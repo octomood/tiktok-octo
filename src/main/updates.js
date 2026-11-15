@@ -9,7 +9,11 @@ const { app, dialog } = require('electron');
  * и README). В dev-режиме модуль молчит, чтобы не мешать отладке.
  */
 function initUpdates() {
-  if (!app.isPackaged || process.env.OCTO_E2E) return;
+  // В Electron 45 app.isPackaged бывает true и при запуске из папки,
+  // поэтому дополнительно проверяем process.defaultApp («это Electron, а не
+  // собранное приложение»).
+  const packaged = app.isPackaged && !process.defaultApp;
+  if (!packaged || process.env.OCTO_E2E) return;
 
   let autoUpdater;
   try {
