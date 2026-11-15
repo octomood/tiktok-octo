@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Установка зависимостей
+        run: npm ci
+
+      # npm 12+ блокирует install-скрипты, из-за чего бинарник Electron
+      # не скачивается. Шаг идемпотентен.
+      - name: Бинарник Electron
+        run: node node_modules/electron/install.js
+
+      - name: Линт
+        run: npm run lint
+
+      - name: Форматирование
+        run: npm run format:check
+
+      - name: Дымовой тест
+        run: xvfb-run -a npm test

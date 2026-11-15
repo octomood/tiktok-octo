@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:;"
+    />
+    <title>TikTok octo</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="chrome" id="chrome">
+      <header class="titlebar" id="titlebar">
+        <div class="brand" title="TikTok octo">
+          <img
+            class="brand-mark"
+            src="assets/tiktok-octo.png"
+            alt="TikTok octo"
+            draggable="false"
+          />
+          <span class="sr-only">TikTok octo</span>
+        </div>
+
+        <div class="divider" aria-hidden="true"></div>
+
+        <nav class="nav" aria-label="Навигация по странице">
+          <button
+            type="button"
+            class="icon-btn"
+            id="btnBack"
+            title="Назад (Alt+←)"
+            aria-label="Назад"
+            disabled
+          >
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12.5 4.5 7 10l5.5 5.5" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            id="btnForward"
+            title="Вперёд (Alt+→)"
+            aria-label="Вперёд"
+            disabled
+          >
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M7.5 4.5 13 10l-5.5 5.5" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            id="btnReload"
+            title="Обновить (Ctrl+R)"
+            aria-label="Обновить"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M16 10a6 6 0 1 1-1.9-4.35" />
+              <path d="M16.4 4.2v3.5h-3.5" />
+            </svg>
+          </button>
+          <button type="button" class="icon-btn" id="btnHome" title="Главная" aria-label="Главная">
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M3.6 8.6 10 3.4l6.4 5.2v7.1a1.2 1.2 0 0 1-1.2 1.2H4.8a1.2 1.2 0 0 1-1.2-1.2z"
+              />
+              <path d="M8.2 16.9v-4.4h3.6v4.4" />
+            </svg>
+          </button>
+        </nav>
+
+        <div class="page-pill" id="pagePill">
+          <span class="unread" id="unreadBadge" hidden></span>
+          <span class="status-dot" id="statusDot"></span>
+          <span class="page-title" id="pageTitle">TikTok</span>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="actions" aria-label="Режимы">
+          <button
+            type="button"
+            class="icon-btn"
+            id="btnPip"
+            title="Картинка в картинке (Ctrl+Shift+P)"
+            aria-label="Картинка в картинке"
+            aria-pressed="false"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4" />
+              <rect x="12" y="13" width="10" height="7" rx="2" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            id="btnMute"
+            title="Звук (Ctrl+Shift+M)"
+            aria-label="Звук"
+            aria-pressed="false"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="ico-sound"
+            >
+              <path
+                d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"
+              />
+              <path d="M16 9a5 5 0 0 1 0 6" />
+              <path d="M19.364 18.364a9 9 0 0 0 0-12.728" />
+            </svg>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="ico-muted"
+            >
+              <path
+                d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"
+              />
+              <path d="m16 9 6 6" />
+              <path d="m22 9-6 6" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            id="btnTop"
+            title="Поверх всех окон (Ctrl+Shift+O)"
+            aria-label="Поверх всех окон"
+            aria-pressed="false"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 17v5" />
+              <path
+                d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div class="win-controls" id="winControls">
+          <button type="button" class="win-btn" id="btnMin" title="Свернуть" aria-label="Свернуть">
+            <svg
+              viewBox="0 0 20 20"
+              stroke="currentColor"
+              stroke-width="1.4"
+              stroke-linecap="round"
+            >
+              <path d="M5 10h10" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="win-btn"
+            id="btnMax"
+            title="Развернуть"
+            aria-label="Развернуть"
+          >
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4">
+              <rect class="ico-max" x="5.6" y="5.6" width="8.8" height="8.8" rx="1.1" />
+              <g class="ico-restore" stroke-linecap="round">
+                <path d="M7.6 7.4V5.9h6.5v6.5h-1.5" />
+                <rect x="5.9" y="7.9" width="6.2" height="6.2" rx="1" />
+              </g>
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="win-btn win-btn--close"
+            id="btnClose"
+            title="Закрыть"
+            aria-label="Закрыть"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              stroke="currentColor"
+              stroke-width="1.4"
+              stroke-linecap="round"
+            >
+              <path d="M6.4 6.4l7.2 7.2M13.6 6.4l-7.2 7.2" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="progress" id="progress"><span></span></div>
+        <div class="download" id="download" hidden><span id="downloadFill"></span></div>
+      </header>
+
+      <div class="findbar" id="findbar" role="search" aria-label="Поиск по странице" hidden>
+        <svg
+          class="findbar-icon"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="9" cy="9" r="5.2" />
+          <path d="m13 13 4 4" />
+        </svg>
+        <input
+          id="findInput"
+          class="findbar-input"
+          type="text"
+          placeholder="Найти на странице"
+          spellcheck="false"
+          autocomplete="off"
+          aria-label="Текст для поиска"
+        />
+        <span class="findbar-count" id="findCount" aria-live="polite"></span>
+        <button
+          type="button"
+          class="findbar-btn"
+          id="btnFindPrev"
+          title="Предыдущее (Shift+Enter)"
+          aria-label="Предыдущее совпадение"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M5 12.5 10 7.5l5 5" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="findbar-btn"
+          id="btnFindNext"
+          title="Следующее (Enter)"
+          aria-label="Следующее совпадение"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M5 7.5 10 12.5l5-5" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="findbar-btn"
+          id="btnFindClose"
+          title="Закрыть (Esc)"
+          aria-label="Закрыть поиск"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+          >
+            <path d="M6.4 6.4l7.2 7.2M13.6 6.4l-7.2 7.2" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <script src="titlebar.js"></script>
+  </body>
+</html>
