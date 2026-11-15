@@ -214,7 +214,7 @@ function createView() {
   wc.on('enter-html-full-screen', () => {
     ctx.htmlFullscreen = true;
     // Панель сбоку не должна мешать видео на весь экран.
-    setPanelOpen(false);
+    setPanelOpen(false, { persist: false });
     layout();
     pushState();
   });

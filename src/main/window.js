@@ -47,7 +47,7 @@ function createWindow() {
 
   ctx.win = win;
   ctx.chromeHeight = TITLEBAR_H;
-  ctx.panelOpen = false;
+  ctx.panelOpen = saved.panelOpen === true;
   ctx.paletteOpen = false;
   ctx.startInTray = saved.startInTray === true;
   setCloseToTray(saved.closeToTray === true);
@@ -88,7 +88,11 @@ function createWindow() {
     // PiP могли закрыть из плавающего окна — сверяемся со страницей.
     refreshPipState();
   });
-  win.on('show', refreshTrayMenu);
+  win.on('show', () => {
+    layout();
+    win.webContents.invalidate();
+    refreshTrayMenu();
+  });
   win.on('hide', () => {
     player.pauseForBackground();
     refreshTrayMenu();

@@ -79,23 +79,45 @@ const PROMO_JS = `(() => {
       if (node.closest('[role="dialog"], [aria-modal="true"]')) continue;
 
       // Поднимаемся, пока текст остаётся тем же: прячем всю плашку, а не букву.
+      // Но не заходим в навигацию TikTok: в свёрнутом сайдбаре единственный
+      // текст может быть именно промо, и мы случайно спрячем весь рельс.
+      const looksLikeNav = (element) =>
+        element instanceof Element &&
+        (element.matches(
+          'nav, aside, [class*="SideNav"], [class*="Sidebar"], [class*="side-nav"]',
+        ) ||
+          element.querySelector('[data-e2e^="nav-"]'));
+
       let target = node;
       while (target.parentElement && norm(target.parentElement.innerText) === text) {
-        target = target.parentElement;
+        const parent = target.parentElement;
+        if (looksLikeNav(parent)) break;
+
+        const rect = parent.getBoundingClientRect();
+        if (rect.width > 420 || rect.height > 120) break;
+
+        target = parent;
       }
 
-      // Плавающий баннер «открыть в приложении» прячем целиком.
+      if (looksLikeNav(target)) continue;
+
+      // Плавающий баннер «открыть в приложении» прячем целиком, но только
+      // если это действительно компактный баннер, а не фиксированный сайдбар.
       let fixed = target;
       for (let depth = 0; depth < 6 && fixed; depth += 1) {
         if (getComputedStyle(fixed).position === 'fixed') break;
         fixed = fixed.parentElement;
       }
-      if (
-        fixed &&
-        getComputedStyle(fixed).position === 'fixed' &&
-        norm(fixed.innerText).length < 200
-      ) {
-        target = fixed;
+      if (fixed && getComputedStyle(fixed).position === 'fixed') {
+        const fixedRect = fixed.getBoundingClientRect();
+        if (
+          !looksLikeNav(fixed) &&
+          fixedRect.width <= 520 &&
+          fixedRect.height <= 220 &&
+          norm(fixed.innerText).length < 200
+        ) {
+          target = fixed;
+        }
       }
 
       if (target.closest('[role="dialog"], [aria-modal="true"]')) continue;

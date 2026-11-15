@@ -10,6 +10,7 @@
 const { app } = require('electron');
 const { TITLEBAR_H, MAX_CHROME_H, PANEL_W } = require('./shared');
 const { COSMETIC_RULES } = require('./cosmetic-catalog');
+const { writeState } = require('./store');
 
 const ctx = {
   /** @type {import('electron').BrowserWindow | null} */
@@ -102,12 +103,36 @@ function layout() {
   });
 }
 
+/**
+ * После сдвига WebContentsView открывается полоса нашего renderer.
+ * На Wayland композитор иногда оставляет её чёрной до следующей
+ * инвалидации — просим окно перерисоваться, в том числе на следующем кадре.
+ */
+function repaintWindow() {
+  if (!ctx.win || ctx.win.isDestroyed()) return;
+  try {
+    ctx.win.webContents.invalidate();
+  } catch {
+    /* окно уже закрывается */
+  }
+}
+
+function layoutSoon() {
+  layout();
+  repaintWindow();
+  setTimeout(() => {
+    layout();
+    repaintWindow();
+  }, 40);
+}
+
 /** Открыть/закрыть панель функций. */
-function setPanelOpen(open) {
+function setPanelOpen(open, { persist = true } = {}) {
   const next = Boolean(open);
   if (next === ctx.panelOpen) return;
   ctx.panelOpen = next;
-  layout();
+  if (persist) writeState({ panelOpen: next });
+  layoutSoon();
   pushState();
 }
 
@@ -133,6 +158,9 @@ function setPaletteOpen(open) {
     ctx.view.setVisible(!next);
   }
 
+  repaintWindow();
+  setTimeout(repaintWindow, 40);
+
   if (next) ctx.win?.webContents.focus();
   else ctx.view?.webContents.focus();
 
@@ -149,7 +177,7 @@ function setChromeHeight(px) {
   const next = Math.min(MAX_CHROME_H, Math.max(TITLEBAR_H, Math.round(Number(px) || TITLEBAR_H)));
   if (next === ctx.chromeHeight) return;
   ctx.chromeHeight = next;
-  layout();
+  layoutSoon();
 }
 
 /**
