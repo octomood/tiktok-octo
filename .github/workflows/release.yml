@@ -17,8 +17,9 @@ jobs:
             target: --linux
           - os: windows-latest
             target: --win
+          # Универсальная сборка: один dmg/zip и для Apple Silicon, и для Intel.
           - os: macos-latest
-            target: --mac
+            target: --mac --universal
 
     runs-on: ${{ matrix.os }}
 

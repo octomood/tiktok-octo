@@ -87,7 +87,8 @@
     },
     "mac": {
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "category": "public.app-category.social-networking",
       "icon": "build/icon.png",
