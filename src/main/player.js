@@ -11,6 +11,7 @@ const { evalInPage } = require('./page-eval');
 
 const DEFAULTS = {
   speed: 1,
+  volume: 1,
   startMuted: false,
   loop: false,
   pauseOnBlur: false,
@@ -51,12 +52,24 @@ function pageScript(config) {
 
     const apply = (video) => {
       if (!video) return;
-      try {
-        video.playbackRate = current.speed;
-      } catch (err) {
-        /* некоторые видео запрещают смену скорости */
+      // Пишем скорость только при реальном отличии. Лишняя запись playbackRate
+      // перезапускает видео-конвейер: на Linux звук продолжается, а кадры
+      // замирают на первой секунде.
+      if (Math.abs(video.playbackRate - current.speed) > 0.001) {
+        try {
+          video.playbackRate = current.speed;
+        } catch (err) {
+          /* некоторые видео запрещают смену скорости */
+        }
       }
-      video.loop = Boolean(current.loop);
+      try {
+        const volume = Number(current.volume);
+        const target = Math.min(1, Math.max(0, Number.isFinite(volume) ? volume : 1));
+        if (Math.abs(video.volume - target) > 0.001) video.volume = target;
+      } catch (err) {
+        /* громкость недоступна до появления источника */
+      }
+      if (video.loop !== Boolean(current.loop)) video.loop = Boolean(current.loop);
     };
 
     const handle = (event) => {
@@ -65,7 +78,7 @@ function pageScript(config) {
 
       if (!seen.has(video)) {
         seen.add(video);
-        if (current.startMuted) video.muted = true;
+        if (current.startMuted && !video.muted) video.muted = true;
       }
 
       apply(video);
@@ -81,8 +94,8 @@ function pageScript(config) {
         current = { ...current, ...configuration };
         document.querySelectorAll('video').forEach((video) => {
           seen.add(video);
-          if (current.startMuted) video.muted = true;
-          else video.muted = false;
+          const mute = Boolean(current.startMuted);
+          if (video.muted !== mute) video.muted = mute;
           apply(video);
         });
       },
@@ -119,6 +132,14 @@ function setSpeed(value) {
   pushState();
 }
 
+/** Громкость 0…1: сайт не даёт своего ползунка, поэтому задаём её у каждого <video>. */
+function setVolume(value) {
+  const volume = Math.min(1, Math.max(0, Number(value) || 0));
+  save({ volume: Math.round(volume * 100) / 100 });
+  apply();
+  pushState();
+}
+
 function toggle(key) {
   if (!(key in DEFAULTS) || key === 'speed') return;
   save({ [key]: !ctx.player[key] });
@@ -136,4 +157,4 @@ function pauseForBackground() {
 
 sync();
 
-module.exports = { SPEEDS, apply, setSpeed, toggle, pauseForBackground };
+module.exports = { SPEEDS, apply, setSpeed, setVolume, toggle, pauseForBackground };

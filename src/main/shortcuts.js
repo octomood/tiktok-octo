@@ -26,9 +26,22 @@ function handleShortcut(event, input) {
     return run(() => handleCommand(input.shift ? 'findPrev' : 'findNext'));
   }
   if (input.key === 'Escape') {
+    // HTML-fullscreen важнее PiP: сначала вернуть полосу PiP, потом выходить.
+    if (ctx.htmlFullscreen) {
+      return run(() => {
+        const wc = ctx.view?.webContents;
+        if (wc && !wc.isDestroyed()) {
+          wc.executeJavaScript(
+            'document.exitFullscreen && document.exitFullscreen().catch(() => {})',
+            false,
+          ).catch(() => {});
+        }
+      });
+    }
     if (ctx.paletteOpen) return run(() => handleCommand('palette'));
     if (ctx.find.open) return run(() => handleCommand('findClose'));
     if (ctx.panelOpen) return run(() => handleCommand('panel'));
+    if (ctx.pipActive) return run(() => handleCommand('pipClose'));
     if (ctx.win?.isFullScreen()) return run(() => handleCommand('fullscreen'));
     return undefined;
   }
@@ -41,6 +54,12 @@ function handleShortcut(event, input) {
   }
   if (input.alt && input.key === 'ArrowLeft') return run(() => handleCommand('back'));
   if (input.alt && input.key === 'ArrowRight') return run(() => handleCommand('forward'));
+  if (mod && input.shift && input.key === 'ArrowLeft') {
+    return run(() => handleCommand('feedPrev'));
+  }
+  if (mod && input.shift && input.key === 'ArrowRight') {
+    return run(() => handleCommand('feedNext'));
+  }
 
   if (!mod) return undefined;
 

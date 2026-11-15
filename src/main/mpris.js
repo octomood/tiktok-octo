@@ -284,4 +284,8 @@ function initMpris() {
   scheduleMetadata(1200);
 }
 
-module.exports = { initMpris, setPlaying, setTitle, scheduleMetadata };
+function isActive() {
+  return Boolean(player);
+}
+
+module.exports = { initMpris, setPlaying, setTitle, scheduleMetadata, isActive };

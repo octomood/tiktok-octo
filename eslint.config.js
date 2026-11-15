@@ -17,6 +17,7 @@ const nodeGlobals = {
   URL: 'readonly',
   URLSearchParams: 'readonly',
   structuredClone: 'readonly',
+  AbortController: 'readonly',
 };
 
 const browserGlobals = {

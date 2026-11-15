@@ -9,6 +9,7 @@ const {
   setPanelOpen,
   setPaletteOpen,
   setCloseToTray,
+  sendToWindow,
 } = require('./app-context');
 const { writeState } = require('./store');
 const { HOME_URL, isTikTokUrl } = require('./shared');
@@ -20,8 +21,12 @@ const cosmetics = require('./cosmetics');
 const downloads = require('./downloads');
 const sleepTimer = require('./sleep-timer');
 const player = require('./player');
+const pip = require('./pip');
 const { captureFrame } = require('./screenshot');
 const autostart = require('./autostart');
+const appimage = require('./appimage-install');
+const ads = require('./ads');
+const region = require('./region');
 const find = require('./find');
 
 // Ступени масштаба как в браузерах.
@@ -59,72 +64,6 @@ function applyZoom(factor) {
   writeState({ zoomFactor: clamped });
   pushState();
   toast(`Масштаб: ${Math.round(clamped * 100)}%`);
-}
-
-async function togglePip() {
-  const wc = viewContents();
-  if (!wc) return;
-
-  try {
-    // requestPictureInPicture может «зависнуть» на некоторых Wayland-сборках —
-    // поэтому не ждём бесконечно.
-    const timeout = new Promise((resolve) => setTimeout(() => resolve('timeout'), 3000));
-
-    const result = await Promise.race([
-      wc.executeJavaScript(
-        `(async () => {
-           const v = document.querySelector('video');
-           if (!v) return 'none';
-           try {
-             if (document.pictureInPictureElement) {
-               await document.exitPictureInPicture();
-               return 'off';
-             }
-             await v.requestPictureInPicture();
-             return 'on';
-           } catch (err) { return 'error'; }
-         })()`,
-        true, // userGesture: без него requestPictureInPicture отклоняется
-      ),
-      timeout,
-    ]);
-
-    if (result === 'on') ctx.pipActive = true;
-    if (result === 'off') ctx.pipActive = false;
-
-    toast(
-      result === 'on'
-        ? 'Картинка в картинке включена'
-        : result === 'off'
-          ? 'Картинка в картинке выключена'
-          : result === 'none'
-            ? 'На странице нет видео'
-            : 'PiP недоступен',
-    );
-  } catch {
-    toast('PiP недоступен');
-  }
-  refreshTrayMenu();
-  pushState();
-}
-
-/**
- * PiP можно закрыть из плавающего окна, о котором main-процесс не узнаёт.
- * Поэтому при возврате фокуса сверяемся с самой страницей.
- */
-async function refreshPipState() {
-  const wc = viewContents();
-  if (!wc) return;
-  try {
-    const active = await wc.executeJavaScript('Boolean(document.pictureInPictureElement)', false);
-    if (active !== ctx.pipActive) {
-      ctx.pipActive = active;
-      pushState();
-      refreshTrayMenu();
-    }
-  } catch {
-    /* страница ещё загружается — не страшно */
-  }
 }
 
 async function togglePlayback() {
@@ -192,7 +131,26 @@ function handleCommand(command, payload) {
       app.quit();
       break;
     case 'pip':
-      togglePip();
+      pip.toggle();
+      refreshTrayMenu();
+      break;
+    case 'pipClose':
+      pip.exit();
+      refreshTrayMenu();
+      break;
+    case 'feedNext':
+      pip.next();
+      break;
+    case 'feedPrev':
+      pip.prev();
+      break;
+    case 'pipAuto':
+      pip.toggleAuto();
+      refreshTrayMenu();
+      break;
+    case 'pipAdaptive':
+      pip.toggleAdaptive();
+      refreshTrayMenu();
       break;
     case 'togglePlayback':
       togglePlayback();
@@ -208,6 +166,7 @@ function handleCommand(command, payload) {
       const next = !ctx.win.isAlwaysOnTop();
       ctx.win.setAlwaysOnTop(next, 'floating');
       writeState({ alwaysOnTop: next });
+      pip.setRestoreOnTop(next);
       toast(next ? 'Поверх всех окон' : 'Обычное окно');
       refreshTrayMenu();
       break;
@@ -225,10 +184,10 @@ function handleCommand(command, payload) {
       wc.toggleDevTools();
       break;
     case 'fullscreen':
-      ctx.win.setFullScreen(!ctx.win.isFullScreen());
+      if (!ctx.pipActive) ctx.win.setFullScreen(!ctx.win.isFullScreen());
       break;
     case 'find':
-      find.open();
+      if (!ctx.pipActive) find.open();
       break;
     case 'findNext':
       find.next();
@@ -240,17 +199,20 @@ function handleCommand(command, payload) {
       find.close();
       break;
     case 'panel':
-      if (!ctx.htmlFullscreen) setPanelOpen(!ctx.panelOpen);
+      if (!ctx.htmlFullscreen && !ctx.pipActive) setPanelOpen(!ctx.panelOpen);
       refreshTrayMenu();
       break;
     case 'palette':
-      if (!ctx.htmlFullscreen) setPaletteOpen(!ctx.paletteOpen);
+      if (!ctx.htmlFullscreen && !ctx.pipActive) setPaletteOpen(!ctx.paletteOpen);
       break;
     case 'screenshot':
       captureFrame();
       break;
     case 'playerSpeed':
       player.setSpeed(payload);
+      break;
+    case 'playerVolume':
+      player.setVolume(payload);
       break;
     case 'playerToggle':
       if (typeof payload === 'string') player.toggle(payload);
@@ -310,6 +272,46 @@ function handleCommand(command, payload) {
       toast(ctx.startInTray ? 'Будет запускаться свёрнутым' : 'Будет открывать окно');
       break;
     }
+    case 'adsSkip': {
+      const next = ads.toggle();
+      toast(next ? 'Пропуск рекламы включён' : 'Пропуск рекламы выключен');
+      break;
+    }
+    case 'region':
+      if (typeof payload === 'string') region.setPreset(payload);
+      break;
+    case 'regionProxyApply':
+      region.setProxy(typeof payload === 'string' ? payload : '');
+      break;
+    case 'regionProxyClear':
+      region.setProxy('');
+      break;
+    case 'regionCheckIp':
+      region.checkIp();
+      break;
+    case 'regionResetData':
+      region.resetSiteData();
+      break;
+    case 'regionPanel':
+      setPanelOpen(true);
+      sendToWindow('octo:panel-category', 'region');
+      break;
+    case 'appimageInstall': {
+      if (!appimage.isAvailable()) {
+        toast('Установка доступна только из AppImage');
+        break;
+      }
+
+      const result = ctx.appimageInstalled ? appimage.uninstall() : appimage.install();
+      if (!result.ok) {
+        toast(result.error || 'Не удалось изменить меню приложений');
+        break;
+      }
+
+      ctx.appimageInstalled = appimage.isInstalled();
+      toast(ctx.appimageInstalled ? 'Добавлено в меню приложений' : 'Удалено из меню приложений');
+      break;
+    }
     case 'checkUpdates':
       checkNow();
       break;
@@ -322,4 +324,4 @@ function handleCommand(command, payload) {
   pushState();
 }
 
-module.exports = { handleCommand, refreshPipState };
+module.exports = { handleCommand };

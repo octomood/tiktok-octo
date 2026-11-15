@@ -29,6 +29,12 @@ contextBridge.exposeInMainWorld('octo', {
     ipcRenderer.on('octo:state', listener);
     return () => ipcRenderer.removeListener('octo:state', listener);
   },
+  /** Открыть панель на конкретной категории (например, «Регион»). */
+  onPanelCategory(callback) {
+    const listener = (_event, id) => callback(id);
+    ipcRenderer.on('octo:panel-category', listener);
+    return () => ipcRenderer.removeListener('octo:panel-category', listener);
+  },
   ready() {
     ipcRenderer.send('octo:ready');
   },

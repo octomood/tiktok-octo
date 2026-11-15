@@ -5,6 +5,7 @@ const {
   HOME_URL,
   PARTITION,
   CHROME_UA,
+  REGION_PRELOAD,
   isTikTokUrl,
   isAuthUrl,
   isInternalUrl,
@@ -17,7 +18,10 @@ const { openExternal } = require('./links');
 const { attachContextMenu } = require('./menu');
 const { handleShortcut } = require('./shortcuts');
 const cosmetics = require('./cosmetics');
+const ads = require('./ads');
 const player = require('./player');
+const media = require('./media');
+const pip = require('./pip');
 const mpris = require('./mpris');
 const find = require('./find');
 
@@ -57,8 +61,13 @@ function createView() {
       nodeIntegration: false,
       sandbox: true,
       spellcheck: true,
+      // Свёрнутое или перекрытое окно не должно замедлять таймеры и видео:
+      // иначе ролик замирает и сайт об этом не узнаёт.
+      backgroundThrottling: false,
       // Свои preload в контент TikTok не подключаем: страница недоверенная.
-      preload: undefined,
+      // Единственное исключение — подмена региона: preload ничего не отдаёт
+      // странице, contextIsolation и sandbox остаются включёнными.
+      preload: REGION_PRELOAD,
     },
   });
 
@@ -67,7 +76,9 @@ function createView() {
 
   const wc = view.webContents;
   wc.setUserAgent(CHROME_UA);
-  view.setBackgroundColor('#00000000');
+  // Непрозрачный фон: полупрозрачный WebContentsView на Linux заставляет
+  // композитор собирать видео через лишний слой и кадры могут «застыть».
+  view.setBackgroundColor('#000000');
   wc.setZoomFactor(readState().zoomFactor ?? 1);
 
   // --- Навигация: внутри приложения только TikTok и OAuth --------------------
@@ -105,8 +116,6 @@ function createView() {
     'did-navigate',
     'did-navigate-in-page',
     'page-title-updated',
-    'media-started-playing',
-    'media-paused',
   ]) {
     wc.on(event, refresh);
   }
@@ -120,7 +129,7 @@ function createView() {
   };
 
   wc.on('did-navigate', () => {
-    ctx.pipActive = false;
+    ctx.playing = false;
     find.resetOnNavigate();
     rememberUrl(wc.getURL());
     mpris.setPlaying(false);
@@ -134,11 +143,19 @@ function createView() {
   });
 
   wc.on('media-started-playing', () => {
+    ctx.playing = true;
     mpris.setPlaying(true);
     mpris.scheduleMetadata(400);
+    // Новое видео может быть другим по пропорциям — адаптивный PiP подстроится.
+    pip.scheduleFit(600);
+    pushState();
   });
 
-  wc.on('media-paused', () => mpris.setPlaying(false));
+  wc.on('media-paused', () => {
+    ctx.playing = false;
+    mpris.setPlaying(false);
+    pushState();
+  });
 
   wc.on('page-title-updated', (_event, title) => {
     setUnread(parseUnreadCount(title));
@@ -195,12 +212,36 @@ function createView() {
     pushState();
   });
 
-  wc.on('unresponsive', () => toast('Страница не отвечает…'));
+  // Зависший рендерер: звук из медиа-пайплайна может ещё играть, но страница
+  // уже не отвечает и не перерисовывается. Если сама не очнётся — перезапускаем
+  // её, иначе приложение остаётся с «застывшим» кадром навсегда.
+  let hangTimer = null;
+  let lastHangReload = 0;
+
+  wc.on('unresponsive', () => {
+    toast('Страница не отвечает…');
+    clearTimeout(hangTimer);
+    hangTimer = setTimeout(() => {
+      if (wc.isDestroyed()) return;
+      const now = Date.now();
+      if (now - lastHangReload < 120000) return;
+      lastHangReload = now;
+      toast('Перезапускаю зависшую страницу…');
+      wc.reload();
+    }, 12000);
+  });
+  wc.on('responsive', () => {
+    clearTimeout(hangTimer);
+    hangTimer = null;
+  });
 
   // --- Косметика: промо, скроллбары, лишние разделы ------------------------
   wc.on('dom-ready', () => {
     cosmetics.apply();
     player.apply();
+    media.apply();
+    pip.reapply();
+    ads.apply();
     // Промо в сайдбаре иногда дорисовывается позже — просканируем ещё раз.
     cosmetics.schedule(3000);
   });

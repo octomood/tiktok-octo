@@ -5,6 +5,7 @@ const path = require('node:path');
 const { ctx } = require('./app-context');
 const { readState, writeState } = require('./store');
 const cosmetics = require('./cosmetics');
+const region = require('./region');
 
 /**
  * Трей: быстрый доступ к звуку/поверх всех окон и режим «закрыть в трей».
@@ -87,12 +88,35 @@ function refreshTrayMenu() {
       click: () => actions.pip(),
     },
     {
+      label: 'Следующее видео',
+      enabled: Boolean(wc),
+      click: () => actions.next?.(),
+    },
+    {
+      label: 'Предыдущее видео',
+      enabled: Boolean(wc),
+      click: () => actions.prev?.(),
+    },
+    {
+      label: 'Автолистание в PiP',
+      type: 'checkbox',
+      checked: ctx.pipAuto,
+      click: () => actions.pipAuto?.(),
+    },
+    {
+      label: 'Адаптивный PiP',
+      type: 'checkbox',
+      checked: ctx.pipAdaptive,
+      click: () => actions.pipAdaptive?.(),
+    },
+    {
       label: 'Панель функций',
       type: 'checkbox',
       checked: ctx.panelOpen,
       click: () => actions.panel(),
     },
     { label: 'Косметика', submenu: cosmetics.menuItems() },
+    { label: 'Регион', submenu: region.menuItems() },
     { type: 'separator' },
     {
       label: 'Закрывать в трей',

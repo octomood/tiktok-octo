@@ -11,6 +11,14 @@ const $ = (id) => document.getElementById(id);
 const el = {
   chrome: $('chrome'),
   titlebar: $('titlebar'),
+  pipbar: $('pipbar'),
+  pipTitle: $('pipTitle'),
+  pipPrev: $('btnPipPrev'),
+  pipPlay: $('btnPipPlay'),
+  pipNext: $('btnPipNext'),
+  pipAuto: $('btnPipAuto'),
+  pipAdaptive: $('btnPipAdaptive'),
+  pipClose: $('btnPipClose'),
   back: $('btnBack'),
   forward: $('btnForward'),
   reload: $('btnReload'),
@@ -37,13 +45,20 @@ const el = {
   btnPanel: $('btnPanel'),
   btnPanelClose: $('btnPanelClose'),
   panelVersion: $('panelVersion'),
+  panelSearch: $('panelSearch'),
+  panelSearchClear: $('btnPanelSearchClear'),
+  panelNoResults: $('panelNoResults'),
   panelZoom: $('panelZoom'),
   panelCosmetics: $('panelCosmetics'),
   panelDownloads: $('panelDownloads'),
   downloadsEmpty: $('downloadsEmpty'),
   sleepLabel: $('sleepLabel'),
   rowMute: $('rowMute'),
+  volumeRange: $('volumeRange'),
+  volumeValue: $('volumeValue'),
   rowPip: $('rowPip'),
+  rowPipAuto: $('rowPipAuto'),
+  rowPipAdaptive: $('rowPipAdaptive'),
   rowOnTop: $('rowOnTop'),
   rowTray: $('rowTray'),
   rowAutostart: $('rowAutostart'),
@@ -51,6 +66,14 @@ const el = {
   rowStartMuted: $('rowStartMuted'),
   rowLoop: $('rowLoop'),
   rowPauseBlur: $('rowPauseBlur'),
+  rowAdSkip: $('rowAdSkip'),
+  regionSelect: $('regionSelect'),
+  regionProxy: $('regionProxy'),
+  regionProxyState: $('regionProxyState'),
+  regionIpValue: $('regionIpValue'),
+  regionIpResult: $('regionIpResult'),
+  rowInstallApp: $('rowInstallApp'),
+  installAppLabel: $('installAppLabel'),
   palette: $('palette'),
   paletteInput: $('paletteInput'),
   paletteList: $('paletteList'),
@@ -63,6 +86,9 @@ const state = {
   muted: false,
   onTop: false,
   pip: false,
+  pipAuto: true,
+  pipAdaptive: false,
+  playing: false,
   maximized: false,
   canGoBack: false,
   canGoForward: false,
@@ -74,11 +100,16 @@ const state = {
   panel: false,
   panelWidth: 300,
   palette: false,
-  player: { speed: 1, startMuted: false, loop: false, pauseOnBlur: false },
+  player: { speed: 1, volume: 1, startMuted: false, loop: false, pauseOnBlur: false },
   cosmetics: [],
   closeToTray: false,
   autostart: false,
   startInTray: false,
+  adsSkip: false,
+  region: { preset: 'off', proxy: '' },
+  regionCheck: { state: 'idle', text: 'Проверить' },
+  regions: [],
+  appimage: { available: false, installed: false },
   downloads: [],
   sleepTimerEnds: 0,
   sleepTimerMinutes: 0,
@@ -88,6 +119,10 @@ const state = {
 let toastText = '';
 let toastTimer = null;
 let findWasOpen = false;
+
+// Открытые разделы панели функций и текущий поисковый запрос.
+const openCategories = new Set(['page']);
+let panelQuery = '';
 
 if (api.ui.platform === 'darwin') document.body.classList.add('mac');
 
@@ -99,6 +134,12 @@ const actions = [
   [el.reload, 'reload'],
   [el.home, 'home'],
   [el.pip, 'pip'],
+  [el.pipPrev, 'feedPrev'],
+  [el.pipPlay, 'togglePlayback'],
+  [el.pipNext, 'feedNext'],
+  [el.pipAuto, 'pipAuto'],
+  [el.pipAdaptive, 'pipAdaptive'],
+  [el.pipClose, 'pipClose'],
   [el.mute, 'mute'],
   [el.top, 'onTop'],
   [el.min, 'minimize'],
@@ -123,8 +164,21 @@ el.btnPanel.addEventListener('click', (event) => {
 });
 el.btnPanelClose.addEventListener('click', () => api.cmd('panel'));
 
+el.panelSearch.addEventListener('input', applyPanelFilter);
+el.panelSearchClear.addEventListener('click', () => {
+  el.panelSearch.value = '';
+  applyPanelFilter();
+  el.panelSearch.focus();
+});
+
 // Строки панели: действия и переключатели косметики.
 el.panel.addEventListener('click', (event) => {
+  const catHead = event.target.closest('[data-cat-head]');
+  if (catHead) {
+    toggleCategory(catHead.dataset.catHead);
+    return;
+  }
+
   const sleep = event.target.closest('[data-sleep]');
   if (sleep) {
     api.cmd('sleepTimer', Number(sleep.dataset.sleep));
@@ -162,7 +216,36 @@ el.panel.addEventListener('click', (event) => {
   }
 
   const row = event.target.closest('[data-cmd]');
-  if (row) api.cmd(row.dataset.cmd);
+  if (!row) return;
+  if (row.dataset.cmd === 'regionProxyApply') {
+    api.cmd('regionProxyApply', el.regionProxy.value.trim());
+    return;
+  }
+  api.cmd(row.dataset.cmd);
+});
+
+// Громкость: ползунок живёт в панели и меняет volume у видео сайта.
+let volumeTimer = null;
+el.volumeRange.addEventListener('input', () => {
+  const percent = Math.min(100, Math.max(0, Math.round(Number(el.volumeRange.value) || 0)));
+  paintVolume(percent);
+  clearTimeout(volumeTimer);
+  volumeTimer = setTimeout(() => {
+    api.cmd('playerVolume', percent / 100);
+  }, 40);
+});
+
+// Регион: выбор страны применяется сразу, прокси — по кнопке или Enter.
+el.regionSelect.addEventListener('change', () => api.cmd('region', el.regionSelect.value));
+el.regionProxy.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  api.cmd('regionProxyApply', el.regionProxy.value.trim());
+});
+api.onPanelCategory((id) => {
+  if (!id) return;
+  openCategories.add(id);
+  applyPanelFilter();
 });
 
 // Палитра команд.
@@ -240,7 +323,7 @@ function prettyTitle(text) {
 
 function renderFind() {
   const find = state.find || { open: false, text: '', matches: 0, active: 0 };
-  el.findbar.hidden = !find.open;
+  el.findbar.hidden = !find.open || state.pip;
 
   if (find.open) {
     if (!findWasOpen) {
@@ -283,8 +366,14 @@ function setSwitch(row, value) {
   row.setAttribute('aria-checked', String(Boolean(value)));
 }
 
-let cosmeticsSignature = '';
+function paintVolume(percent) {
+  const value = Math.min(100, Math.max(0, Math.round(Number(percent) || 0)));
+  el.volumeRange.style.setProperty('--volume', `${value}%`);
+  el.volumeValue.textContent = `${value} %`;
+}
 
+let cosmeticsSignature = '';
+let regionSignature = '';
 function renderCosmetics(list) {
   const items = Array.isArray(list) ? list : [];
   const signature = items.map((item) => item.id).join('|');
@@ -388,6 +477,71 @@ function renderDownloads(list) {
   }
 }
 
+function normalizeSearch(text) {
+  return (text || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Раскрывает нужные категории и прячет всё, что не подходит под запрос.
+ * При активном поиске категории раскрываются сами: пользователь ищет
+ * функцию, а не место, где она лежит.
+ */
+function applyPanelFilter() {
+  const query = normalizeSearch(el.panelSearch.value);
+  panelQuery = query;
+  el.panelSearchClear.hidden = !query;
+
+  let visibleCategories = 0;
+
+  for (const cat of el.panel.querySelectorAll('.panel-cat')) {
+    const title = normalizeSearch(cat.querySelector('.panel-cat-title')?.textContent || '');
+    const titleMatch = Boolean(query) && title.includes(query);
+    const body = cat.querySelector('.panel-cat-body');
+    let rowMatch = false;
+
+    // Текст подсказок тоже участвует в поиске: например, «прокси» находится
+    // по пояснению под полем, а не только по названию категории.
+    const noteText = normalizeSearch(
+      [...cat.querySelectorAll('.panel-note, .panel-empty')]
+        .filter((hint) => !hint.hasAttribute('hidden'))
+        .map((hint) => hint.textContent)
+        .join(' '),
+    );
+    const noteMatch = Boolean(query) && noteText.includes(query);
+
+    for (const row of cat.querySelectorAll('.panel-row, .download-row, .panel-field')) {
+      const label = normalizeSearch(row.textContent);
+      const hiddenRow = row.hasAttribute('hidden');
+      const match = !query || titleMatch || noteMatch || (!hiddenRow && label.includes(query));
+      row.classList.toggle('is-filtered', !match);
+      if (match && !hiddenRow) rowMatch = true;
+    }
+
+    for (const hint of cat.querySelectorAll('.panel-note, .panel-empty')) {
+      hint.classList.toggle('is-filtered', Boolean(query) && !titleMatch && !noteMatch);
+    }
+
+    const categoryMatch = !query || titleMatch || noteMatch || rowMatch;
+    if (categoryMatch) visibleCategories += 1;
+    cat.classList.toggle('is-filtered', !categoryMatch);
+
+    const expanded = query ? categoryMatch : openCategories.has(cat.dataset.cat);
+    body.hidden = !expanded;
+    cat.dataset.open = String(expanded);
+    cat.querySelector('[data-cat-head]')?.setAttribute('aria-expanded', String(expanded));
+  }
+
+  el.panelNoResults.hidden = !(query && visibleCategories === 0);
+}
+
+function toggleCategory(id) {
+  // Во время поиска раскрытием управляет фильтр.
+  if (!id || panelQuery) return;
+  if (openCategories.has(id)) openCategories.delete(id);
+  else openCategories.add(id);
+  applyPanelFilter();
+}
+
 function formatRemaining(ms) {
   const total = Math.max(0, Math.ceil(ms / 1000));
   const minutes = Math.floor(total / 60);
@@ -426,9 +580,15 @@ function paletteItems() {
     { label: 'Обновить без кэша', cmd: 'hardReload', hint: 'Ctrl Shift R' },
     { label: 'Поиск по странице', cmd: 'find', hint: 'Ctrl F' },
     { label: 'Панель функций', cmd: 'panel', hint: 'Ctrl Shift B' },
+    { label: 'Регион и прокси', cmd: 'regionPanel' },
     { label: 'Снимок кадра', cmd: 'screenshot', hint: 'Ctrl Shift S' },
     { label: 'Звук вкл/выкл', cmd: 'mute', hint: 'Ctrl Shift M' },
     { label: 'Картинка в картинке', cmd: 'pip', hint: 'Ctrl Shift P' },
+    { label: 'Следующее видео', cmd: 'feedNext', hint: 'Ctrl Shift →' },
+    { label: 'Предыдущее видео', cmd: 'feedPrev', hint: 'Ctrl Shift ←' },
+    { label: 'Автолистание в PiP', cmd: 'pipAuto' },
+    { label: 'Адаптивный PiP', cmd: 'pipAdaptive' },
+    { label: 'Выйти из PiP', cmd: 'pipClose', hint: 'Esc' },
     { label: 'Поверх всех окон', cmd: 'onTop', hint: 'Ctrl Shift O' },
     { label: 'Полный экран', cmd: 'fullscreen', hint: 'F11' },
     { label: 'Инструменты разработчика', cmd: 'devtools', hint: 'Ctrl Shift I' },
@@ -461,7 +621,29 @@ function paletteItems() {
     { label: 'Запускать без звука', cmd: 'playerToggle', payload: 'startMuted' },
     { label: 'Повторять видео', cmd: 'playerToggle', payload: 'loop' },
     { label: 'Пауза в фоне', cmd: 'playerToggle', payload: 'pauseOnBlur' },
+    {
+      label: `${state.adsSkip ? 'Выключить' : 'Включить'} пропуск рекламы`,
+      cmd: 'adsSkip',
+    },
   );
+
+  if (state.region && state.region.proxy) {
+    items.push({ label: 'Сбросить прокси', cmd: 'regionProxyClear' });
+  }
+
+  items.push(
+    { label: 'Проверить внешний IP', cmd: 'regionCheckIp' },
+    { label: 'Сбросить данные сайта…', cmd: 'regionResetData' },
+  );
+
+  if (state.appimage && state.appimage.available) {
+    items.push({
+      label: state.appimage.installed
+        ? 'Удалить из меню приложений'
+        : 'Установить в меню приложений',
+      cmd: 'appimageInstall',
+    });
+  }
 
   return items;
 }
@@ -550,9 +732,64 @@ function renderPlayer() {
     button.setAttribute('aria-pressed', String(active));
   }
 
+  // Пока пользователь тянет ползунок, не перебиваем его значениями из main.
+  if (document.activeElement !== el.volumeRange) {
+    const volume = player.volume === undefined ? 1 : Number(player.volume);
+    const percent = Math.round(Math.min(1, Math.max(0, volume || 0)) * 100);
+    el.volumeRange.value = String(percent);
+    paintVolume(percent);
+  }
+
   setSwitch(el.rowStartMuted, player.startMuted);
   setSwitch(el.rowLoop, player.loop);
   setSwitch(el.rowPauseBlur, player.pauseOnBlur);
+}
+
+function renderRegion() {
+  const region = state.region || { preset: 'off', proxy: '' };
+  const regions = Array.isArray(state.regions) ? state.regions : [];
+  const signature = `${regions.map((item) => `${item.id}:${item.label}`).join('|')}#${region.preset}`;
+
+  if (signature !== regionSignature) {
+    regionSignature = signature;
+    el.regionSelect.replaceChildren(
+      ...regions.map((item) => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.label;
+        option.selected = item.id === region.preset;
+        return option;
+      }),
+    );
+    el.regionSelect.value = region.preset;
+  }
+
+  // Не перебиваем ввод, пока пользователь печатает адрес прокси.
+  if (document.activeElement !== el.regionProxy && el.regionProxy.value !== region.proxy) {
+    el.regionProxy.value = region.proxy;
+  }
+
+  el.regionProxyState.textContent = region.proxy
+    ? 'Прокси включён — сайт видит IP прокси.'
+    : 'Прокси не задан — сайт видит ваш IP.';
+
+  const check = state.regionCheck || { state: 'idle', text: 'Проверить' };
+  const checkLabel =
+    check.state === 'loading'
+      ? 'Проверяю…'
+      : check.state === 'done'
+        ? 'Готово'
+        : check.state === 'error'
+          ? 'Ошибка'
+          : 'Проверить';
+  el.regionIpValue.textContent = checkLabel;
+  el.regionIpValue.classList.toggle('is-error', check.state === 'error');
+  el.regionIpValue.classList.toggle('is-loading', check.state === 'loading');
+
+  const hasResult = check.state === 'done' || check.state === 'error';
+  el.regionIpResult.hidden = !hasResult;
+  el.regionIpResult.textContent = hasResult ? check.text : '';
+  el.regionIpResult.classList.toggle('is-error', check.state === 'error');
 }
 
 function renderPanel() {
@@ -566,17 +803,28 @@ function renderPanel() {
   el.panelVersion.textContent = `v${state.version || '—'} · Electron ${api.ui.electron}`;
   el.panelZoom.textContent = `${state.zoom || 100} %`;
 
-  setSwitch(el.rowMute, state.muted);
+  setSwitch(el.rowMute, !state.muted);
   setSwitch(el.rowPip, state.pip);
+  setSwitch(el.rowPipAuto, state.pipAuto);
+  setSwitch(el.rowPipAdaptive, state.pipAdaptive);
   setSwitch(el.rowOnTop, state.onTop);
   setSwitch(el.rowTray, state.closeToTray);
   setSwitch(el.rowAutostart, state.autostart);
   setSwitch(el.rowStartTray, state.startInTray);
+  setSwitch(el.rowAdSkip, state.adsSkip);
+
+  const appimage = state.appimage || { available: false, installed: false };
+  el.rowInstallApp.hidden = !appimage.available;
+  el.installAppLabel.textContent = appimage.installed
+    ? 'Удалить из меню приложений'
+    : 'Установить в приложения';
 
   renderCosmetics(state.cosmetics);
   renderDownloads(state.downloads);
   renderSleep();
   renderPlayer();
+  renderRegion();
+  applyPanelFilter();
 }
 
 function render() {
@@ -598,7 +846,22 @@ function render() {
 
   document.body.classList.toggle('is-muted', state.muted);
   document.body.classList.toggle('is-maximized', state.maximized);
-  el.titlebar.classList.toggle('is-hidden', state.chromeHidden);
+
+  // Режим PiP: обычная полоса уступает место компактному мини-плееру.
+  const pip = Boolean(state.pip);
+  document.body.classList.toggle('is-pip', pip);
+  el.titlebar.hidden = pip;
+  el.pipbar.hidden = !pip;
+  el.titlebar.classList.toggle('is-hidden', state.chromeHidden && !pip);
+  el.pipTitle.textContent = toastText || prettyTitle(state.title);
+  el.pipTitle.classList.toggle('is-toast', Boolean(toastText));
+  el.pipPlay.classList.toggle('is-playing', Boolean(state.playing));
+  el.pipPlay.title = state.playing ? 'Пауза' : 'Играть';
+  el.pipPlay.setAttribute('aria-label', state.playing ? 'Пауза' : 'Играть');
+  el.pipAuto.classList.toggle('is-on', Boolean(state.pipAuto));
+  el.pipAuto.setAttribute('aria-pressed', String(Boolean(state.pipAuto)));
+  el.pipAdaptive.classList.toggle('is-on', Boolean(state.pipAdaptive));
+  el.pipAdaptive.setAttribute('aria-pressed', String(Boolean(state.pipAdaptive)));
 
   el.max.title = state.maximized ? 'Восстановить' : 'Развернуть';
   el.max.setAttribute('aria-label', state.maximized ? 'Восстановить' : 'Развернуть');

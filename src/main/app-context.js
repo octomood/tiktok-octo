@@ -10,6 +10,7 @@
 const { app } = require('electron');
 const { TITLEBAR_H, MAX_CHROME_H, PANEL_W } = require('./shared');
 const { COSMETIC_RULES } = require('./cosmetic-catalog');
+const { REGION_PRESETS } = require('./region-catalog');
 const { writeState } = require('./store');
 
 const ctx = {
@@ -32,6 +33,7 @@ const ctx = {
   /** Настройки плеера, которых нет у сайта. */
   player: {
     speed: 1,
+    volume: 1,
     startMuted: false,
     loop: false,
     pauseOnBlur: false,
@@ -48,6 +50,12 @@ const ctx = {
     enabled: rule.default,
   })),
   pipActive: false,
+  /** Автолистание ленты в режиме PiP. */
+  pipAuto: true,
+  /** Подстраивать окно PiP под экран и пропорции видео. */
+  pipAdaptive: false,
+  /** Играет ли сейчас видео (для кнопки play/pause в полосе PiP). */
+  playing: false,
   unread: 0,
   /**
    * @type {{
@@ -78,6 +86,14 @@ const ctx = {
   sleepTimerMinutes: 0,
   autostart: false,
   startInTray: false,
+  /** Автоматически пролистывать рекламные ролики в ленте. */
+  adsSkip: false,
+  /** Подмена региона: пресет страны и адрес прокси (см. region.js). */
+  region: { preset: 'off', proxy: '' },
+  /** Результат проверки внешнего IP через текущий прокси. */
+  regionCheck: { state: 'idle', text: 'Проверить' },
+  /** Установлен ли AppImage в пользовательское меню приложений. */
+  appimageInstalled: false,
   toastSeq: 0,
 };
 
@@ -229,6 +245,9 @@ function currentState() {
     chromeHidden: ctx.htmlFullscreen,
     zoom: wc ? Math.round(wc.getZoomFactor() * 100) : 100,
     pip: ctx.pipActive,
+    pipAuto: ctx.pipAuto,
+    pipAdaptive: ctx.pipAdaptive,
+    playing: ctx.playing,
     unread: ctx.unread,
     panel: ctx.panelOpen,
     panelWidth: PANEL_W,
@@ -244,6 +263,14 @@ function currentState() {
     sleepTimerMinutes: ctx.sleepTimerMinutes,
     autostart: ctx.autostart,
     startInTray: ctx.startInTray,
+    adsSkip: ctx.adsSkip,
+    region: { ...ctx.region },
+    regionCheck: { ...ctx.regionCheck },
+    regions: REGION_PRESETS.map((preset) => ({ id: preset.id, label: preset.label })),
+    appimage: {
+      available: Boolean(process.env.APPIMAGE),
+      installed: ctx.appimageInstalled,
+    },
   };
 }
 

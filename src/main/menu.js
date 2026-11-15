@@ -6,6 +6,7 @@ const { openExternal } = require('./links');
 const { handleCommand } = require('./commands');
 const { showAbout } = require('./about');
 const cosmetics = require('./cosmetics');
+const region = require('./region');
 
 const isMac = process.platform === 'darwin';
 
@@ -155,6 +156,7 @@ function buildAppMenu() {
         { label: 'Полный экран', click: () => handleCommand('fullscreen') },
         { type: 'separator' },
         { label: 'Косметика', submenu: cosmetics.menuItems() },
+        { label: 'Регион', submenu: region.menuItems() },
         { type: 'separator' },
         { label: 'Инструменты разработчика', click: () => handleCommand('devtools') },
       ],
@@ -167,6 +169,10 @@ function buildAppMenu() {
         { type: 'separator' },
         { label: 'Поверх всех окон', click: () => handleCommand('onTop') },
         { label: 'Картинка в картинке', click: () => handleCommand('pip') },
+        { label: 'Следующее видео', click: () => handleCommand('feedNext') },
+        { label: 'Предыдущее видео', click: () => handleCommand('feedPrev') },
+        { label: 'Автолистание в PiP', click: () => handleCommand('pipAuto') },
+        { label: 'Адаптивный PiP', click: () => handleCommand('pipAdaptive') },
         { label: 'Без звука', click: () => handleCommand('mute') },
       ],
     },

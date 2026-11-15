@@ -5,6 +5,16 @@ const { app, ipcMain, globalShortcut, nativeTheme } = require('electron');
 // Тесты подменяют каталог профиля, чтобы не трогать реальную сессию и логин.
 if (process.env.OCTO_USER_DATA) app.setPath('userData', process.env.OCTO_USER_DATA);
 
+/**
+ * Аппаратный декодер на Linux — частая причина «звук идёт, картинка стоит»:
+ * драйвер отдаёт звук, но перестаёт проводить кадры в композитор. Для клиента
+ * ленты софт-декода 1080p достаточно, поэтому по умолчанию выключаем
+ * аппаратное декодирование на Linux. Вернуть можно OCTO_HW_VIDEO=1.
+ */
+if (process.platform === 'linux' && process.env.OCTO_HW_VIDEO !== '1') {
+  app.commandLine.appendSwitch('disable-accelerated-video-decode');
+}
+
 const { ctx, pushState, setChromeHeight, toast } = require('./app-context');
 const { buildAppMenu } = require('./menu');
 const { createWindow } = require('./window');
@@ -12,10 +22,17 @@ const { createTray, refreshTrayMenu, showWindow, destroyTray } = require('./tray
 const { handleCommand } = require('./commands');
 const { installWebContentsGuards } = require('./hardening');
 const { initUpdates } = require('./updates');
-const { initMpris } = require('./mpris');
+const { initMpris, isActive: mprisActive } = require('./mpris');
 const autostart = require('./autostart');
+const appimage = require('./appimage-install');
+const ads = require('./ads');
+const region = require('./region');
 const cosmetics = require('./cosmetics');
 const find = require('./find');
+
+const cliInstall = process.argv.includes('--install-appimage');
+const cliUninstall = process.argv.includes('--uninstall-appimage');
+const cliMode = cliInstall || cliUninstall;
 
 let mediaKeysFailed = false;
 
@@ -34,9 +51,16 @@ function registerMediaKeys() {
   };
   bind('MediaPlayPause', 'togglePlayback');
   bind('MediaStop', 'mute');
+
+  // MPRIS уже принимает next/previous по D-Bus. Если взять те же клавиши
+  // глобально, на некоторых DE лента прыгала бы через видео.
+  if (!mprisActive()) {
+    bind('MediaNextTrack', 'feedNext');
+    bind('MediaPreviousTrack', 'feedPrev');
+  }
 }
 
-const gotLock = app.requestSingleInstanceLock();
+const gotLock = cliMode ? true : app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
@@ -46,15 +70,36 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
+    if (cliMode) {
+      const result = cliInstall ? appimage.install() : appimage.uninstall();
+      if (result.ok) {
+        console.log(
+          `[octo] ${cliInstall ? 'installed' : 'uninstalled'}`,
+          result.appImage || result.desktop || '',
+        );
+      } else {
+        console.error('[octo] AppImage integration failed:', result.error);
+      }
+      app.quit();
+      return;
+    }
+
     nativeTheme.themeSource = 'dark';
     app.setAppUserModelId('app.octo.tiktok');
+    ctx.appimageInstalled = appimage.isInstalled();
+    ads.sync();
+    region.sync();
+    region.installIpc();
+    region.installLoginHandler();
 
     installWebContentsGuards();
-    // Переключатели косметики меняют меню и трей — пересобираем их после клика.
-    cosmetics.setOnChange(() => {
+    // Переключатели косметики и региона меняют меню и трей — пересобираем их.
+    const rebuildMenus = () => {
       buildAppMenu();
       refreshTrayMenu();
-    });
+    };
+    cosmetics.setOnChange(rebuildMenus);
+    region.setOnChange(rebuildMenus);
     buildAppMenu();
     createWindow();
 
@@ -62,6 +107,10 @@ if (!gotLock) {
       mute: () => handleCommand('mute'),
       onTop: () => handleCommand('onTop'),
       pip: () => handleCommand('pip'),
+      next: () => handleCommand('feedNext'),
+      prev: () => handleCommand('feedPrev'),
+      pipAuto: () => handleCommand('pipAuto'),
+      pipAdaptive: () => handleCommand('pipAdaptive'),
       panel: () => handleCommand('panel'),
       home: () => handleCommand('home'),
       show: () => {

@@ -3,6 +3,7 @@
 const { session } = require('electron');
 const { PARTITION, CHROME_UA, isTikTokUrl } = require('./shared');
 const downloads = require('./downloads');
+const region = require('./region');
 
 /**
  * Разрешения, которые реально нужны сайту.
@@ -32,6 +33,9 @@ function prepareSession() {
   // Окно могут пересоздать (macOS activate) — обработчики ставим один раз.
   if (preparedSessions.has(ses)) return ses;
   preparedSessions.add(ses);
+
+  // Accept-Language для TikTok и сохранённый прокси (см. region.js).
+  region.installSessionHooks(ses);
 
   ses.setUserAgent(CHROME_UA, 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7');
 

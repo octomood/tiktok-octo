@@ -39,22 +39,23 @@ window and a handful of shortcuts that make sense on a desktop.
 
 ## What's inside
 
-|                                     |                                                                                                                                                               |
-| :---------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **🪟&nbsp; A title bar of its own** | Back / forward / reload / home, a live page pill, unread count, native window buttons. Dragging and double-click to maximise come for free.                   |
-| **🔐&nbsp; Real login**             | A persistent `persist:octo-tiktok` session on disk — you stay signed in between launches. Google, Apple, Facebook and X OAuth windows open on top of the app. |
-| **🔎&nbsp; Find in page**           | <kbd>Ctrl</kbd>+<kbd>F</kbd> opens a compact bar with a `1/3` counter. The page slides down instead of being covered; <kbd>Esc</kbd> closes it.               |
-| **🎬&nbsp; Picture-in-picture**     | Send the current video into a floating window above everything else. Toolbar button or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>.                         |
-| **📌&nbsp; Always on top**          | Keep the feed above your work while you pretend to work. The mode survives restarts.                                                                          |
-| **🔇&nbsp; Instant mute**           | One click, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> or a media key. No reload, no state lost.                                                            |
-| **🗂&nbsp; Tray**                    | Hide the window, mute, pin, PiP, or enable "close to tray" and keep listening.                                                                                |
-| **⬇️&nbsp; Downloads**              | Files go through the system save dialog; progress lives in the title bar, and the result is a toast.                                                          |
-| **🔄&nbsp; Self-updating**          | Packaged builds check GitHub Releases and offer to restart when the update is ready.                                                                          |
-| **🔍&nbsp; Browser-grade zoom**     | Chromium steps from 50 to 300 %, remembered across restarts.                                                                                                  |
-| **🌍&nbsp; Links stay polite**      | Anything that isn't `tiktok.com` opens in your system browser. TikTok links with `target=_blank` stay inside the app.                                         |
-| **🧠&nbsp; It remembers**           | Window geometry, maximised state, zoom, mute, always-on-top and the last page you were on.                                                                    |
-| **🧯&nbsp; It survives**            | Failed loads retry with backoff, a crashed renderer is brought back, a hung page says so instead of dying silently.                                           |
-| **⛶&nbsp; Real fullscreen**         | Fullscreen video takes the whole window and the title bar gets out of the way.                                                                                |
+|                                     |                                                                                                                                                                        |
+| :---------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **🪟&nbsp; A title bar of its own** | Back / forward / reload / home, a live page pill, unread count, native window buttons. Dragging and double-click to maximise come for free.                            |
+| **🔐&nbsp; Real login**             | A persistent `persist:octo-tiktok` session on disk — you stay signed in between launches. Google, Apple, Facebook and X OAuth windows open on top of the app.          |
+| **🔎&nbsp; Find in page**           | <kbd>Ctrl</kbd>+<kbd>F</kbd> opens a compact bar with a `1/3` counter. The page slides down instead of being covered; <kbd>Esc</kbd> closes it.                        |
+| **🎬&nbsp; Picture-in-picture**     | A compact always-on-top mini player: auto-advance, previous/next and adaptive sizing for your screen. Toolbar button or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>. |
+| **📌&nbsp; Always on top**          | Keep the feed above your work while you pretend to work. The mode survives restarts.                                                                                   |
+| **🔇&nbsp; Sound & volume**         | Instant mute with a click, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> or a media key, plus a 0–100 % volume slider in the Playback panel.                           |
+| **🗂&nbsp; Tray**                    | Hide the window, mute, pin, PiP, or enable "close to tray" and keep listening.                                                                                         |
+| **⬇️&nbsp; Downloads**              | Files go through the system save dialog; progress lives in the title bar, and the result is a toast.                                                                   |
+| **🔄&nbsp; Self-updating**          | Packaged builds check GitHub Releases and offer to restart when the update is ready.                                                                                   |
+| **🔍&nbsp; Browser-grade zoom**     | Chromium steps from 50 to 300 %, remembered across restarts.                                                                                                           |
+| **🌍&nbsp; Links stay polite**      | Anything that isn't `tiktok.com` opens in your system browser. TikTok links with `target=_blank` stay inside the app.                                                  |
+| **🌐&nbsp; Region & proxy**         | Pick a country to change `Accept-Language`, `navigator.language`, timezone and geolocation. Bring your own SOCKS5/HTTP proxy to change the actual IP.                  |
+| **🧠&nbsp; It remembers**           | Window geometry, maximised state, zoom, mute, always-on-top and the last page you were on.                                                                             |
+| **🧯&nbsp; It survives**            | Failed loads retry with backoff, a crashed renderer is brought back, a hung page says so instead of dying silently.                                                    |
+| **⛶&nbsp; Real fullscreen**         | Fullscreen video takes the whole window and the title bar gets out of the way.                                                                                         |
 
 <div align="center">
   <img src="docs/findbar.png" width="820" alt="Find in page bar with a match counter under the title bar" />
@@ -62,25 +63,49 @@ window and a handful of shortcuts that make sense on a desktop.
   <sub><i>Find in page: the content shrinks, it is never covered.</i></sub>
 </div>
 
+## Region & proxy
+
+TikTok derives a lot from where a request comes from. The **Region** section in
+the panel changes what the browser tells the site — `Accept-Language`, the
+language in `navigator`, the `Intl`/`Date` timezone and geolocation coordinates —
+and can route the session through a proxy you provide.
+
+- Presets: Kazakhstan, Armenia, Georgia, Turkey, Serbia, UAE, Israel, USA,
+  Germany, Netherlands, UK, Poland.
+- The proxy field accepts `socks5://host:port`, `http://host:port` and
+  `http://user:pass@host:port`. It applies to the whole TikTok session, including
+  OAuth windows.
+- **Check external IP** sends a request through the same session and proxy, so
+  you can see the address and country TikTok is likely to see.
+- **Reset site data** removes TikTok cookies, cache and storage after a
+  confirmation. You will have to sign in again, and the site re-detects the
+  region from the current IP.
+- **The preset alone does not change your IP.** Without a proxy or a system-wide
+  VPN, the site still sees your real address; the preset only aligns the browser
+  signals with the country you picked.
+- The app ships no proxy list and no VPN. Use your own endpoint and follow
+  TikTok's terms.
+
 ## Shortcuts
 
-| Keys                                                                                                 | Action                                    |
-| :--------------------------------------------------------------------------------------------------- | :---------------------------------------- |
-| <kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd>                                            | Back / forward                            |
-| <kbd>Ctrl</kbd>+<kbd>F</kbd>                                                                         | Find in page                              |
-| <kbd>Enter</kbd> / <kbd>Shift</kbd>+<kbd>Enter</kbd>, <kbd>F3</kbd> / <kbd>Shift</kbd>+<kbd>F3</kbd> | Next / previous match                     |
-| <kbd>Esc</kbd>                                                                                       | Close the find bar, then leave fullscreen |
-| <kbd>Ctrl</kbd>+<kbd>R</kbd>                                                                         | Reload                                    |
-| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>                                                        | Reload, bypassing cache                   |
-| <kbd>F5</kbd>                                                                                        | Reload                                    |
-| <kbd>Ctrl</kbd>+<kbd>=</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd> / <kbd>Ctrl</kbd>+<kbd>0</kbd>           | Zoom in / out / reset                     |
-| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd>                                                        | Mute / unmute                             |
-| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>                                                        | Picture-in-picture                        |
-| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>                                                        | Always on top                             |
-| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd>                                                        | DevTools                                  |
-| <kbd>Ctrl</kbd>+<kbd>W</kbd> / <kbd>Ctrl</kbd>+<kbd>Q</kbd>                                          | Close window / quit                       |
-| <kbd>F11</kbd>                                                                                       | Fullscreen                                |
-| Media keys                                                                                           | Play / pause, stop (mute)                 |
+| Keys                                                                                                 | Action                                           |
+| :--------------------------------------------------------------------------------------------------- | :----------------------------------------------- |
+| <kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd>                                            | Back / forward                                   |
+| <kbd>Ctrl</kbd>+<kbd>F</kbd>                                                                         | Find in page                                     |
+| <kbd>Enter</kbd> / <kbd>Shift</kbd>+<kbd>Enter</kbd>, <kbd>F3</kbd> / <kbd>Shift</kbd>+<kbd>F3</kbd> | Next / previous match                            |
+| <kbd>Esc</kbd>                                                                                       | Close find, leave PiP, then leave fullscreen     |
+| <kbd>Ctrl</kbd>+<kbd>R</kbd>                                                                         | Reload                                           |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>                                                        | Reload, bypassing cache                          |
+| <kbd>F5</kbd>                                                                                        | Reload                                           |
+| <kbd>Ctrl</kbd>+<kbd>=</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd> / <kbd>Ctrl</kbd>+<kbd>0</kbd>           | Zoom in / out / reset                            |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd>                                                        | Mute / unmute                                    |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>                                                        | Picture-in-picture                               |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>←</kbd> / <kbd>→</kbd>                                         | Previous / next video                            |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>                                                        | Always on top                                    |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd>                                                        | DevTools                                         |
+| <kbd>Ctrl</kbd>+<kbd>W</kbd> / <kbd>Ctrl</kbd>+<kbd>Q</kbd>                                          | Close window / quit                              |
+| <kbd>F11</kbd>                                                                                       | Fullscreen                                       |
+| Media keys                                                                                           | Play / pause, stop (mute), next / previous video |
 
 On macOS use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd>.
 
@@ -134,8 +159,12 @@ src/
     window.js      BrowserWindow, geometry, close-to-tray
     view.js        WebContentsView with the site, history, retries, fullscreen
     session.js     persistent session, permissions, downloads
+    region.js      region presets, Accept-Language and proxy
+    region-catalog.js  countries, locales and timezones
+    region-preload.js  language/timezone/geolocation patches in the page
     store.js       JSON state in userData
     commands.js    the command table behind every button and shortcut
+    pip.js         mini player, auto-advance and adaptive PiP sizing
     find.js        find in page
     shortcuts.js   before-input-event handling
     menu.js        app menu and context menu
@@ -150,7 +179,9 @@ src/
     styles.css     their styling
     titlebar.js    state, toasts, keyboard plumbing
     assets/
-      tiktok-octo.png  brand mark (cropped and cleaned tiktok-octo.jpg)
+      tiktok-octo.png    source photo of the glass octopus
+      octo-logo-mark.png mark only, transparent (title bar, narrow nav rail)
+      octo-logo-full.png mark + tt-octo lockup (wide nav, header)
 test/
   smoke.spec.js  Playwright smoke test
 build/
@@ -159,11 +190,13 @@ build/
 
 The site does not live in a `<webview>` or an `<iframe>` — it runs in a separate
 `WebContentsView` pinned under the title bar. Our UI is an ordinary Electron page;
-TikTok's content is an isolated process with no preload, no Node and
-`sandbox: true`. The site cannot reach our interface, and we steer it only through
-`webContents`. Permissions are an explicit allowlist (camera, microphone,
-notifications, fullscreen, clipboard write, pointer lock) granted only to
-`tiktok.com`; every other navigation goes to the system browser.
+TikTok's content is an isolated process with no Node and `sandbox: true`. Its only
+preload is `region-preload.js`: it applies the selected region's language,
+timezone and geolocation patches in the main world, exposes nothing to the page
+and keeps `contextIsolation` on. The site cannot reach our interface, and we steer
+it only through `webContents`. Permissions are an explicit allowlist (camera,
+microphone, notifications, fullscreen, clipboard write, pointer lock) granted only
+to `tiktok.com`; every other navigation goes to the system browser.
 
 Small things that took actual work:
 
@@ -181,29 +214,40 @@ Small things that took actual work:
   the site view is pushed down instead of being overlapped.
 - **HTML fullscreen** is handled separately: on `enter-html-full-screen` the view
   stretches over the whole window and the title bar hides.
+- **Region patches** live in a sandboxed preload because `Intl` and `Date` read
+  the system timezone directly and page scripts start before our renderer can
+  intervene. The function is serialized into the main world before the site's
+  own scripts run; it exposes nothing back to the page.
 
 ## Known limits
 
 - On **Wayland** the compositor decides where the window goes and how big it is, so
   the saved geometry may be ignored. On X11, Windows and macOS it works as usual.
-- **PiP** and **global media keys** depend on the desktop portal; on some Wayland
-  setups they may not work (the app tells you when it can).
+- **PiP** is our own mini player, so it does not need the desktop portal. On
+  Wayland the compositor may still ignore window size and position. **Global
+  media keys** do depend on the portal and may not work on some setups (the app
+  tells you when it can).
 - The tray needs **StatusNotifier** on Linux; without it the app simply runs
   without an icon.
 - **Unread badges** appear where the desktop supports them (macOS dock, Unity
   launcher); the count is read from the page title, not from private requests.
 - **Auto-update** works only for packaged builds published through GitHub
   Releases.
+- **Region presets** change browser-side signals only. Without your own proxy or
+  a system-wide VPN, TikTok still sees your real IP address; the app bundles no
+  proxy list and no VPN.
 - Ads, recommendations and account limits are exactly like on the web — the
   client doesn't touch them.
 
 ## Legal
 
 The app's code is MIT-licensed. TikTok, its logos and its content belong to
-TikTok Ltd. This project is not affiliated with TikTok, does not modify their
-traffic and does not bypass protections: it is a browser in the shape of a window.
-Do not publish builds in stores under someone else's name and logo — for personal
-use there is nothing to worry about.
+TikTok Ltd. This project is not affiliated with TikTok, does not parse private
+endpoints, spoof signatures or bypass technical protections. Region presets only
+align browser locale, timezone and geolocation; the optional proxy routes traffic
+through an endpoint you choose. Your use of TikTok remains subject to their terms
+and your local law. Do not publish builds in stores under someone else's name and
+logo — for personal use there is nothing to worry about.
 
 <div align="center">
   <sub>Made with glass, gradients and <code>WebContentsView</code>.</sub>

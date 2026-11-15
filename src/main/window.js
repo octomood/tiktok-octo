@@ -7,12 +7,15 @@ const { ctx, layout, pushState, setCloseToTray } = require('./app-context');
 const { readState, writeState } = require('./store');
 const { createView } = require('./view');
 const { handleShortcut } = require('./shortcuts');
-const { refreshPipState } = require('./commands');
 const { refreshTrayMenu } = require('./tray');
 const player = require('./player');
+const media = require('./media');
+const pip = require('./pip');
 
 function saveGeometry(win) {
-  writeState({ bounds: win.getNormalBounds(), maximized: win.isMaximized() });
+  // В PiP окно маленькое — сохраняем геометрию, которая была до режима.
+  const saved = pip.savedGeometry();
+  writeState(saved || { bounds: win.getNormalBounds(), maximized: win.isMaximized() });
 }
 
 function createWindow() {
@@ -54,6 +57,19 @@ function createWindow() {
 
   const startHidden = ctx.startInTray || process.argv.includes('--hidden');
 
+  // Свернули во время воспроизведения — после возврата продолжим сами:
+  // Chromium иногда ставит видео на паузу в фоне, а сайт этого не замечает.
+  let resumeOnReturn = false;
+  const rememberPlayback = () => {
+    // При включённой «паузе в фоне» решение остаётся за пользователем.
+    resumeOnReturn = ctx.playing && !ctx.player.pauseOnBlur;
+  };
+  const resumePlayback = () => {
+    if (!resumeOnReturn) return;
+    resumeOnReturn = false;
+    media.resume();
+  };
+
   win.loadFile(path.join(__dirname, '../renderer/index.html'));
 
   win.once('ready-to-show', () => {
@@ -84,25 +100,27 @@ function createWindow() {
     layout();
     pushState();
   });
-  win.on('focus', () => {
-    // PiP могли закрыть из плавающего окна — сверяемся со страницей.
-    refreshPipState();
-  });
   win.on('show', () => {
     layout();
     win.webContents.invalidate();
+    resumePlayback();
     refreshTrayMenu();
   });
   win.on('hide', () => {
+    rememberPlayback();
     player.pauseForBackground();
     refreshTrayMenu();
   });
   win.on('minimize', () => {
+    rememberPlayback();
     player.pauseForBackground();
     refreshTrayMenu();
   });
   win.on('blur', () => player.pauseForBackground());
-  win.on('restore', refreshTrayMenu);
+  win.on('restore', () => {
+    resumePlayback();
+    refreshTrayMenu();
+  });
 
   win.on('close', (event) => {
     const state = readState();
@@ -116,6 +134,7 @@ function createWindow() {
   });
 
   win.on('closed', () => {
+    pip.reset();
     ctx.win = null;
     ctx.view = null;
     refreshTrayMenu();

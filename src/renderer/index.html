@@ -12,11 +12,134 @@
   </head>
   <body>
     <div class="chrome" id="chrome">
+      <header class="pipbar" id="pipbar" hidden>
+        <button
+          type="button"
+          class="icon-btn"
+          id="btnPipPrev"
+          title="Предыдущее видео (Ctrl+Shift+←)"
+          aria-label="Предыдущее видео"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12.5 4.5 7 10l5.5 5.5" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="icon-btn pip-play"
+          id="btnPipPlay"
+          title="Играть / пауза"
+          aria-label="Играть"
+        >
+          <svg class="ico-play" viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M7.4 4.9 15.3 10l-7.9 5.1z" fill="currentColor" />
+          </svg>
+          <svg
+            class="ico-pause"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M7.2 5v10M12.8 5v10" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="icon-btn"
+          id="btnPipNext"
+          title="Следующее видео (Ctrl+Shift+→)"
+          aria-label="Следующее видео"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M7.5 4.5 13 10l-5.5 5.5" />
+          </svg>
+        </button>
+        <span class="pip-title" id="pipTitle">TikTok</span>
+        <button
+          type="button"
+          class="icon-btn"
+          id="btnPipAuto"
+          title="Автолистание"
+          aria-label="Автолистание"
+          aria-pressed="true"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 8.5A4.5 4.5 0 0 1 8.5 4H16" />
+            <path d="m13.5 1.5 2.5 2.5-2.5 2.5" />
+            <path d="M16 11.5A4.5 4.5 0 0 1 11.5 16H4" />
+            <path d="m6.5 18.5-2.5-2.5 2.5-2.5" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="icon-btn"
+          id="btnPipAdaptive"
+          title="Адаптивный режим"
+          aria-label="Адаптивный режим"
+          aria-pressed="false"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 7.5V5a2 2 0 0 1 2-2h2.5" />
+            <path d="M17 7.5V5a2 2 0 0 0-2-2h-2.5" />
+            <path d="M3 12.5V15a2 2 0 0 0 2 2h2.5" />
+            <path d="M17 12.5V15a2 2 0 0 1-2 2h-2.5" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="icon-btn"
+          id="btnPipClose"
+          title="Выйти из PiP (Esc)"
+          aria-label="Выйти из картинки в картинке"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+          >
+            <path d="M5.8 5.8l8.4 8.4M14.2 5.8l-8.4 8.4" />
+          </svg>
+        </button>
+      </header>
+
       <header class="titlebar" id="titlebar">
         <div class="brand" title="TikTok octo">
           <img
             class="brand-mark"
-            src="assets/tiktok-octo.png"
+            src="assets/octo-logo-mark.png"
             alt="TikTok octo"
             draggable="false"
           />
@@ -365,221 +488,698 @@
         </button>
       </header>
 
+      <div class="panel-search">
+        <svg
+          class="panel-search-icon"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="9" cy="9" r="5.2" />
+          <path d="m13 13 4 4" />
+        </svg>
+        <input
+          id="panelSearch"
+          class="panel-search-input"
+          type="search"
+          placeholder="Поиск функций…"
+          spellcheck="false"
+          autocomplete="off"
+          aria-label="Поиск функций"
+        />
+        <button
+          type="button"
+          class="panel-search-clear"
+          id="btnPanelSearchClear"
+          title="Очистить поиск"
+          aria-label="Очистить поиск"
+          hidden
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+          >
+            <path d="M6.4 6.4l7.2 7.2M13.6 6.4l-7.2 7.2" />
+          </svg>
+        </button>
+      </div>
+
       <div class="panel-body">
-        <section class="panel-section">
-          <h2 class="panel-section-title">Страница</h2>
-          <button type="button" class="panel-row" data-cmd="palette">
-            <span class="panel-row-label">Палитра команд</span>
-            <kbd>Ctrl K</kbd>
-          </button>
-          <button type="button" class="panel-row" data-cmd="home">
-            <span class="panel-row-label">Главная</span>
-          </button>
-          <button type="button" class="panel-row" data-cmd="hardReload">
-            <span class="panel-row-label">Обновить без кэша</span>
-          </button>
-          <button type="button" class="panel-row" data-cmd="find">
-            <span class="panel-row-label">Поиск по странице</span>
-            <kbd>Ctrl F</kbd>
-          </button>
-          <button type="button" class="panel-row" data-cmd="screenshot">
-            <span class="panel-row-label">Снимок кадра</span>
-            <kbd>Ctrl Shift S</kbd>
-          </button>
-          <div class="panel-row panel-row--static">
-            <span class="panel-row-label">Масштаб</span>
-            <span class="stepper">
-              <button type="button" class="stepper-btn" data-cmd="zoomOut" aria-label="Мельче">
-                −
-              </button>
-              <button
-                type="button"
-                class="stepper-value"
-                id="panelZoom"
-                data-cmd="zoomReset"
-                title="Сбросить до 100 %"
+        <p class="panel-empty panel-empty--search" id="panelNoResults" hidden>Ничего не найдено</p>
+
+        <section class="panel-cat" data-cat="page">
+          <button
+            type="button"
+            class="panel-cat-head"
+            id="catPageHead"
+            data-cat-head="page"
+            aria-expanded="true"
+            aria-controls="catPage"
+          >
+            <span class="panel-cat-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
               >
-                100 %
-              </button>
-              <button type="button" class="stepper-btn" data-cmd="zoomIn" aria-label="Крупнее">
-                +
-              </button>
+                <rect x="3" y="4" width="14" height="12" rx="2" />
+                <path d="M3 7.6h14" />
+                <path d="M5.6 5.8h.01M7.9 5.8h.01" />
+              </svg>
             </span>
+            <span class="panel-cat-title">Страница</span>
+            <svg
+              class="panel-cat-chevron"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 8 4 4 4-4" />
+            </svg>
+          </button>
+          <div class="panel-cat-body" id="catPage" role="group" aria-labelledby="catPageHead">
+            <button type="button" class="panel-row" data-cmd="palette">
+              <span class="panel-row-label">Палитра команд</span>
+              <kbd>Ctrl K</kbd>
+            </button>
+            <button type="button" class="panel-row" data-cmd="home">
+              <span class="panel-row-label">Главная</span>
+            </button>
+            <button type="button" class="panel-row" data-cmd="hardReload">
+              <span class="panel-row-label">Обновить без кэша</span>
+            </button>
+            <button type="button" class="panel-row" data-cmd="find">
+              <span class="panel-row-label">Поиск по странице</span>
+              <kbd>Ctrl F</kbd>
+            </button>
+            <button type="button" class="panel-row" data-cmd="screenshot">
+              <span class="panel-row-label">Снимок кадра</span>
+              <kbd>Ctrl Shift S</kbd>
+            </button>
+            <div class="panel-row panel-row--static">
+              <span class="panel-row-label">Масштаб</span>
+              <span class="stepper">
+                <button type="button" class="stepper-btn" data-cmd="zoomOut" aria-label="Мельче">
+                  −
+                </button>
+                <button
+                  type="button"
+                  class="stepper-value"
+                  id="panelZoom"
+                  data-cmd="zoomReset"
+                  title="Сбросить до 100 %"
+                >
+                  100 %
+                </button>
+                <button type="button" class="stepper-btn" data-cmd="zoomIn" aria-label="Крупнее">
+                  +
+                </button>
+              </span>
+            </div>
           </div>
         </section>
 
-        <section class="panel-section">
-          <h2 class="panel-section-title">Воспроизведение</h2>
+        <section class="panel-cat" data-cat="playback">
           <button
             type="button"
-            class="panel-row"
-            id="rowMute"
-            role="switch"
-            aria-checked="false"
-            data-cmd="mute"
+            class="panel-cat-head"
+            id="catPlaybackHead"
+            data-cat-head="playback"
+            aria-expanded="false"
+            aria-controls="catPlayback"
           >
-            <span class="panel-row-label">Звук</span>
-            <span class="switch" aria-hidden="true"></span>
-          </button>
-          <button
-            type="button"
-            class="panel-row"
-            id="rowPip"
-            role="switch"
-            aria-checked="false"
-            data-cmd="pip"
-          >
-            <span class="panel-row-label">Картинка в картинке</span>
-            <span class="switch" aria-hidden="true"></span>
-          </button>
-          <button
-            type="button"
-            class="panel-row"
-            id="rowOnTop"
-            role="switch"
-            aria-checked="false"
-            data-cmd="onTop"
-          >
-            <span class="panel-row-label">Поверх всех окон</span>
-            <span class="switch" aria-hidden="true"></span>
-          </button>
-          <button type="button" class="panel-row" data-cmd="togglePlayback">
-            <span class="panel-row-label">Играть / пауза</span>
-            <kbd>Media</kbd>
-          </button>
-          <div class="panel-row panel-row--static">
-            <span class="panel-row-label" id="sleepLabel">Таймер сна</span>
-            <span class="timer-group" role="group" aria-label="Таймер сна">
-              <button type="button" class="timer-btn" data-sleep="15" title="15 минут">15</button>
-              <button type="button" class="timer-btn" data-sleep="30" title="30 минут">30</button>
-              <button type="button" class="timer-btn" data-sleep="60" title="60 минут">60</button>
-              <button
-                type="button"
-                class="timer-btn timer-btn--off"
-                data-sleep="0"
-                title="Выключить таймер"
-                aria-label="Выключить таймер"
+            <span class="panel-cat-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
               >
-                ×
-              </button>
+                <circle cx="10" cy="10" r="7" />
+                <path d="M8.4 7.2 13 10l-4.6 2.8z" />
+              </svg>
             </span>
+            <span class="panel-cat-title">Воспроизведение</span>
+            <svg
+              class="panel-cat-chevron"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 8 4 4 4-4" />
+            </svg>
+          </button>
+          <div
+            class="panel-cat-body"
+            id="catPlayback"
+            role="group"
+            aria-labelledby="catPlaybackHead"
+            hidden
+          >
+            <button
+              type="button"
+              class="panel-row"
+              id="rowMute"
+              role="switch"
+              aria-checked="true"
+              data-cmd="mute"
+            >
+              <span class="panel-row-label">Звук</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+            <div class="panel-row panel-row--static">
+              <label class="panel-row-label" for="volumeRange">Громкость</label>
+              <span class="volume-group">
+                <input
+                  id="volumeRange"
+                  class="volume-range"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value="100"
+                  aria-label="Громкость"
+                />
+                <span class="volume-value" id="volumeValue">100 %</span>
+              </span>
+            </div>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowPip"
+              role="switch"
+              aria-checked="false"
+              data-cmd="pip"
+            >
+              <span class="panel-row-label">Картинка в картинке</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowPipAuto"
+              role="switch"
+              aria-checked="true"
+              data-cmd="pipAuto"
+            >
+              <span class="panel-row-label">Автолистание в PiP</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowPipAdaptive"
+              role="switch"
+              aria-checked="false"
+              data-cmd="pipAdaptive"
+            >
+              <span class="panel-row-label">Адаптивный PiP</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowOnTop"
+              role="switch"
+              aria-checked="false"
+              data-cmd="onTop"
+            >
+              <span class="panel-row-label">Поверх всех окон</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="panel-row" data-cmd="togglePlayback">
+              <span class="panel-row-label">Играть / пауза</span>
+              <kbd>Media</kbd>
+            </button>
+            <div class="panel-row panel-row--static">
+              <span class="panel-row-label" id="sleepLabel">Таймер сна</span>
+              <span class="timer-group" role="group" aria-label="Таймер сна">
+                <button type="button" class="timer-btn" data-sleep="15" title="15 минут">15</button>
+                <button type="button" class="timer-btn" data-sleep="30" title="30 минут">30</button>
+                <button type="button" class="timer-btn" data-sleep="60" title="60 минут">60</button>
+                <button
+                  type="button"
+                  class="timer-btn timer-btn--off"
+                  data-sleep="0"
+                  title="Выключить таймер"
+                  aria-label="Выключить таймер"
+                >
+                  ×
+                </button>
+              </span>
+            </div>
           </div>
         </section>
 
-        <section class="panel-section">
-          <h2 class="panel-section-title">Плеер</h2>
-          <div class="panel-row panel-row--static">
-            <span class="panel-row-label">Скорость</span>
-            <span class="speed-group" role="group" aria-label="Скорость воспроизведения">
-              <button type="button" class="speed-btn" data-player-speed="0.5">0.5×</button>
-              <button type="button" class="speed-btn" data-player-speed="1">1×</button>
-              <button type="button" class="speed-btn" data-player-speed="1.5">1.5×</button>
-              <button type="button" class="speed-btn" data-player-speed="2">2×</button>
+        <section class="panel-cat" data-cat="player">
+          <button
+            type="button"
+            class="panel-cat-head"
+            id="catPlayerHead"
+            data-cat-head="player"
+            aria-expanded="false"
+            aria-controls="catPlayer"
+          >
+            <span class="panel-cat-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M4 6.5h12M4 10h12M4 13.5h12" />
+                <circle cx="7.6" cy="6.5" r="1.5" />
+                <circle cx="12.4" cy="10" r="1.5" />
+                <circle cx="6.4" cy="13.5" r="1.5" />
+              </svg>
             </span>
+            <span class="panel-cat-title">Плеер</span>
+            <svg
+              class="panel-cat-chevron"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 8 4 4 4-4" />
+            </svg>
+          </button>
+          <div
+            class="panel-cat-body"
+            id="catPlayer"
+            role="group"
+            aria-labelledby="catPlayerHead"
+            hidden
+          >
+            <div class="panel-row panel-row--static">
+              <span class="panel-row-label">Скорость</span>
+              <span class="speed-group" role="group" aria-label="Скорость воспроизведения">
+                <button type="button" class="speed-btn" data-player-speed="0.5">0.5×</button>
+                <button type="button" class="speed-btn" data-player-speed="1">1×</button>
+                <button type="button" class="speed-btn" data-player-speed="1.5">1.5×</button>
+                <button type="button" class="speed-btn" data-player-speed="2">2×</button>
+              </span>
+            </div>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowStartMuted"
+              role="switch"
+              aria-checked="false"
+              data-player-toggle="startMuted"
+            >
+              <span class="panel-row-label">Запускать без звука</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowLoop"
+              role="switch"
+              aria-checked="false"
+              data-player-toggle="loop"
+            >
+              <span class="panel-row-label">Повторять видео</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowPauseBlur"
+              role="switch"
+              aria-checked="false"
+              data-player-toggle="pauseOnBlur"
+            >
+              <span class="panel-row-label">Пауза в фоне</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
           </div>
-          <button
-            type="button"
-            class="panel-row"
-            id="rowStartMuted"
-            role="switch"
-            aria-checked="false"
-            data-player-toggle="startMuted"
-          >
-            <span class="panel-row-label">Запускать без звука</span>
-            <span class="switch" aria-hidden="true"></span>
-          </button>
-          <button
-            type="button"
-            class="panel-row"
-            id="rowLoop"
-            role="switch"
-            aria-checked="false"
-            data-player-toggle="loop"
-          >
-            <span class="panel-row-label">Повторять видео</span>
-            <span class="switch" aria-hidden="true"></span>
-          </button>
-          <button
-            type="button"
-            class="panel-row"
-            id="rowPauseBlur"
-            role="switch"
-            aria-checked="false"
-            data-player-toggle="pauseOnBlur"
-          >
-            <span class="panel-row-label">Пауза в фоне</span>
-            <span class="switch" aria-hidden="true"></span>
-          </button>
         </section>
 
-        <section class="panel-section">
-          <h2 class="panel-section-title">Загрузки</h2>
-          <div class="download-list" id="panelDownloads"></div>
-          <p class="panel-empty" id="downloadsEmpty">Пока ничего не скачано</p>
-          <button type="button" class="panel-row" data-cmd="openDownloads">
-            <span class="panel-row-label">Открыть папку загрузок</span>
+        <section class="panel-cat" data-cat="downloads">
+          <button
+            type="button"
+            class="panel-cat-head"
+            id="catDownloadsHead"
+            data-cat-head="downloads"
+            aria-expanded="false"
+            aria-controls="catDownloads"
+          >
+            <span class="panel-cat-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M10 3.4v8.2" />
+                <path d="m6.7 8.4 3.3 3.3 3.3-3.3" />
+                <path d="M4.2 13.4v1.4a1.7 1.7 0 0 0 1.7 1.7h8.2a1.7 1.7 0 0 0 1.7-1.7v-1.4" />
+              </svg>
+            </span>
+            <span class="panel-cat-title">Загрузки</span>
+            <svg
+              class="panel-cat-chevron"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 8 4 4 4-4" />
+            </svg>
           </button>
-          <button type="button" class="panel-row" data-cmd="downloadClear">
-            <span class="panel-row-label">Очистить список</span>
-          </button>
+          <div
+            class="panel-cat-body"
+            id="catDownloads"
+            role="group"
+            aria-labelledby="catDownloadsHead"
+            hidden
+          >
+            <div class="download-list" id="panelDownloads"></div>
+            <p class="panel-empty" id="downloadsEmpty">Пока ничего не скачано</p>
+            <button type="button" class="panel-row" data-cmd="openDownloads">
+              <span class="panel-row-label">Открыть папку загрузок</span>
+            </button>
+            <button type="button" class="panel-row" data-cmd="downloadClear">
+              <span class="panel-row-label">Очистить список</span>
+            </button>
+          </div>
         </section>
 
-        <section class="panel-section">
-          <h2 class="panel-section-title">Косметика</h2>
-          <div class="panel-list" id="panelCosmetics"></div>
+        <section class="panel-cat" data-cat="cosmetics">
+          <button
+            type="button"
+            class="panel-cat-head"
+            id="catCosmeticsHead"
+            data-cat-head="cosmetics"
+            aria-expanded="false"
+            aria-controls="catCosmetics"
+          >
+            <span class="panel-cat-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M9.2 3.4 10.4 7l3.6 1.2-3.6 1.2-1.2 3.6-1.2-3.6L4.4 8.2 8 7z" />
+                <path d="m14.8 12.6.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z" />
+              </svg>
+            </span>
+            <span class="panel-cat-title">Косметика</span>
+            <svg
+              class="panel-cat-chevron"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 8 4 4 4-4" />
+            </svg>
+          </button>
+          <div
+            class="panel-cat-body"
+            id="catCosmetics"
+            role="group"
+            aria-labelledby="catCosmeticsHead"
+            hidden
+          >
+            <div class="panel-list" id="panelCosmetics"></div>
+          </div>
         </section>
 
-        <section class="panel-section">
-          <h2 class="panel-section-title">Приложение</h2>
+        <section class="panel-cat" data-cat="ads">
           <button
             type="button"
-            class="panel-row"
-            id="rowAutostart"
-            role="switch"
-            aria-checked="false"
-            data-cmd="autostart"
+            class="panel-cat-head"
+            id="catAdsHead"
+            data-cat-head="ads"
+            aria-expanded="false"
+            aria-controls="catAds"
           >
-            <span class="panel-row-label">Автозапуск</span>
-            <span class="switch" aria-hidden="true"></span>
+            <span class="panel-cat-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M4.2 6.6 9.4 10l-5.2 3.4z" />
+                <path d="M10.6 6.6 15.8 10l-5.2 3.4z" />
+                <path d="M16.8 6.2v7.6" />
+              </svg>
+            </span>
+            <span class="panel-cat-title">Реклама</span>
+            <svg
+              class="panel-cat-chevron"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 8 4 4 4-4" />
+            </svg>
           </button>
+          <div class="panel-cat-body" id="catAds" role="group" aria-labelledby="catAdsHead" hidden>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowAdSkip"
+              role="switch"
+              aria-checked="false"
+              data-cmd="adsSkip"
+            >
+              <span class="panel-row-label">Пропускать рекламу</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+            <p class="panel-note">Автоматически пролистывает рекламные ролики в ленте.</p>
+          </div>
+        </section>
+
+        <section class="panel-cat" data-cat="region">
           <button
             type="button"
-            class="panel-row"
-            id="rowStartTray"
-            role="switch"
-            aria-checked="false"
-            data-cmd="startInTray"
+            class="panel-cat-head"
+            id="catRegionHead"
+            data-cat-head="region"
+            aria-expanded="false"
+            aria-controls="catRegion"
           >
-            <span class="panel-row-label">Запускать свёрнутым</span>
-            <span class="switch" aria-hidden="true"></span>
+            <span class="panel-cat-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="10" cy="10" r="6.5" />
+                <path d="M3.6 10h12.8" />
+                <path
+                  d="M10 3.5c1.8 1.8 2.8 4 2.8 6.5s-1 4.7-2.8 6.5c-1.8-1.8-2.8-4-2.8-6.5s1-4.7 2.8-6.5Z"
+                />
+              </svg>
+            </span>
+            <span class="panel-cat-title">Регион</span>
+            <svg
+              class="panel-cat-chevron"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 8 4 4 4-4" />
+            </svg>
           </button>
+          <div
+            class="panel-cat-body"
+            id="catRegion"
+            role="group"
+            aria-labelledby="catRegionHead"
+            hidden
+          >
+            <div class="panel-row panel-row--static">
+              <label class="panel-row-label" for="regionSelect">Страна</label>
+              <select id="regionSelect" class="panel-select" aria-label="Страна региона"></select>
+            </div>
+            <div class="panel-field">
+              <label class="panel-field-label" for="regionProxy">Прокси для смены IP</label>
+              <input
+                id="regionProxy"
+                class="panel-input"
+                type="text"
+                placeholder="socks5://127.0.0.1:1080"
+                spellcheck="false"
+                autocomplete="off"
+                aria-label="Адрес прокси"
+              />
+              <div class="panel-field-actions">
+                <button type="button" class="panel-mini" data-cmd="regionProxyApply">
+                  Применить
+                </button>
+                <button type="button" class="panel-mini" data-cmd="regionProxyClear">
+                  Сбросить
+                </button>
+              </div>
+            </div>
+            <p class="panel-note" id="regionProxyState">Прокси не задан — сайт видит ваш IP.</p>
+            <button type="button" class="panel-row" data-cmd="regionCheckIp">
+              <span class="panel-row-label">Внешний IP</span>
+              <span class="panel-value" id="regionIpValue">Проверить</span>
+            </button>
+            <p class="panel-result" id="regionIpResult" hidden></p>
+            <button type="button" class="panel-row panel-row--danger" data-cmd="regionResetData">
+              <span class="panel-row-label">Сбросить данные сайта</span>
+            </button>
+            <p class="panel-note">
+              Проверка идёт через текущий прокси. Сброс удалит cookies, кэш и вход в TikTok, чтобы
+              сайт заново определил регион по IP.
+            </p>
+            <p class="panel-note">
+              Страна меняет язык, часовой пояс и геолокацию страницы. IP меняется только через
+              прокси или системный VPN.
+            </p>
+          </div>
+        </section>
+
+        <section class="panel-cat" data-cat="app">
           <button
             type="button"
-            class="panel-row"
-            id="rowTray"
-            role="switch"
-            aria-checked="false"
-            data-cmd="closeToTray"
+            class="panel-cat-head"
+            id="catAppHead"
+            data-cat-head="app"
+            aria-expanded="false"
+            aria-controls="catApp"
           >
-            <span class="panel-row-label">Закрывать в трей</span>
-            <span class="switch" aria-hidden="true"></span>
+            <span class="panel-cat-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="3.5" y="3.5" width="5.2" height="5.2" rx="1.2" />
+                <rect x="11.3" y="3.5" width="5.2" height="5.2" rx="1.2" />
+                <rect x="3.5" y="11.3" width="5.2" height="5.2" rx="1.2" />
+                <rect x="11.3" y="11.3" width="5.2" height="5.2" rx="1.2" />
+              </svg>
+            </span>
+            <span class="panel-cat-title">Приложение</span>
+            <svg
+              class="panel-cat-chevron"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 8 4 4 4-4" />
+            </svg>
           </button>
-          <button type="button" class="panel-row" data-cmd="openDownloads">
-            <span class="panel-row-label">Папка загрузок</span>
-          </button>
-          <button type="button" class="panel-row" data-cmd="devtools">
-            <span class="panel-row-label">Инструменты разработчика</span>
-            <kbd>Ctrl Shift I</kbd>
-          </button>
-          <button type="button" class="panel-row" data-cmd="checkUpdates">
-            <span class="panel-row-label">Проверить обновления</span>
-          </button>
-          <button type="button" class="panel-row" data-cmd="about">
-            <span class="panel-row-label">О программе</span>
-          </button>
-          <button type="button" class="panel-row panel-row--danger" data-cmd="quit">
-            <span class="panel-row-label">Выход</span>
-          </button>
+          <div class="panel-cat-body" id="catApp" role="group" aria-labelledby="catAppHead" hidden>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowAutostart"
+              role="switch"
+              aria-checked="false"
+              data-cmd="autostart"
+            >
+              <span class="panel-row-label">Автозапуск</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowStartTray"
+              role="switch"
+              aria-checked="false"
+              data-cmd="startInTray"
+            >
+              <span class="panel-row-label">Запускать свёрнутым</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowInstallApp"
+              data-cmd="appimageInstall"
+              hidden
+            >
+              <span class="panel-row-label" id="installAppLabel">Установить в приложения</span>
+            </button>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowTray"
+              role="switch"
+              aria-checked="false"
+              data-cmd="closeToTray"
+            >
+              <span class="panel-row-label">Закрывать в трей</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+            <button type="button" class="panel-row" data-cmd="devtools">
+              <span class="panel-row-label">Инструменты разработчика</span>
+              <kbd>Ctrl Shift I</kbd>
+            </button>
+            <button type="button" class="panel-row" data-cmd="checkUpdates">
+              <span class="panel-row-label">Проверить обновления</span>
+            </button>
+            <button type="button" class="panel-row" data-cmd="about">
+              <span class="panel-row-label">О программе</span>
+            </button>
+            <button type="button" class="panel-row panel-row--danger" data-cmd="quit">
+              <span class="panel-row-label">Выход</span>
+            </button>
+          </div>
         </section>
       </div>
     </aside>

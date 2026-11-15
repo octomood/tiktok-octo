@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('node:path');
+
 /**
  * Константы и предикаты, общие для main-процесса.
  *
@@ -21,6 +23,10 @@ const PANEL_W = 300;
 
 // Отдельная persistent-сессия: логин и настройки сайта живут между запусками.
 const PARTITION = 'persist:octo-tiktok';
+
+// Preload страницы TikTok: только подмена языка/часового пояса/геолокации.
+// Ничего не отдаёт странице и не трогает contextIsolation.
+const REGION_PRELOAD = path.join(__dirname, 'region-preload.js');
 
 /**
  * TikTok и часть CDN отсекают неизвестные UA с токеном Electron,
@@ -124,6 +130,7 @@ module.exports = {
   MAX_CHROME_H,
   PANEL_W,
   PARTITION,
+  REGION_PRELOAD,
   AUTH_RULES,
   CHROME_UA,
   isTikTokUrl,
