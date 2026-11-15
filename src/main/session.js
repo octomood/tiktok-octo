@@ -1,9 +1,8 @@
 'use strict';
 
-const { app, session } = require('electron');
-const path = require('node:path');
+const { session } = require('electron');
 const { PARTITION, CHROME_UA, isTikTokUrl } = require('./shared');
-const { ctx, pushState, toast } = require('./app-context');
+const downloads = require('./downloads');
 
 /**
  * Разрешения, которые реально нужны сайту.
@@ -25,38 +24,6 @@ const preparedSessions = new Set();
 /** Разрешения выдаём только самому TikTok, а не любому хосту в этой сессии. */
 function isTrustedOrigin(url) {
   return isTikTokUrl(url);
-}
-
-function handleDownload(item) {
-  const name = item.getFilename();
-
-  item.setSaveDialogOptions({
-    title: 'Сохранить файл',
-    defaultPath: path.join(app.getPath('downloads'), name),
-  });
-
-  const publish = (percent) => {
-    ctx.download = { name, percent };
-    pushState();
-  };
-
-  publish(0);
-
-  let lastPercent = -1;
-  item.on('updated', (_event, state) => {
-    if (state !== 'progressing') return;
-    const total = item.getTotalBytes();
-    const percent = total > 0 ? Math.round((item.getReceivedBytes() / total) * 100) : 0;
-    if (percent === lastPercent) return;
-    lastPercent = percent;
-    publish(percent);
-  });
-
-  item.once('done', (_event, state) => {
-    ctx.download = null;
-    toast(state === 'completed' ? 'Загрузка завершена' : 'Загрузка прервана');
-    pushState();
-  });
 }
 
 function prepareSession() {
@@ -87,8 +54,8 @@ function prepareSession() {
     return isTrustedOrigin(requestingOrigin || wc?.getURL() || '');
   });
 
-  // Загрузки: системный диалог сохранения + прогресс в полосе заголовка.
-  ses.on('will-download', (_event, item) => handleDownload(item));
+  // Загрузки: системный диалог сохранения + очередь и прогресс в панели.
+  ses.on('will-download', (_event, item) => downloads.handle(item));
 
   return ses;
 }

@@ -12,6 +12,9 @@ const { createTray, refreshTrayMenu, showWindow, destroyTray } = require('./tray
 const { handleCommand } = require('./commands');
 const { installWebContentsGuards } = require('./hardening');
 const { initUpdates } = require('./updates');
+const { initMpris } = require('./mpris');
+const autostart = require('./autostart');
+const cosmetics = require('./cosmetics');
 const find = require('./find');
 
 let mediaKeysFailed = false;
@@ -47,6 +50,11 @@ if (!gotLock) {
     app.setAppUserModelId('app.octo.tiktok');
 
     installWebContentsGuards();
+    // Переключатели косметики меняют меню и трей — пересобираем их после клика.
+    cosmetics.setOnChange(() => {
+      buildAppMenu();
+      refreshTrayMenu();
+    });
     buildAppMenu();
     createWindow();
 
@@ -54,6 +62,7 @@ if (!gotLock) {
       mute: () => handleCommand('mute'),
       onTop: () => handleCommand('onTop'),
       pip: () => handleCommand('pip'),
+      panel: () => handleCommand('panel'),
       home: () => handleCommand('home'),
       show: () => {
         if (!ctx.win) createWindow();
@@ -67,10 +76,17 @@ if (!gotLock) {
     createTray();
     refreshTrayMenu();
 
+    try {
+      ctx.autostart = autostart.isEnabled();
+    } catch {
+      ctx.autostart = false;
+    }
+
+    initMpris();
     initUpdates();
     registerMediaKeys();
 
-    ipcMain.on('octo:cmd', (_event, command) => handleCommand(command));
+    ipcMain.on('octo:cmd', (_event, command, payload) => handleCommand(command, payload));
     ipcMain.on('octo:ready', () => {
       pushState();
       // Сообщаем один раз, что медиа-клавиши не достались (Wayland, заняты).

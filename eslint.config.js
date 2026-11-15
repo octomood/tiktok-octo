@@ -26,6 +26,8 @@ const browserGlobals = {
   getComputedStyle: 'readonly',
   setTimeout: 'readonly',
   clearTimeout: 'readonly',
+  setInterval: 'readonly',
+  clearInterval: 'readonly',
 };
 
 const rules = {

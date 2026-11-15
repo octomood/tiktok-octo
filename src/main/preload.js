@@ -14,8 +14,8 @@ contextBridge.exposeInMainWorld('octo', {
     platform: process.platform,
     electron: process.versions.electron,
   },
-  cmd(command) {
-    ipcRenderer.send('octo:cmd', command);
+  cmd(command, payload) {
+    ipcRenderer.send('octo:cmd', command, payload);
   },
   find(action, text) {
     ipcRenderer.send('octo:find', { action, text });

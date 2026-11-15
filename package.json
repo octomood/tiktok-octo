@@ -1,7 +1,7 @@
 {
   "name": "tiktok-octo",
   "productName": "TikTok octo",
-  "version": "0.2.0",
+  "version": "0.4.1",
   "description": "Неофициальный десктоп-клиент TikTok: официальный веб-сайт в нативной оболочке Electron",
   "main": "src/main/main.js",
   "desktopName": "tiktok-octo.desktop",
@@ -44,7 +44,8 @@
     "prettier": "^3.10.1"
   },
   "dependencies": {
-    "electron-updater": "^6.8.11"
+    "electron-updater": "^6.8.11",
+    "mpris-service": "^2.1.2"
   },
   "build": {
     "appId": "app.octo.tiktok",

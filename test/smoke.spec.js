@@ -17,8 +17,9 @@ const { test, expect, _electron: electron } = require('@playwright/test');
  * реальные нажатия. Сам поиск и состояние при этом проходят весь путь
  * renderer → main → findInPage → renderer.
  */
-test('окно, команды и поиск по странице', async () => {
+test('окно, команды, поиск и панель функций', async () => {
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-e2e-'));
+  const screenshots = path.join(userData, 'screens');
   let app;
 
   try {
@@ -29,6 +30,7 @@ test('окно, команды и поиск по странице', async () =>
         OCTO_E2E: '1',
         OCTO_USER_DATA: userData,
         OCTO_HOME_URL: 'about:blank',
+        OCTO_SCREENSHOT_DIR: screenshots,
       },
     });
 
@@ -71,6 +73,52 @@ test('окно, команды и поиск по странице', async () =>
 
     await page.evaluate(() => window.octo.find('close'));
     await expect(page.locator('#findbar')).toBeHidden();
+
+    // Панель функций: открывается, показывает косметику и переключает её.
+    await page.click('#btnPanel');
+    await expect(page.locator('#panel')).toBeVisible();
+    await expect(page.locator('#btnPanel')).toHaveAttribute('aria-pressed', 'true');
+
+    const cosmetic = page.locator('#panelCosmetics [data-cosmetic="dark-scrollbars"]');
+    await expect(cosmetic).toHaveAttribute('aria-checked', 'true');
+    await cosmetic.click();
+    await expect(cosmetic).toHaveAttribute('aria-checked', 'false');
+    await cosmetic.click();
+    await expect(cosmetic).toHaveAttribute('aria-checked', 'true');
+
+    // Загрузки: пустое состояние и таймер сна.
+    await expect(page.locator('#downloadsEmpty')).toBeVisible();
+    await page.locator('[data-sleep="15"]').click();
+    await expect(page.locator('[data-sleep="15"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#sleepLabel')).toContainText('·');
+    await page.locator('[data-sleep="0"]').click();
+    await expect(page.locator('#sleepLabel')).toHaveText('Таймер сна');
+
+    await page.click('#btnPanelClose');
+    await expect(page.locator('#panel')).toBeHidden();
+    await expect(page.locator('#btnPanel')).toHaveAttribute('aria-pressed', 'false');
+
+    // Палитра команд: открывается, фильтрует и выполняет команду.
+    await page.evaluate(() => window.octo.cmd('palette'));
+    await expect(page.locator('#palette')).toBeVisible();
+    await expect(page.locator('#paletteInput')).toBeFocused();
+    await expect(page.locator('#paletteList .palette-item').first()).toBeVisible();
+
+    await page.locator('#paletteInput').fill('скорость 1.5');
+    await expect(page.locator('#paletteList .palette-item')).toHaveCount(1);
+    await page.locator('#paletteList .palette-item').click();
+    await expect(page.locator('#palette')).toBeHidden();
+
+    await page.evaluate(() => window.octo.cmd('panel'));
+    await expect(page.locator('[data-player-speed="1.5"]')).toHaveClass(/is-on/);
+    await page.evaluate(() => window.octo.cmd('panel'));
+
+    // Снимок кадра: файл появляется в переопределённом каталоге.
+    await page.evaluate(() => window.octo.cmd('screenshot'));
+    await expect
+      .poll(() => (fs.existsSync(screenshots) ? fs.readdirSync(screenshots).length : 0))
+      .toBe(1);
+    await expect(page.locator('#pageTitle')).toContainText('Снимок сохранён');
   } finally {
     if (app) await app.close();
     fs.rmSync(userData, { recursive: true, force: true });

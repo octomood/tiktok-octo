@@ -10,12 +10,15 @@ const {
   isInternalUrl,
   parseUnreadCount,
 } = require('./shared');
-const { ctx, layout, pushState, toast, setUnread } = require('./app-context');
+const { ctx, layout, pushState, toast, setUnread, setPanelOpen } = require('./app-context');
 const { prepareSession } = require('./session');
 const { readState, writeState } = require('./store');
 const { openExternal } = require('./links');
 const { attachContextMenu } = require('./menu');
 const { handleShortcut } = require('./shortcuts');
+const cosmetics = require('./cosmetics');
+const player = require('./player');
+const mpris = require('./mpris');
 const find = require('./find');
 
 /** Окно OAuth: то же persistent-хранилище, но без Node и preload. */
@@ -120,12 +123,27 @@ function createView() {
     ctx.pipActive = false;
     find.resetOnNavigate();
     rememberUrl(wc.getURL());
+    mpris.setPlaying(false);
+    mpris.scheduleMetadata(1200);
     pushState();
   });
 
-  wc.on('did-navigate-in-page', () => rememberUrl(wc.getURL()));
+  wc.on('did-navigate-in-page', () => {
+    rememberUrl(wc.getURL());
+    mpris.scheduleMetadata();
+  });
 
-  wc.on('page-title-updated', (_event, title) => setUnread(parseUnreadCount(title)));
+  wc.on('media-started-playing', () => {
+    mpris.setPlaying(true);
+    mpris.scheduleMetadata(400);
+  });
+
+  wc.on('media-paused', () => mpris.setPlaying(false));
+
+  wc.on('page-title-updated', (_event, title) => {
+    setUnread(parseUnreadCount(title));
+    mpris.setTitle(title);
+  });
 
   // --- Ошибки загрузки: повтор с backoff, без бесконечного цикла -----------
   let loadFailures = 0;
@@ -179,12 +197,24 @@ function createView() {
 
   wc.on('unresponsive', () => toast('Страница не отвечает…'));
 
+  // --- Косметика: промо, скроллбары, лишние разделы ------------------------
+  wc.on('dom-ready', () => {
+    cosmetics.apply();
+    player.apply();
+    // Промо в сайдбаре иногда дорисовывается позже — просканируем ещё раз.
+    cosmetics.schedule(3000);
+  });
+  wc.on('did-navigate-in-page', () => cosmetics.scheduleScripts());
+  wc.on('did-stop-loading', () => cosmetics.schedule(600));
+
   // --- Поиск по странице ---------------------------------------------------
   wc.on('found-in-page', (_event, result) => find.onFound(result));
 
   // --- Полноэкранное видео --------------------------------------------------
   wc.on('enter-html-full-screen', () => {
     ctx.htmlFullscreen = true;
+    // Панель сбоку не должна мешать видео на весь экран.
+    setPanelOpen(false);
     layout();
     pushState();
   });

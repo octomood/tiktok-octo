@@ -16,6 +16,9 @@ const TITLEBAR_H = 44;
 // Верхняя граница «хрома»: полоса заголовка + панель поиска по странице.
 const MAX_CHROME_H = 120;
 
+// Ширина боковой панели функций.
+const PANEL_W = 300;
+
 // Отдельная persistent-сессия: логин и настройки сайта живут между запусками.
 const PARTITION = 'persist:octo-tiktok';
 
@@ -119,6 +122,7 @@ module.exports = {
   HOME_URL,
   TITLEBAR_H,
   MAX_CHROME_H,
+  PANEL_W,
   PARTITION,
   AUTH_RULES,
   CHROME_UA,

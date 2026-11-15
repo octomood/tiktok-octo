@@ -1,10 +1,27 @@
 'use strict';
 
-const { app } = require('electron');
-const { ctx, pushState, toast, stepHistory } = require('./app-context');
+const { app, shell } = require('electron');
+const {
+  ctx,
+  pushState,
+  toast,
+  stepHistory,
+  setPanelOpen,
+  setPaletteOpen,
+  setCloseToTray,
+} = require('./app-context');
 const { writeState } = require('./store');
-const { HOME_URL } = require('./shared');
+const { HOME_URL, isTikTokUrl } = require('./shared');
+const { openExternal } = require('./links');
 const { refreshTrayMenu } = require('./tray');
+const { showAbout } = require('./about');
+const { checkNow } = require('./updates');
+const cosmetics = require('./cosmetics');
+const downloads = require('./downloads');
+const sleepTimer = require('./sleep-timer');
+const player = require('./player');
+const { captureFrame } = require('./screenshot');
+const autostart = require('./autostart');
 const find = require('./find');
 
 // Ступени масштаба как в браузерах.
@@ -116,11 +133,20 @@ async function togglePlayback() {
   try {
     await wc.executeJavaScript(
       `(() => {
-         const v = document.querySelector('video');
-         if (!v) return 'none';
-         if (v.paused) { v.play(); return 'playing'; }
-         v.pause();
-         return 'paused';
+         const videos = [...document.querySelectorAll('video')];
+         const playing = videos.find((video) => !video.paused);
+         if (playing) {
+           videos.forEach((video) => video.pause());
+           return 'paused';
+         }
+         const visible = videos.find((video) => {
+           const rect = video.getBoundingClientRect();
+           return rect.width > 120 && rect.height > 120;
+         });
+         const video = visible || videos[0];
+         if (!video) return 'none';
+         video.play();
+         return 'playing';
        })()`,
       true,
     );
@@ -130,7 +156,7 @@ async function togglePlayback() {
   }
 }
 
-function handleCommand(command) {
+function handleCommand(command, payload) {
   if (!ctx.win || !ctx.view) return;
   const wc = ctx.view.webContents;
 
@@ -212,6 +238,83 @@ function handleCommand(command) {
       break;
     case 'findClose':
       find.close();
+      break;
+    case 'panel':
+      if (!ctx.htmlFullscreen) setPanelOpen(!ctx.panelOpen);
+      refreshTrayMenu();
+      break;
+    case 'palette':
+      if (!ctx.htmlFullscreen) setPaletteOpen(!ctx.paletteOpen);
+      break;
+    case 'screenshot':
+      captureFrame();
+      break;
+    case 'playerSpeed':
+      player.setSpeed(payload);
+      break;
+    case 'playerToggle':
+      if (typeof payload === 'string') player.toggle(payload);
+      break;
+    case 'openUrl':
+      if (typeof payload === 'string' && isTikTokUrl(payload)) {
+        find.close({ focusView: false });
+        wc.loadURL(payload);
+      } else if (typeof payload === 'string') {
+        openExternal(payload);
+      }
+      break;
+    case 'cosmetic':
+      if (typeof payload === 'string') cosmetics.toggle(payload);
+      break;
+    case 'closeToTray': {
+      const next = !ctx.closeToTray;
+      setCloseToTray(next);
+      writeState({ closeToTray: next });
+      toast(next ? 'Окно будет закрываться в трей' : 'Окно закрывается как обычно');
+      refreshTrayMenu();
+      break;
+    }
+    case 'openDownloads':
+      shell.openPath(app.getPath('downloads')).then((error) => {
+        if (error) toast('Не удалось открыть папку загрузок');
+      });
+      break;
+    case 'downloadCancel':
+      if (typeof payload === 'string') downloads.cancel(payload);
+      break;
+    case 'downloadShow':
+      if (typeof payload === 'string') downloads.showInFolder(payload);
+      break;
+    case 'downloadClear':
+      downloads.clearFinished();
+      break;
+    case 'sleepTimer':
+      sleepTimer.set(payload);
+      break;
+    case 'autostart': {
+      const next = !ctx.autostart;
+      autostart.setEnabled(next);
+      ctx.autostart = autostart.isEnabled();
+      toast(
+        ctx.autostart === next
+          ? next
+            ? 'Автозапуск включён'
+            : 'Автозапуск выключен'
+          : 'Не удалось изменить автозапуск',
+      );
+      break;
+    }
+    case 'startInTray': {
+      ctx.startInTray = !ctx.startInTray;
+      writeState({ startInTray: ctx.startInTray });
+      toast(ctx.startInTray ? 'Будет запускаться свёрнутым' : 'Будет открывать окно');
+      break;
+    }
+    case 'checkUpdates':
+      checkNow();
+      break;
+    case 'about':
+      showAbout(ctx.win);
       break;
     default:
       break;

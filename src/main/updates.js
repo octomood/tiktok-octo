@@ -1,6 +1,7 @@
 'use strict';
 
 const { app, dialog } = require('electron');
+const { toast } = require('./app-context');
 
 /**
  * Автообновление (electron-updater) — только для упакованной сборки.
@@ -8,14 +9,18 @@ const { app, dialog } = require('electron');
  * Работает, если в build.publish указан репозиторий GitHub (см. package.json
  * и README). В dev-режиме модуль молчит, чтобы не мешать отладке.
  */
+
+/** @type {import('electron-updater').AppUpdater | null} */
+let autoUpdater = null;
+let packaged = false;
+
 function initUpdates() {
   // В Electron 45 app.isPackaged бывает true и при запуске из папки,
   // поэтому дополнительно проверяем process.defaultApp («это Electron, а не
   // собранное приложение»).
-  const packaged = app.isPackaged && !process.defaultApp;
+  packaged = app.isPackaged && !process.defaultApp;
   if (!packaged || process.env.OCTO_E2E) return;
 
-  let autoUpdater;
   try {
     // Пакет может отсутствовать в урезанной сборке — приложение важнее.
     ({ autoUpdater } = require('electron-updater'));
@@ -48,4 +53,23 @@ function initUpdates() {
   });
 }
 
-module.exports = { initUpdates };
+/** Ручная проверка из панели функций. */
+async function checkNow() {
+  if (!packaged || !autoUpdater) {
+    toast('Обновления доступны только в собранной версии');
+    return;
+  }
+
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    if (!result?.updateInfo || result.updateInfo.version === app.getVersion()) {
+      toast('Обновлений нет');
+    } else {
+      toast(`Доступна версия ${result.updateInfo.version}`);
+    }
+  } catch {
+    toast('Не удалось проверить обновления');
+  }
+}
+
+module.exports = { initUpdates, checkNow };

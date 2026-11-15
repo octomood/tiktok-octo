@@ -4,6 +4,7 @@ const { Tray, Menu, nativeImage } = require('electron');
 const path = require('node:path');
 const { ctx } = require('./app-context');
 const { readState, writeState } = require('./store');
+const cosmetics = require('./cosmetics');
 
 /**
  * Трей: быстрый доступ к звуку/поверх всех окон и режим «закрыть в трей».
@@ -85,6 +86,13 @@ function refreshTrayMenu() {
       checked: ctx.pipActive,
       click: () => actions.pip(),
     },
+    {
+      label: 'Панель функций',
+      type: 'checkbox',
+      checked: ctx.panelOpen,
+      click: () => actions.panel(),
+    },
+    { label: 'Косметика', submenu: cosmetics.menuItems() },
     { type: 'separator' },
     {
       label: 'Закрывать в трей',

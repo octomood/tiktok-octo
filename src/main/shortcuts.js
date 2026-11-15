@@ -26,8 +26,17 @@ function handleShortcut(event, input) {
     return run(() => handleCommand(input.shift ? 'findPrev' : 'findNext'));
   }
   if (input.key === 'Escape') {
+    if (ctx.paletteOpen) return run(() => handleCommand('palette'));
     if (ctx.find.open) return run(() => handleCommand('findClose'));
+    if (ctx.panelOpen) return run(() => handleCommand('panel'));
     if (ctx.win?.isFullScreen()) return run(() => handleCommand('fullscreen'));
+    return undefined;
+  }
+
+  // Палитра сама обрабатывает стрелки и Enter; из глобальных оставляем
+  // только её закрытие/переключение.
+  if (ctx.paletteOpen) {
+    if (mod && key === 'k') return run(() => handleCommand('palette'));
     return undefined;
   }
   if (input.alt && input.key === 'ArrowLeft') return run(() => handleCommand('back'));
@@ -64,6 +73,14 @@ function handleShortcut(event, input) {
       break;
     case 'o':
       if (input.shift) return run(() => handleCommand('onTop'));
+      break;
+    case 'b':
+      if (input.shift) return run(() => handleCommand('panel'));
+      break;
+    case 'k':
+      return run(() => handleCommand('palette'));
+    case 's':
+      if (input.shift) return run(() => handleCommand('screenshot'));
       break;
     default:
       break;

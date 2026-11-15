@@ -3,12 +3,13 @@
 const { BrowserWindow } = require('electron');
 const path = require('node:path');
 const { TITLEBAR_H } = require('./shared');
-const { ctx, layout, pushState } = require('./app-context');
+const { ctx, layout, pushState, setCloseToTray } = require('./app-context');
 const { readState, writeState } = require('./store');
 const { createView } = require('./view');
 const { handleShortcut } = require('./shortcuts');
 const { refreshPipState } = require('./commands');
 const { refreshTrayMenu } = require('./tray');
+const player = require('./player');
 
 function saveGeometry(win) {
   writeState({ bounds: win.getNormalBounds(), maximized: win.isMaximized() });
@@ -46,12 +47,23 @@ function createWindow() {
 
   ctx.win = win;
   ctx.chromeHeight = TITLEBAR_H;
+  ctx.panelOpen = false;
+  ctx.paletteOpen = false;
+  ctx.startInTray = saved.startInTray === true;
+  setCloseToTray(saved.closeToTray === true);
+
+  const startHidden = ctx.startInTray || process.argv.includes('--hidden');
 
   win.loadFile(path.join(__dirname, '../renderer/index.html'));
 
   win.once('ready-to-show', () => {
     if (saved.alwaysOnTop) win.setAlwaysOnTop(true, 'floating');
     if (saved.maximized) win.maximize();
+
+    // Запуск в трее: окно не показываем, если есть куда свернуться.
+    // Без трея (Linux без StatusNotifier) лучше показать окно, иначе
+    // приложение станет невидимым.
+    if (startHidden && ctx.tray) return;
     win.show();
   });
 
@@ -77,8 +89,15 @@ function createWindow() {
     refreshPipState();
   });
   win.on('show', refreshTrayMenu);
-  win.on('hide', refreshTrayMenu);
-  win.on('minimize', refreshTrayMenu);
+  win.on('hide', () => {
+    player.pauseForBackground();
+    refreshTrayMenu();
+  });
+  win.on('minimize', () => {
+    player.pauseForBackground();
+    refreshTrayMenu();
+  });
+  win.on('blur', () => player.pauseForBackground());
   win.on('restore', refreshTrayMenu);
 
   win.on('close', (event) => {

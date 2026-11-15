@@ -1,9 +1,11 @@
 'use strict';
 
-const { app, Menu, clipboard, dialog } = require('electron');
+const { app, Menu, clipboard } = require('electron');
 const { ctx, canGoBack, canGoForward, stepHistory } = require('./app-context');
 const { openExternal } = require('./links');
 const { handleCommand } = require('./commands');
+const { showAbout } = require('./about');
+const cosmetics = require('./cosmetics');
 
 const isMac = process.platform === 'darwin';
 
@@ -89,19 +91,8 @@ function attachContextMenu(wc) {
   });
 }
 
-function showAbout() {
-  dialog.showMessageBox({
-    type: 'info',
-    title: 'О программе',
-    message: 'TikTok octo',
-    detail: [
-      `Версия ${app.getVersion()}`,
-      `Electron ${process.versions.electron} · Chromium ${process.versions.chrome}`,
-      '',
-      'Неофициальный клиент. Не связан с TikTok Ltd.',
-    ].join('\n'),
-    buttons: ['ОК'],
-  });
+function showAboutDialog() {
+  showAbout(ctx.win);
 }
 
 /**
@@ -154,11 +145,16 @@ function buildAppMenu() {
     {
       label: 'Вид',
       submenu: [
+        { label: 'Панель функций', click: () => handleCommand('panel') },
+        { label: 'Палитра команд', click: () => handleCommand('palette') },
+        { type: 'separator' },
         { label: 'Крупнее', click: () => handleCommand('zoomIn') },
         { label: 'Мельче', click: () => handleCommand('zoomOut') },
         { label: 'Масштаб 100 %', click: () => handleCommand('zoomReset') },
         { type: 'separator' },
         { label: 'Полный экран', click: () => handleCommand('fullscreen') },
+        { type: 'separator' },
+        { label: 'Косметика', submenu: cosmetics.menuItems() },
         { type: 'separator' },
         { label: 'Инструменты разработчика', click: () => handleCommand('devtools') },
       ],
@@ -174,10 +170,12 @@ function buildAppMenu() {
         { label: 'Без звука', click: () => handleCommand('mute') },
       ],
     },
-    ...(isMac ? [] : [{ label: 'Справка', submenu: [{ label: 'О программе', click: showAbout }] }]),
+    ...(isMac
+      ? []
+      : [{ label: 'Справка', submenu: [{ label: 'О программе', click: showAboutDialog }] }]),
   ];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-module.exports = { attachContextMenu, buildAppMenu, showAbout };
+module.exports = { attachContextMenu, buildAppMenu, showAbout: showAboutDialog };
