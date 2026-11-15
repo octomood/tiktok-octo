@@ -104,7 +104,11 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "TikTok octo"
+      "shortcutName": "TikTok octo",
+      "artifactName": "${name}-${version}-win-${arch}-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "${name}-${version}-win-${arch}-portable.${ext}"
     }
   }
 }
