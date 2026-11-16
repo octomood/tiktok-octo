@@ -135,6 +135,14 @@ async function launch(app, userData, chatUrl) {
   return launched;
 }
 
+/** Состояние чата внутри iframe #chat: Playwright-фрейм может ещё не успеть. */
+function chatEvents(view) {
+  return view.evaluate(() => {
+    const win = document.getElementById('chat')?.contentWindow;
+    return win ? (win.__events ?? null) : null;
+  });
+}
+
 async function openStickers(page) {
   await page.click('#btnStickers');
   await expect(page.locator('#panel')).toBeVisible();
@@ -241,19 +249,13 @@ test('стикеры: чат во вложенном фрейме', async () => 
     app = launched.instance;
     const { page, view } = launched;
 
-    await expect
-      .poll(() => view.frames().some((frame) => frame.url().includes('/chat')))
-      .toBe(true);
-    const chat = view.frames().find((frame) => frame.url().includes('/chat'));
-    await expect.poll(() => chat.evaluate(() => Boolean(window.__events))).toBe(true);
+    await expect.poll(async () => Boolean(await chatEvents(view))).toBe(true);
 
     await openStickers(page);
     await page.evaluate(() => window.octo.cmd('stickerSend', 'test'));
 
-    await expect
-      .poll(() => chat.evaluate(() => window.__events.attached?.size ?? 0))
-      .toBe(PNG.length);
-    await expect.poll(() => chat.evaluate(() => window.__events.sent)).toBe(1);
+    await expect.poll(async () => (await chatEvents(view))?.attached?.size ?? 0).toBe(PNG.length);
+    await expect.poll(async () => (await chatEvents(view))?.sent ?? 0).toBe(1);
   } finally {
     if (app) await app.close();
     await new Promise((resolve) => server.close(resolve));
@@ -279,22 +281,14 @@ test('стикеры: ленивое поле загрузки во вложен
     app = launched.instance;
     const { page, view } = launched;
 
-    await expect
-      .poll(() => view.frames().some((frame) => frame.url().includes('/chat')))
-      .toBe(true);
-    const chat = view.frames().find((frame) => frame.url().includes('/chat'));
-    await expect.poll(() => chat.evaluate(() => Boolean(window.__events))).toBe(true);
+    await expect.poll(async () => Boolean(await chatEvents(view))).toBe(true);
 
     await openStickers(page);
     await page.evaluate(() => window.octo.cmd('stickerSend', 'test'));
 
-    await expect
-      .poll(() => chat.evaluate(() => window.__events.attached?.size ?? 0))
-      .toBe(PNG.length);
-    await expect
-      .poll(() => chat.evaluate(() => window.__events.attached?.name ?? ''))
-      .toBe('test.png');
-    await expect.poll(() => chat.evaluate(() => window.__events.sent)).toBe(1);
+    await expect.poll(async () => (await chatEvents(view))?.attached?.size ?? 0).toBe(PNG.length);
+    await expect.poll(async () => (await chatEvents(view))?.attached?.name ?? '').toBe('test.png');
+    await expect.poll(async () => (await chatEvents(view))?.sent ?? 0).toBe(1);
   } finally {
     if (app) await app.close();
     await new Promise((resolve) => server.close(resolve));
