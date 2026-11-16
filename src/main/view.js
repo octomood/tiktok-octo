@@ -26,6 +26,7 @@ const mpris = require('./mpris');
 const find = require('./find');
 const plugins = require('./plugins');
 const region = require('./region');
+const autoTheme = require('./auto-theme');
 
 /** Окно OAuth: то же persistent-хранилище, но без Node и preload. */
 function authWindowOptions() {
@@ -211,6 +212,8 @@ function createView() {
   wc.on('did-finish-load', () => {
     loadFailures = 0;
     crashCount = 0;
+    autoTheme.sync(wc).catch(() => {});
+    cosmetics.injectFrameStyles().catch(() => {});
     pushState();
   });
 
@@ -240,6 +243,7 @@ function createView() {
   // --- Косметика: промо, скроллбары, лишние разделы ------------------------
   wc.on('dom-ready', () => {
     cosmetics.apply();
+    autoTheme.sync(wc).catch(() => {});
     player.apply();
     media.apply();
     pip.reapply();
@@ -248,6 +252,12 @@ function createView() {
     // Промо в сайдбаре иногда дорисовывается позже — просканируем ещё раз.
     cosmetics.schedule(3000);
   });
+  wc.on('did-frame-finish-load', (_event, isMainFrame) => {
+    // insertCSS не проникает во вложенные фреймы, а Business Suite и часть
+    // экранов TikTok живут именно там.
+    if (!isMainFrame) cosmetics.injectFrameStyles().catch(() => {});
+  });
+  wc.on('devtools-closed', () => autoTheme.sync(wc).catch(() => {}));
   wc.on('did-navigate-in-page', () => {
     cosmetics.scheduleScripts();
     plugins.onPageNavigate({ url: wc.getURL(), title: wc.getTitle() });
@@ -275,6 +285,9 @@ function createView() {
   attachContextMenu(wc);
 
   layout();
+  // Auto dark mode включается до первой загрузки: страницы, которые не
+  // понимают cookie темы TikTok (Business Suite), не должны мигнуть белым.
+  autoTheme.setEnabled(wc, cosmetics.isEnabled('dark-theme')).catch(() => {});
   // Тема сайта ставится cookie до первой загрузки: чат и другие разделы
   // читают её при монтировании и иначе останутся светлыми до перезагрузки.
   cosmetics

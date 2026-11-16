@@ -19,6 +19,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { ctx, pushState, toast } = require('./app-context');
+const { isTikTokUrl } = require('./shared');
 
 const SCHEME = 'octo-sticker';
 const DIR_NAME = 'stickers';
@@ -298,23 +299,69 @@ function withTimeout(promise, ms, label) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+// Поиск по документу и открытым shadow root: чат TikTok и его кнопки вложения
+// могут жить в web-компонентах, до которых document.querySelector не достаёт.
+const DEEP_QUERY_EXPR = `
+  const deepAll = (selector, root = document, out = []) => {
+    if (!root || !root.querySelectorAll) return out;
+    out.push(...root.querySelectorAll(selector));
+    for (const element of root.querySelectorAll('*')) {
+      if (element.shadowRoot) deepAll(selector, element.shadowRoot, out);
+    }
+    return out;
+  };
+  const deepFind = (selector, root = document) => {
+    if (!root || !root.querySelector) return null;
+    const direct = root.querySelector(selector);
+    if (direct) return direct;
+    for (const element of root.querySelectorAll('*')) {
+      if (!element.shadowRoot) continue;
+      const nested = deepFind(selector, element.shadowRoot);
+      if (nested) return nested;
+    }
+    return null;
+  };
+  const isSearchField = (element) => {
+    const label = element.getAttribute('aria-label') || '';
+    const placeholder = element.getAttribute('placeholder') || '';
+    const type = element.getAttribute('type') || '';
+    return /search|поиск/i.test(label + ' ' + placeholder + ' ' + type);
+  };
+  const isVisible = (element) => {
+    const rect = element.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return false;
+    const style = getComputedStyle(element);
+    return style.visibility !== 'hidden' && style.display !== 'none' && Number(style.opacity) !== 0;
+  };
+  // На странице сообщений несколько contenteditable: поиск в списке чатов и
+  // поле сообщения. Ищем именно поле сообщения, а не первый элемент DOM.
+  const findComposer = () => {
+    const composers = deepAll(
+      '[role="textbox"][contenteditable="true"], [contenteditable="true"], textarea'
+    ).filter((element) => !isSearchField(element) && isVisible(element));
+    if (!composers.length) return null;
+    const preferred = composers.find((element) =>
+      /message|сообщен|chat|чат|отправ/i.test(element.getAttribute('aria-label') || '')
+    );
+    return preferred || composers[composers.length - 1];
+  };
+`;
+
 const CHAT_READY_EXPR = `(() => {
-  const composer = document.querySelector(
-    '[role="textbox"][contenteditable="true"], div[contenteditable="true"], textarea'
-  );
+  ${DEEP_QUERY_EXPR}
+  const composer = findComposer();
   if (!composer) return false;
   const aria = (composer.getAttribute('aria-label') || '').toLowerCase();
-  if (/message|сообщен|chat|чат/.test(aria)) return true;
+  if (/message|сообщен|chat|чат|отправ/.test(aria)) return true;
   return /\\/messages(?:[/?#]|$)/.test(location.pathname);
 })()`;
 
 const FIND_UPLOAD_BUTTON_EXPR = `(() => {
-  const composer = document.querySelector(
-    '[role="textbox"][contenteditable="true"], div[contenteditable="true"], textarea'
-  );
+  ${DEEP_QUERY_EXPR}
+  const composer = findComposer();
   const composerRect = composer ? composer.getBoundingClientRect() : null;
   const re = /(?:photo|image|upload|attach|media|фото|изображ|вложен)/i;
-  const buttons = [...document.querySelectorAll('button, [role="button"]')].filter((element) => {
+  const buttons = deepAll('button, [role="button"]').filter((element) => {
     const aria = element.getAttribute('aria-label') || '';
     const e2e = element.getAttribute('data-e2e') || '';
     const cls = typeof element.className === 'string' ? element.className : '';
@@ -335,17 +382,16 @@ const FIND_UPLOAD_BUTTON_EXPR = `(() => {
 })()`;
 
 const FIND_INPUT_EXPR = `(() => {
+  ${DEEP_QUERY_EXPR}
   const isImageInput = (input) => {
     if (input.disabled) return false;
     const accept = (input.getAttribute('accept') || '').toLowerCase();
     return !accept || accept.includes('image') || accept.includes('*');
   };
-  const inputs = [...document.querySelectorAll('input[type="file"]')].filter(isImageInput);
+  const inputs = deepAll('input[type="file"]').filter(isImageInput);
   if (!inputs.length) return null;
 
-  const composer = document.querySelector(
-    '[role="textbox"][contenteditable="true"], div[contenteditable="true"], textarea'
-  );
+  const composer = findComposer();
   if (composer) {
     const root = composer.closest(
       '[data-e2e*="chat"], [class*="Chat"], [class*="chat"], [class*="Message"], [class*="message"], form'
@@ -357,6 +403,43 @@ const FIND_INPUT_EXPR = `(() => {
   }
   return inputs[inputs.length - 1];
 })()`;
+
+const CLICK_UPLOAD_EXPR = `(() => {
+  const button = ${FIND_UPLOAD_BUTTON_EXPR};
+  if (!button) return false;
+  button.click();
+  return true;
+})()`;
+
+function framesOf(wc) {
+  try {
+    const main = wc.mainFrame;
+    const list = Array.isArray(main.framesInSubtree)
+      ? main.framesInSubtree
+      : [main, ...(Array.isArray(main.frames) ? main.frames : [])];
+    const mainOrigin = main.origin;
+    return list.filter((frame) => {
+      if (!frame || frame.isDestroyed?.()) return false;
+      if (frame === main) return true;
+      const url = frame.url || '';
+      if (url.startsWith('about:')) return true;
+      if (isTikTokUrl(url)) return true;
+      return frame.origin === mainOrigin;
+    });
+  } catch {
+    return [];
+  }
+}
+
+async function evaluateFrame(frame, code, { timeout = 8000 } = {}) {
+  if (!frame || frame.isDestroyed?.()) return null;
+  try {
+    return await withTimeout(frame.executeJavaScript(code, true), timeout, 'таймаут выполнения');
+  } catch (err) {
+    if (process.env.OCTO_DEBUG) console.warn('[octo] sticker frame eval:', err.message);
+    return null;
+  }
+}
 
 function attachWithDebugger(wc, file) {
   const dbg = wc.debugger;
@@ -414,7 +497,7 @@ function attachWithDebugger(wc, file) {
  * на кнопку фото. Перехватываем системный диалог выбора файла через CDP и
  * подставляем файл прямо в открывшийся input.
  */
-async function attachWithFileChooser(wc, file) {
+async function attachWithFileChooser(wc, file, frame = wc.mainFrame) {
   const dbg = wc.debugger;
   if (!dbg) return null;
 
@@ -440,21 +523,22 @@ async function attachWithFileChooser(wc, file) {
     );
     dbg.on('message', onMessage);
 
-    const clicked = await withTimeout(
-      dbg.sendCommand('Runtime.evaluate', {
-        expression: `(() => {
-          const button = ${FIND_UPLOAD_BUTTON_EXPR};
-          if (!button) return false;
-          button.click();
-          return true;
-        })()`,
-        returnByValue: true,
-        userGesture: true,
-      }),
-      3000,
-      'клик по кнопке фото',
-    );
-    if (!clicked?.result?.value) return null;
+    let clicked = false;
+    if (frame && frame !== wc.mainFrame) {
+      clicked = Boolean(await evaluateFrame(frame, CLICK_UPLOAD_EXPR, { timeout: 3000 }));
+    } else {
+      const result = await withTimeout(
+        dbg.sendCommand('Runtime.evaluate', {
+          expression: CLICK_UPLOAD_EXPR,
+          returnByValue: true,
+          userGesture: true,
+        }),
+        3000,
+        'клик по кнопке фото',
+      );
+      clicked = Boolean(result?.result?.value);
+    }
+    if (!clicked) return null;
 
     for (let attempt = 0; attempt < 20 && !backendNodeId; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -491,6 +575,7 @@ async function attachWithFileChooser(wc, file) {
 
 function fallbackScript(base64, mime, name) {
   return `(async () => {
+  ${DEEP_QUERY_EXPR}
   const b64 = ${JSON.stringify(base64)};
   const mime = ${JSON.stringify(mime)};
   const name = ${JSON.stringify(name)};
@@ -506,22 +591,22 @@ function fallbackScript(base64, mime, name) {
     const accept = (input.getAttribute('accept') || '').toLowerCase();
     return !accept || accept.includes('image') || accept.includes('*');
   };
-  const inputs = [...document.querySelectorAll('input[type="file"]')].filter(isImageInput);
+  const inputs = deepAll('input[type="file"]').filter(isImageInput);
   const input = inputs[inputs.length - 1] || null;
   if (input) {
     try {
       input.files = data.files;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      return { mode: 'input' };
     } catch {
-      return { mode: 'none', reason: 'files' };
+      /* некоторые браузерные поля запрещают подмену files — пробуем drop */
     }
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    return { mode: 'input' };
   }
 
   const target =
-    document.querySelector('[role="textbox"][contenteditable="true"], div[contenteditable="true"], textarea') ||
-    document.querySelector('[data-e2e*="chat"]') ||
+    findComposer() ||
+    deepFind('[data-e2e*="chat"]') ||
     document.body;
   if (!target) return { mode: 'none', reason: 'no-input' };
 
@@ -548,6 +633,7 @@ function fallbackScript(base64, mime, name) {
 
 function autoSendScript() {
   return `(async () => {
+  ${DEEP_QUERY_EXPR}
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const visible = (element) => {
     if (!element || element.disabled) return false;
@@ -559,7 +645,7 @@ function autoSendScript() {
   };
   const labels = new Set(['send', 'send message', 'отправить', 'отправить сообщение']);
   const candidates = () =>
-    [...document.querySelectorAll('button, [role="button"]')].filter((element) => {
+    deepAll('button, [role="button"]').filter((element) => {
       const aria = (element.getAttribute('aria-label') || '').trim().toLowerCase();
       const text = (element.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const cls = typeof element.className === 'string' ? element.className : '';
@@ -587,54 +673,27 @@ function autoSendScript() {
 })()`;
 }
 
-async function evaluate(wc, code, { timeout = 10000 } = {}) {
-  if (!wc || wc.isDestroyed()) return null;
+let sending = false;
 
-  // executeJavaScript ждёт did-stop-loading, а лента TikTok может грузиться
-  // бесконечно. Поэтому сначала пробуем CDP, а при занятом debugger —
-  // обычный путь. Оба варианта ограничены таймаутом.
-  const dbg = wc.debugger;
-  if (dbg) {
-    let attachedHere = false;
-    try {
-      if (!dbg.isAttached()) {
-        dbg.attach('1.3');
-        attachedHere = true;
-      }
-      const result = await withTimeout(
-        dbg.sendCommand('Runtime.evaluate', {
-          expression: code,
-          awaitPromise: true,
-          returnByValue: true,
-          userGesture: true,
-        }),
-        timeout,
-        'таймаут выполнения',
-      );
-      if (result?.exceptionDetails) {
-        throw new Error(result.exceptionDetails.text || 'ошибка на странице');
-      }
-      return result?.result?.value ?? null;
-    } catch (err) {
-      if (process.env.OCTO_DEBUG) console.warn('[octo] sticker eval:', err.message);
-    } finally {
-      try {
-        if (attachedHere) dbg.detach();
-      } catch {
-        /* debugger уже отключён */
-      }
-    }
-  }
-
+/**
+ * Прикрепляет файл внутри конкретного фрейма. Основной путь — подменить files
+ * у input[type=file] и отправить change; если поля нет, пробуем drop/paste в
+ * поле сообщения. Работает и в iframe, и в shadow root.
+ */
+async function attachInFrame(frame, file, item) {
   try {
-    return await withTimeout(wc.executeJavaScript(code, true), timeout, 'таймаут выполнения');
+    const base64 = fs.readFileSync(file).toString('base64');
+    const name = `sticker${item.ext}`;
+    const result = await evaluateFrame(frame, fallbackScript(base64, MIME[item.ext], name), {
+      timeout: 15000,
+    });
+    if (result && result.mode && result.mode !== 'none') return result;
+    return null;
   } catch (err) {
-    if (process.env.OCTO_DEBUG) console.warn('[octo] sticker eval fallback:', err.message);
+    if (process.env.OCTO_DEBUG) console.warn('[octo] sticker frame attach:', err.message);
     return null;
   }
 }
-
-let sending = false;
 
 async function send(id) {
   if (sending) {
@@ -663,26 +722,35 @@ async function send(id) {
     }
 
     // Не трогаем чужие input[type=file] (например, загрузку аватара):
-    // отправляем только когда на странице есть поле сообщения.
-    const chatReady = await evaluate(wc, CHAT_READY_EXPR, { timeout: 4000 });
-    if (!chatReady) {
+    // отправляем только когда на странице есть поле сообщения. Business Suite
+    // держит чат во вложенном фрейме, поэтому проверяем всё дерево.
+    const frames = framesOf(wc);
+    let chatFrame = null;
+    for (const frame of frames) {
+      const ready = await evaluateFrame(frame, CHAT_READY_EXPR, { timeout: 4000 });
+      if (ready) {
+        chatFrame = frame;
+        break;
+      }
+    }
+
+    if (!chatFrame) {
       toast('Откройте диалог в «Сообщениях» TikTok и выберите собеседника');
       return { ok: false, error: 'not-chat' };
     }
 
-    let attached = await attachWithDebugger(wc, file);
-    if (!attached) attached = await attachWithFileChooser(wc, file);
-
-    if (!attached) {
-      try {
-        const base64 = fs.readFileSync(file).toString('base64');
-        const fileName = `sticker${item.ext}`;
-        attached = await evaluate(wc, fallbackScript(base64, MIME[item.ext], fileName));
-      } catch (err) {
-        if (process.env.OCTO_DEBUG) console.warn('[octo] sticker fallback:', err.message);
-        attached = null;
-      }
+    let attached = null;
+    if (chatFrame === wc.mainFrame) {
+      attached = await attachWithDebugger(wc, file);
+      if (!attached) attached = await attachWithFileChooser(wc, file);
     }
+
+    // Во фрейме сначала перехватываем системный диалог: если чат создаёт
+    // input только по клику на фото, drop/paste ничего не докажет.
+    if (!attached && chatFrame !== wc.mainFrame) {
+      attached = await attachWithFileChooser(wc, file, chatFrame);
+    }
+    if (!attached) attached = await attachInFrame(chatFrame, file, item);
 
     if (!attached || attached.mode === 'none') {
       toast('Откройте диалог в «Сообщениях» TikTok — стикер отправится как фото');
@@ -691,7 +759,7 @@ async function send(id) {
 
     // Даём сайту создать превью и включаем кнопку отправки.
     await new Promise((resolve) => setTimeout(resolve, 650));
-    const sent = await evaluate(wc, autoSendScript(), { timeout: 8000 });
+    const sent = await evaluateFrame(chatFrame, autoSendScript(), { timeout: 8000 });
 
     if (sent?.clicked) toast('Стикер отправлен');
     else toast('Стикер прикреплён — нажмите «Отправить» в чате');

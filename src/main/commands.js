@@ -31,6 +31,7 @@ const find = require('./find');
 const plugins = require('./plugins');
 const stickers = require('./stickers');
 const i18n = require('./i18n');
+const autoTheme = require('./auto-theme');
 
 // Ступени масштаба как в браузерах.
 const ZOOM_STEPS = [0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
@@ -184,7 +185,9 @@ function handleCommand(command, payload) {
       applyZoom(1);
       break;
     case 'devtools':
-      wc.toggleDevTools();
+      // DevTools и webContents.debugger не могут работать одновременно.
+      // Снимаем auto dark mode; после закрытия окна view.js включит его снова.
+      autoTheme.suspend(wc).finally(() => wc.toggleDevTools());
       break;
     case 'fullscreen':
       if (!ctx.pipActive) ctx.win.setFullScreen(!ctx.win.isFullScreen());

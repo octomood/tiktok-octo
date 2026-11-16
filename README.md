@@ -54,7 +54,9 @@ window and a handful of shortcuts that make sense on a desktop.
 | **🌍&nbsp; Links stay polite**      | Anything that isn't `tiktok.com` opens in your system browser. TikTok links with `target=_blank` stay inside the app.                                                                                                |
 | **🌐&nbsp; Region & proxy**         | Pick a country to change `Accept-Language`, `navigator.language`, timezone and geolocation. Bring your own SOCKS5/HTTP proxy to change the actual IP.                                                                |
 | **🗣️&nbsp; Language**               | 12 UI languages and 22 TikTok site languages via the documented `default_lang` cookie, `Accept-Language` and `navigator.language`. Your choice survives restarts.                                                    |
-| **🙂&nbsp; Chat stickers**          | Your PNG/GIF/WebP files go from the panel into the open TikTok chat as photos; a transparent background reads as a sticker.                                                                                          |
+| **🙂&nbsp; Chat stickers**          | Your PNG/GIF/WebP files go from the panel into the open TikTok chat as photos, including Business Suite; a transparent background reads as a sticker.                                                                |
+| **🌙&nbsp; Dark theme everywhere**  | TikTok theme cookies are written for the whole domain, and Chromium auto dark mode covers Business Suite and service pages, so no white TikTok pages remain.                                                         |
+| **🔤&nbsp; Shell font on the site** | Inter is applied to all site text, including nested frames and web components in shadow DOM. SVG icons are left untouched.                                                                                           |
 | **🧩&nbsp; Plugins**                | A separate manager with a catalog, per-plugin permissions, static security audit, Ed25519 signatures, tamper checks, logs, version rollback and opt-out auto-updates. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>. |
 | **🧠&nbsp; It remembers**           | Window geometry, maximised state, zoom, mute, always-on-top and the last page you were on.                                                                                                                           |
 | **🧯&nbsp; It survives**            | Failed loads retry with backoff, a crashed renderer is brought back, a hung page says so instead of dying silently.                                                                                                  |
@@ -120,6 +122,9 @@ and clicks Send when the button appears.
   → «Stickers» → «Add stickers…». PNG, JPG, WebP and GIF up to 8 MB.
 - **Send** — open a conversation at `tiktok.com/messages`, then click a sticker
   in the panel or the command palette. It arrives as a regular photo.
+- **Business Suite and nested frames** — the message composer is located in every
+  frame and open shadow root, so stickers also work where the chat is embedded in
+  the Business Suite shell, not only at `tiktok.com/messages`.
 - A **transparent PNG** looks like a sticker, but the recipient still sees a
   photo. That is a limitation of TikTok's web client, not of the app. Square
   images around 256–512 px look best.

@@ -1,5 +1,7 @@
 'use strict';
 
+const autoTheme = require('./auto-theme');
+
 /**
  * Выполнение наших скриптов в странице сайта.
  *
@@ -49,6 +51,9 @@ async function evalInPage(wc, scripts) {
         /* уже отключился */
       }
     }
+    // Мы могли занять сессию отладчика раньше auto dark mode и отцепить её.
+    // Возвращаем автотёмную тему, чтобы она не пропала до перезагрузки.
+    if (autoTheme.isEnabled()) autoTheme.sync(wc).catch(() => {});
   }
 }
 

@@ -9,6 +9,7 @@ const cosmetics = require('./cosmetics');
 const region = require('./region');
 const plugins = require('./plugins');
 const i18n = require('./i18n');
+const autoTheme = require('./auto-theme');
 
 const isMac = process.platform === 'darwin';
 
@@ -87,7 +88,10 @@ function attachContextMenu(wc) {
     template.push({ type: 'separator' });
     template.push({
       label: 'Проверить элемент',
-      click: () => wc.inspectElement(params.x, params.y),
+      click: () =>
+        autoTheme.suspend(wc).finally(() => {
+          if (!wc.isDestroyed()) wc.inspectElement(params.x, params.y);
+        }),
     });
 
     const pluginItems = plugins.contextMenuItems({

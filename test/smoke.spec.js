@@ -92,6 +92,20 @@ test('окно, команды, поиск и панель функций', asyn
     await expect(page.locator('#panelNoResults')).toBeHidden();
     await expect(page.locator('#catPage')).toBeVisible();
 
+    // Поиск не блокирует аккордеон: клик по найденному заголовку сбрасывает фильтр.
+    await page.locator('#panelSearch').fill('тё');
+    await expect(page.locator('#catPage')).toBeHidden();
+    await page.locator('[data-cat-head="cosmetics"]').click();
+    await expect(page.locator('#panelSearch')).toHaveValue('');
+    await expect(page.locator('#catCosmetics')).toBeVisible();
+    await page.locator('[data-cat-head="cosmetics"]').click();
+
+    // Команда «Стикеры» из полосы заголовка тоже не должна упираться в фильтр.
+    await page.locator('#panelSearch').fill('язык');
+    await page.click('#btnStickers');
+    await expect(page.locator('#panelSearch')).toHaveValue('');
+    await expect(page.locator('#catStickers')).toBeVisible();
+
     // Косметика: категория раскрывается по клику.
     await page.locator('[data-cat-head="cosmetics"]').click();
     const cosmetic = page.locator('#panelCosmetics [data-cosmetic="dark-scrollbars"]');
@@ -131,9 +145,16 @@ test('окно, команды, поиск и панель функций', asyn
     await page.locator('[data-sleep="0"]').click();
     await expect(page.locator('#sleepLabel')).toHaveText('Таймер сна');
 
+    await page.locator('#panelSearch').fill('язык');
     await page.click('#btnPanelClose');
     await expect(page.locator('#panel')).toBeHidden();
     await expect(page.locator('#btnPanel')).toHaveAttribute('aria-pressed', 'false');
+
+    // Поиск не переживает закрытие панели: при открытии видны все разделы.
+    await page.click('#btnPanel');
+    await expect(page.locator('#panelSearch')).toHaveValue('');
+    await page.click('#btnPanelClose');
+    await expect(page.locator('#panel')).toBeHidden();
 
     // Палитра команд: открывается, фильтрует и выполняет команду.
     await page.evaluate(() => window.octo.cmd('palette'));

@@ -67,6 +67,24 @@ test('шрифт сайта применяется ко всем элемент�
       svg.append(svgText);
 
       document.body.append(text, important, svg);
+
+      // Business Suite рисует чат во вложенном фрейме, а TUX-компоненты —
+      // в shadow root. insertCSS туда не проникает: проверяем оба случая.
+      const frame = document.createElement('iframe');
+      frame.id = 'octo-font-frame';
+      frame.srcdoc =
+        '<body><div id="octo-font-inner" style="font-family: \'TikTokDisplayFont\', serif">Сообщения</div></body>';
+      document.body.append(frame);
+
+      const host = document.createElement('div');
+      host.id = 'octo-font-shadow-host';
+      document.body.append(host);
+      const root = host.attachShadow({ mode: 'open' });
+      const shadowText = document.createElement('div');
+      shadowText.id = 'octo-font-shadow';
+      shadowText.setAttribute('style', "font-family: 'TikTokDisplayFont', serif");
+      shadowText.textContent = 'Сообщения';
+      root.append(shadowText);
     });
 
     const fontOf = (id) =>
@@ -77,6 +95,30 @@ test('шрифт сайта применяется ко всем элемент�
 
     await expect.poll(() => fontOf('octo-font-text')).toContain('Inter');
     await expect.poll(() => fontOf('octo-font-important')).toContain('Inter');
+
+    // Подфрейм получает собственный <style> после did-frame-finish-load.
+    await expect
+      .poll(() =>
+        site.evaluate(() => {
+          const doc = document.getElementById('octo-font-frame')?.contentDocument;
+          return doc
+            ? getComputedStyle(doc.getElementById('octo-font-inner')).fontFamily
+            : 'нет фрейма';
+        }),
+      )
+      .toContain('Inter');
+
+    // В shadow root стиль ставится при обходе и через хук attachShadow.
+    await expect
+      .poll(() =>
+        site.evaluate(() => {
+          const root = document.getElementById('octo-font-shadow-host')?.shadowRoot;
+          return root
+            ? getComputedStyle(root.getElementById('octo-font-shadow')).fontFamily
+            : 'нет shadow root';
+        }),
+      )
+      .toContain('Inter');
 
     // Inter действительно подгружается из встроенных data: URI.
     await expect

@@ -20,6 +20,8 @@ const { ctx, setCosmeticsState } = require('./app-context');
 const { readState, writeState } = require('./store');
 const { COSMETIC_RULES } = require('./cosmetic-catalog');
 const { evalInPage } = require('./page-eval');
+const { isTikTokUrl } = require('./shared');
+const autoTheme = require('./auto-theme');
 
 const PROMO_MARK = 'data-octo-promo';
 const BRAND_MARK = 'data-octo-brand';
@@ -399,6 +401,9 @@ const SCROLLBAR_CSS = `
 
 const FONT_CSS_FILE = path.join(__dirname, '../renderer/fonts.css');
 const FONT_DIR = path.join(__dirname, '../renderer/assets/fonts');
+const FONT_STACK = `'Inter', 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif`;
+const SITE_FRAME_STYLE_ID = 'octo-frame-css';
+const SHADOW_STYLE_ID = 'octo-shadow-css';
 
 /**
  * Тот же Inter, что и в оболочке, но для страницы сайта.
@@ -410,21 +415,157 @@ const FONT_DIR = path.join(__dirname, '../renderer/assets/fonts');
  * в чатах) оставалась в фирменном шрифте, часть в Inter. Иконки на сайте —
  * SVG, поэтому исключаем только их; иконочных шрифтов на живой странице нет.
  */
-function siteFontCss() {
-  const stack = `'Inter', 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif`;
-  const fontRule = `html, body, body :not(svg):not(svg *) { font-family: ${stack} !important; }
-input, textarea, select { font-family: ${stack} !important; }`;
-
+function googleFontFaceCss() {
   try {
     const css = fs.readFileSync(FONT_CSS_FILE, 'utf8');
-    const embedded = css.replace(/url\('assets\/fonts\/([^']+)'\)/g, (_match, name) => {
+    return css.replace(/url\('assets\/fonts\/([^']+)'\)/g, (_match, name) => {
       const file = path.join(FONT_DIR, name);
       return `url('data:font/woff2;base64,${fs.readFileSync(file).toString('base64')}')`;
     });
-    return `${embedded}\n${fontRule}`;
   } catch {
-    return fontRule;
+    return '';
   }
+}
+
+function documentFontRule() {
+  return `html, body, body :not(svg):not(svg *) { font-family: ${FONT_STACK} !important; }
+input, textarea, select { font-family: ${FONT_STACK} !important; }`;
+}
+
+function shadowFontRule() {
+  return `:host, :host *:not(svg):not(svg *) { font-family: ${FONT_STACK} !important; }
+input, textarea, select { font-family: ${FONT_STACK} !important; }`;
+}
+
+function siteFontCss() {
+  return `${googleFontFaceCss()}\n${documentFontRule()}`;
+}
+
+/**
+ * CSS для подфреймов. `insertCSS` действует только на главный документ, а
+ * Business Suite и часть экранов TikTok живут во вложенных фреймах. Там стиль
+ * приходится ставить элементом <style>: CSP TikTok разрешает inline-стили.
+ */
+function frameInjectionScript(documentCss, shadowCss) {
+  return `(() => {
+  const DOC_CSS = ${JSON.stringify(documentCss || '')};
+  const SHADOW_CSS = ${JSON.stringify(shadowCss || '')};
+  const DOC_ID = ${JSON.stringify(SITE_FRAME_STYLE_ID)};
+  const SHADOW_ID = ${JSON.stringify(SHADOW_STYLE_ID)};
+
+  const install = (root, css, id) => {
+    if (!root || !root.querySelector) return;
+    let style = root.querySelector('style#' + id);
+    if (!css) {
+      if (style) style.remove();
+      return;
+    }
+    if (!style) {
+      style = document.createElement('style');
+      style.id = id;
+      (root.head || root).appendChild(style);
+    }
+    if (style.textContent !== css) style.textContent = css;
+  };
+
+  install(document, DOC_CSS, DOC_ID);
+
+  const seen = new WeakSet();
+  const walk = (root) => {
+    if (!root || seen.has(root)) return;
+    seen.add(root);
+    let nodes;
+    try {
+      nodes = root.querySelectorAll('*');
+    } catch {
+      return;
+    }
+    for (const element of nodes) {
+      if (!element.shadowRoot) continue;
+      install(element.shadowRoot, SHADOW_CSS, SHADOW_ID);
+      walk(element.shadowRoot);
+    }
+  };
+  walk(document);
+
+  // Новые shadow root появляются после SPA-переходов и ленивой отрисовки.
+  if (!window.__octoShadowCssHook) {
+    const original = Element.prototype.attachShadow;
+    window.__octoShadowCssHook = { original };
+    Element.prototype.attachShadow = function (init) {
+      const root = original.call(this, init);
+      try {
+        install(root, window.__octoShadowCssValue || '', SHADOW_ID);
+      } catch {
+        /* закрытый shadow root */
+      }
+      return root;
+    };
+  }
+  window.__octoShadowCssValue = SHADOW_CSS;
+  return true;
+})()`;
+}
+
+function framesOf(wc) {
+  try {
+    const main = wc.mainFrame;
+    const list = Array.isArray(main.framesInSubtree)
+      ? main.framesInSubtree
+      : [main, ...(Array.isArray(main.frames) ? main.frames : [])];
+    const mainOrigin = main.origin;
+    return list.filter((frame) => {
+      if (!frame || frame === main || frame.isDestroyed?.()) return false;
+      const url = frame.url || '';
+      // В чужие https-фреймы (капча, платёжные виджеты, реклама) не лезем.
+      if (url.startsWith('about:')) return true;
+      if (isTikTokUrl(url)) return true;
+      return frame.origin === mainOrigin;
+    });
+  } catch {
+    return [];
+  }
+}
+
+function enabledCss() {
+  return RULES.filter((rule) => isEnabled(rule.id))
+    .map((rule) => rule.css || '')
+    .filter(Boolean)
+    .join('\n');
+}
+
+function enabledShadowCss() {
+  return isEnabled('modern-font') ? shadowFontRule() : '';
+}
+
+/**
+ * Досылает стили во вложенные фреймы и во все открытые shadow root.
+ * Основной документ уже получает CSS через insertCSS, поэтому ему передаём
+ * только правило для shadow root.
+ */
+async function injectFrameStyles() {
+  const wc = ctx.view?.webContents;
+  if (!wc || wc.isDestroyed()) return;
+
+  const documentCss = enabledCss();
+  const shadowCss = enabledShadowCss();
+
+  try {
+    await wc.mainFrame.executeJavaScript(frameInjectionScript('', shadowCss), false);
+  } catch {
+    /* документ сменился во время инъекции */
+  }
+
+  const frames = framesOf(wc);
+  if (!frames.length) return;
+
+  await Promise.all(
+    frames.map((frame) =>
+      frame
+        .executeJavaScript(frameInjectionScript(documentCss, shadowCss), false)
+        .catch(() => false),
+    ),
+  );
 }
 
 /**
@@ -447,29 +588,60 @@ const THEME_COOKIES = [
   { name: 'tiktok_webapp_theme', value: 'dark' },
 ];
 
+// Доменную cookie получают все поддомены: Business Suite и служебные экраны
+// TikTok живут не на www и иначе остаются светлыми.
+const THEME_TARGETS = [
+  { url: SITE_URL },
+  { url: 'https://tiktok.com/' },
+  { url: SITE_URL, domain: '.tiktok.com' },
+];
+
+async function removeThemeCookies(ses) {
+  let cookies = [];
+  try {
+    cookies = await ses.cookies.get({});
+  } catch {
+    return;
+  }
+
+  const names = new Set(THEME_COOKIES.map((cookie) => cookie.name));
+  await Promise.all(
+    cookies
+      .filter((cookie) => names.has(cookie.name))
+      .map((cookie) => {
+        const host = String(cookie.domain || 'www.tiktok.com').replace(/^\./, '');
+        return ses.cookies
+          .remove(`https://${host}${cookie.path || '/'}`, cookie.name)
+          .catch(() => {});
+      }),
+  );
+}
+
 async function syncThemeCookies(ses, enabled) {
   if (!ses) return;
+  if (!enabled) {
+    await removeThemeCookies(ses);
+    return;
+  }
 
-  const expirationDate = Date.now() / 1000 + THEME_MAX_AGE;
+  const expirationDate = Math.floor(Date.now() / 1000) + THEME_MAX_AGE;
   await Promise.all(
-    THEME_COOKIES.map(async ({ name, value }) => {
-      try {
-        if (enabled) {
-          await ses.cookies.set({
-            url: SITE_URL,
+    THEME_COOKIES.flatMap(({ name, value }) =>
+      THEME_TARGETS.map((target) =>
+        ses.cookies
+          .set({
+            ...target,
             name,
             value,
             expirationDate,
             secure: true,
             sameSite: 'lax',
-          });
-        } else {
-          await ses.cookies.remove(SITE_URL, name);
-        }
-      } catch {
-        /* cookie jar может быть недоступен в тестовом профиле */
-      }
-    }),
+          })
+          .catch(() => {
+            /* cookie jar может быть недоступен в тестовом профиле */
+          }),
+      ),
+    ),
   );
 }
 
@@ -545,11 +717,7 @@ async function apply() {
   await Promise.all(previous.map((key) => wc.removeInsertedCSS(key).catch(() => {})));
   if (currentGeneration !== generation) return;
 
-  const enabled = RULES.filter((rule) => isEnabled(rule.id));
-  const css = enabled
-    .map((rule) => rule.css || '')
-    .filter(Boolean)
-    .join('\n');
+  const css = enabledCss();
 
   if (css.trim()) {
     try {
@@ -562,6 +730,7 @@ async function apply() {
   if (currentGeneration !== generation) return;
 
   runScripts();
+  injectFrameStyles().catch(() => {});
 }
 
 let scriptRunning = false;
@@ -618,6 +787,7 @@ function toggle(id) {
   if (id === 'dark-theme') {
     const wc = ctx.view?.webContents;
     if (wc && !wc.isDestroyed()) {
+      autoTheme.setEnabled(wc, next).catch(() => {});
       syncThemeCookies(wc.session, next).finally(() => {
         if (!wc.isDestroyed()) wc.reload();
       });
@@ -645,6 +815,7 @@ module.exports = {
   apply,
   schedule,
   scheduleScripts,
+  injectFrameStyles,
   prepareTheme,
   toggle,
   isEnabled,

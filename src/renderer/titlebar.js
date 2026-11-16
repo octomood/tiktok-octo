@@ -194,8 +194,14 @@ el.btnPanel.addEventListener('click', (event) => {
 el.btnPanelClose.addEventListener('click', () => api.cmd('panel'));
 
 el.panelSearch.addEventListener('input', applyPanelFilter);
+el.panelSearch.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || !el.panelSearch.value) return;
+  event.preventDefault();
+  clearPanelSearch();
+  applyPanelFilter();
+});
 el.panelSearchClear.addEventListener('click', () => {
-  el.panelSearch.value = '';
+  clearPanelSearch();
   applyPanelFilter();
   el.panelSearch.focus();
 });
@@ -299,6 +305,7 @@ el.regionProxy.addEventListener('keydown', (event) => {
 });
 api.onPanelCategory((id) => {
   if (!id) return;
+  clearPanelSearch();
   openCategories.add(id);
   applyPanelFilter();
   const category = el.panel.querySelector(`[data-cat="${id}"]`);
@@ -677,6 +684,14 @@ function normalizeSearch(text) {
   return (text || '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
+/** Сбрасывает поиск, чтобы команда «открыть раздел» не упиралась в фильтр. */
+function clearPanelSearch() {
+  if (!panelQuery && !el.panelSearch.value) return;
+  panelQuery = '';
+  el.panelSearch.value = '';
+  el.panelSearchClear.hidden = true;
+}
+
 /**
  * Раскрывает нужные категории и прячет всё, что не подходит под запрос.
  * При активном поиске категории раскрываются сами: пользователь ищет
@@ -731,8 +746,10 @@ function applyPanelFilter() {
 }
 
 function toggleCategory(id) {
-  // Во время поиска раскрытием управляет фильтр.
-  if (!id || panelQuery) return;
+  if (!id) return;
+  // Во время поиска клик по заголовку не должен ощущаться сломанным:
+  // сбрасываем фильтр и переключаем выбранный раздел.
+  clearPanelSearch();
   if (openCategories.has(id)) openCategories.delete(id);
   else openCategories.add(id);
   applyPanelFilter();
@@ -1063,6 +1080,10 @@ function renderPanel() {
   el.panel.hidden = !state.panel;
   el.btnPanel.classList.toggle('is-on', Boolean(state.panel));
   el.btnPanel.setAttribute('aria-pressed', String(Boolean(state.panel)));
+
+  // Закрытая панель не должна хранить поиск: при следующем открытии пользователь
+  // ожидает увидеть все разделы, а не случайно скрытые фильтром.
+  if (!state.panel) clearPanelSearch();
 
   const width = Number(state.panelWidth) || 300;
   document.documentElement.style.setProperty('--panel-w', `${width}px`);

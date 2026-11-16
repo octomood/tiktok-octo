@@ -88,10 +88,11 @@ function seedProfile() {
   return { userData, stickerFile };
 }
 
-async function startServer(html) {
-  const server = http.createServer((_request, response) => {
+async function startServer(html, routes = {}) {
+  const server = http.createServer((request, response) => {
+    const body = routes[request.url] ?? html;
     response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    response.end(html);
+    response.end(body);
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   return { server, url: `http://127.0.0.1:${server.address().port}/` };
@@ -106,7 +107,7 @@ async function findWindow(app, predicate) {
   return null;
 }
 
-async function launch(app, userData, chatUrl) {
+async function launchRaw(userData, chatUrl) {
   const instance = await electron.launch({
     args: [path.join(__dirname, '..'), '--no-sandbox'],
     env: {
@@ -124,9 +125,14 @@ async function launch(app, userData, chatUrl) {
 
   const view = await findWindow(instance, (candidate) => candidate.url().startsWith(chatUrl));
   expect(view, 'страница чата не появилась').toBeTruthy();
-  await expect.poll(() => view.evaluate(() => Boolean(window.__events))).toBe(true);
 
   return { instance, page, view };
+}
+
+async function launch(app, userData, chatUrl) {
+  const launched = await launchRaw(userData, chatUrl);
+  await expect.poll(() => launched.view.evaluate(() => Boolean(window.__events))).toBe(true);
+  return launched;
 }
 
 async function openStickers(page) {
@@ -210,6 +216,85 @@ test('стикеры: поле загрузки, созданное по кли�
       .poll(() => view.evaluate(() => window.__events.attached?.name ?? ''))
       .toBe('test.png');
     await expect.poll(() => view.evaluate(() => window.__events.sent)).toBe(1);
+  } finally {
+    if (app) await app.close();
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+/**
+ * Business Suite держит переписку во вложенном фрейме. Раньше стикер искал
+ * поле только в главном документе и молча не находил чат.
+ */
+test('стикеры: чат во вложенном фрейме', async () => {
+  const { userData } = seedProfile();
+  const outer = `<!doctype html>
+<html><body style="margin:0">
+  <iframe id="chat" src="/chat" style="width:640px;height:420px;border:0"></iframe>
+</body></html>`;
+  const { server, url } = await startServer(outer, { '/chat': CHAT_HTML });
+  let app;
+
+  try {
+    const launched = await launchRaw(userData, url);
+    app = launched.instance;
+    const { page, view } = launched;
+
+    await expect
+      .poll(() => view.frames().some((frame) => frame.url().includes('/chat')))
+      .toBe(true);
+    const chat = view.frames().find((frame) => frame.url().includes('/chat'));
+    await expect.poll(() => chat.evaluate(() => Boolean(window.__events))).toBe(true);
+
+    await openStickers(page);
+    await page.evaluate(() => window.octo.cmd('stickerSend', 'test'));
+
+    await expect
+      .poll(() => chat.evaluate(() => window.__events.attached?.size ?? 0))
+      .toBe(PNG.length);
+    await expect.poll(() => chat.evaluate(() => window.__events.sent)).toBe(1);
+  } finally {
+    if (app) await app.close();
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+/**
+ * Ленивое поле загрузки во вложенном фрейме: клик по кнопке фото должен
+ * перехватываться через CDP так же, как в главном документе.
+ */
+test('стикеры: ленивое поле загрузки во вложенном фрейме', async () => {
+  const { userData } = seedProfile();
+  const outer = `<!doctype html>
+<html><body style="margin:0">
+  <iframe id="chat" src="/chat" style="width:640px;height:420px;border:0"></iframe>
+</body></html>`;
+  const { server, url } = await startServer(outer, { '/chat': LAZY_INPUT_HTML });
+  let app;
+
+  try {
+    const launched = await launchRaw(userData, url);
+    app = launched.instance;
+    const { page, view } = launched;
+
+    await expect
+      .poll(() => view.frames().some((frame) => frame.url().includes('/chat')))
+      .toBe(true);
+    const chat = view.frames().find((frame) => frame.url().includes('/chat'));
+    await expect.poll(() => chat.evaluate(() => Boolean(window.__events))).toBe(true);
+
+    await openStickers(page);
+    await page.evaluate(() => window.octo.cmd('stickerSend', 'test'));
+
+    await expect
+      .poll(() => chat.evaluate(() => window.__events.attached?.size ?? 0))
+      .toBe(PNG.length);
+    await expect
+      .poll(() => chat.evaluate(() => window.__events.attached?.name ?? ''))
+      .toBe('test.png');
+    await expect.poll(() => chat.evaluate(() => window.__events.sent)).toBe(1);
   } finally {
     if (app) await app.close();
     await new Promise((resolve) => server.close(resolve));
