@@ -24,7 +24,7 @@ provides=('tiktok-octo')
 conflicts=('tiktok-octo' 'tiktok-octo-git')
 options=('!strip' '!debug')
 source=("$pkgname-$pkgver.AppImage::https://github.com/octomood/tiktok-octo/releases/download/v$pkgver/tiktok-octo-$pkgver-linux-x86_64.AppImage")
-sha256sums=('729822b867ff5a205763bdc4c356a0cca9a41c4f92fb0801b621c76188701b59')
+sha256sums=('745fcb5eb68fce8045ccd8f5e1febdd20e764d34923f51781d314c3c6ba6422a')
 
 package() {
   cd "$srcdir"

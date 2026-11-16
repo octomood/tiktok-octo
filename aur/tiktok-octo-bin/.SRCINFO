@@ -21,6 +21,6 @@ pkgbase = tiktok-octo-bin
 	options = !strip
 	options = !debug
 	source = tiktok-octo-bin-0.5.1.AppImage::https://github.com/octomood/tiktok-octo/releases/download/v0.5.1/tiktok-octo-0.5.1-linux-x86_64.AppImage
-	sha256sums = 729822b867ff5a205763bdc4c356a0cca9a41c4f92fb0801b621c76188701b59
+	sha256sums = 745fcb5eb68fce8045ccd8f5e1febdd20e764d34923f51781d314c3c6ba6422a
 
 pkgname = tiktok-octo-bin
