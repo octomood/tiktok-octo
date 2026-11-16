@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.octomood.TikTokOcto</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>TikTok octo</name>
+  <summary>TikTok в отдельном окне</summary>
+
+  <developer id="io.github.octomood">
+    <name>octo</name>
+  </developer>
+
+  <description>
+    <p>
+      TikTok octo — неофициальный десктоп-клиент: официальный сайт в нативной
+      оболочке Electron, без адресной строки и вкладок браузера.
+    </p>
+    <p>Что внутри:</p>
+    <ul>
+      <li>Своя полоса заголовка: назад, вперёд, обновить, счётчик непрочитанных.</li>
+      <li>Мини-плеер поверх всех окон с автолистанием и управлением.</li>
+      <li>Трей, режим «поверх всех», медиа-клавиши и MPRIS.</li>
+      <li>Поиск по странице, масштаб, загрузки и снимок кадра.</li>
+      <li>Выбор региона и собственный SOCKS5/HTTP-прокси.</li>
+    </ul>
+    <p>
+      Приложение не связано с TikTok Ltd., не использует приватных запросов и не
+      обходит защиты сайта: это браузер в форме приложения.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.octomood.TikTokOcto.desktop</launchable>
+
+  <url type="homepage">https://github.com/octomood/tiktok-octo</url>
+  <url type="bugtracker">https://github.com/octomood/tiktok-octo/issues</url>
+  <url type="vcs-browser">https://github.com/octomood/tiktok-octo</url>
+
+  <screenshots>
+    <!-- Перед заявкой на Flathub нужны настоящие скриншоты 16:9 в docs/screenshots/. -->
+    <screenshot type="default">
+      <caption>Лента TikTok в отдельном окне</caption>
+      <image type="source">https://raw.githubusercontent.com/octomood/tiktok-octo/main/docs/screenshots/main.png</image>
+    </screenshot>
+  </screenshots>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-info">moderate</content_attribute>
+  </content_rating>
+
+  <releases>
+    <release version="0.5.1" date="2026-11-16"/>
+    <release version="0.5.0" date="2026-11-16"/>
+    <release version="0.4.3" date="2026-11-15"/>
+    <release version="0.4.2" date="2026-11-15"/>
+    <release version="0.4.1" date="2026-11-15"/>
+    <release version="0.2.0" date="2026-11-15"/>
+  </releases>
+
+  <provides>
+    <binary>tiktok-octo</binary>
+  </provides>
+
+  <categories>
+    <category>Network</category>
+    <category>Video</category>
+  </categories>
+
+  <keywords>
+    <keyword>tiktok</keyword>
+    <keyword>video</keyword>
+    <keyword>social</keyword>
+    <keyword>client</keyword>
+  </keywords>
+</component>

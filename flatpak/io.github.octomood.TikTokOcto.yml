@@ -1,0 +1,102 @@
+# Flatpak-манифест TikTok octo.
+#
+# Локальная проверка (из каталога flatpak/):
+#   flatpak-builder --user --install --force-clean \
+#     --state-dir=/tmp/octo-flatpak/state /tmp/octo-flatpak/build \
+#     io.github.octomood.TikTokOcto.yml
+#   flatpak run io.github.octomood.TikTokOcto
+#
+# Заявка на Flathub: см. README.md рядом. Для PR источники ниже нужно
+# заменить на git-источник с тегом релиза (вместо type: dir).
+
+app-id: io.github.octomood.TikTokOcto
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '25.08'
+command: tiktok-octo
+separate-locales: false
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --device=dri
+  # Загрузки видео и снимки кадра сохраняются в пользовательские каталоги.
+  - --filesystem=xdg-download
+  - --filesystem=xdg-pictures
+  # Уведомления, трей и MPRIS («сейчас играет» в GNOME/KDE/playerctl).
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --own-name=org.mpris.MediaPlayer2.tiktok_octo
+
+build-options:
+  append-path: /usr/lib/sdk/node22/bin
+  env:
+    NPM_CONFIG_LOGLEVEL: warn
+
+modules:
+  # Готовый бинарник Electron: в песочнице нет сети, скачать его из
+  # install-скрипта пакета electron нельзя.
+  - name: electron
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/electron
+      - unzip -q electron.zip -d /app/electron
+    sources:
+      - type: file
+        url: https://github.com/electron/electron/releases/download/v45.3.2/electron-v45.3.2-linux-x64.zip
+        sha256: 0ae270dcca192d2f0a0e2be585307a2460f59303d76b7d19171fc6442d72a829
+        dest-filename: electron.zip
+        only-arches: [x86_64]
+      - type: file
+        url: https://github.com/electron/electron/releases/download/v45.3.2/electron-v45.3.2-linux-arm64.zip
+        sha256: e869334b60a1768b2cbb0ae066d25de333511cbb1957cdac9a345e120d41e11b
+        dest-filename: electron.zip
+        only-arches: [aarch64]
+
+  - name: tiktok-octo
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 tiktok-octo.sh /app/bin/tiktok-octo
+      - mkdir -p /app/main
+      - cp -r src build package.json package-lock.json /app/main/
+      - install -Dm644 LICENSE /app/share/licenses/io.github.octomood.TikTokOcto/LICENSE
+      # Только рабочие зависимости: npm-sources.json собран с --no-devel.
+      # --ignore-scripts отключает сборку необязательного нативного
+      # abstract-socket (нужен dbus-next только для abstract-сокетов D-Bus,
+      # в Flatpak сессионная шина — обычный unix-сокет).
+      - cd /app/main && npm ci --offline --omit=dev --ignore-scripts --no-audit --no-fund
+        --cache "$FLATPAK_BUILDER_BUILDDIR/flatpak-node/npm-cache"
+      - install -Dm644 io.github.octomood.TikTokOcto.metainfo.xml -t /app/share/metainfo/
+      - install -Dm644 io.github.octomood.TikTokOcto.desktop -t /app/share/applications/
+      - install -Dm644 build/icon.png /app/share/icons/hicolor/512x512/apps/io.github.octomood.TikTokOcto.png
+    sources:
+      # Для Flathub замените этот блок на:
+      #   - type: git
+      #     url: https://github.com/octomood/tiktok-octo.git
+      #     tag: v0.5.0
+      #     commit: <полный sha коммита тега>
+      # и перегенерируйте npm-sources.json из того же коммита.
+      - type: dir
+        path: ../src
+        dest: src
+      - type: file
+        path: ../package.json
+      - type: file
+        path: ../package-lock.json
+      - type: file
+        path: ../LICENSE
+      - type: file
+        path: ../build/icon.png
+        dest: build
+      - npm-sources.json
+      - type: file
+        path: io.github.octomood.TikTokOcto.metainfo.xml
+      - type: file
+        path: io.github.octomood.TikTokOcto.desktop
+      - type: file
+        path: tiktok-octo.sh

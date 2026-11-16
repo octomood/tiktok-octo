@@ -1,0 +1,65 @@
+# Maintainer: octo <octo@users.noreply.github.com>
+
+pkgname=tiktok-octo-bin
+_name=tiktok-octo
+pkgver=0.4.3
+pkgrel=1
+pkgdesc='Неофициальный десктоп-клиент TikTok: официальный сайт в нативной оболочке Electron'
+arch=('x86_64')
+url='https://github.com/octomood/tiktok-octo'
+license=('MIT')
+depends=(
+  'alsa-lib'
+  'gtk3'
+  'libcups'
+  'libdrm'
+  'libnotify'
+  'libxkbcommon'
+  'libxss'
+  'libxtst'
+  'mesa'
+  'nss'
+)
+provides=('tiktok-octo')
+conflicts=('tiktok-octo' 'tiktok-octo-git')
+options=('!strip' '!debug')
+source=("$pkgname-$pkgver.AppImage::https://github.com/octomood/tiktok-octo/releases/download/v$pkgver/tiktok-octo-$pkgver-linux-x86_64.AppImage")
+sha256sums=('0e0a88a86e0d504ddebb86d24208153465269712301202d1d0ff58ddd7b5e637')
+
+package() {
+  cd "$srcdir"
+
+  # Распаковываем AppImage на этапе сборки: иначе пользователю нужен
+  # libfuse2, а приложение всё равно лежит в /opt целиком.
+  chmod +x "$pkgname-$pkgver.AppImage"
+  ./"$pkgname-$pkgver.AppImage" --appimage-extract > /dev/null
+
+  install -dm755 "$pkgdir/opt/$_name"
+  cp -a squashfs-root/. "$pkgdir/opt/$_name/"
+
+  # Chromium ищет SUID-хелпер песочницы: без него Electron не стартует
+  # на системах, где обычным пользователям запрещены user namespaces.
+  chown root:root "$pkgdir/opt/$_name/chrome-sandbox"
+  chmod 4755 "$pkgdir/opt/$_name/chrome-sandbox"
+
+  install -Dm755 /dev/stdin "$pkgdir/usr/bin/$_name" << 'EOF'
+#!/bin/sh
+exec /opt/tiktok-octo/tiktok-octo "$@"
+EOF
+
+  install -Dm644 "$pkgdir/opt/$_name/usr/share/icons/hicolor/512x512/apps/$_name.png" \
+    "$pkgdir/usr/share/icons/hicolor/512x512/apps/$_name.png"
+
+  install -Dm644 /dev/stdin "$pkgdir/usr/share/applications/$_name.desktop" << 'EOF'
+[Desktop Entry]
+Name=TikTok octo
+Comment=Неофициальный десктоп-клиент TikTok
+Exec=tiktok-octo %U
+Terminal=false
+Type=Application
+Icon=tiktok-octo
+StartupWMClass=tiktok-octo
+Categories=Network;Video;
+Keywords=tiktok;video;social;
+EOF
+}

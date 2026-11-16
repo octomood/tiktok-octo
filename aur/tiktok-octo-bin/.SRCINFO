@@ -1,0 +1,26 @@
+pkgbase = tiktok-octo-bin
+	pkgdesc = Неофициальный десктоп-клиент TikTok: официальный сайт в нативной оболочке Electron
+	pkgver = 0.4.3
+	pkgrel = 1
+	url = https://github.com/octomood/tiktok-octo
+	arch = x86_64
+	license = MIT
+	depends = alsa-lib
+	depends = gtk3
+	depends = libcups
+	depends = libdrm
+	depends = libnotify
+	depends = libxkbcommon
+	depends = libxss
+	depends = libxtst
+	depends = mesa
+	depends = nss
+	provides = tiktok-octo
+	conflicts = tiktok-octo
+	conflicts = tiktok-octo-git
+	options = !strip
+	options = !debug
+	source = tiktok-octo-bin-0.4.3.AppImage::https://github.com/octomood/tiktok-octo/releases/download/v0.4.3/tiktok-octo-0.4.3-linux-x86_64.AppImage
+	sha256sums = 0e0a88a86e0d504ddebb86d24208153465269712301202d1d0ff58ddd7b5e637
+
+pkgname = tiktok-octo-bin

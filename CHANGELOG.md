@@ -1,5 +1,21 @@
 # Changelog
 
+## Не выпущено
+
+### Добавлено
+
+- **Пакеты для Linux**: Flatpak-манифест с метаданными AppStream и PKGBUILD
+  для AUR (`tiktok-octo-bin`, `tiktok-octo-git`) лежат в `flatpak/` и `aur/`.
+  Локальная сборка и публикация — `flatpak/README.md`, обновление версий —
+  `aur/README.md`. `tiktok-octo-bin` распаковывает AppImage в `/opt` без FUSE и
+  ставит `chrome-sandbox` с SUID, поэтому запуск идёт без `--no-sandbox`.
+- **Flatpak-специфика обновлений и автозапуска**: в песочнице собственный
+  апдейтер выключен (`FLATPAK_ID` в `src/main/updates.js`), проверка
+  обновлений отвечает «Обновления приходят через Flathub». Автозапуск через
+  `~/.config/autostart` отключён (`src/main/autostart.js`): этот файл попадает
+  внутрь песочницы и не виден рабочему столу; правильный путь — портал
+  `org.freedesktop.portal.Background`.
+
 ## 0.4.3
 
 ### Добавлено

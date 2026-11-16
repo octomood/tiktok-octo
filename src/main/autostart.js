@@ -15,6 +15,14 @@ const path = require('node:path');
 
 const DESKTOP_FILE = 'tiktok-octo.desktop';
 
+/**
+ * В Flatpak автозапуск устроен иначе: файл в ~/.config/autostart попадает
+ * внутрь песочницы (~/.var/app/<id>/config), и рабочий стол его не читает.
+ * Правильный путь — портал org.freedesktop.portal.Background; пока автозапуск
+ * в Flatpak просто отключён.
+ */
+const IS_FLATPAK = Boolean(process.env.FLATPAK_ID);
+
 function linuxAutostartFile() {
   const configHome = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
   return path.join(configHome, 'autostart', DESKTOP_FILE);
@@ -26,6 +34,7 @@ function executablePath() {
 }
 
 function isEnabled() {
+  if (IS_FLATPAK) return false;
   if (process.platform === 'linux') return fs.existsSync(linuxAutostartFile());
   try {
     return app.getLoginItemSettings().openAtLogin;
@@ -35,6 +44,8 @@ function isEnabled() {
 }
 
 function setEnabled(enabled) {
+  if (IS_FLATPAK) return;
+
   if (process.platform === 'linux') {
     const file = linuxAutostartFile();
     if (!enabled) {

@@ -1,0 +1,72 @@
+# Maintainer: octo <octo@users.noreply.github.com>
+
+pkgname=tiktok-octo-git
+_name=tiktok-octo
+pkgver=0.4.3
+pkgrel=1
+pkgdesc='Неофициальный десктоп-клиент TikTok: официальный сайт в нативной оболочке Electron'
+arch=('x86_64')
+url='https://github.com/octomood/tiktok-octo'
+license=('MIT')
+depends=(
+  'alsa-lib'
+  'gtk3'
+  'libcups'
+  'libdrm'
+  'libnotify'
+  'libxkbcommon'
+  'libxss'
+  'libxtst'
+  'mesa'
+  'nss'
+)
+makedepends=('git' 'nodejs' 'npm')
+provides=('tiktok-octo')
+conflicts=('tiktok-octo' 'tiktok-octo-bin')
+options=('!strip' '!debug')
+source=("$pkgname::git+https://github.com/octomood/tiktok-octo.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$pkgname"
+  git describe --long --tags --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+build() {
+  cd "$pkgname"
+  npm ci --no-audit --no-fund
+  npx electron-builder --linux dir
+}
+
+package() {
+  cd "$pkgname"
+
+  install -dm755 "$pkgdir/opt/$_name"
+  cp -a dist/linux-unpacked/. "$pkgdir/opt/$_name/"
+
+  # Chromium ищет SUID-хелпер песочницы: без него Electron не стартует
+  # на системах, где обычным пользователям запрещены user namespaces.
+  chown root:root "$pkgdir/opt/$_name/chrome-sandbox"
+  chmod 4755 "$pkgdir/opt/$_name/chrome-sandbox"
+
+  install -Dm755 /dev/stdin "$pkgdir/usr/bin/$_name" << 'EOF'
+#!/bin/sh
+exec /opt/tiktok-octo/tiktok-octo "$@"
+EOF
+
+  install -Dm644 build/icon.png \
+    "$pkgdir/usr/share/icons/hicolor/512x512/apps/$_name.png"
+
+  install -Dm644 /dev/stdin "$pkgdir/usr/share/applications/$_name.desktop" << 'EOF'
+[Desktop Entry]
+Name=TikTok octo
+Comment=Неофициальный десктоп-клиент TikTok
+Exec=tiktok-octo %U
+Terminal=false
+Type=Application
+Icon=tiktok-octo
+StartupWMClass=tiktok-octo
+Categories=Network;Video;
+Keywords=tiktok;video;social;
+EOF
+}

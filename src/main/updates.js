@@ -10,6 +10,12 @@ const { toast } = require('./app-context');
  * и README). В dev-режиме модуль молчит, чтобы не мешать отладке.
  */
 
+/**
+ * В Flatpak приложение обновляется вместе с пакетом: собственный апдейтер
+ * качал бы мимо песочницы и нарушал правила Flathub.
+ */
+const IS_FLATPAK = Boolean(process.env.FLATPAK_ID);
+
 /** @type {import('electron-updater').AppUpdater | null} */
 let autoUpdater = null;
 let packaged = false;
@@ -19,7 +25,7 @@ function initUpdates() {
   // поэтому дополнительно проверяем process.defaultApp («это Electron, а не
   // собранное приложение»).
   packaged = app.isPackaged && !process.defaultApp;
-  if (!packaged || process.env.OCTO_E2E) return;
+  if (!packaged || IS_FLATPAK || process.env.OCTO_E2E) return;
 
   try {
     // Пакет может отсутствовать в урезанной сборке — приложение важнее.
@@ -55,6 +61,11 @@ function initUpdates() {
 
 /** Ручная проверка из панели функций. */
 async function checkNow() {
+  if (IS_FLATPAK) {
+    toast('Обновления приходят через Flathub');
+    return;
+  }
+
   if (!packaged || !autoUpdater) {
     toast('Обновления доступны только в собранной версии');
     return;

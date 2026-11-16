@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=TikTok octo
+Comment=Неофициальный десктоп-клиент TikTok
+Exec=tiktok-octo %U
+Terminal=false
+Type=Application
+Icon=io.github.octomood.TikTokOcto
+StartupWMClass=tiktok-octo
+Categories=Network;
+Keywords=tiktok;video;social;
