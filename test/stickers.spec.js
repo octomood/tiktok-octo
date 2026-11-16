@@ -143,6 +143,15 @@ function chatEvents(view) {
   });
 }
 
+/** Встраивает чат через srcdoc: без второго HTTP-запроса и гонки загрузки. */
+function iframePage(content) {
+  const srcdoc = content.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  return `<!doctype html>
+<html><body style="margin:0">
+  <iframe id="chat" style="width:640px;height:420px;border:0" srcdoc="${srcdoc}"></iframe>
+</body></html>`;
+}
+
 async function openStickers(page) {
   await page.click('#btnStickers');
   await expect(page.locator('#panel')).toBeVisible();
@@ -237,11 +246,7 @@ test('стикеры: поле загрузки, созданное по кли�
  */
 test('стикеры: чат во вложенном фрейме', async () => {
   const { userData } = seedProfile();
-  const outer = `<!doctype html>
-<html><body style="margin:0">
-  <iframe id="chat" src="/chat" style="width:640px;height:420px;border:0"></iframe>
-</body></html>`;
-  const { server, url } = await startServer(outer, { '/chat': CHAT_HTML });
+  const { server, url } = await startServer(iframePage(CHAT_HTML));
   let app;
 
   try {
@@ -269,11 +274,7 @@ test('стикеры: чат во вложенном фрейме', async () => 
  */
 test('стикеры: ленивое поле загрузки во вложенном фрейме', async () => {
   const { userData } = seedProfile();
-  const outer = `<!doctype html>
-<html><body style="margin:0">
-  <iframe id="chat" src="/chat" style="width:640px;height:420px;border:0"></iframe>
-</body></html>`;
-  const { server, url } = await startServer(outer, { '/chat': LAZY_INPUT_HTML });
+  const { server, url } = await startServer(iframePage(LAZY_INPUT_HTML));
   let app;
 
   try {
