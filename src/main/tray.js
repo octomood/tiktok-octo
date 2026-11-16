@@ -6,6 +6,8 @@ const { ctx } = require('./app-context');
 const { readState, writeState } = require('./store');
 const cosmetics = require('./cosmetics');
 const region = require('./region');
+const plugins = require('./plugins');
+const i18n = require('./i18n');
 
 /**
  * Трей: быстрый доступ к звуку/поверх всех окон и режим «закрыть в трей».
@@ -36,7 +38,7 @@ function createTray() {
 }
 
 function toggleWindow() {
-  if (!ctx.win) {
+  if (!ctx.win || ctx.win.isDestroyed()) {
     // На macOS окно могли закрыть, а приложение осталось в трее.
     ctx.trayActions?.show?.();
     return;
@@ -51,7 +53,7 @@ function toggleWindow() {
 }
 
 function showWindow() {
-  if (!ctx.win) return;
+  if (!ctx.win || ctx.win.isDestroyed()) return;
   if (ctx.win.isMinimized()) ctx.win.restore();
   ctx.win.show();
   ctx.win.focus();
@@ -63,73 +65,94 @@ function refreshTrayMenu() {
   if (!actions) return;
 
   const saved = readState();
-  const wc = ctx.view?.webContents;
-  const visible = !!ctx.win && ctx.win.isVisible() && !ctx.win.isMinimized();
+  const wc =
+    ctx.view && ctx.view.webContents && !ctx.view.webContents.isDestroyed()
+      ? ctx.view.webContents
+      : null;
+  const winAlive = Boolean(ctx.win && !ctx.win.isDestroyed());
+  const visible = Boolean(winAlive && ctx.win.isVisible() && !ctx.win.isMinimized());
 
-  const menu = Menu.buildFromTemplate([
-    { label: visible ? 'Скрыть окно' : 'Показать окно', click: toggleWindow },
-    { type: 'separator' },
-    {
-      label: 'Без звука',
-      type: 'checkbox',
-      checked: !!wc?.isAudioMuted(),
-      click: () => actions.mute(),
-    },
-    {
-      label: 'Поверх всех окон',
-      type: 'checkbox',
-      checked: !!ctx.win?.isAlwaysOnTop(),
-      click: () => actions.onTop(),
-    },
-    {
-      label: 'Картинка в картинке',
-      type: 'checkbox',
-      checked: ctx.pipActive,
-      click: () => actions.pip(),
-    },
-    {
-      label: 'Следующее видео',
-      enabled: Boolean(wc),
-      click: () => actions.next?.(),
-    },
-    {
-      label: 'Предыдущее видео',
-      enabled: Boolean(wc),
-      click: () => actions.prev?.(),
-    },
-    {
-      label: 'Автолистание в PiP',
-      type: 'checkbox',
-      checked: ctx.pipAuto,
-      click: () => actions.pipAuto?.(),
-    },
-    {
-      label: 'Адаптивный PiP',
-      type: 'checkbox',
-      checked: ctx.pipAdaptive,
-      click: () => actions.pipAdaptive?.(),
-    },
-    {
-      label: 'Панель функций',
-      type: 'checkbox',
-      checked: ctx.panelOpen,
-      click: () => actions.panel(),
-    },
-    { label: 'Косметика', submenu: cosmetics.menuItems() },
-    { label: 'Регион', submenu: region.menuItems() },
-    { type: 'separator' },
-    {
-      label: 'Закрывать в трей',
-      type: 'checkbox',
-      checked: saved.closeToTray === true,
-      click: () => {
-        writeState({ closeToTray: saved.closeToTray !== true });
-        refreshTrayMenu();
+  const menu = Menu.buildFromTemplate(
+    i18n.applyToMenuTemplate([
+      { label: visible ? 'Скрыть окно' : 'Показать окно', click: toggleWindow },
+      { type: 'separator' },
+      {
+        label: 'Без звука',
+        type: 'checkbox',
+        checked: !!wc?.isAudioMuted(),
+        click: () => actions.mute(),
       },
-    },
-    { type: 'separator' },
-    { label: 'Выход', click: () => actions.quit() },
-  ]);
+      {
+        label: 'Поверх всех окон',
+        type: 'checkbox',
+        checked: Boolean(winAlive && ctx.win.isAlwaysOnTop()),
+        click: () => actions.onTop(),
+      },
+      {
+        label: 'Картинка в картинке',
+        type: 'checkbox',
+        checked: ctx.pipActive,
+        click: () => actions.pip(),
+      },
+      {
+        label: 'Следующее видео',
+        enabled: Boolean(wc),
+        click: () => actions.next?.(),
+      },
+      {
+        label: 'Предыдущее видео',
+        enabled: Boolean(wc),
+        click: () => actions.prev?.(),
+      },
+      {
+        label: 'Автолистание в PiP',
+        type: 'checkbox',
+        checked: ctx.pipAuto,
+        click: () => actions.pipAuto?.(),
+      },
+      {
+        label: 'Адаптивный PiP',
+        type: 'checkbox',
+        checked: ctx.pipAdaptive,
+        click: () => actions.pipAdaptive?.(),
+      },
+      {
+        label: 'Панель функций',
+        type: 'checkbox',
+        checked: ctx.panelOpen,
+        click: () => actions.panel(),
+      },
+      {
+        label: 'Плагины',
+        submenu: [
+          { label: 'Менеджер плагинов', click: () => plugins.openManager() },
+          { type: 'separator' },
+          ...plugins.menuItems(),
+        ],
+      },
+      { label: 'Косметика', submenu: cosmetics.menuItems() },
+      { label: 'Регион', submenu: region.menuItems() },
+      {
+        label: 'Язык',
+        submenu: [
+          { label: 'Интерфейс', submenu: i18n.menuItems() },
+          { label: 'TikTok', submenu: region.siteLanguageMenuItems() },
+        ],
+      },
+      { type: 'separator' },
+      {
+        label: 'Закрывать в трей',
+        type: 'checkbox',
+        checked: saved.closeToTray === true,
+        click: () => {
+          writeState({ closeToTray: saved.closeToTray !== true });
+          refreshTrayMenu();
+        },
+      },
+      { type: 'separator' },
+      { label: 'Выход', click: () => actions.quit() },
+    ]),
+  );
 
   ctx.tray.setContextMenu(menu);
 }

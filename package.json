@@ -1,7 +1,7 @@
 {
   "name": "tiktok-octo",
   "productName": "TikTok octo",
-  "version": "0.4.3",
+  "version": "0.5.1",
   "description": "Неофициальный десктоп-клиент TikTok: официальный веб-сайт в нативной оболочке Electron",
   "main": "src/main/main.js",
   "desktopName": "tiktok-octo.desktop",
@@ -30,6 +30,16 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "playwright test",
+    "plugin:pack": "node scripts/pack-plugin.js plugins/examples/hello-octo --out plugins/packages --update-registry plugins/registry.json",
+    "plugin:keygen": "node scripts/plugin-keygen.js",
+    "docs:build": "node scripts/build-plugin-docs.js",
+    "prestart": "npm run docs:build",
+    "predev": "npm run docs:build",
+    "pretest": "npm run docs:build",
+    "predist": "npm run docs:build",
+    "predist:linux": "npm run docs:build",
+    "predist:win": "npm run docs:build",
+    "predist:mac": "npm run docs:build",
     "dist": "electron-builder",
     "dist:linux": "electron-builder --linux",
     "dist:win": "electron-builder --win",
@@ -44,6 +54,7 @@
     "prettier": "^3.10.1"
   },
   "dependencies": {
+    "acorn": "^8.19.0",
     "electron-updater": "^6.8.11",
     "mpris-service": "^2.1.2"
   },

@@ -18,7 +18,10 @@ const arg = (name, def) => {
 
 const fps = Number(arg('fps', 30));
 const dsf = Number(arg('dsf', 2));
+const width = Number(arg('width', 1080));
+const height = Number(arg('height', 1920));
 const still = arg('still', null);
+const scene = arg('scene', 'scene.html');
 const outDir = path.resolve(here, arg('out', 'build'));
 const framesDir = path.join(outDir, 'frames');
 const DUR = 15;
@@ -56,7 +59,7 @@ const browser = await chromium.launch({
 });
 
 const context = await browser.newContext({
-  viewport: { width: 1080, height: 1920 },
+  viewport: { width, height },
   deviceScaleFactor: dsf,
   colorScheme: 'dark',
   reducedMotion: 'no-preference',
@@ -68,7 +71,7 @@ page.on('console', (m) => {
 });
 page.on('pageerror', (e) => console.error('[scene error]', e.message));
 
-await page.goto(pathToFileURL(path.join(here, 'scene.html')).href, { waitUntil: 'load' });
+await page.goto(pathToFileURL(path.join(here, scene)).href, { waitUntil: 'load' });
 await page.evaluate(() => document.fonts.ready);
 await page.waitForFunction(() => document.body.dataset.ready === '1');
 

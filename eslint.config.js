@@ -18,12 +18,15 @@ const nodeGlobals = {
   URLSearchParams: 'readonly',
   structuredClone: 'readonly',
   AbortController: 'readonly',
+  Response: 'readonly',
 };
 
 const browserGlobals = {
   window: 'readonly',
   document: 'readonly',
   ResizeObserver: 'readonly',
+  MutationObserver: 'readonly',
+  NodeFilter: 'readonly',
   getComputedStyle: 'readonly',
   setTimeout: 'readonly',
   clearTimeout: 'readonly',
@@ -47,7 +50,13 @@ const rules = {
 
 module.exports = [
   {
-    ignores: ['dist/**', 'node_modules/**', 'test-results/**', 'playwright-report/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'test-results/**',
+      'playwright-report/**',
+      'src/renderer/plugins-docs/**',
+    ],
   },
   {
     files: ['src/main/**/*.js', 'eslint.config.js', 'playwright.config.js', 'test/**/*.js'],

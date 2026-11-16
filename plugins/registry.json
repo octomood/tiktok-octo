@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "updatedAt": "2026-11-16T10:43:42.102Z",
+  "plugins": [
+    {
+      "id": "app.octo.hello",
+      "name": "Hello octo",
+      "author": {
+        "name": "octo",
+        "url": "https://github.com/octomood"
+      },
+      "description": "Пример плагина: команда в палитре, строка в панели функций, настройки, хранилище и безопасная работа со страницей.",
+      "homepage": "https://github.com/octomood/tiktok-octo/tree/main/plugins/examples/hello-octo",
+      "source": "https://github.com/octomood/tiktok-octo/tree/main/plugins/examples/hello-octo",
+      "license": "MIT",
+      "categories": ["demo", "example"],
+      "releases": [
+        {
+          "version": "1.0.0",
+          "minAppVersion": "0.5.0",
+          "download": "https://raw.githubusercontent.com/octomood/tiktok-octo/main/plugins/packages/app.octo.hello-1.0.0.octoplugin",
+          "sha256": "4aff45e992a6bf5c46bac8f201ea6966ca8471f5b88c52bde8c06b8115d0316e",
+          "size": 3734,
+          "publishedAt": "2026-11-16T10:43:42.101Z",
+          "changelog": "Первый пример: команды, панель, настройки, хранилище, CSS и изолированный скрипт страницы.",
+          "permissions": ["page:css", "page:script"],
+          "networkHosts": []
+        }
+      ]
+    }
+  ]
+}

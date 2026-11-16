@@ -1,7 +1,8 @@
 'use strict';
 
-const { app, dialog } = require('electron');
+const { app } = require('electron');
 const { toast } = require('./app-context');
+const { showMessageBox } = require('./dialogs');
 
 /**
  * Автообновление (electron-updater) — только для упакованной сборки.
@@ -42,7 +43,7 @@ function initUpdates() {
   });
 
   autoUpdater.on('update-downloaded', async (info) => {
-    const { response } = await dialog.showMessageBox({
+    const { response } = await showMessageBox({
       type: 'info',
       title: 'Обновление готово',
       message: `Версия ${info.version} загружена`,

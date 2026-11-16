@@ -1,0 +1,36 @@
+{
+  "id": "app.octo.hello",
+  "name": "Hello octo",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "minAppVersion": "0.5.0",
+  "description": "Пример плагина: команда в палитре, строка в панели функций, настройки, хранилище и безопасная работа со страницей.",
+  "author": {
+    "name": "octo",
+    "url": "https://github.com/octomood"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/octomood/tiktok-octo/tree/main/plugins/examples/hello-octo",
+  "source": "https://github.com/octomood/tiktok-octo/tree/main/plugins/examples/hello-octo",
+  "main": "index.js",
+  "permissions": ["page:css", "page:script"],
+  "settings": [
+    {
+      "key": "greeting",
+      "type": "string",
+      "title": "Приветствие",
+      "description": "Текст, который показывает команда «Поздороваться».",
+      "default": "Привет из плагина!",
+      "maxLength": 120
+    },
+    {
+      "key": "accent",
+      "type": "boolean",
+      "title": "Розовая полоска",
+      "description": "Добавляет тонкую полоску под лентой, чтобы было видно, что плагин работает.",
+      "default": true
+    }
+  ],
+  "changelog": "Первый пример: команды, панель, настройки, хранилище, CSS и изолированный скрипт страницы.",
+  "categories": ["demo", "example"]
+}

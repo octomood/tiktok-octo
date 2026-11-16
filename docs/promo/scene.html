@@ -7,9 +7,9 @@
     <link rel="stylesheet" href="../../src/renderer/styles.css" />
     <style>
       /* ----------------------------------------------------------------
-         Промо 1080×1920: «почему этим пользоваться», приоритет — десктоп.
-         Логотип — tiktok-octo.jpg (стеклянный осьминог), вырезанный в альфу.
-         Вся анимация — чистая функция от t.
+         Промо 1080×1920: «первый мод для компов», десктоп, плюшка PiP,
+         финал — Telegram-канал. Логотип — tiktok-octo.jpg в альфе.
+         Всё считается из t.
          ---------------------------------------------------------------- */
 
       :root {
@@ -50,6 +50,8 @@
 
         --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
         --ink: #f2f2f4;
+        --paper: #f4f4f6;
+        --paper-ink: #0b0b0d;
       }
 
       html,
@@ -71,6 +73,7 @@
         height: 1920px;
         overflow: hidden;
         background: #0a0a0c;
+        will-change: transform;
       }
 
       .bg {
@@ -97,6 +100,15 @@
         mix-blend-mode: soft-light;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
         background-size: 160px 160px;
+      }
+
+      .flash {
+        position: absolute;
+        inset: 0;
+        z-index: 20;
+        background: #ffffff;
+        opacity: 0;
+        pointer-events: none;
       }
 
       .hud {
@@ -200,34 +212,20 @@
         color: rgba(242, 242, 244, 0.46);
       }
 
-      .cap .key {
-        display: inline-flex;
-        align-items: center;
-        gap: 14px;
-        margin-top: 34px;
-        padding: 0 22px;
-        height: 56px;
-        border: 1px solid rgba(242, 242, 244, 0.2);
-        border-radius: 999px;
-        font-family: var(--mono);
-        font-size: 21px;
-        letter-spacing: 0.04em;
-        color: rgba(242, 242, 244, 0.78);
-      }
-
-      .cap .key b {
-        font-weight: 500;
-        color: rgba(242, 242, 244, 0.4);
-        font-size: 16px;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-      }
-
       .stage {
         position: absolute;
         left: 60px;
         top: 820px;
         width: 960px;
+      }
+
+      .foot {
+        margin-top: 34px;
+        font-family: var(--mono);
+        font-size: 17px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(242, 242, 244, 0.32);
       }
 
       /* ---------- Стеклянный логотип ---------- */
@@ -247,17 +245,17 @@
       .hero-logo {
         position: absolute;
         left: 50%;
-        top: 336px;
-        width: 820px;
-        height: 820px;
-        margin-left: -410px;
+        top: 300px;
+        width: 800px;
+        height: 800px;
+        margin-left: -400px;
       }
 
       .hero-word {
         position: absolute;
         left: 0;
         right: 0;
-        top: 1184px;
+        top: 1118px;
         text-align: center;
         font-size: 104px;
         font-weight: 600;
@@ -269,7 +267,7 @@
         position: absolute;
         left: 0;
         right: 0;
-        top: 1332px;
+        top: 1258px;
         text-align: center;
         font-family: var(--mono);
         font-size: 22px;
@@ -281,9 +279,9 @@
       .hero-line {
         position: absolute;
         left: 50%;
-        top: 1420px;
+        top: 1340px;
         width: 1px;
-        height: 70px;
+        height: 60px;
         margin-left: -0.5px;
         background: linear-gradient(180deg, rgba(242, 242, 244, 0.34), rgba(242, 242, 244, 0));
       }
@@ -292,6 +290,112 @@
         position: absolute;
         border-radius: 50%;
         border: 1px solid rgba(242, 242, 244, 0.55);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* ---------- Стикер «первый мод» ---------- */
+
+      .one {
+        position: absolute;
+        left: 8px;
+        top: 470px;
+        font-size: 900px;
+        font-weight: 700;
+        line-height: 0.8;
+        color: transparent;
+        -webkit-text-stroke: 2px rgba(242, 242, 244, 0.12);
+        letter-spacing: -0.08em;
+        pointer-events: none;
+      }
+
+      .sticker {
+        position: absolute;
+        left: 100px;
+        top: 700px;
+        width: 880px;
+        padding: 60px 64px 54px;
+        border-radius: 56px;
+        background: var(--paper);
+        color: var(--paper-ink);
+        box-shadow:
+          0 3px 0 rgba(0, 0, 0, 0.25),
+          0 50px 110px rgba(0, 0, 0, 0.65);
+        transform-origin: 50% 40%;
+      }
+
+      .sticker-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .sticker-pill {
+        display: inline-flex;
+        align-items: center;
+        height: 48px;
+        padding: 0 20px;
+        border-radius: 999px;
+        background: var(--paper-ink);
+        color: var(--paper);
+        font-family: var(--mono);
+        font-size: 20px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+
+      .sticker-badge {
+        display: inline-grid;
+        place-items: center;
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        background: var(--paper-ink);
+        color: var(--paper);
+        font-family: var(--mono);
+        font-size: 22px;
+        letter-spacing: 0;
+        transform: rotate(6deg);
+      }
+
+      .sticker-word {
+        margin: 30px 0 0;
+        font-size: 214px;
+        font-weight: 700;
+        line-height: 0.98;
+        letter-spacing: -0.055em;
+      }
+
+      .sticker-sub {
+        margin: 18px 0 0;
+        font-size: 82px;
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+
+      .sticker-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 38px;
+        font-family: var(--mono);
+        font-size: 19px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(11, 11, 13, 0.55);
+      }
+
+      .sticker-foot b {
+        font-weight: 500;
+        color: rgba(11, 11, 13, 0.9);
+      }
+
+      .impact {
+        position: absolute;
+        z-index: 4;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.55);
         opacity: 0;
         pointer-events: none;
       }
@@ -404,75 +508,296 @@
       .window-body {
         position: relative;
         width: 960px;
-        height: 424px;
+        height: 560px;
         margin-top: -2px;
         border-radius: 0 0 26px 26px;
-        background: linear-gradient(180deg, #191920, #0e0e11);
+        background: radial-gradient(620px 420px at 50% 24%, #1b1b21, #0c0c0f 72%);
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
         overflow: hidden;
-        -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 66%, transparent 100%);
-        mask-image: linear-gradient(180deg, #000 0%, #000 66%, transparent 100%);
       }
 
-      .body-glow {
+      /* вертикальное «видео» в ленте */
+      .feed-bg {
         position: absolute;
-        left: 50%;
-        top: -200px;
-        width: 860px;
-        height: 460px;
-        margin-left: -430px;
-        background: radial-gradient(closest-side, rgba(255, 255, 255, 0.11), transparent 78%);
+        inset: -10%;
+        background: url('assets/video-frame.jpg') center / cover no-repeat;
+        filter: blur(34px) brightness(0.4) saturate(0);
+        transform: scale(1.15);
       }
 
-      .brow {
+      .feed-bg-shade {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(70% 60% at 50% 45%, rgba(10, 10, 12, 0.2), rgba(10, 10, 12, 0.82) 75%);
+      }
+
+      .feed-video {
+        position: absolute;
+        left: 330px;
+        top: 20px;
+        width: 300px;
+        height: 520px;
+        border-radius: 24px;
+        overflow: hidden;
+        background: #0d0d10;
+        box-shadow:
+          0 22px 54px rgba(0, 0, 0, 0.55),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+      }
+
+      .feed-video img {
+        position: absolute;
+        inset: -8%;
+        width: 116%;
+        height: 116%;
+        object-fit: cover;
+        filter: contrast(1.06) brightness(0.92);
+      }
+
+      .feed-shade {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          rgba(10, 10, 12, 0.08) 26%,
+          rgba(10, 10, 12, 0.42) 62%,
+          rgba(10, 10, 12, 0.94) 100%
+        );
+      }
+
+      .feed-rail {
+        position: absolute;
+        right: 10px;
+        bottom: 96px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .rail-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--mono);
+        font-size: 14px;
+        color: #f2f2f4;
+        text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+      }
+
+      .rail-item svg {
+        width: 27px;
+        height: 27px;
+      }
+
+      .feed-scrim {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 120px;
+        background: linear-gradient(90deg, transparent, rgba(6, 6, 8, 0.55));
+        pointer-events: none;
+      }
+
+      .feed-meta {
+        position: absolute;
+        left: 16px;
+        right: 58px;
+        bottom: 22px;
+      }
+
+      .feed-user {
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .feed-cap {
+        margin-top: 5px;
+        font-size: 13px;
+        line-height: 1.35;
+        color: rgba(242, 242, 244, 0.8);
+      }
+
+      .feed-sound {
         display: flex;
         align-items: center;
-        gap: 22px;
-        height: 108px;
-        padding: 0 30px;
+        gap: 7px;
+        margin-top: 10px;
+        font-family: var(--mono);
+        font-size: 11.5px;
+        color: rgba(242, 242, 244, 0.7);
       }
 
-      .brow:first-of-type {
-        margin-top: 8px;
+      .feed-sound svg {
+        width: 15px;
+        height: 15px;
       }
 
-      .bthumb {
+      .feed-progress {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        background: rgba(242, 242, 244, 0.22);
+      }
+
+      .feed-progress b {
+        display: block;
+        height: 100%;
+        width: 34%;
+        background: #f2f2f4;
+      }
+
+      /* уведомление ОС над окном */
+      .notif {
+        position: absolute;
+        right: 0;
+        top: -100px;
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        width: 420px;
+        height: 78px;
+        padding: 0 18px;
+        border-radius: 22px;
+        background: #1b1b21;
+        box-shadow:
+          0 24px 54px rgba(0, 0, 0, 0.6),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+        opacity: 0;
+      }
+
+      .notif-ico {
         display: grid;
         flex: none;
         place-items: center;
-        width: 62px;
-        height: 84px;
-        border-radius: 14px;
-        background: linear-gradient(180deg, #26262d, #17171c);
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-        color: rgba(242, 242, 244, 0.55);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #f2f2f4;
+        color: #0a0a0c;
       }
 
-      .bthumb svg {
-        width: 18px;
-        height: 18px;
-        margin-left: 2px;
+      .notif-ico svg {
+        width: 22px;
+        height: 22px;
       }
 
-      .blines {
-        display: flex;
-        flex: 1 1 auto;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .bline {
-        height: 12px;
-        border-radius: 999px;
-        background: rgba(242, 242, 244, 0.17);
-      }
-
-      .btime {
-        flex: none;
-        font-family: var(--mono);
+      .notif-txt {
+        display: block;
         font-size: 16px;
-        color: rgba(242, 242, 244, 0.32);
+        font-weight: 500;
+        letter-spacing: -0.01em;
       }
+
+      .notif-sub {
+        display: block;
+        margin-top: 3px;
+        font-family: var(--mono);
+        font-size: 12.5px;
+        letter-spacing: 0.06em;
+        color: rgba(242, 242, 244, 0.45);
+      }
+
+      /* «рабочий чат» под PiP */
+      .chat {
+        position: absolute;
+        left: 20px;
+        top: 20px;
+        width: 900px;
+        height: 620px;
+        border-radius: 26px;
+        background: linear-gradient(180deg, #17171c, #101014);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+        overflow: hidden;
+        filter: blur(1.5px) brightness(0.6);
+      }
+
+      .chat-bar {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        height: 74px;
+        padding: 0 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      }
+
+      .chat-ava {
+        display: grid;
+        flex: none;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #2c2c34;
+        font-size: 15px;
+        font-weight: 600;
+        color: #d4d4db;
+      }
+
+      .chat-name {
+        font-size: 17px;
+        font-weight: 600;
+      }
+
+      .chat-sub {
+        margin-top: 3px;
+        font-family: var(--mono);
+        font-size: 12.5px;
+        color: rgba(242, 242, 244, 0.4);
+      }
+
+      .chat-body {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 24px;
+      }
+
+      .bubble {
+        width: fit-content;
+        max-width: 520px;
+        padding: 12px 16px;
+        border-radius: 18px;
+        background: #24242b;
+        font-size: 15px;
+        color: rgba(242, 242, 244, 0.82);
+      }
+
+      .bubble.me {
+        align-self: flex-end;
+        background: #34343d;
+        color: #f2f2f4;
+      }
+
+      .bubble.short {
+        max-width: 200px;
+      }
+
+      .chat-input {
+        position: absolute;
+        right: 24px;
+        bottom: 22px;
+        left: 24px;
+        height: 52px;
+        border-radius: 16px;
+        background: #1e1e24;
+      }
+
+      .chat-input::after {
+        content: 'Написать сообщение…';
+        position: absolute;
+        top: 17px;
+        left: 18px;
+        font-size: 14px;
+        color: rgba(242, 242, 244, 0.3);
+      }
+
 
       /* ---------- Курсор и клик ---------- */
 
@@ -603,39 +928,44 @@
       .pip-screen {
         position: relative;
         height: 540px;
-        background:
-          radial-gradient(210px 330px at 52% 34%, rgba(255, 255, 255, 0.14), transparent 72%),
-          linear-gradient(180deg, #1e1e25, #101014);
+        background: #0e0e11;
         overflow: hidden;
       }
 
-      .pip-screen svg.rings {
+      .pip-screen img {
+        position: absolute;
+        inset: -8%;
+        width: 116%;
+        height: 116%;
+        object-fit: cover;
+        filter: contrast(1.06) brightness(0.9);
+      }
+
+      .pip-screen .pip-shade {
         position: absolute;
         inset: 0;
-        width: 100%;
-        height: 100%;
-        opacity: 0.5;
+        background: linear-gradient(180deg, rgba(10, 10, 12, 0.12) 30%, rgba(10, 10, 12, 0.78) 100%);
       }
 
-      .pip-play {
+      .pip-meta {
         position: absolute;
-        top: 50%;
-        left: 50%;
-        display: grid;
-        place-items: center;
-        width: 96px;
-        height: 96px;
-        margin: -48px 0 0 -48px;
-        border-radius: 50%;
-        background: #f2f2f4;
-        color: #0a0a0b;
-        box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
+        left: 20px;
+        bottom: 56px;
+        right: 20px;
       }
 
-      .pip-play svg {
-        width: 34px;
-        height: 34px;
-        margin-left: 4px;
+      .pip-meta b {
+        display: block;
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .pip-meta span {
+        display: block;
+        margin-top: 5px;
+        font-size: 13px;
+        color: rgba(242, 242, 244, 0.75);
       }
 
       .pip-foot {
@@ -692,78 +1022,7 @@
         height: 20px;
       }
 
-      /* ---------- Клавиши ---------- */
-
-      .keys {
-        display: grid;
-        grid-template-columns: 462px 462px;
-        gap: 22px;
-        margin-top: 26px;
-      }
-
-      .keycard {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        height: 246px;
-        padding: 32px 34px 28px;
-        border-radius: 28px;
-        background: #141419;
-        box-shadow:
-          inset 0 0 0 1px rgba(255, 255, 255, 0.09),
-          0 22px 50px rgba(0, 0, 0, 0.45);
-        overflow: hidden;
-      }
-
-      .kc-keys {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .kbd {
-        display: inline-grid;
-        place-items: center;
-        min-width: 74px;
-        height: 74px;
-        padding: 0 16px;
-        border-radius: 18px;
-        background: linear-gradient(180deg, #303039, #232329);
-        box-shadow:
-          inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-          inset 0 -3px 0 rgba(0, 0, 0, 0.45);
-        color: #f2f2f4;
-        font-family: var(--mono);
-        font-size: 27px;
-        line-height: 1;
-        transform-origin: 50% 60%;
-      }
-
-      .kbd.is-wide {
-        min-width: 300px;
-      }
-
-      .kc-label {
-        font-family: var(--mono);
-        font-size: 16px;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        color: rgba(242, 242, 244, 0.44);
-      }
-
-      .kc-ring {
-        position: absolute;
-        width: 10px;
-        height: 10px;
-        margin: -5px 0 0 -5px;
-        border-radius: 50%;
-        border: 2px solid rgba(255, 255, 255, 0.65);
-        opacity: 0;
-        pointer-events: none;
-      }
-
-      /* ---------- Финал ---------- */
+      /* ---------- Финал: Telegram ---------- */
 
       .end {
         position: absolute;
@@ -773,103 +1032,120 @@
       .end-logo {
         position: absolute;
         left: 50%;
-        top: 428px;
-        width: 470px;
-        height: 470px;
-        margin-left: -235px;
+        top: 216px;
+        width: 300px;
+        height: 300px;
+        margin-left: -150px;
       }
 
       .end-word {
         position: absolute;
         left: 0;
         right: 0;
-        top: 948px;
+        top: 528px;
         text-align: center;
-        font-size: 96px;
+        font-size: 82px;
         font-weight: 600;
         letter-spacing: -0.045em;
         line-height: 1;
       }
 
-      .end-sub {
+      .end-label {
         position: absolute;
         left: 0;
         right: 0;
-        top: 1084px;
+        top: 648px;
         text-align: center;
         font-family: var(--mono);
-        font-size: 21px;
-        letter-spacing: 0.26em;
+        font-size: 20px;
+        letter-spacing: 0.28em;
         text-transform: uppercase;
         color: rgba(242, 242, 244, 0.48);
+      }
+
+      .tg-card {
+        position: absolute;
+        left: 50%;
+        top: 724px;
+        width: 560px;
+        height: 700px;
+        margin-left: -280px;
+        padding: 58px 70px 46px;
+        border-radius: 46px;
+        background: #ffffff;
+        color: var(--paper-ink);
+        box-shadow:
+          0 3px 0 rgba(0, 0, 0, 0.25),
+          0 46px 110px rgba(0, 0, 0, 0.7);
+        transform-origin: 50% 40%;
+      }
+
+      .tg-qr {
+        display: block;
+        width: 420px;
+        height: 420px;
+        margin: 0 auto;
+      }
+
+      .tg-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 34px;
+        font-family: var(--mono);
+        font-size: 38px;
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+      }
+
+      .tg-link svg {
+        width: 30px;
+        height: 30px;
+        flex: none;
+      }
+
+      .tg-note {
+        margin-top: 16px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 17px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(11, 11, 13, 0.5);
       }
 
       .end-plat {
         position: absolute;
         left: 0;
         right: 0;
-        top: 1205px;
+        top: 1480px;
         text-align: center;
         font-family: var(--mono);
-        font-size: 23px;
+        font-size: 21px;
         letter-spacing: 0.22em;
         text-transform: uppercase;
-        color: rgba(242, 242, 244, 0.74);
+        color: rgba(242, 242, 244, 0.66);
       }
 
       .end-plat s {
         display: inline-block;
-        width: 26px;
+        width: 24px;
         height: 1px;
-        margin: 0 16px 7px;
+        margin: 0 14px 6px;
         background: rgba(242, 242, 244, 0.3);
         text-decoration: none;
-      }
-
-      .end-link {
-        position: absolute;
-        left: 50%;
-        top: 1322px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 14px;
-        width: 564px;
-        height: 64px;
-        margin-left: -282px;
-        border: 1px solid rgba(242, 242, 244, 0.18);
-        border-radius: 999px;
-        font-family: var(--mono);
-        font-size: 21px;
-        letter-spacing: 0.02em;
-        color: rgba(242, 242, 244, 0.86);
-        white-space: nowrap;
-      }
-
-      .end-link svg {
-        width: 22px;
-        height: 22px;
-        opacity: 0.7;
       }
 
       .end-lic {
         position: absolute;
         left: 0;
         right: 0;
-        top: 1434px;
+        top: 1548px;
         text-align: center;
         font-family: var(--mono);
-        font-size: 17px;
-        letter-spacing: 0.2em;
-        color: rgba(242, 242, 244, 0.3);
-      }
-
-      .foot {
-        margin-top: 34px;
-        font-family: var(--mono);
-        font-size: 17px;
+        font-size: 16px;
         letter-spacing: 0.18em;
-        text-transform: uppercase;
         color: rgba(242, 242, 244, 0.32);
       }
     </style>
@@ -888,87 +1164,53 @@
         <div class="hero-line" id="heroLine"></div>
       </section>
 
-      <!-- ============ 2. Не вкладка ============ -->
+      <!-- ============ 2. Первый мод ============ -->
       <section id="b2" style="opacity: 0">
-        <div class="cap" id="cap2">
-          <div class="cap-label">
-            <span class="cap-num">01</span><span class="cap-rule"></span>ДЕСКТОП
+        <div class="impact" id="impact2"></div>
+        <div class="sticker" id="sticker2">
+          <div class="sticker-top">
+            <span class="sticker-pill">Первый</span>
+            <span class="sticker-badge">№1</span>
           </div>
+          <div class="sticker-word">МОД</div>
+          <div class="sticker-sub">НА ТВОЙ КОМП</div>
+          <div class="sticker-foot">
+            <b>TikTok octo</b>
+            <span>desktop</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 3. Окно ============ -->
+      <section id="b3" style="opacity: 0">
+        <div class="cap" id="cap3">
+          <div class="cap-label"><span class="cap-num">02</span><span class="cap-rule"></span>БЕЗ БРАУЗЕРА</div>
           <h1>
-            <span class="ln"><span>Не вкладка.</span></span>
-            <span class="ln dim"><span>Приложение.</span></span>
+            <span class="ln"><span>Только лента.</span></span>
+            <span class="ln dim"><span>Ни вкладок, ни строки.</span></span>
           </h1>
         </div>
 
-        <div class="stage" id="stage2">
-          <div
-            class="win-ghost"
-            id="ghostB2"
-            style="left: 34px; top: -128px; width: 700px; height: 300px; opacity: 0"
-          >
-            <div class="wg-bar"><i></i><i></i><i></i><u></u></div>
-            <div class="wg-body"><b style="width: 64%"></b><b style="width: 42%"></b></div>
-          </div>
-
-          <div id="barWrap">
-            <div class="bar-card demo-bar" id="barCard">
-              <div class="titlebar" id="titlebarDemo">
+        <div class="stage" id="stage3">
+          <div id="winWrap3">
+            <div class="bar-card demo-bar" id="barCard3">
+              <div class="titlebar" id="titlebar3">
                 <div class="brand">
                   <img class="brand-mark" src="assets/tiktok-octo.png" alt="" />
                 </div>
                 <div class="divider"></div>
                 <nav class="nav">
                   <button class="icon-btn" disabled>
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.7"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M12.5 4.5 7 10l5.5 5.5" />
-                    </svg>
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5" /></svg>
                   </button>
                   <button class="icon-btn" disabled>
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.7"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M7.5 4.5 13 10l-5.5 5.5" />
-                    </svg>
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5 13 10l-5.5 5.5" /></svg>
                   </button>
                   <button class="icon-btn">
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.7"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M16 10a6 6 0 1 1-1.9-4.35" />
-                      <path d="M16.4 4.2v3.5h-3.5" />
-                    </svg>
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10a6 6 0 1 1-1.9-4.35" /><path d="M16.4 4.2v3.5h-3.5" /></svg>
                   </button>
                   <button class="icon-btn">
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.7"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path
-                        d="M3.6 8.6 10 3.4l6.4 5.2v7.1a1.2 1.2 0 0 1-1.2 1.2H4.8a1.2 1.2 0 0 1-1.2-1.2z"
-                      />
-                      <path d="M8.2 16.9v-4.4h3.6v4.4" />
-                    </svg>
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 8.6 10 3.4l6.4 5.2v7.1a1.2 1.2 0 0 1-1.2 1.2H4.8a1.2 1.2 0 0 1-1.2-1.2z" /><path d="M8.2 16.9v-4.4h3.6v4.4" /></svg>
                   </button>
                 </nav>
                 <div class="page-pill">
@@ -978,273 +1220,140 @@
                 <div class="spacer"></div>
                 <div class="actions">
                   <button class="icon-btn">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4" />
-                      <rect x="12" y="13" width="10" height="7" rx="2" />
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4" /><rect x="12" y="13" width="10" height="7" rx="2" /></svg>
                   </button>
                   <button class="icon-btn">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path
-                        d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"
-                      />
-                      <path d="M16 9a5 5 0 0 1 0 6" />
-                      <path d="M19.364 18.364a9 9 0 0 0 0-12.728" />
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" /><path d="M16 9a5 5 0 0 1 0 6" /><path d="M19.364 18.364a9 9 0 0 0 0-12.728" /></svg>
                   </button>
                   <button class="icon-btn" id="pinBtn">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M12 17v5" />
-                      <path
-                        d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
-                      />
-                    </svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5" /><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" /></svg>
                   </button>
                 </div>
                 <div class="win-controls">
-                  <button class="win-btn">
-                    <svg
-                      viewBox="0 0 20 20"
-                      stroke="currentColor"
-                      stroke-width="1.4"
-                      stroke-linecap="round"
-                    >
-                      <path d="M5 10h10" />
-                    </svg>
-                  </button>
-                  <button class="win-btn">
-                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4">
-                      <rect x="5.6" y="5.6" width="8.8" height="8.8" rx="1.1" />
-                    </svg>
-                  </button>
-                  <button class="win-btn win-btn--close">
-                    <svg
-                      viewBox="0 0 20 20"
-                      stroke="currentColor"
-                      stroke-width="1.4"
-                      stroke-linecap="round"
-                    >
-                      <path d="M6.4 6.4l7.2 7.2M13.6 6.4l-7.2 7.2" />
-                    </svg>
-                  </button>
+                  <button class="win-btn"><svg viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M5 10h10" /></svg></button>
+                  <button class="win-btn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5.6" y="5.6" width="8.8" height="8.8" rx="1.1" /></svg></button>
+                  <button class="win-btn win-btn--close"><svg viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M6.4 6.4l7.2 7.2M13.6 6.4l-7.2 7.2" /></svg></button>
                 </div>
               </div>
             </div>
 
             <div class="window-body">
-              <div class="body-glow"></div>
-              <div class="brow">
-                <span class="bthumb"
-                  ><svg viewBox="0 0 20 20">
-                    <path d="M6.6 3.9 16.2 10 6.6 16.1z" fill="currentColor" /></svg
-                ></span>
-                <span class="blines"
-                  ><i class="bline" style="width: 300px"></i
-                  ><i class="bline" style="width: 168px"></i
-                ></span>
-                <span class="btime">0:12</span>
-              </div>
-              <div class="brow">
-                <span class="bthumb"
-                  ><svg viewBox="0 0 20 20">
-                    <path d="M6.6 3.9 16.2 10 6.6 16.1z" fill="currentColor" /></svg
-                ></span>
-                <span class="blines"
-                  ><i class="bline" style="width: 380px"></i
-                  ><i class="bline" style="width: 132px"></i
-                ></span>
-                <span class="btime">0:18</span>
-              </div>
-              <div class="brow">
-                <span class="bthumb"
-                  ><svg viewBox="0 0 20 20">
-                    <path d="M6.6 3.9 16.2 10 6.6 16.1z" fill="currentColor" /></svg
-                ></span>
-                <span class="blines"
-                  ><i class="bline" style="width: 240px"></i
-                  ><i class="bline" style="width: 190px"></i
-                ></span>
-                <span class="btime">0:27</span>
+              <div class="feed-bg"></div>
+              <div class="feed-bg-shade"></div>
+              <div class="feed-video">
+                <img id="feedImg" src="assets/video-frame.jpg" alt="" />
+                <div class="feed-shade"></div>
+                <div class="feed-scrim"></div>
+                <div class="feed-rail">
+                  <div class="rail-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5s-7.5-4.6-7.5-9.6A4.4 4.4 0 0 1 12 8.2a4.4 4.4 0 0 1 7.5 2.7c0 5-7.5 9.6-7.5 9.6Z" /></svg>
+                    12.4K
+                  </div>
+                  <div class="rail-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5 8 8 0 0 1-3.2-.7L4 20l1.4-4.2A7.5 7.5 0 1 1 20 11.5Z" /></svg>
+                    318
+                  </div>
+                  <div class="rail-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4h11A1.5 1.5 0 0 1 19 5.5v15L12 16l-7 4.5v-15A1.5 1.5 0 0 1 6.5 4Z" /></svg>
+                    1.2K
+                  </div>
+                  <div class="rail-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7h4l9 3V2L8 5H4z" /><path d="M18 8.5 21 6M18 15.5 21 18" /></svg>
+                    840
+                  </div>
+                </div>
+                <div class="feed-meta">
+                  <div class="feed-user">@octo</div>
+                  <div class="feed-cap">первый мод на твой комп</div>
+                  <div class="feed-sound">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M9 18V6l10-2v12" /><circle cx="6.5" cy="18" r="2.5" /><circle cx="16.5" cy="16" r="2.5" /></svg>
+                    оригинальный звук — octo
+                  </div>
+                </div>
+                <div class="feed-progress"><b></b></div>
               </div>
             </div>
-
-            <div class="foot" id="foot2">Одно окно · без вкладок и адресной строки</div>
           </div>
 
+          <div class="notif" id="notif3">
+            <span class="notif-ico">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 10.5 3.6 3.6 7.4-8.2" /></svg>
+            </span>
+            <span>
+              <span class="notif-txt">Закреплено поверх окон</span>
+              <span class="notif-sub">TikTok octo · можно работать</span>
+            </span>
+          </div>
+
+          <div class="foot" id="foot3">Окно с кнопками, курсором и горячими клавишами</div>
+
           <svg class="cursor" id="cursor" viewBox="0 0 24 24">
-            <path
-              d="M5 3l14 8.6-6.1 1.3 3.2 6.3-2.6 1.3-3.2-6.3L5 18z"
-              fill="#f2f2f4"
-              stroke="#0a0a0c"
-              stroke-width="1.8"
-              stroke-linejoin="round"
-            />
+            <path d="M5 3l14 8.6-6.1 1.3 3.2 6.3-2.6 1.3-3.2-6.3L5 18z" fill="#f2f2f4" stroke="#0a0a0c" stroke-width="1.8" stroke-linejoin="round" />
           </svg>
           <div class="click-ring" id="clickRing"></div>
         </div>
       </section>
 
-      <!-- ============ 3. Поверх ============ -->
-      <section id="b3" style="opacity: 0">
-        <div class="cap" id="cap3">
-          <div class="cap-label">
-            <span class="cap-num">02</span><span class="cap-rule"></span>ПОВЕРХ
-          </div>
+      <!-- ============ 4. Плюшка ============ -->
+      <section id="b4" style="opacity: 0">
+        <div class="cap" id="cap4">
+          <div class="cap-label"><span class="cap-num">03</span><span class="cap-rule"></span>МИНИ-ПЛЕЕР</div>
           <h1>
-            <span class="ln"><span>Поверх всех окон.</span></span>
-            <span class="ln dim"><span>Пока вы работаете.</span></span>
+            <span class="ln"><span>Смотри и работай.</span></span>
+            <span class="ln dim"><span>Ничего не перекроет.</span></span>
           </h1>
         </div>
 
-        <div class="stage" id="stage3">
-          <div class="desk">
-            <div
-              class="win-ghost"
-              id="ghostA"
-              style="left: -40px; top: 34px; width: 700px; height: 300px"
-            >
-              <div class="wg-bar"><i></i><i></i><i></i><u></u></div>
-              <div class="wg-body">
-                <b style="width: 62%"></b><b style="width: 86%"></b><b style="width: 44%"></b>
-              </div>
+        <div class="stage" id="stage4">
+          <div class="chat">
+            <div class="chat-bar">
+              <span class="chat-ava">О</span>
+              <span>
+                <span class="chat-name">Рабочий чат</span>
+                <span class="chat-sub">12 участников · онлайн</span>
+              </span>
             </div>
-            <div
-              class="win-ghost"
-              id="ghostB"
-              style="left: 336px; top: 132px; width: 640px; height: 264px"
-            >
-              <div class="wg-bar"><i></i><i></i><i></i><u></u></div>
-              <div class="wg-body">
-                <b style="width: 74%"></b><b style="width: 52%"></b><b style="width: 66%"></b>
-              </div>
+            <div class="chat-body">
+              <div class="bubble">привет, все на созвоне?</div>
+              <div class="bubble me short">через 5 минут</div>
+              <div class="bubble">скинь макет, посмотрю</div>
+              <div class="bubble me short">ок</div>
+              <div class="bubble short">спасибо!</div>
             </div>
+            <div class="chat-input"></div>
           </div>
 
           <div class="pip-wrap" id="pipWrap">
             <div class="pip-card demo-bar" id="pipCard">
               <div class="pipbar">
                 <button class="icon-btn">
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.7"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M12.5 4.5 7 10l5.5 5.5" />
-                  </svg>
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5" /></svg>
                 </button>
                 <button class="icon-btn is-playing">
-                  <svg class="ico-play" viewBox="0 0 20 20">
-                    <path d="M7.4 4.9 15.3 10l-7.9 5.1z" fill="currentColor" />
-                  </svg>
-                  <svg
-                    class="ico-pause"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.2"
-                    stroke-linecap="round"
-                  >
-                    <path d="M7.2 5v10M12.8 5v10" />
-                  </svg>
+                  <svg class="ico-play" viewBox="0 0 20 20"><path d="M7.4 4.9 15.3 10l-7.9 5.1z" fill="currentColor" /></svg>
+                  <svg class="ico-pause" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7.2 5v10M12.8 5v10" /></svg>
                 </button>
                 <button class="icon-btn">
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.7"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M7.5 4.5 13 10l-5.5 5.5" />
-                  </svg>
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5 13 10l-5.5 5.5" /></svg>
                 </button>
                 <span class="pip-title">TikTok</span>
                 <button class="icon-btn">
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M4 8.5A4.5 4.5 0 0 1 8.5 4H16" />
-                    <path d="m13.5 1.5 2.5 2.5-2.5 2.5" />
-                    <path d="M16 11.5A4.5 4.5 0 0 1 11.5 16H4" />
-                    <path d="m6.5 18.5-2.5-2.5 2.5-2.5" />
-                  </svg>
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A4.5 4.5 0 0 1 8.5 4H16" /><path d="m13.5 1.5 2.5 2.5-2.5 2.5" /><path d="M16 11.5A4.5 4.5 0 0 1 11.5 16H4" /><path d="m6.5 18.5-2.5-2.5 2.5-2.5" /></svg>
                 </button>
                 <button class="icon-btn">
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M3 7.5V5a2 2 0 0 1 2-2h2.5" />
-                    <path d="M17 7.5V5a2 2 0 0 0-2-2h-2.5" />
-                    <path d="M3 12.5V15a2 2 0 0 0 2 2h2.5" />
-                    <path d="M17 12.5V15a2 2 0 0 1-2 2h-2.5" />
-                  </svg>
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5V5a2 2 0 0 1 2-2h2.5" /><path d="M17 7.5V5a2 2 0 0 0-2-2h-2.5" /><path d="M3 12.5V15a2 2 0 0 0 2 2h2.5" /><path d="M17 12.5V15a2 2 0 0 1-2 2h-2.5" /></svg>
                 </button>
                 <button class="icon-btn">
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.7"
-                    stroke-linecap="round"
-                  >
-                    <path d="M5.8 5.8l8.4 8.4M14.2 5.8l-8.4 8.4" />
-                  </svg>
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5.8 5.8l8.4 8.4M14.2 5.8l-8.4 8.4" /></svg>
                 </button>
               </div>
 
               <div class="pip-screen">
-                <svg
-                  class="rings"
-                  viewBox="0 0 420 540"
-                  fill="none"
-                  stroke="rgba(242,242,244,0.16)"
-                  stroke-width="1"
-                >
-                  <circle cx="210" cy="230" r="70" />
-                  <circle cx="210" cy="230" r="110" />
-                  <circle cx="210" cy="230" r="150" />
-                  <circle cx="210" cy="230" r="196" />
-                  <circle cx="210" cy="230" r="248" />
-                </svg>
-                <div class="pip-play">
-                  <svg viewBox="0 0 20 20">
-                    <path d="M6.6 3.9 16.2 10 6.6 16.1z" fill="currentColor" />
-                  </svg>
+                <img id="pipImg" src="assets/video-frame.jpg" alt="" />
+                <div class="pip-shade"></div>
+                <div class="pip-meta">
+                  <b>@octo</b>
+                  <span>первый мод на твой комп</span>
                 </div>
                 <div class="pip-foot">
                   <span>0:12</span>
@@ -1255,101 +1364,41 @@
             </div>
 
             <div class="pip-chip" id="pipChip">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M12 17v5" />
-                <path
-                  d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
-                />
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5" /><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" /></svg>
               ПОВЕРХ ВСЕХ
             </div>
           </div>
 
-          <div
-            class="foot"
-            id="foot3"
-            style="position: absolute; top: 690px; left: 0; width: 960px"
-          >
-            Мини-плеер не перекрывает работу
+          <div class="foot" id="foot4" style="position: absolute; top: 730px; left: 0; width: 960px">
+            Держится сверху, пока вы в других программах
           </div>
         </div>
       </section>
 
-      <!-- ============ 4. Клавиатура ============ -->
-      <section id="b4" style="opacity: 0">
-        <div class="cap" id="cap4">
-          <div class="cap-label">
-            <span class="cap-num">03</span><span class="cap-rule"></span>КЛАВИАТУРА
-          </div>
-          <h1>
-            <span class="ln"><span>Всё с клавиатуры.</span></span>
-            <span class="ln dim"><span>Как в приложении.</span></span>
-          </h1>
-        </div>
-
-        <div class="stage" id="stage4" style="top: 760px">
-          <div class="keys" id="keys4">
-            <div class="keycard" data-key="0">
-              <div class="kc-keys">
-                <span class="kbd">Ctrl</span><span class="kbd">⇧</span><span class="kbd">P</span>
-              </div>
-              <div class="kc-label">Картинка в картинке</div>
-              <div class="kc-ring"></div>
-            </div>
-            <div class="keycard" data-key="1">
-              <div class="kc-keys">
-                <span class="kbd">Ctrl</span><span class="kbd">⇧</span><span class="kbd">O</span>
-              </div>
-              <div class="kc-label">Поверх всех окон</div>
-              <div class="kc-ring"></div>
-            </div>
-            <div class="keycard" data-key="2">
-              <div class="kc-keys">
-                <span class="kbd">Ctrl</span><span class="kbd">⇧</span><span class="kbd">M</span>
-              </div>
-              <div class="kc-label">Звук вкл / выкл</div>
-              <div class="kc-ring"></div>
-            </div>
-            <div class="keycard" data-key="3">
-              <div class="kc-keys">
-                <span class="kbd is-wide">F11</span>
-              </div>
-              <div class="kc-label">Полный экран</div>
-              <div class="kc-ring"></div>
-            </div>
-          </div>
-          <div class="foot" id="foot4">Медиа-клавиши, трей и масштаб — без мыши</div>
-        </div>
-      </section>
-
-      <!-- ============ 5. Финал ============ -->
+      <!-- ============ 5. Телеграм ============ -->
       <section class="end" id="b5" style="opacity: 0">
         <div class="ripple" id="rip3"></div>
         <div class="ripple" id="rip4"></div>
         <img class="glass end-logo" id="endLogo" src="assets/tiktok-octo.png" alt="" />
         <div class="end-word" id="endWord">TikTok octo</div>
-        <div class="end-sub" id="endSub">TikTok для десктопа</div>
-        <div class="end-plat" id="endPlat">linux<s></s>windows<s></s>macos</div>
-        <div class="end-link" id="endLink">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 1.8 2.7 1.3 3.4 1 .1-.7.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11 11 0 0 1 6 0C18.6 3.7 19.6 4 19.6 4c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"
-            />
-          </svg>
-          github.com/octomood/tiktok-octo
+        <div class="end-label" id="endLabel">Забирай в Telegram</div>
+
+        <div class="tg-card" id="tgCard">
+          <img class="tg-qr" src="assets/telegram-qr.png" alt="" />
+          <div class="tg-link">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.6 19.7c-.2 1-.9 1.3-1.7.8l-4.6-3.4-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.6 8.3-7.5c.4-.3-.1-.5-.6-.2L6.4 13.3 1.9 11.9c-1-.3-1-1 .2-1.4l18.3-7.1c.8-.3 1.6.2 1.5.9z"/></svg>
+            t.me/tiktok_octo
+          </div>
+          <div class="tg-note">новости, сборки, обновления</div>
         </div>
-        <div class="end-lic" id="endLic">MIT · БЕЗ API И ПАРСИНГА</div>
+
+        <div class="end-plat" id="endPlat">linux<s></s>windows<s></s>macos</div>
+        <div class="end-lic" id="endLic">github.com/octomood/tiktok-octo · MIT</div>
       </section>
 
       <div class="vignette"></div>
       <div class="grain" id="grain"></div>
+      <div class="flash" id="flash"></div>
 
       <div class="hud">
         <div class="hud-label"><i></i>tiktok octo</div>
@@ -1358,21 +1407,13 @@
     </div>
 
     <script>
-      /* ------------------------------------------------------------------
-         Вся анимация — чистая функция от t (секунды).
-         ------------------------------------------------------------------ */
-
       const DUR = 15;
       const $ = (id) => document.getElementById(id);
       const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
       function bezier(x1, y1, x2, y2) {
-        const cx = 3 * x1,
-          bx = 3 * (x2 - x1) - cx,
-          ax = 1 - cx - bx;
-        const cy = 3 * y1,
-          by = 3 * (y2 - y1) - cy,
-          ay = 1 - cy - by;
+        const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+        const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
         const sx = (t) => ((ax * t + bx) * t + cx) * t;
         const sy = (t) => ((ay * t + by) * t + cy) * t;
         const dx = (t) => (3 * ax * t + 2 * bx) * t + cx;
@@ -1396,56 +1437,19 @@
         decel: bezier(0.05, 0.7, 0.1, 1),
         std: bezier(0.2, 0, 0, 1),
         accel: bezier(0.3, 0, 0.8, 0.15),
-        spring: bezier(0.34, 1.4, 0.5, 1),
-        soft: bezier(0.4, 0, 0.2, 1),
+        spring: bezier(0.34, 1.45, 0.5, 1),
+        pop: bezier(0.25, 1.6, 0.4, 1),
+        soft: bezier(0.4, 0, 0.2, 1)
       };
 
       const seg = (t, a, b, f) => f(clamp01((t - a) / Math.max(1e-5, b - a)));
       const lerp = (a, b, p) => a + (b - a) * p;
-
-      function show(el, on) {
-        el.style.display = on ? '' : 'none';
-      }
-
-      // ---------- 1. Логотип ----------
-      function beat1(t) {
-        const el = $('b1');
-        const out = seg(t, 2.0, 2.32, E.accel);
-        show(el, t < 2.42);
-        el.style.opacity = String(1 - out);
-
-        const logo = $('heroLogo');
-        const p = seg(t, 0.08, 0.95, E.decel);
-        logo.style.opacity = String(seg(t, 0.06, 0.6, E.std));
-        logo.style.transform = `translateY(${lerp(60, 0, p)}px) scale(${lerp(0.9, 1, p)})`;
-        logo.style.filter = `contrast(1.04) brightness(${lerp(0.6, 1.04, seg(t, 0.06, 0.8, E.std))}) blur(${lerp(9, 0, seg(t, 0.06, 0.75, E.std))}px)`;
-
-        const word = $('heroWord');
-        const pw = seg(t, 0.52, 1.24, E.decel);
-        word.style.opacity = String(seg(t, 0.5, 1.0, E.std));
-        word.style.transform = `translateY(${lerp(44, 0, pw)}px)`;
-        word.style.letterSpacing = `${lerp(-0.02, -0.045, pw)}em`;
-
-        const sub = $('heroSub');
-        sub.style.opacity = String(seg(t, 0.9, 1.42, E.std) * 0.95);
-        sub.style.transform = `translateY(${lerp(18, 0, seg(t, 0.9, 1.42, E.decel))}px)`;
-
-        const line = $('heroLine');
-        line.style.opacity = String(seg(t, 1.06, 1.5, E.std) * 0.8);
-        line.style.transform = `scaleY(${seg(t, 1.06, 1.72, E.emphasized)})`;
-        line.style.transformOrigin = '50% 0%';
-
-        ripples(t, 'rip1', 0.36, 540, 750, 320, 1.55);
-        ripples(t, 'rip2', 0.66, 540, 750, 320, 1.55);
-      }
+      const show = (el, on) => { el.style.display = on ? '' : 'none'; };
 
       function ripples(t, id, t0, cx, cy, maxR, life = 1.45, peak = 0.26) {
         const el = $(id);
         const p = clamp01((t - t0) / life);
-        if (t < t0 || p >= 1) {
-          el.style.opacity = '0';
-          return;
-        }
+        if (t < t0 || p >= 1) { el.style.opacity = '0'; return; }
         const r = lerp(90, maxR, E.decel(p));
         el.style.width = `${r * 2}px`;
         el.style.height = `${r * 2}px`;
@@ -1455,77 +1459,127 @@
         el.style.transform = 'translate(-50%, -50%)';
       }
 
-      // ---------- 2. Не вкладка ----------
+      // ---------- 1. Логотип ----------
+      function beat1(t) {
+        const el = $('b1');
+        show(el, t < 2.0);
+        el.style.opacity = String(1 - seg(t, 1.82, 1.98, E.accel));
+
+        const logo = $('heroLogo');
+        const p = seg(t, 0.04, 0.72, E.spring);
+        logo.style.opacity = String(seg(t, 0.02, 0.4, E.std));
+        logo.style.transform = `translateY(${lerp(90, 0, p)}px) scale(${lerp(0.82, 1, p)})`;
+        logo.style.filter = `contrast(1.04) brightness(${lerp(0.55, 1.04, seg(t, 0.02, 0.6, E.std))}) blur(${lerp(10, 0, seg(t, 0.02, 0.55, E.std))}px)`;
+
+        const word = $('heroWord');
+        const pw = seg(t, 0.34, 1.0, E.pop);
+        word.style.opacity = String(seg(t, 0.3, 0.62, E.std));
+        word.style.transform = `translateY(${lerp(52, 0, pw)}px) scale(${lerp(0.94, 1, pw)})`;
+        word.style.letterSpacing = `${lerp(-0.02, -0.045, pw)}em`;
+
+        const sub = $('heroSub');
+        sub.style.opacity = String(seg(t, 0.62, 1.05, E.std) * 0.95);
+        sub.style.transform = `translateY(${lerp(16, 0, seg(t, 0.62, 1.05, E.decel))}px)`;
+
+        const line = $('heroLine');
+        line.style.opacity = String(seg(t, 0.8, 1.15, E.std) * 0.8);
+        line.style.transform = `scaleY(${seg(t, 0.8, 1.3, E.emphasized)})`;
+        line.style.transformOrigin = '50% 0%';
+
+        ripples(t, 'rip1', 0.2, 540, 700, 330, 1.4);
+        ripples(t, 'rip2', 0.5, 540, 700, 330, 1.4);
+      }
+
+      // ---------- 2. Первый мод ----------
       function beat2(t) {
         const el = $('b2');
-        const on = t > 2.34 && t < 5.62;
+        const on = t > 1.88 && t < 5.2;
         show(el, on);
         if (!on) return;
-        el.style.opacity = String(seg(t, 2.34, 2.5, E.std) * (1 - seg(t, 5.42, 5.6, E.accel)));
+        el.style.opacity = String(1 - seg(t, 4.96, 5.16, E.accel));
 
-        caption(t, 2.38, 'cap2');
+        const card = $('sticker2');
+        const p = seg(t, 2.18, 2.72, E.pop);
+        const out = seg(t, 4.9, 5.16, E.accel);
+        card.style.opacity = String(seg(t, 2.12, 2.3, E.std));
+        card.style.transform = `translateY(${lerp(240, 0, p) - 70 * out}px) rotate(${lerp(-9, -3.5, p) + 4 * out}deg) scale(${lerp(1.16, 1, p) * (1 - 0.04 * out)})`;
 
-        const wrap = $('barWrap');
-        const p = seg(t, 2.52, 3.4, E.spring);
-        const out = seg(t, 5.3, 5.58, E.accel);
-        wrap.style.opacity = String(seg(t, 2.5, 2.75, E.std));
-        wrap.style.transform = `translateY(${lerp(170, 0, p) - 100 * out}px) scale(${lerp(0.94, 1, p) * (1 - 0.03 * out)})`;
-        wrap.style.filter = `blur(${lerp(12, 0, seg(t, 2.5, 3.1, E.std))}px)`;
-
-        const kids = [
-          ['.brand', 0.0],
-          ['.divider', 0.04],
-          ['.nav', 0.08],
-          ['.page-pill', 0.16],
-          ['.actions', 0.24],
-          ['.win-controls', 0.3],
-        ];
-        for (const [sel, d] of kids) {
-          const node = document.querySelector('#titlebarDemo ' + sel);
-          if (!node) continue;
-          const q = seg(t, 2.68 + d, 3.25 + d, E.decel);
-          node.style.opacity = String(q);
-          node.style.transform = `translateY(${lerp(16, 0, q)}px)`;
+        const ring = $('impact2');
+        const rp = clamp01((t - 2.28) / 0.6);
+        if (t > 2.28 && rp < 1) {
+          const r = lerp(40, 640, E.decel(rp));
+          ring.style.width = `${r * 2}px`;
+          ring.style.height = `${r * 2}px`;
+          ring.style.left = '540px';
+          ring.style.top = '990px';
+          ring.style.opacity = String(0.5 * (1 - rp));
+        } else {
+          ring.style.opacity = '0';
         }
 
-        const ghost = $('ghostB2');
-        const gq = seg(t, 2.7, 3.5, E.emphasized);
-        ghost.style.opacity = String(0.45 * gq);
-        ghost.style.transform = `translate(${lerp(-40, 0, gq)}px, ${lerp(26, 0, gq)}px)`;
-        ghost.style.filter = `blur(${lerp(3, 0.4, gq)}px)`;
+        // камера вздрагивает на ударе
+        const shakeP = clamp01((t - 2.28) / 0.3);
+        const amp = 9 * (1 - shakeP) * (1 - shakeP) * (t > 2.28 ? 1 : 0);
+        $('scene').style.transform = `translate(${Math.sin(t * 93) * amp}px, ${Math.cos(t * 77) * amp}px)`;
 
-        const foot = $('foot2');
-        foot.style.opacity = String(seg(t, 3.9, 4.35, E.std) * 0.9);
+        const flash = $('flash');
+        flash.style.opacity = String(t > 2.28 ? 0.1 * Math.pow(1 - clamp01((t - 2.28) / 0.22), 2) : 0);
+      }
 
-        // курсор: едет к кнопке «поверх всех» и кликает
+      // ---------- 3. Окно ----------
+      function beat3(t) {
+        const el = $('b3');
+        const on = t > 5.02 && t < 8.5;
+        show(el, on);
+        if (!on) return;
+        el.style.opacity = String(seg(t, 5.04, 5.14, E.std) * (1 - seg(t, 8.3, 8.46, E.accel)));
+
+        caption(t, 5.08, 'cap3');
+
+        const wrap = $('winWrap3');
+        const p = seg(t, 5.14, 5.9, E.pop);
+        const out = seg(t, 8.22, 8.44, E.accel);
+        wrap.style.opacity = String(seg(t, 5.1, 5.28, E.std));
+        wrap.style.transform = `translateY(${lerp(200, 0, p) - 110 * out}px) scale(${lerp(0.94, 1, p) * (1 - 0.03 * out)}) rotate(${lerp(2, 0, p)}deg)`;
+        wrap.style.filter = `blur(${lerp(12, 0, seg(t, 5.1, 5.6, E.std))}px)`;
+
+        for (const [sel, d] of [['.brand', 0], ['.divider', 0.03], ['.nav', 0.06], ['.page-pill', 0.12], ['.actions', 0.18], ['.win-controls', 0.24]]) {
+          const node = document.querySelector('#titlebar3 ' + sel);
+          if (!node) continue;
+          const q = seg(t, 5.2 + d, 5.62 + d, E.decel);
+          node.style.opacity = String(q);
+          node.style.transform = `translateY(${lerp(14, 0, q)}px)`;
+        }
+
+        const foot = $('foot3');
+        foot.style.opacity = String(seg(t, 7.1, 7.5, E.std) * 0.9);
+
+        // курсор: едет к «поверх всех» и кликает на 6.86
         const cursor = $('cursor');
-        const stage = $('stage2');
+        const stage = $('stage3');
         const pin = $('pinBtn');
         const sRect = stage.getBoundingClientRect();
         const pRect = pin.getBoundingClientRect();
         const bx = pRect.left - sRect.left + pRect.width / 2 + 6;
         const by = pRect.top - sRect.top + pRect.height / 2 + 4;
 
-        const cIn = seg(t, 3.35, 3.6, E.std);
-        const cOut = seg(t, 5.0, 5.3, E.std);
+        const cIn = seg(t, 5.68, 5.9, E.std);
+        const cOut = seg(t, 7.45, 7.7, E.std);
         cursor.style.opacity = String(cIn * (1 - cOut));
         if (cIn > 0) {
-          const path = seg(t, 3.55, 4.42, E.emphasized);
-          const sx0 = 840,
-            sy0 = 700;
-          const cx = 880,
-            cy = 380;
+          const path = seg(t, 5.86, 6.66, E.emphasized);
+          const sx0 = 840, sy0 = 700;
+          const cx = 890, cy = 330;
           const x = (1 - path) * (1 - path) * sx0 + 2 * (1 - path) * path * cx + path * path * bx;
           const y = (1 - path) * (1 - path) * sy0 + 2 * (1 - path) * path * cy + path * path * by;
-          const press = 1 - 0.12 * Math.exp(-Math.pow((t - 4.44) / 0.1, 2));
+          const press = 1 - 0.13 * Math.exp(-Math.pow((t - 6.86) / 0.1, 2));
           cursor.style.transform = `translate(${x}px, ${y}px) scale(${press})`;
         }
 
-        // риппл и включение пина
         const ring = $('clickRing');
-        const rp = clamp01((t - 4.44) / 0.5);
-        if (t > 4.44 && rp < 1) {
-          const r = lerp(6, 74, E.decel(rp));
+        const rp = clamp01((t - 6.86) / 0.42);
+        if (t > 6.86 && rp < 1) {
+          const r = lerp(6, 62, E.decel(rp));
           ring.style.width = `${r * 2}px`;
           ring.style.height = `${r * 2}px`;
           ring.style.left = `${bx}px`;
@@ -1534,141 +1588,96 @@
         } else {
           ring.style.opacity = '0';
         }
-        $('pinBtn').classList.toggle('is-on', t > 4.44);
+        $('pinBtn').classList.toggle('is-on', t > 6.86);
+
+        // системное уведомление: включили «поверх всех»
+        const notif = $('notif3');
+        const tq = seg(t, 7.0, 7.38, E.pop);
+        notif.style.opacity = String(tq);
+        notif.style.transform = `translateY(${lerp(30, 0, tq)}px) scale(${lerp(0.94, 1, tq)})`;
+
+        // лёгкое «дыхание» видео в окне
+        const feed = $('feedImg');
+        feed.style.transform = `scale(${1.06 + Math.sin((t - 5) * 0.6) * 0.02}) translateY(${Math.sin((t - 5) * 0.5) * 4}px)`;
       }
 
-      // ---------- 3. Поверх ----------
-      function beat3(t) {
-        const el = $('b3');
-        const on = t > 5.48 && t < 8.55;
-        show(el, on);
-        if (!on) return;
-        el.style.opacity = String(seg(t, 5.48, 5.62, E.std) * (1 - seg(t, 8.24, 8.42, E.accel)));
-
-        caption(t, 5.52, 'cap3');
-
-        const float = Math.sin((t - 6.5) * 1.25) * 5;
-        const tilt = Math.sin((t - 6.5) * 0.9) * 0.5;
-
-        const ghostA = $('ghostA');
-        const ga = seg(t, 5.5, 6.35, E.emphasized);
-        ghostA.style.opacity = String(0.85 * ga);
-        ghostA.style.transform = `translate(${lerp(-60, 0, ga)}px, ${lerp(30, 0, ga) - float * 0.4}px) rotate(${-1.2 + tilt * 0.2}deg)`;
-        ghostA.style.filter = `blur(${lerp(4, 0, ga)}px)`;
-
-        const ghostB = $('ghostB');
-        const gb = seg(t, 5.6, 6.45, E.emphasized);
-        ghostB.style.opacity = String(0.7 * gb);
-        ghostB.style.transform = `translate(${lerp(70, 0, gb)}px, ${lerp(60, 0, gb) + float * 0.5}px) rotate(${0.8 - tilt * 0.2}deg)`;
-        ghostB.style.filter = `blur(${lerp(4, 0, gb)}px)`;
-
-        const pip = $('pipCard');
-        const p = seg(t, 5.78, 6.6, E.spring);
-        const out = seg(t, 8.14, 8.36, E.accel);
-        pip.style.opacity = String(seg(t, 5.72, 5.95, E.std));
-        pip.style.transform = `translateY(${lerp(280, 0, p) + float - 40 * out}px) rotate(${lerp(7, -1.4, p) + tilt + 3 * out}deg) scale(${lerp(0.84, 1, p) * (1 - 0.05 * out)})`;
-        pip.style.filter = `blur(${lerp(10, 0, seg(t, 5.72, 6.2, E.std))}px)`;
-
-        pip.querySelector('.rings').style.transform =
-          `scale(${1 + Math.sin((t - 6) * 0.8) * 0.02}) rotate(${(t - 6) * 1.4}deg)`;
-        pip.querySelector('.rings').style.transformOrigin = '50% 43%';
-
-        const chip = $('pipChip');
-        const cq = seg(t, 6.55, 6.98, E.spring);
-        chip.style.opacity = String(cq);
-        chip.style.transform = `translateX(${lerp(-30, 0, cq)}px) scale(${lerp(0.9, 1, cq)})`;
-
-        const foot = $('foot3');
-        foot.style.opacity = String(seg(t, 6.7, 7.1, E.std) * 0.85);
-      }
-
-      // ---------- 4. Клавиатура ----------
+      // ---------- 4. Плюшка ----------
       function beat4(t) {
         const el = $('b4');
-        const on = t > 8.3 && t < 11.8;
+        const on = t > 8.38 && t < 11.85;
         show(el, on);
         if (!on) return;
-        el.style.opacity = String(seg(t, 8.4, 8.5, E.std) * (1 - seg(t, 11.55, 11.74, E.accel)));
+        el.style.opacity = String(seg(t, 8.42, 8.52, E.std) * (1 - seg(t, 11.62, 11.8, E.accel)));
 
-        caption(t, 8.44, 'cap4');
+        caption(t, 8.46, 'cap4');
 
-        const cards = [...$('keys4').children];
-        const presses = [9.28, 9.86, 10.44, 11.0];
-        cards.forEach((card, i) => {
-          const q = seg(t, 8.42 + i * 0.07, 8.8 + i * 0.07, E.spring);
-          card.style.opacity = String(q);
-          card.style.transform = `translateY(${lerp(40, 0, q)}px) scale(${lerp(0.96, 1, q)})`;
+        const float = Math.sin((t - 9.4) * 1.5) * 8;
+        const tilt = Math.sin((t - 9.4) * 1.1) * 0.9;
 
-          const tp = presses[i];
-          const kbd = card.querySelectorAll('.kbd');
-          const dt = Math.min(...[...kbd].map(() => Math.abs(t - tp)));
-          const glow = Math.max(0, 1 - dt / 0.16);
-          kbd.forEach((k) => {
-            k.style.transform = `translateY(${glow * 5}px) scale(${1 - glow * 0.07})`;
-            k.style.background =
-              glow > 0.5
-                ? 'linear-gradient(180deg, #ffffff, #dedee4)'
-                : 'linear-gradient(180deg, #303039, #232329)';
-            k.style.color = glow > 0.5 ? '#0a0a0c' : '#f2f2f4';
-          });
+        const chat = document.querySelector('#b4 .chat');
+        const chq = seg(t, 8.42, 9.15, E.emphasized);
+        chat.style.opacity = String(chq);
+        chat.style.transform = `translate(${lerp(-40, 0, chq)}px, ${lerp(24, 0, chq) - float * 0.3}px) rotate(${-0.8 + tilt * 0.15}deg)`;
+        chat.style.filter = `blur(${lerp(3, 1.5, chq)}px) brightness(${lerp(0.35, 0.6, chq)})`;
 
-          const ring = card.querySelector('.kc-ring');
-          const rp = clamp01((t - tp) / 0.5);
-          if (t > tp && rp < 1) {
-            const r = lerp(6, 66, E.decel(rp));
-            ring.style.width = `${r * 2}px`;
-            ring.style.height = `${r * 2}px`;
-            ring.style.left = '50%';
-            ring.style.top = '86px';
-            ring.style.opacity = String(0.45 * (1 - rp));
-          } else {
-            ring.style.opacity = '0';
-          }
-        });
+        const pip = $('pipCard');
+        const p = seg(t, 8.62, 9.35, E.pop);
+        const out = seg(t, 11.5, 11.78, E.accel);
+        pip.style.opacity = String(seg(t, 8.56, 8.78, E.std));
+        pip.style.transform = `translateY(${lerp(300, 0, p) + float - 40 * out}px) rotate(${lerp(8, -1.6, p) + tilt + 3 * out}deg) scale(${lerp(0.82, 1, p) * (1 - 0.05 * out)})`;
+        pip.style.filter = `blur(${lerp(10, 0, seg(t, 8.56, 9.0, E.std))}px)`;
+
+        const pipImg = $('pipImg');
+        pipImg.style.transform = `scale(${1.06 + Math.sin((t - 9) * 0.7) * 0.02}) translateY(${Math.sin((t - 9) * 0.55) * 5}px)`;
+
+        const chip = $('pipChip');
+        const cq = seg(t, 9.32, 9.72, E.pop);
+        chip.style.opacity = String(cq);
+        chip.style.transform = `translateX(${lerp(-40, 0, cq)}px) translateY(${lerp(10, 0, cq)}px) rotate(${lerp(-6, -2.5, cq)}deg) scale(${lerp(0.85, 1, cq)})`;
 
         const foot = $('foot4');
-        foot.style.opacity = String(seg(t, 9.4, 9.85, E.std) * 0.9);
+        foot.style.opacity = String(seg(t, 9.6, 10.0, E.std) * 0.85);
       }
 
-      // ---------- 5. Финал ----------
+      // ---------- 5. Телеграм ----------
       function beat5(t) {
         const el = $('b5');
-        const on = t > 11.7;
+        const on = t > 11.72;
         show(el, on);
         if (!on) return;
-        const fade = 1 - seg(t, 14.5, 14.98, E.soft);
+        const fade = 1 - seg(t, 14.52, 14.98, E.soft);
         el.style.opacity = String(fade);
 
         const logo = $('endLogo');
-        const p = seg(t, 11.8, 12.62, E.spring);
-        logo.style.opacity = String(seg(t, 11.8, 12.2, E.std));
-        logo.style.transform = `translateY(${lerp(44, 0, p)}px) scale(${lerp(0.88, 1, p)})`;
-        logo.style.filter = `contrast(1.04) brightness(${lerp(0.7, 1.04, seg(t, 11.8, 12.4, E.std))}) blur(${lerp(8, 0, seg(t, 11.8, 12.35, E.std))}px)`;
+        const p = seg(t, 11.78, 12.4, E.pop);
+        logo.style.opacity = String(seg(t, 11.78, 12.05, E.std));
+        logo.style.transform = `translateY(${lerp(40, 0, p)}px) scale(${lerp(0.86, 1, p)})`;
+        logo.style.filter = `contrast(1.04) brightness(${lerp(0.7, 1.04, seg(t, 11.78, 12.2, E.std))}) blur(${lerp(8, 0, seg(t, 11.78, 12.15, E.std))}px)`;
 
-        ripples(t, 'rip3', 12.2, 540, 663, 360, 1.7, 0.22);
-        ripples(t, 'rip4', 12.46, 540, 663, 360, 1.7, 0.22);
+        ripples(t, 'rip3', 12.0, 540, 366, 320, 1.6, 0.2);
+        ripples(t, 'rip4', 12.24, 540, 366, 320, 1.6, 0.2);
 
         const word = $('endWord');
-        const pw = seg(t, 12.02, 12.68, E.decel);
-        word.style.opacity = String(seg(t, 12.02, 12.42, E.std));
-        word.style.transform = `translateY(${lerp(34, 0, pw)}px)`;
+        const pw = seg(t, 11.96, 12.5, E.pop);
+        word.style.opacity = String(seg(t, 11.96, 12.2, E.std));
+        word.style.transform = `translateY(${lerp(30, 0, pw)}px)`;
         word.style.letterSpacing = `${lerp(-0.015, -0.045, pw)}em`;
 
-        const sub = $('endSub');
-        sub.style.opacity = String(seg(t, 12.28, 12.7, E.std) * 0.95);
-        sub.style.transform = `translateY(${lerp(18, 0, seg(t, 12.28, 12.7, E.decel))}px)`;
+        const label = $('endLabel');
+        label.style.opacity = String(seg(t, 12.1, 12.45, E.std) * 0.95);
+        label.style.transform = `translateY(${lerp(14, 0, seg(t, 12.1, 12.45, E.decel))}px)`;
+
+        const card = $('tgCard');
+        const cq = seg(t, 12.16, 12.85, E.pop);
+        card.style.opacity = String(seg(t, 12.12, 12.3, E.std));
+        card.style.transform = `translateY(${lerp(70, 0, cq)}px) scale(${lerp(0.9, 1, cq)}) rotate(${lerp(2.5, 0, cq)}deg)`;
 
         const plat = $('endPlat');
-        plat.style.opacity = String(seg(t, 12.44, 12.86, E.std));
-        plat.style.transform = `translateY(${lerp(16, 0, seg(t, 12.44, 12.86, E.decel))}px)`;
-
-        const link = $('endLink');
-        const lq = seg(t, 12.58, 13.1, E.spring);
-        link.style.opacity = String(seg(t, 12.58, 12.9, E.std));
-        link.style.transform = `translateY(${lerp(22, 0, lq)}px) scale(${lerp(0.97, 1, lq)})`;
+        plat.style.opacity = String(seg(t, 12.72, 13.06, E.std));
+        plat.style.transform = `translateY(${lerp(14, 0, seg(t, 12.72, 13.06, E.decel))}px)`;
 
         const lic = $('endLic');
-        lic.style.opacity = String(seg(t, 12.8, 13.2, E.std));
+        lic.style.opacity = String(seg(t, 12.88, 13.2, E.std));
       }
 
       // ---------- Общее ----------
@@ -1676,13 +1685,13 @@
         const el = $(id);
         const lines = el.querySelectorAll('.ln > span');
         const lab = el.querySelector('.cap-label');
-        const lq = seg(t, t0, t0 + 0.26, E.emphasized);
+        const lq = seg(t, t0, t0 + 0.24, E.emphasized);
         lab.style.opacity = String(lq);
         lab.style.transform = `translateY(${lerp(-12, 0, lq)}px)`;
         lines.forEach((ln, i) => {
-          const p = seg(t, t0 + 0.04 + i * 0.08, t0 + 0.42 + i * 0.08, E.emphasized);
+          const p = seg(t, t0 + 0.03 + i * 0.075, t0 + 0.36 + i * 0.075, E.emphasized);
           ln.style.transform = `translateY(${lerp(110, 0, p)}%)`;
-          ln.parentElement.style.opacity = String(seg(t, t0, t0 + 0.18, E.std));
+          ln.parentElement.style.opacity = String(seg(t, t0, t0 + 0.14, E.std));
         });
       }
 
@@ -1690,16 +1699,14 @@
         t = Math.max(0, Math.min(DUR - 1e-4, t));
         $('prog').style.width = `${(t / DUR) * 1080}px`;
 
+        $('scene').style.transform = '';
         for (const fn of [beat1, beat2, beat3, beat4, beat5]) fn(t);
 
         const step = Math.floor(t * 12);
         $('grain').style.backgroundPosition = `${(step * 37) % 160}px ${(step * 61) % 160}px`;
       }
 
-      window.renderAt = (t) => {
-        render(t);
-        return true;
-      };
+      window.renderAt = (t) => { render(t); return true; };
       window.DUR = DUR;
 
       render(0);

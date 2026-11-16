@@ -28,6 +28,9 @@ const appimage = require('./appimage-install');
 const ads = require('./ads');
 const region = require('./region');
 const find = require('./find');
+const plugins = require('./plugins');
+const stickers = require('./stickers');
+const i18n = require('./i18n');
 
 // Ступени масштаба как в браузерах.
 const ZOOM_STEPS = [0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
@@ -277,6 +280,12 @@ function handleCommand(command, payload) {
       toast(next ? 'Пропуск рекламы включён' : 'Пропуск рекламы выключен');
       break;
     }
+    case 'language':
+      if (typeof payload === 'string') i18n.setLanguage(payload);
+      break;
+    case 'siteLanguage':
+      if (typeof payload === 'string') region.setSiteLanguage(payload);
+      break;
     case 'region':
       if (typeof payload === 'string') region.setPreset(payload);
       break;
@@ -295,6 +304,28 @@ function handleCommand(command, payload) {
     case 'regionPanel':
       setPanelOpen(true);
       sendToWindow('octo:panel-category', 'region');
+      break;
+    case 'languagePanel':
+      setPanelOpen(true);
+      sendToWindow('octo:panel-category', 'language');
+      break;
+    case 'stickerPanel':
+      setPanelOpen(true);
+      sendToWindow('octo:panel-category', 'stickers');
+      break;
+    case 'stickerAdd':
+      setPanelOpen(true);
+      sendToWindow('octo:panel-category', 'stickers');
+      stickers.addFromDialog();
+      break;
+    case 'stickerSend':
+      if (typeof payload === 'string') stickers.send(payload);
+      break;
+    case 'stickerRemove':
+      if (typeof payload === 'string') stickers.remove(payload);
+      break;
+    case 'stickerFolder':
+      stickers.openFolder();
       break;
     case 'appimageInstall': {
       if (!appimage.isAvailable()) {
@@ -315,10 +346,32 @@ function handleCommand(command, payload) {
     case 'checkUpdates':
       checkNow();
       break;
+    case 'plugins':
+      plugins.openManager();
+      break;
+    case 'pluginInstallFile':
+      plugins.installFromFile();
+      break;
+    case 'pluginToggle':
+      if (typeof payload === 'string') plugins.toggle(payload);
+      else if (payload && typeof payload.id === 'string') {
+        plugins.setEnabled(payload.id, payload.enabled !== false);
+      }
+      break;
+    case 'pluginDocs':
+      plugins.openDocs();
+      break;
+    case 'pluginRules':
+      plugins.openRules();
+      break;
+    case 'pluginFolder':
+      plugins.openFolder();
+      break;
     case 'about':
       showAbout(ctx.win);
       break;
     default:
+      plugins.runCommand(command, payload);
       break;
   }
   pushState();

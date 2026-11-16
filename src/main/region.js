@@ -1,10 +1,14 @@
 'use strict';
 
-const { app, dialog, ipcMain, session } = require('electron');
+const { app, ipcMain, session } = require('electron');
 const { ctx, pushState, toast } = require('./app-context');
 const { readState, writeState } = require('./store');
 const { HOME_URL, PARTITION } = require('./shared');
 const { REGION_PRESETS, findPreset } = require('./region-catalog');
+const { SITE_LANGUAGES, findSiteLanguage, findAppLanguage } = require('./language-catalog');
+const { showMessageBox } = require('./dialogs');
+const { t } = require('./i18n');
+const cosmetics = require('./cosmetics');
 
 /**
  * Подмена региона.
@@ -53,26 +57,81 @@ function activePreset() {
 }
 
 function sync() {
-  const saved = readState().region;
+  const state = readState();
+  const saved = state.region;
   const preset = findPreset(saved?.preset);
   ctx.region = {
     preset: preset.id,
     proxy: typeof saved?.proxy === 'string' ? saved.proxy.trim() : '',
   };
+  ctx.siteLanguage = findSiteLanguage(state.siteLanguage)?.id || 'auto';
   ctx.regionCheck = { state: 'idle', text: 'Проверить' };
+}
+
+function activeSiteLanguage() {
+  return findSiteLanguage(ctx.siteLanguage);
+}
+
+/** Cookie default_lang — документированный способ сказать TikTok о языке. */
+async function applySiteLanguageCookie(ses, { clear = false } = {}) {
+  if (!ses) return;
+  const site = activeSiteLanguage();
+
+  if (!site) {
+    if (!clear) return;
+    let cookies = [];
+    try {
+      cookies = await ses.cookies.get({ name: 'default_lang' });
+    } catch {
+      return;
+    }
+    for (const cookie of cookies) {
+      const host = String(cookie.domain || 'www.tiktok.com').replace(/^\./, '');
+      try {
+        await ses.cookies.remove(`https://${host}${cookie.path || '/'}`, cookie.name);
+      } catch {
+        /* cookie уже удалена */
+      }
+    }
+    return;
+  }
+
+  const expirationDate = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
+  const common = {
+    name: 'default_lang',
+    value: site.tiktok,
+    path: '/',
+    secure: true,
+    expirationDate,
+  };
+
+  // Дублируем host-only и доменную cookie: часть сборок TikTok читает только
+  // конкретный хост, а часть — общую cookie домена.
+  for (const cookie of [
+    { ...common, url: 'https://www.tiktok.com/' },
+    { ...common, url: 'https://tiktok.com/' },
+    { ...common, url: 'https://www.tiktok.com/', domain: '.tiktok.com' },
+  ]) {
+    try {
+      await ses.cookies.set(cookie);
+    } catch (err) {
+      if (process.env.OCTO_DEBUG) console.warn('[octo] language cookie failed:', err.message);
+    }
+  }
 }
 
 function appSession() {
   return ctx.view?.webContents.session || session.fromPartition(PARTITION);
 }
 
-/** Код страны → русское название (US → США). */
+/** Код страны → название на языке интерфейса (US → США / USA). */
 function countryName(code) {
   if (!code) return '';
   const value = String(code).trim();
   if (value.length > 3) return value;
   try {
-    return new Intl.DisplayNames(['ru'], { type: 'region' }).of(value.toUpperCase()) || value;
+    const locale = findAppLanguage(ctx.language).locale;
+    return new Intl.DisplayNames([locale], { type: 'region' }).of(value.toUpperCase()) || value;
   } catch {
     return value;
   }
@@ -116,7 +175,7 @@ async function checkIp() {
   }
 
   if (token !== checkToken) return;
-  ctx.regionCheck = { state: 'error', text: 'Не удалось проверить' };
+  ctx.regionCheck = { state: 'error', text: t('Не удалось проверить') };
   pushState();
   toast('Не удалось узнать внешний IP — проверьте прокси и сеть');
 }
@@ -140,8 +199,8 @@ async function resetSiteData() {
     detail: 'Придётся войти заново. Это помогает TikTok заново определить регион по текущему IP.',
   };
   const { response } = ctx.win
-    ? await dialog.showMessageBox(ctx.win, options)
-    : await dialog.showMessageBox(options);
+    ? await showMessageBox(ctx.win, options)
+    : await showMessageBox(options);
   if (response !== 1) return;
 
   const ses = wc.session;
@@ -162,6 +221,9 @@ async function resetSiteData() {
       origins: ['https://www.tiktok.com', 'https://tiktok.com'],
     });
     await ses.clearHostResolverCache();
+    // Сброс стёр cookie темы и языка — вернём их до перезагрузки страницы.
+    await cosmetics.prepareTheme(ses);
+    await applySiteLanguageCookie(ses);
     wc.loadURL(HOME_URL);
     toast('Данные TikTok сброшены — войдите заново');
   } catch (err) {
@@ -222,9 +284,11 @@ function proxyLabel() {
   return `Прокси: ${parsed.rules}`;
 }
 
-function reloadView() {
+function reloadView(ignoreCache = false) {
   const wc = ctx.view?.webContents;
-  if (wc && !wc.isDestroyed()) wc.reload();
+  if (!wc || wc.isDestroyed()) return;
+  if (ignoreCache) wc.reloadIgnoringCache();
+  else wc.reload();
 }
 
 function applyProxy(ses) {
@@ -240,16 +304,19 @@ function applyProxy(ses) {
  */
 function installSessionHooks(ses) {
   applyProxy(ses);
+  applySiteLanguageCookie(ses).catch(() => {});
 
   ses.webRequest.onBeforeSendHeaders(
     { urls: ['*://tiktok.com/*', '*://*.tiktok.com/*'] },
     (details, callback) => {
       const preset = activePreset();
-      if (preset.acceptLanguage) {
+      const site = activeSiteLanguage();
+      const acceptLanguage = site?.acceptLanguage || preset.acceptLanguage;
+      if (acceptLanguage) {
         for (const key of Object.keys(details.requestHeaders)) {
           if (key.toLowerCase() === 'accept-language') delete details.requestHeaders[key];
         }
-        details.requestHeaders['Accept-Language'] = preset.acceptLanguage;
+        details.requestHeaders['Accept-Language'] = acceptLanguage;
       }
       callback({ requestHeaders: details.requestHeaders });
     },
@@ -267,6 +334,48 @@ function setPreset(id) {
   pushState();
   onChange?.();
   return preset.id;
+}
+
+/**
+ * Язык сайта TikTok. Cookie и Accept-Language применяются сразу, страницу
+ * перезагружаем: SPA не перечитывает язык без новой загрузки.
+ */
+function setSiteLanguage(id) {
+  const site = findSiteLanguage(id);
+  const next = site ? site.id : 'auto';
+  if (next === ctx.siteLanguage) return next;
+
+  ctx.siteLanguage = next;
+  writeState({ siteLanguage: next });
+
+  const ses = appSession();
+  applySiteLanguageCookie(ses, { clear: next === 'auto' })
+    .catch(() => {})
+    .finally(() => reloadView(true));
+
+  toast(next === 'auto' ? 'Язык сайта сброшен' : `Язык TikTok: ${site.label}`);
+  pushState();
+  onChange?.();
+  return next;
+}
+
+function siteLanguageMenuItems() {
+  return [
+    {
+      label: 'Авто (как у сайта)',
+      type: 'radio',
+      checked: ctx.siteLanguage === 'auto',
+      click: () => setSiteLanguage('auto'),
+    },
+    { type: 'separator' },
+    ...SITE_LANGUAGES.map((language) => ({
+      label: language.label,
+      native: true,
+      type: 'radio',
+      checked: ctx.siteLanguage === language.id,
+      click: () => setSiteLanguage(language.id),
+    })),
+  ];
 }
 
 function setProxy(raw) {
@@ -321,15 +430,18 @@ function menuItems() {
 function installIpc() {
   ipcMain.on('octo:region-config', (event) => {
     const preset = activePreset();
-    event.returnValue =
-      preset.id === 'off'
-        ? null
-        : {
-            locale: preset.locale,
-            timezone: preset.timezone,
-            latitude: preset.latitude,
-            longitude: preset.longitude,
-          };
+    const site = activeSiteLanguage();
+    const locale = site?.locale || preset.locale;
+    if (!locale) {
+      event.returnValue = null;
+      return;
+    }
+    event.returnValue = {
+      locale,
+      timezone: preset.timezone,
+      latitude: preset.latitude,
+      longitude: preset.longitude,
+    };
   });
 }
 
@@ -351,12 +463,15 @@ function setOnChange(callback) {
 module.exports = {
   sync,
   setPreset,
+  setSiteLanguage,
+  siteLanguageMenuItems,
   setProxy,
   checkIp,
   resetSiteData,
   installSessionHooks,
   installIpc,
   installLoginHandler,
+  applySiteLanguageCookie,
   menuItems,
   setOnChange,
 };

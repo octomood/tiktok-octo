@@ -4,6 +4,8 @@ const { session } = require('electron');
 const { PARTITION, CHROME_UA, isTikTokUrl } = require('./shared');
 const downloads = require('./downloads');
 const region = require('./region');
+const { findAppLanguage } = require('./language-catalog');
+const { readState } = require('./store');
 
 /**
  * Разрешения, которые реально нужны сайту.
@@ -27,6 +29,21 @@ function isTrustedOrigin(url) {
   return isTikTokUrl(url);
 }
 
+/** Языки проверки орфографии: язык оболочки, русский и английский. */
+function applySpellChecker(ses = session.fromPartition(PARTITION)) {
+  try {
+    const available = ses.availableSpellCheckerLanguages;
+    const app = findAppLanguage(readState().language);
+    const wanted = [app.spellcheck, 'ru', 'en-US']
+      .filter(Boolean)
+      .filter((lang, index, list) => list.indexOf(lang) === index)
+      .filter((lang) => available.includes(lang));
+    if (wanted.length > 0) ses.setSpellCheckerLanguages(wanted);
+  } catch {
+    /* раскладка может быть недоступна в урезанной сборке */
+  }
+}
+
 function prepareSession() {
   const ses = session.fromPartition(PARTITION);
 
@@ -38,14 +55,7 @@ function prepareSession() {
   region.installSessionHooks(ses);
 
   ses.setUserAgent(CHROME_UA, 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7');
-
-  try {
-    const available = ses.availableSpellCheckerLanguages;
-    const wanted = ['ru', 'en-US'].filter((lang) => available.includes(lang));
-    if (wanted.length > 0) ses.setSpellCheckerLanguages(wanted);
-  } catch {
-    /* раскладка может быть недоступна в урезанной сборке */
-  }
+  applySpellChecker(ses);
 
   ses.setPermissionRequestHandler((wc, permission, callback, details) => {
     if (!ALLOWED_PERMISSIONS.has(permission)) return callback(false);
@@ -64,4 +74,4 @@ function prepareSession() {
   return ses;
 }
 
-module.exports = { prepareSession, ALLOWED_PERMISSIONS };
+module.exports = { prepareSession, applySpellChecker, ALLOWED_PERMISSIONS };

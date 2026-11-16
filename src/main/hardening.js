@@ -4,6 +4,7 @@ const { app } = require('electron');
 const { ctx } = require('./app-context');
 const { isTikTokUrl, isAuthHost } = require('./shared');
 const { openExternal } = require('./links');
+const docsWindow = require('./plugins/docs-window');
 
 /**
  * Общие ограничения для всех webContents.
@@ -15,7 +16,9 @@ const { openExternal } = require('./links');
  */
 
 function isOwnContents(wc) {
-  return wc === ctx.win?.webContents || wc === ctx.view?.webContents;
+  return (
+    wc === ctx.win?.webContents || wc === ctx.view?.webContents || docsWindow.isDocsContents(wc)
+  );
 }
 
 /** Навигация, разрешённая внутри popup'а: сам TikTok и экраны входа. */

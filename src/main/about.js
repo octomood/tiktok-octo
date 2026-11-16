@@ -1,6 +1,8 @@
 'use strict';
 
-const { app, dialog } = require('electron');
+const { app } = require('electron');
+const { showMessageBox } = require('./dialogs');
+const { t } = require('./i18n');
 
 /** Одно диалоговое окно «О программе» для меню и панели функций. */
 function showAbout(parent) {
@@ -9,15 +11,15 @@ function showAbout(parent) {
     title: 'О программе',
     message: 'TikTok octo',
     detail: [
-      `Версия ${app.getVersion()}`,
+      t(`Версия ${app.getVersion()}`),
       `Electron ${process.versions.electron} · Chromium ${process.versions.chrome}`,
       '',
-      'Неофициальный клиент. Не связан с TikTok Ltd.',
+      t('Неофициальный клиент. Не связан с TikTok Ltd.'),
     ].join('\n'),
     buttons: ['ОК'],
   };
-  if (parent) dialog.showMessageBox(parent, options);
-  else dialog.showMessageBox(options);
+  if (parent) showMessageBox(parent, options);
+  else showMessageBox(options);
 }
 
 module.exports = { showAbout };

@@ -7,6 +7,8 @@ const { handleCommand } = require('./commands');
 const { showAbout } = require('./about');
 const cosmetics = require('./cosmetics');
 const region = require('./region');
+const plugins = require('./plugins');
+const i18n = require('./i18n');
 
 const isMac = process.platform === 'darwin';
 
@@ -88,7 +90,22 @@ function attachContextMenu(wc) {
       click: () => wc.inspectElement(params.x, params.y),
     });
 
-    Menu.buildFromTemplate(template).popup({ window: ctx.win ?? undefined });
+    const pluginItems = plugins.contextMenuItems({
+      linkURL: params.linkURL,
+      selectionText: params.selectionText,
+      isEditable: params.isEditable,
+      mediaType: params.mediaType,
+      srcURL: params.srcURL,
+      pageURL: wc.getURL(),
+    });
+    if (pluginItems.length) {
+      template.push({ type: 'separator' });
+      template.push(...pluginItems);
+    }
+
+    Menu.buildFromTemplate(i18n.applyToMenuTemplate(template)).popup({
+      window: ctx.win ?? undefined,
+    });
   });
 }
 
@@ -148,6 +165,14 @@ function buildAppMenu() {
       submenu: [
         { label: 'Панель функций', click: () => handleCommand('panel') },
         { label: 'Палитра команд', click: () => handleCommand('palette') },
+        {
+          label: 'Стикеры',
+          submenu: [
+            { label: 'Панель стикеров', click: () => handleCommand('stickerPanel') },
+            { label: 'Добавить стикеры…', click: () => handleCommand('stickerAdd') },
+            { label: 'Папка стикеров', click: () => handleCommand('stickerFolder') },
+          ],
+        },
         { type: 'separator' },
         { label: 'Крупнее', click: () => handleCommand('zoomIn') },
         { label: 'Мельче', click: () => handleCommand('zoomOut') },
@@ -159,6 +184,26 @@ function buildAppMenu() {
         { label: 'Регион', submenu: region.menuItems() },
         { type: 'separator' },
         { label: 'Инструменты разработчика', click: () => handleCommand('devtools') },
+      ],
+    },
+    {
+      label: 'Язык',
+      submenu: [
+        { label: 'Интерфейс', submenu: i18n.menuItems() },
+        { label: 'TikTok', submenu: region.siteLanguageMenuItems() },
+      ],
+    },
+    {
+      label: 'Плагины',
+      submenu: [
+        { label: 'Менеджер плагинов', click: () => handleCommand('plugins') },
+        { label: 'Установить из файла…', click: () => handleCommand('pluginInstallFile') },
+        { type: 'separator' },
+        ...plugins.menuItems(),
+        { type: 'separator' },
+        { label: 'Документация для разработчиков', click: () => handleCommand('pluginDocs') },
+        { label: 'Правила публикации', click: () => handleCommand('pluginRules') },
+        { label: 'Папка плагинов', click: () => handleCommand('pluginFolder') },
       ],
     },
     {
@@ -181,7 +226,7 @@ function buildAppMenu() {
       : [{ label: 'Справка', submenu: [{ label: 'О программе', click: showAboutDialog }] }]),
   ];
 
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  Menu.setApplicationMenu(Menu.buildFromTemplate(i18n.applyToMenuTemplate(template)));
 }
 
 module.exports = { attachContextMenu, buildAppMenu, showAbout: showAboutDialog };

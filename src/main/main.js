@@ -29,6 +29,15 @@ const ads = require('./ads');
 const region = require('./region');
 const cosmetics = require('./cosmetics');
 const find = require('./find');
+const plugins = require('./plugins');
+const stickers = require('./stickers');
+const i18n = require('./i18n');
+const session = require('./session');
+
+// Кастомные схемы (хосты плагинов и превью стикеров) должны быть объявлены
+// до app.whenReady().
+plugins.registerScheme();
+stickers.registerScheme();
 
 const cliInstall = process.argv.includes('--install-appimage');
 const cliUninstall = process.argv.includes('--uninstall-appimage');
@@ -65,7 +74,7 @@ if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (ctx.win) showWindow();
+    if (ctx.win && !ctx.win.isDestroyed()) showWindow();
     else createWindow();
   });
 
@@ -88,20 +97,28 @@ if (!gotLock) {
     app.setAppUserModelId('app.octo.tiktok');
     ctx.appimageInstalled = appimage.isInstalled();
     ads.sync();
+    i18n.sync();
+    i18n.installIpc();
     region.sync();
     region.installIpc();
     region.installLoginHandler();
 
     installWebContentsGuards();
-    // Переключатели косметики и региона меняют меню и трей — пересобираем их.
+    stickers.init();
+    // Переключатели косметики, региона и языка меняют меню и трей — пересобираем их.
     const rebuildMenus = () => {
       buildAppMenu();
       refreshTrayMenu();
     };
     cosmetics.setOnChange(rebuildMenus);
     region.setOnChange(rebuildMenus);
+    i18n.setOnChange(() => {
+      rebuildMenus();
+      session.applySpellChecker();
+    });
     buildAppMenu();
     createWindow();
+    plugins.init({ onChange: rebuildMenus });
 
     ctx.trayActions = {
       mute: () => handleCommand('mute'),
@@ -114,7 +131,7 @@ if (!gotLock) {
       panel: () => handleCommand('panel'),
       home: () => handleCommand('home'),
       show: () => {
-        if (!ctx.win) createWindow();
+        if (!ctx.win || ctx.win.isDestroyed()) createWindow();
         else showWindow();
       },
       quit: () => {
@@ -148,7 +165,7 @@ if (!gotLock) {
     ipcMain.on('octo:find', (_event, payload) => find.handle(payload));
 
     app.on('activate', () => {
-      if (!ctx.win) createWindow();
+      if (!ctx.win || ctx.win.isDestroyed()) createWindow();
       else showWindow();
     });
   });
@@ -159,6 +176,7 @@ if (!gotLock) {
 
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();
+    plugins.dispose();
     destroyTray();
   });
 

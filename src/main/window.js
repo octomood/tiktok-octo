@@ -11,6 +11,7 @@ const { refreshTrayMenu } = require('./tray');
 const player = require('./player');
 const media = require('./media');
 const pip = require('./pip');
+const plugins = require('./plugins');
 
 function saveGeometry(win) {
   // В PiP окно маленькое — сохраняем геометрию, которая была до режима.
@@ -137,6 +138,7 @@ function createWindow() {
     pip.reset();
     ctx.win = null;
     ctx.view = null;
+    plugins.suspend();
     refreshTrayMenu();
   });
 
@@ -147,6 +149,7 @@ function createWindow() {
   });
 
   createView();
+  plugins.resume();
   return win;
 }
 

@@ -37,6 +37,9 @@ jobs:
       - name: Бинарник Electron
         run: node node_modules/electron/install.js
 
+      - name: Сборка встроенной документации
+        run: npm run docs:build
+
       - name: Сборка и публикация
         run: npx electron-builder ${{ matrix.target }} --publish always
         env:

@@ -2,6 +2,7 @@
 
 const { ctx } = require('./app-context');
 const { handleCommand } = require('./commands');
+const plugins = require('./plugins');
 
 /**
  * Горячие клавиши.
@@ -96,6 +97,9 @@ function handleShortcut(event, input) {
     case 'b':
       if (input.shift) return run(() => handleCommand('panel'));
       break;
+    case 'e':
+      if (input.shift) return run(() => handleCommand('plugins'));
+      break;
     case 'k':
       return run(() => handleCommand('palette'));
     case 's':
@@ -103,6 +107,11 @@ function handleShortcut(event, input) {
       break;
     default:
       break;
+  }
+
+  if (plugins.handleShortcut(input)) {
+    event.preventDefault();
+    return undefined;
   }
   return undefined;
 }

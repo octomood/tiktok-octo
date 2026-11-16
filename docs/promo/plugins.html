@@ -1,0 +1,1987 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>TikTok octo — plugins promo</title>
+    <link rel="stylesheet" href="../../src/renderer/fonts.css" />
+    <link rel="stylesheet" href="../../src/renderer/styles.css" />
+    <style>
+      /* ----------------------------------------------------------------
+         Промо 1080×1920: «первый мод для компов», десктоп, плюшка PiP,
+         финал — Telegram-канал. Логотип — tiktok-octo.jpg в альфе.
+         Всё считается из t.
+         ---------------------------------------------------------------- */
+
+      :root {
+        --md-primary: #ffffff;
+        --md-on-primary: #0a0a0b;
+        --md-primary-container: #26262b;
+        --md-on-primary-container: #ffffff;
+        --md-secondary: #c9c9d1;
+        --md-on-secondary: #0a0a0b;
+        --md-secondary-container: #2e2e34;
+        --md-on-secondary-container: #ffffff;
+        --md-error: #ededf0;
+        --md-on-error: #0a0a0b;
+        --md-surface: #0a0a0b;
+        --md-surface-container-lowest: #070708;
+        --md-surface-container-low: #111113;
+        --md-surface-container: #161619;
+        --md-surface-container-high: #1e1e22;
+        --md-surface-container-highest: #29292e;
+        --md-on-surface: #f2f2f4;
+        --md-on-surface-variant: #a8a8b2;
+        --md-outline: #74747e;
+        --md-outline-variant: #33333a;
+        --md-state-hover: rgba(242, 242, 244, 0.07);
+        --md-state-pressed: rgba(242, 242, 244, 0.11);
+
+        --bg: var(--md-surface);
+        --bar-top: var(--md-surface-container-low);
+        --bar-bottom: var(--md-surface);
+        --fg: var(--md-on-surface);
+        --muted: var(--md-outline);
+        --muted-strong: var(--md-on-surface-variant);
+        --hover: var(--md-state-hover);
+        --line: var(--md-outline-variant);
+        --field: var(--md-surface-container);
+        --bar-h: 44px;
+        --radius: 12px;
+
+        --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+        --ink: #f2f2f4;
+        --paper: #f4f4f6;
+        --paper-ink: #0b0b0d;
+      }
+
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        margin: 0;
+        overflow: hidden;
+        background: #0a0a0c;
+        color: var(--ink);
+        font-family: 'Inter', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+      }
+
+      #scene {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #0a0a0c;
+        will-change: transform;
+      }
+
+      .bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(940px 720px at 50% 30%, rgba(255, 255, 255, 0.06), transparent 66%),
+          radial-gradient(1200px 900px at 50% 108%, rgba(255, 255, 255, 0.035), transparent 70%),
+          #0a0a0c;
+      }
+
+      .vignette {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(120% 82% at 50% 46%, transparent 42%, rgba(0, 0, 0, 0.6) 100%);
+      }
+
+      .grain {
+        position: absolute;
+        inset: -8%;
+        pointer-events: none;
+        opacity: 0.055;
+        mix-blend-mode: soft-light;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+        background-size: 160px 160px;
+      }
+
+      .flash {
+        position: absolute;
+        inset: 0;
+        z-index: 20;
+        background: #ffffff;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .hud {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .hud-top {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1080px;
+        height: 4px;
+        background: rgba(242, 242, 244, 0.08);
+      }
+
+      .hud-top-fill {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 4px;
+        width: 0;
+        background: rgba(242, 242, 244, 0.72);
+      }
+
+      .hud-label {
+        position: absolute;
+        top: 84px;
+        left: 84px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-family: var(--mono);
+        font-size: 21px;
+        letter-spacing: 0.26em;
+        color: rgba(242, 242, 244, 0.5);
+        text-transform: uppercase;
+      }
+
+      .hud-label i {
+        display: block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #f2f2f4;
+        opacity: 0.75;
+      }
+
+      /* ---------- Подписи ---------- */
+
+      .cap {
+        position: absolute;
+        left: 84px;
+        top: 340px;
+        width: 912px;
+      }
+
+      .cap-label {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        height: 24px;
+        font-family: var(--mono);
+        font-size: 21px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: rgba(242, 242, 244, 0.44);
+      }
+
+      .cap-num {
+        color: rgba(242, 242, 244, 0.9);
+      }
+
+      .cap-rule {
+        width: 46px;
+        height: 1px;
+        background: rgba(242, 242, 244, 0.24);
+      }
+
+      .cap h1 {
+        margin: 22px 0 0;
+        font-size: 72px;
+        font-weight: 600;
+        letter-spacing: -0.035em;
+        line-height: 1.05;
+      }
+
+      .cap .ln {
+        display: block;
+        overflow: hidden;
+        padding-bottom: 4px;
+      }
+
+      .cap .ln > span {
+        display: block;
+        will-change: transform;
+      }
+
+      .cap .dim {
+        color: rgba(242, 242, 244, 0.46);
+      }
+
+      .stage {
+        position: absolute;
+        left: 60px;
+        top: 820px;
+        width: 960px;
+      }
+
+      .foot {
+        margin-top: 34px;
+        font-family: var(--mono);
+        font-size: 17px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(242, 242, 244, 0.32);
+      }
+
+      /* ---------- Стеклянный логотип ---------- */
+
+      .glass {
+        display: block;
+        filter: contrast(1.04) brightness(1.04);
+        user-select: none;
+        -webkit-user-drag: none;
+      }
+
+      .hero {
+        position: absolute;
+        inset: 0;
+      }
+
+      .hero-logo {
+        position: absolute;
+        left: 50%;
+        top: 300px;
+        width: 800px;
+        height: 800px;
+        margin-left: -400px;
+      }
+
+      .hero-word {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 1118px;
+        text-align: center;
+        font-size: 104px;
+        font-weight: 600;
+        letter-spacing: -0.045em;
+        line-height: 1;
+      }
+
+      .hero-sub {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 1258px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 22px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: rgba(242, 242, 244, 0.5);
+      }
+
+      .hero-line {
+        position: absolute;
+        left: 50%;
+        top: 1340px;
+        width: 1px;
+        height: 60px;
+        margin-left: -0.5px;
+        background: linear-gradient(180deg, rgba(242, 242, 244, 0.34), rgba(242, 242, 244, 0));
+      }
+
+      .ripple {
+        position: absolute;
+        border-radius: 50%;
+        border: 1px solid rgba(242, 242, 244, 0.55);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* ---------- Стикер «первый мод» ---------- */
+
+      .one {
+        position: absolute;
+        left: 8px;
+        top: 470px;
+        font-size: 900px;
+        font-weight: 700;
+        line-height: 0.8;
+        color: transparent;
+        -webkit-text-stroke: 2px rgba(242, 242, 244, 0.12);
+        letter-spacing: -0.08em;
+        pointer-events: none;
+      }
+
+      .sticker {
+        position: absolute;
+        left: 100px;
+        top: 700px;
+        width: 880px;
+        padding: 60px 64px 54px;
+        border-radius: 56px;
+        background: var(--paper);
+        color: var(--paper-ink);
+        box-shadow:
+          0 3px 0 rgba(0, 0, 0, 0.25),
+          0 50px 110px rgba(0, 0, 0, 0.65);
+        transform-origin: 50% 40%;
+      }
+
+      .sticker-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .sticker-pill {
+        display: inline-flex;
+        align-items: center;
+        height: 48px;
+        padding: 0 20px;
+        border-radius: 999px;
+        background: var(--paper-ink);
+        color: var(--paper);
+        font-family: var(--mono);
+        font-size: 20px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+
+      .sticker-badge {
+        display: inline-grid;
+        place-items: center;
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        background: var(--paper-ink);
+        color: var(--paper);
+        font-family: var(--mono);
+        font-size: 22px;
+        letter-spacing: 0;
+        transform: rotate(6deg);
+      }
+
+      .sticker-word {
+        margin: 30px 0 0;
+        font-size: 214px;
+        font-weight: 700;
+        line-height: 0.98;
+        letter-spacing: -0.055em;
+      }
+
+      .sticker-sub {
+        margin: 18px 0 0;
+        font-size: 82px;
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+
+      .sticker-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 38px;
+        font-family: var(--mono);
+        font-size: 19px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(11, 11, 13, 0.55);
+      }
+
+      .sticker-foot b {
+        font-weight: 500;
+        color: rgba(11, 11, 13, 0.9);
+      }
+
+      .impact {
+        position: absolute;
+        z-index: 4;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.55);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* ---------- Настоящая полоса заголовка ---------- */
+
+      .bar-card {
+        position: relative;
+        width: 960px;
+        border-radius: 26px;
+        background: #17171c;
+        box-shadow:
+          0 2px 2px rgba(0, 0, 0, 0.5),
+          0 30px 70px rgba(0, 0, 0, 0.6),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.11);
+        overflow: hidden;
+      }
+
+      .demo-bar .titlebar {
+        height: 92px;
+        gap: 6px;
+        padding: 0 10px 0 22px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: none;
+        background: linear-gradient(180deg, #212127, #18181d);
+      }
+
+      .demo-bar .brand {
+        display: grid;
+        place-items: center;
+        height: 100%;
+        padding-right: 4px;
+      }
+
+      .demo-bar .brand-mark {
+        display: block;
+        width: 54px;
+        height: 54px;
+        border-radius: 12px;
+        filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
+      }
+
+      .demo-bar .divider {
+        height: 34px;
+        margin: 0 12px;
+      }
+
+      .demo-bar .nav,
+      .demo-bar .actions {
+        gap: 2px;
+      }
+
+      .demo-bar .actions {
+        margin-right: 8px;
+      }
+
+      .demo-bar .icon-btn {
+        position: relative;
+        width: 54px;
+        height: 54px;
+        border-radius: 18px;
+      }
+
+      .demo-bar .icon-btn svg {
+        width: 27px;
+        height: 27px;
+      }
+
+      .demo-bar .icon-btn:disabled {
+        opacity: 0.28;
+      }
+
+      .demo-bar .icon-btn.is-on {
+        background: #f2f2f4;
+        color: #0a0a0c;
+      }
+
+      .demo-bar .page-pill {
+        height: 46px;
+        margin-left: 14px;
+        padding: 0 20px;
+        gap: 12px;
+        border-radius: 999px;
+        max-width: 360px;
+        border-color: rgba(255, 255, 255, 0.14);
+        background: #232329;
+        color: rgba(242, 242, 244, 0.8);
+      }
+
+      .demo-bar .page-title {
+        font-size: 22px;
+        letter-spacing: -0.01em;
+      }
+
+      .demo-bar .status-dot {
+        width: 9px;
+        height: 9px;
+        background: #8e8e98;
+      }
+
+      .demo-bar .win-btn {
+        width: 66px;
+      }
+
+      .demo-bar .win-btn svg {
+        width: 24px;
+        height: 24px;
+      }
+
+      .window-body {
+        position: relative;
+        width: 960px;
+        height: 560px;
+        margin-top: -2px;
+        border-radius: 0 0 26px 26px;
+        background: radial-gradient(620px 420px at 50% 24%, #1b1b21, #0c0c0f 72%);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+        overflow: hidden;
+      }
+
+      /* вертикальное «видео» в ленте */
+      .feed-bg {
+        position: absolute;
+        inset: -10%;
+        background: url('assets/video-frame.jpg') center / cover no-repeat;
+        filter: blur(34px) brightness(0.4) saturate(0);
+        transform: scale(1.15);
+      }
+
+      .feed-bg-shade {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(70% 60% at 50% 45%, rgba(10, 10, 12, 0.2), rgba(10, 10, 12, 0.82) 75%);
+      }
+
+      .feed-video {
+        position: absolute;
+        left: 330px;
+        top: 20px;
+        width: 300px;
+        height: 520px;
+        border-radius: 24px;
+        overflow: hidden;
+        background: #0d0d10;
+        box-shadow:
+          0 22px 54px rgba(0, 0, 0, 0.55),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+      }
+
+      .feed-video img {
+        position: absolute;
+        inset: -8%;
+        width: 116%;
+        height: 116%;
+        object-fit: cover;
+        filter: contrast(1.06) brightness(0.92);
+      }
+
+      .feed-shade {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          rgba(10, 10, 12, 0.08) 26%,
+          rgba(10, 10, 12, 0.42) 62%,
+          rgba(10, 10, 12, 0.94) 100%
+        );
+      }
+
+      .feed-rail {
+        position: absolute;
+        right: 10px;
+        bottom: 96px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .rail-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--mono);
+        font-size: 14px;
+        color: #f2f2f4;
+        text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+      }
+
+      .rail-item svg {
+        width: 27px;
+        height: 27px;
+      }
+
+      .feed-scrim {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 120px;
+        background: linear-gradient(90deg, transparent, rgba(6, 6, 8, 0.55));
+        pointer-events: none;
+      }
+
+      .feed-meta {
+        position: absolute;
+        left: 16px;
+        right: 58px;
+        bottom: 22px;
+      }
+
+      .feed-user {
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .feed-cap {
+        margin-top: 5px;
+        font-size: 13px;
+        line-height: 1.35;
+        color: rgba(242, 242, 244, 0.8);
+      }
+
+      .feed-sound {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 10px;
+        font-family: var(--mono);
+        font-size: 11.5px;
+        color: rgba(242, 242, 244, 0.7);
+      }
+
+      .feed-sound svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      .feed-progress {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        background: rgba(242, 242, 244, 0.22);
+      }
+
+      .feed-progress b {
+        display: block;
+        height: 100%;
+        width: 34%;
+        background: #f2f2f4;
+      }
+
+      /* уведомление ОС над окном */
+      .notif {
+        position: absolute;
+        right: 0;
+        top: -100px;
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        width: 420px;
+        height: 78px;
+        padding: 0 18px;
+        border-radius: 22px;
+        background: #1b1b21;
+        box-shadow:
+          0 24px 54px rgba(0, 0, 0, 0.6),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+        opacity: 0;
+      }
+
+      .notif-ico {
+        display: grid;
+        flex: none;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #f2f2f4;
+        color: #0a0a0c;
+      }
+
+      .notif-ico svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .notif-txt {
+        display: block;
+        font-size: 16px;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+      }
+
+      .notif-sub {
+        display: block;
+        margin-top: 3px;
+        font-family: var(--mono);
+        font-size: 12.5px;
+        letter-spacing: 0.06em;
+        color: rgba(242, 242, 244, 0.45);
+      }
+
+      /* «рабочий чат» под PiP */
+      .chat {
+        position: absolute;
+        left: 20px;
+        top: 20px;
+        width: 900px;
+        height: 620px;
+        border-radius: 26px;
+        background: linear-gradient(180deg, #17171c, #101014);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+        overflow: hidden;
+        filter: blur(1.5px) brightness(0.6);
+      }
+
+      .chat-bar {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        height: 74px;
+        padding: 0 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      }
+
+      .chat-ava {
+        display: grid;
+        flex: none;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #2c2c34;
+        font-size: 15px;
+        font-weight: 600;
+        color: #d4d4db;
+      }
+
+      .chat-name {
+        font-size: 17px;
+        font-weight: 600;
+      }
+
+      .chat-sub {
+        margin-top: 3px;
+        font-family: var(--mono);
+        font-size: 12.5px;
+        color: rgba(242, 242, 244, 0.4);
+      }
+
+      .chat-body {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 24px;
+      }
+
+      .bubble {
+        width: fit-content;
+        max-width: 520px;
+        padding: 12px 16px;
+        border-radius: 18px;
+        background: #24242b;
+        font-size: 15px;
+        color: rgba(242, 242, 244, 0.82);
+      }
+
+      .bubble.me {
+        align-self: flex-end;
+        background: #34343d;
+        color: #f2f2f4;
+      }
+
+      .bubble.short {
+        max-width: 200px;
+      }
+
+      .chat-input {
+        position: absolute;
+        right: 24px;
+        bottom: 22px;
+        left: 24px;
+        height: 52px;
+        border-radius: 16px;
+        background: #1e1e24;
+      }
+
+      .chat-input::after {
+        content: 'Написать сообщение…';
+        position: absolute;
+        top: 17px;
+        left: 18px;
+        font-size: 14px;
+        color: rgba(242, 242, 244, 0.3);
+      }
+
+
+      /* ---------- Курсор и клик ---------- */
+
+      .cursor {
+        position: absolute;
+        z-index: 6;
+        width: 38px;
+        height: 38px;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.7));
+        pointer-events: none;
+      }
+
+      .click-ring {
+        position: absolute;
+        z-index: 5;
+        width: 10px;
+        height: 10px;
+        margin: -5px 0 0 -5px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.9);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* ---------- Рабочий стол ---------- */
+
+      .desk {
+        position: absolute;
+        inset: 0;
+      }
+
+      .win-ghost {
+        position: absolute;
+        border-radius: 22px;
+        background: linear-gradient(180deg, #17171c, #0f0f13);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+        overflow: hidden;
+      }
+
+      .win-ghost .wg-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 42px;
+        padding: 0 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .win-ghost .wg-bar i {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: rgba(242, 242, 244, 0.22);
+      }
+
+      .win-ghost .wg-bar u {
+        flex: 1;
+        height: 10px;
+        max-width: 130px;
+        border-radius: 999px;
+        background: rgba(242, 242, 244, 0.09);
+      }
+
+      .win-ghost .wg-body {
+        padding: 22px;
+      }
+
+      .win-ghost .wg-body b {
+        display: block;
+        height: 12px;
+        margin-bottom: 14px;
+        border-radius: 999px;
+        background: rgba(242, 242, 244, 0.07);
+      }
+
+      /* ---------- PiP ---------- */
+
+      .pip-wrap {
+        position: absolute;
+        left: 400px;
+        top: 30px;
+        width: 420px;
+        height: 640px;
+      }
+
+      .pip-card {
+        position: absolute;
+        width: 420px;
+        border-radius: 30px;
+        background: #121216;
+        box-shadow:
+          0 2px 3px rgba(0, 0, 0, 0.5),
+          0 40px 90px rgba(0, 0, 0, 0.75),
+          0 0 0 1px rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+        transform-origin: 60% 80%;
+      }
+
+      .demo-bar .pipbar {
+        height: 64px;
+        gap: 2px;
+        padding: 0 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(180deg, #222229, #18181d);
+        box-shadow: none;
+      }
+
+      .demo-bar .pipbar .icon-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+      }
+
+      .demo-bar .pipbar .icon-btn svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .demo-bar .pip-title {
+        margin: 0 8px;
+        font-size: 18px;
+        color: #a9a9b2;
+      }
+
+      .pip-screen {
+        position: relative;
+        height: 540px;
+        background: #0e0e11;
+        overflow: hidden;
+      }
+
+      .pip-screen img {
+        position: absolute;
+        inset: -8%;
+        width: 116%;
+        height: 116%;
+        object-fit: cover;
+        filter: contrast(1.06) brightness(0.9);
+      }
+
+      .pip-screen .pip-shade {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(10, 10, 12, 0.12) 30%, rgba(10, 10, 12, 0.78) 100%);
+      }
+
+      .pip-meta {
+        position: absolute;
+        left: 20px;
+        bottom: 56px;
+        right: 20px;
+      }
+
+      .pip-meta b {
+        display: block;
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .pip-meta span {
+        display: block;
+        margin-top: 5px;
+        font-size: 13px;
+        color: rgba(242, 242, 244, 0.75);
+      }
+
+      .pip-foot {
+        position: absolute;
+        right: 24px;
+        bottom: 22px;
+        left: 24px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-family: var(--mono);
+        font-size: 15px;
+        color: rgba(242, 242, 244, 0.62);
+      }
+
+      .pip-progress {
+        position: relative;
+        flex: 1;
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(242, 242, 244, 0.2);
+        overflow: hidden;
+      }
+
+      .pip-progress b {
+        position: absolute;
+        inset: 0;
+        width: 38%;
+        border-radius: 999px;
+        background: #f2f2f4;
+      }
+
+      .pip-chip {
+        position: absolute;
+        left: -284px;
+        top: 262px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 54px;
+        padding: 0 20px;
+        border-radius: 999px;
+        background: #f2f2f4;
+        color: #0a0a0b;
+        font-family: var(--mono);
+        font-size: 18px;
+        letter-spacing: 0.08em;
+        white-space: nowrap;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+      }
+
+      .pip-chip svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      /* ---------- Менеджер плагинов ---------- */
+
+      .pm-window {
+        position: relative;
+        width: 960px;
+        border-radius: 26px;
+        background: #141419;
+        box-shadow:
+          0 2px 2px rgba(0, 0, 0, 0.5),
+          0 30px 70px rgba(0, 0, 0, 0.6),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.11);
+        overflow: hidden;
+      }
+
+      .pm-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 96px;
+        padding: 0 14px 0 20px;
+        background: linear-gradient(180deg, #202026, #17171c);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .pm-mark {
+        display: block;
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+      }
+
+      .pm-title {
+        font-size: 25px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .pm-search {
+        display: flex;
+        flex: 1 1 auto;
+        align-items: center;
+        height: 46px;
+        min-width: 0;
+        margin-left: 12px;
+        padding: 0 18px;
+        border-radius: 999px;
+        background: #26262d;
+        font-size: 16px;
+        color: rgba(242, 242, 244, 0.4);
+      }
+
+      .pm-install {
+        display: grid;
+        flex: none;
+        place-items: center;
+        height: 46px;
+        padding: 0 20px;
+        border-radius: 999px;
+        background: #f2f2f4;
+        color: #0a0a0c;
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .pm-win {
+        display: flex;
+        gap: 16px;
+        padding: 0 6px 0 10px;
+        font-size: 18px;
+        color: rgba(242, 242, 244, 0.55);
+      }
+
+      .pm-body {
+        padding: 30px 34px 32px;
+      }
+
+      .pm-section {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--mono);
+        font-size: 15px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(242, 242, 244, 0.4);
+      }
+
+      .pm-count {
+        display: grid;
+        place-items: center;
+        min-width: 26px;
+        height: 26px;
+        padding: 0 7px;
+        border-radius: 999px;
+        background: #26262d;
+        font-size: 12px;
+        color: rgba(242, 242, 244, 0.65);
+      }
+
+      .pm-card {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        margin-top: 18px;
+        padding: 24px 26px;
+        border-radius: 22px;
+        background: #1b1b21;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      }
+
+      .pm-card.is-on {
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+          0 18px 44px rgba(0, 0, 0, 0.35);
+      }
+
+      .pm-card--sub {
+        margin-top: 12px;
+        opacity: 0.72;
+      }
+
+      .pm-icon {
+        display: block;
+        flex: none;
+        width: 84px;
+        height: 84px;
+        border-radius: 18px;
+        background: #0f0f13;
+        object-fit: cover;
+      }
+
+      .pm-icon--mono {
+        display: grid;
+        place-items: center;
+        font-family: var(--mono);
+        font-size: 26px;
+        color: rgba(242, 242, 244, 0.7);
+        background: #232329;
+      }
+
+      .pm-info {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      .pm-name {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 23px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .pm-badge {
+        display: inline-flex;
+        align-items: center;
+        height: 26px;
+        padding: 0 10px;
+        border-radius: 999px;
+        background: #f2f2f4;
+        color: #0a0a0c;
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+      }
+
+      .pm-badge--ghost {
+        background: transparent;
+        color: rgba(242, 242, 244, 0.5);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+      }
+
+      .pm-meta {
+        margin-top: 5px;
+        font-family: var(--mono);
+        font-size: 13px;
+        color: rgba(242, 242, 244, 0.45);
+      }
+
+      .pm-desc {
+        margin-top: 10px;
+        font-size: 15px;
+        color: rgba(242, 242, 244, 0.72);
+      }
+
+      .pm-chips {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .pm-chips span {
+        display: grid;
+        place-items: center;
+        height: 28px;
+        padding: 0 10px;
+        border-radius: 8px;
+        background: #26262d;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+        font-family: var(--mono);
+        font-size: 11px;
+        color: rgba(242, 242, 244, 0.6);
+      }
+
+      .pm-toggle {
+        position: relative;
+        flex: none;
+        width: 64px;
+        height: 36px;
+        border-radius: 999px;
+        background: #2c2c34;
+        box-shadow: inset 0 0 0 2px #4a4a55;
+      }
+
+      .pm-toggle i {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #8e8e98;
+      }
+
+      .pm-toggle.is-on {
+        background: #f2f2f4;
+        box-shadow: inset 0 0 0 2px #f2f2f4;
+      }
+
+      .pm-toggle.is-on i {
+        background: #0a0a0c;
+      }
+
+      .pm-hint {
+        margin-top: 16px;
+        font-family: var(--mono);
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        color: rgba(242, 242, 244, 0.35);
+      }
+
+      /* ---------- Диалог установки ---------- */
+
+      .dlg {
+        position: absolute;
+        left: 50%;
+        top: 32px;
+        width: 840px;
+        margin-left: -420px;
+        padding: 38px 40px 34px;
+        border-radius: 30px;
+        background: #16161b;
+        box-shadow:
+          0 40px 100px rgba(0, 0, 0, 0.72),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+        transform-origin: 50% 30%;
+        opacity: 0;
+      }
+
+      .dlg-head {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .dlg-lock {
+        display: grid;
+        flex: none;
+        place-items: center;
+        width: 54px;
+        height: 54px;
+        border-radius: 50%;
+        background: #f2f2f4;
+        color: #0a0a0c;
+      }
+
+      .dlg-lock svg {
+        width: 26px;
+        height: 26px;
+      }
+
+      .dlg-title {
+        font-size: 31px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .dlg-sub {
+        margin-top: 4px;
+        font-family: var(--mono);
+        font-size: 14px;
+        color: rgba(242, 242, 244, 0.45);
+      }
+
+      .dlg-risk {
+        display: grid;
+        place-items: center;
+        height: 32px;
+        margin-left: auto;
+        padding: 0 14px;
+        border-radius: 999px;
+        box-shadow: inset 0 0 0 1px rgba(242, 242, 244, 0.28);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(242, 242, 244, 0.72);
+        white-space: nowrap;
+      }
+
+      .dlg-perms {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 28px;
+      }
+
+      .perm {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        height: 74px;
+        padding: 0 20px;
+        border-radius: 18px;
+        background: #1e1e24;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+      }
+
+      .perm i {
+        flex: none;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #8e8e98;
+      }
+
+      .perm b {
+        font-size: 18px;
+        font-weight: 500;
+      }
+
+      .perm span {
+        margin-left: auto;
+        font-family: var(--mono);
+        font-size: 13px;
+        color: rgba(242, 242, 244, 0.42);
+      }
+
+      .dlg-checks {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: var(--mono);
+        font-size: 14px;
+        color: rgba(242, 242, 244, 0.78);
+        opacity: 0;
+      }
+
+      .check svg {
+        flex: none;
+        width: 18px;
+        height: 18px;
+        color: #f2f2f4;
+      }
+
+      .dlg-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 30px;
+      }
+
+      .btn-ghost,
+      .btn-primary {
+        display: grid;
+        place-items: center;
+        height: 54px;
+        padding: 0 28px;
+        border-radius: 999px;
+        font-size: 16px;
+      }
+
+      .btn-ghost {
+        color: rgba(242, 242, 244, 0.68);
+      }
+
+      .btn-primary {
+        background: #f2f2f4;
+        color: #0a0a0c;
+        font-weight: 600;
+      }
+
+      /* ---------- Финал: Telegram ---------- */
+
+      .end {
+        position: absolute;
+        inset: 0;
+      }
+
+      .end-logo {
+        position: absolute;
+        left: 50%;
+        top: 216px;
+        width: 300px;
+        height: 300px;
+        margin-left: -150px;
+      }
+
+      .end-word {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 528px;
+        text-align: center;
+        font-size: 82px;
+        font-weight: 600;
+        letter-spacing: -0.045em;
+        line-height: 1;
+      }
+
+      .end-label {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 648px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 20px;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: rgba(242, 242, 244, 0.48);
+      }
+
+      .tg-card {
+        position: absolute;
+        left: 50%;
+        top: 724px;
+        width: 560px;
+        height: 700px;
+        margin-left: -280px;
+        padding: 58px 70px 46px;
+        border-radius: 46px;
+        background: #ffffff;
+        color: var(--paper-ink);
+        box-shadow:
+          0 3px 0 rgba(0, 0, 0, 0.25),
+          0 46px 110px rgba(0, 0, 0, 0.7);
+        transform-origin: 50% 40%;
+      }
+
+      .tg-qr {
+        display: block;
+        width: 420px;
+        height: 420px;
+        margin: 0 auto;
+      }
+
+      .tg-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 34px;
+        font-family: var(--mono);
+        font-size: 38px;
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+      }
+
+      .tg-link svg {
+        width: 30px;
+        height: 30px;
+        flex: none;
+      }
+
+      .tg-note {
+        margin-top: 16px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 17px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(11, 11, 13, 0.5);
+      }
+
+      .end-plat {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 1480px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 21px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(242, 242, 244, 0.66);
+      }
+
+      .end-plat s {
+        display: inline-block;
+        width: 24px;
+        height: 1px;
+        margin: 0 14px 6px;
+        background: rgba(242, 242, 244, 0.3);
+        text-decoration: none;
+      }
+
+      .end-lic {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 1548px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 16px;
+        letter-spacing: 0.18em;
+        color: rgba(242, 242, 244, 0.32);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="scene">
+      <div class="bg"></div>
+
+      <!-- ============ 1. Логотип ============ -->
+      <section class="hero" id="b1">
+        <div class="ripple" id="rip1"></div>
+        <div class="ripple" id="rip2"></div>
+        <img class="glass hero-logo" id="heroLogo" src="assets/tiktok-octo.png" alt="" />
+        <div class="hero-word" id="heroWord">TikTok octo</div>
+        <div class="hero-sub" id="heroSub">теперь с плагинами</div>
+        <div class="hero-line" id="heroLine"></div>
+      </section>
+
+      <!-- ============ 2. Первый мод ============ -->
+      <section id="b2" style="opacity: 0">
+        <div class="impact" id="impact2"></div>
+        <div class="sticker" id="sticker2">
+          <div class="sticker-top">
+            <span class="sticker-pill">Новое</span>
+            <span class="sticker-badge">0.5</span>
+          </div>
+          <div class="sticker-word" style="font-size: 150px">ПЛАГИНЫ</div>
+          <div class="sticker-sub">для TikTok octo</div>
+          <div class="sticker-foot">
+            <b>TikTok octo</b>
+            <span>plugins</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 3. Менеджер ============ -->
+      <section id="b3" style="opacity: 0">
+        <div class="cap" id="cap3">
+          <div class="cap-label"><span class="cap-num">01</span><span class="cap-rule"></span>МЕНЕДЖЕР</div>
+          <h1>
+            <span class="ln"><span>Ставится в один клик.</span></span>
+            <span class="ln dim"><span>Из файла или каталога.</span></span>
+          </h1>
+        </div>
+
+        <div class="stage" id="stage3" style="top: 760px">
+          <div class="pm-window" id="pmWin">
+            <div class="pm-bar">
+              <img class="pm-mark" src="assets/tiktok-octo.png" alt="" />
+              <div class="pm-title">Плагины</div>
+              <div class="pm-search">Поиск плагинов…</div>
+              <div class="pm-install">Установить из файла</div>
+              <div class="pm-win"><span>–</span><span>□</span><span>×</span></div>
+            </div>
+            <div class="pm-body">
+              <div class="pm-section">Установленные <span class="pm-count">2</span></div>
+
+              <div class="pm-card" id="pmCard">
+                <img class="pm-icon" src="assets/tiktok-octo.png" alt="" />
+                <div class="pm-info">
+                  <div class="pm-name">hello-octo <span class="pm-badge">✓ проверен</span></div>
+                  <div class="pm-meta">1.0.0 · @octo · 42 КБ</div>
+                  <div class="pm-desc">Команды в палитре и строка в панели функций</div>
+                  <div class="pm-chips"><span>интерфейс</span><span>хранилище</span><span>page:css</span></div>
+                </div>
+                <div class="pm-toggle" id="pmToggle"><i></i></div>
+              </div>
+
+              <div class="pm-card pm-card--sub">
+                <span class="pm-icon pm-icon--mono">OT</span>
+                <div class="pm-info">
+                  <div class="pm-name">octo-test <span class="pm-badge pm-badge--ghost">разработка</span></div>
+                  <div class="pm-meta">1.0.1 · @octo</div>
+                  <div class="pm-desc">Пример из репозитория: кнопка и уведомление</div>
+                  <div class="pm-chips"><span>интерфейс</span><span>storage</span></div>
+                </div>
+                <div class="pm-toggle is-on"><i></i></div>
+              </div>
+
+              <div class="pm-hint" id="pmHint">Выключен · нажмите, чтобы включить</div>
+            </div>
+          </div>
+          <div class="foot" id="foot3">Ctrl + Shift + E — менеджер плагинов</div>
+        </div>
+      </section>
+
+      <!-- ============ 4. Безопасность ============ -->
+      <section id="b4" style="opacity: 0">
+        <div class="cap" id="cap4">
+          <div class="cap-label"><span class="cap-num">02</span><span class="cap-rule"></span>БЕЗОПАСНО</div>
+          <h1>
+            <span class="ln"><span>Песочница и разрешения.</span></span>
+            <span class="ln dim"><span>Всё видно до установки.</span></span>
+          </h1>
+        </div>
+
+        <div class="stage" id="stage4" style="top: 780px">
+          <div class="dlg" id="dlg">
+            <div class="dlg-head">
+              <span class="dlg-lock">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" /><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" /></svg>
+              </span>
+              <div>
+                <div class="dlg-title">Установить плагин?</div>
+                <div class="dlg-sub">hello-octo · 1.0.0 · @octo</div>
+              </div>
+              <span class="dlg-risk">средний риск</span>
+            </div>
+
+            <div class="dlg-perms">
+              <div class="perm" id="perm1"><i></i><b>Стили страницы</b><span>page:css · средний</span></div>
+              <div class="perm" id="perm2"><i></i><b>Горячие клавиши</b><span>shortcuts · средний</span></div>
+            </div>
+
+            <div class="dlg-checks">
+              <div class="check" id="check1"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 10 4 4 8-9" /></svg>Проверка кода пройдена</div>
+              <div class="check" id="check2"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 10 4 4 8-9" /></svg>SHA-256 совпадает</div>
+              <div class="check" id="check3"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 10 4 4 8-9" /></svg>Файлы внутри пакета</div>
+            </div>
+
+            <div class="dlg-actions">
+              <span class="btn-ghost">Отмена</span>
+              <span class="btn-primary">Установить</span>
+            </div>
+          </div>
+
+          <div class="foot" id="foot4" style="position: absolute; top: 690px; left: 0; width: 960px">
+            Без Node, без файлов — сеть только по разрешению
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 5. Телеграм ============ -->
+      <section class="end" id="b5" style="opacity: 0">
+        <div class="ripple" id="rip3"></div>
+        <div class="ripple" id="rip4"></div>
+        <img class="glass end-logo" id="endLogo" src="assets/tiktok-octo.png" alt="" />
+        <div class="end-word" id="endWord">TikTok octo</div>
+        <div class="end-label" id="endLabel">Плагины — в Telegram</div>
+
+        <div class="tg-card" id="tgCard">
+          <img class="tg-qr" src="assets/telegram-qr.png" alt="" />
+          <div class="tg-link">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.6 19.7c-.2 1-.9 1.3-1.7.8l-4.6-3.4-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.6 8.3-7.5c.4-.3-.1-.5-.6-.2L6.4 13.3 1.9 11.9c-1-.3-1-1 .2-1.4l18.3-7.1c.8-.3 1.6.2 1.5.9z"/></svg>
+            t.me/tiktok_octo
+          </div>
+          <div class="tg-note">каталог, обновления, поддержка</div>
+        </div>
+
+        <div class="end-plat" id="endPlat">linux<s></s>windows<s></s>macos</div>
+        <div class="end-lic" id="endLic">github.com/octomood/tiktok-octo · MIT</div>
+      </section>
+
+      <div class="vignette"></div>
+      <div class="grain" id="grain"></div>
+      <div class="flash" id="flash"></div>
+
+      <div class="hud">
+        <div class="hud-label"><i></i>tiktok octo</div>
+        <div class="hud-top"><div class="hud-top-fill" id="prog"></div></div>
+      </div>
+    </div>
+
+    <script>
+      const DUR = 15;
+      const $ = (id) => document.getElementById(id);
+      const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+      function bezier(x1, y1, x2, y2) {
+        const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+        const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+        const sx = (t) => ((ax * t + bx) * t + cx) * t;
+        const sy = (t) => ((ay * t + by) * t + cy) * t;
+        const dx = (t) => (3 * ax * t + 2 * bx) * t + cx;
+        return (x) => {
+          if (x <= 0) return 0;
+          if (x >= 1) return 1;
+          let t = x;
+          for (let i = 0; i < 8; i++) {
+            const err = sx(t) - x;
+            if (Math.abs(err) < 1e-6) break;
+            const d = dx(t);
+            if (Math.abs(d) < 1e-6) break;
+            t -= err / d;
+          }
+          return sy(clamp01(t));
+        };
+      }
+
+      const E = {
+        emphasized: bezier(0.2, 0, 0, 1),
+        decel: bezier(0.05, 0.7, 0.1, 1),
+        std: bezier(0.2, 0, 0, 1),
+        accel: bezier(0.3, 0, 0.8, 0.15),
+        spring: bezier(0.34, 1.45, 0.5, 1),
+        pop: bezier(0.25, 1.6, 0.4, 1),
+        soft: bezier(0.4, 0, 0.2, 1)
+      };
+
+      const seg = (t, a, b, f) => f(clamp01((t - a) / Math.max(1e-5, b - a)));
+      const lerp = (a, b, p) => a + (b - a) * p;
+      const show = (el, on) => { el.style.display = on ? '' : 'none'; };
+
+      function ripples(t, id, t0, cx, cy, maxR, life = 1.45, peak = 0.26) {
+        const el = $(id);
+        const p = clamp01((t - t0) / life);
+        if (t < t0 || p >= 1) { el.style.opacity = '0'; return; }
+        const r = lerp(90, maxR, E.decel(p));
+        el.style.width = `${r * 2}px`;
+        el.style.height = `${r * 2}px`;
+        el.style.left = `${cx}px`;
+        el.style.top = `${cy}px`;
+        el.style.opacity = String(peak * (1 - p) * (1 - p));
+        el.style.transform = 'translate(-50%, -50%)';
+      }
+
+      // ---------- 1. Логотип ----------
+      function beat1(t) {
+        const el = $('b1');
+        show(el, t < 2.0);
+        el.style.opacity = String(1 - seg(t, 1.82, 1.98, E.accel));
+
+        const logo = $('heroLogo');
+        const p = seg(t, 0.04, 0.72, E.spring);
+        logo.style.opacity = String(seg(t, 0.02, 0.4, E.std));
+        logo.style.transform = `translateY(${lerp(90, 0, p)}px) scale(${lerp(0.82, 1, p)})`;
+        logo.style.filter = `contrast(1.04) brightness(${lerp(0.55, 1.04, seg(t, 0.02, 0.6, E.std))}) blur(${lerp(10, 0, seg(t, 0.02, 0.55, E.std))}px)`;
+
+        const word = $('heroWord');
+        const pw = seg(t, 0.34, 1.0, E.pop);
+        word.style.opacity = String(seg(t, 0.3, 0.62, E.std));
+        word.style.transform = `translateY(${lerp(52, 0, pw)}px) scale(${lerp(0.94, 1, pw)})`;
+        word.style.letterSpacing = `${lerp(-0.02, -0.045, pw)}em`;
+
+        const sub = $('heroSub');
+        sub.style.opacity = String(seg(t, 0.62, 1.05, E.std) * 0.95);
+        sub.style.transform = `translateY(${lerp(16, 0, seg(t, 0.62, 1.05, E.decel))}px)`;
+
+        const line = $('heroLine');
+        line.style.opacity = String(seg(t, 0.8, 1.15, E.std) * 0.8);
+        line.style.transform = `scaleY(${seg(t, 0.8, 1.3, E.emphasized)})`;
+        line.style.transformOrigin = '50% 0%';
+
+        ripples(t, 'rip1', 0.2, 540, 700, 330, 1.4);
+        ripples(t, 'rip2', 0.5, 540, 700, 330, 1.4);
+      }
+
+      // ---------- 2. Первый мод ----------
+      function beat2(t) {
+        const el = $('b2');
+        const on = t > 1.88 && t < 5.2;
+        show(el, on);
+        if (!on) return;
+        el.style.opacity = String(1 - seg(t, 4.96, 5.16, E.accel));
+
+        const card = $('sticker2');
+        const p = seg(t, 2.18, 2.72, E.pop);
+        const out = seg(t, 4.9, 5.16, E.accel);
+        card.style.opacity = String(seg(t, 2.12, 2.3, E.std));
+        card.style.transform = `translateY(${lerp(240, 0, p) - 70 * out}px) rotate(${lerp(-9, -3.5, p) + 4 * out}deg) scale(${lerp(1.16, 1, p) * (1 - 0.04 * out)})`;
+
+        const ring = $('impact2');
+        const rp = clamp01((t - 2.28) / 0.6);
+        if (t > 2.28 && rp < 1) {
+          const r = lerp(40, 640, E.decel(rp));
+          ring.style.width = `${r * 2}px`;
+          ring.style.height = `${r * 2}px`;
+          ring.style.left = '540px';
+          ring.style.top = '990px';
+          ring.style.opacity = String(0.5 * (1 - rp));
+        } else {
+          ring.style.opacity = '0';
+        }
+
+        // камера вздрагивает на ударе
+        const shakeP = clamp01((t - 2.28) / 0.3);
+        const amp = 9 * (1 - shakeP) * (1 - shakeP) * (t > 2.28 ? 1 : 0);
+        $('scene').style.transform = `translate(${Math.sin(t * 93) * amp}px, ${Math.cos(t * 77) * amp}px)`;
+
+        const flash = $('flash');
+        flash.style.opacity = String(t > 2.28 ? 0.1 * Math.pow(1 - clamp01((t - 2.28) / 0.22), 2) : 0);
+      }
+
+      // ---------- 3. Менеджер ----------
+      function beat3(t) {
+        const el = $('b3');
+        const on = t > 5.02 && t < 8.5;
+        show(el, on);
+        if (!on) return;
+        el.style.opacity = String(seg(t, 5.04, 5.14, E.std) * (1 - seg(t, 8.3, 8.46, E.accel)));
+
+        caption(t, 5.08, 'cap3');
+
+        const win = $('pmWin');
+        const p = seg(t, 5.14, 5.92, E.pop);
+        const out = seg(t, 8.22, 8.44, E.accel);
+        win.style.opacity = String(seg(t, 5.1, 5.28, E.std));
+        win.style.transform = `translateY(${lerp(200, 0, p) - 110 * out}px) scale(${lerp(0.94, 1, p) * (1 - 0.03 * out)})`;
+        win.style.filter = `blur(${lerp(12, 0, seg(t, 5.1, 5.6, E.std))}px)`;
+
+        const card = $('pmCard');
+        const cq = seg(t, 5.4, 5.95, E.pop);
+        card.style.opacity = String(cq);
+        card.style.transform = `translateY(${lerp(26, 0, cq)}px)`;
+
+        const sub = document.querySelector('#b3 .pm-card--sub');
+        const sq = seg(t, 5.55, 6.1, E.pop);
+        sub.style.opacity = String(0.72 * sq);
+        sub.style.transform = `translateY(${lerp(22, 0, sq)}px)`;
+
+        // включаем плагин кликом по переключателю
+        const flip = seg(t, 6.86, 7.08, E.spring);
+        const toggle = $('pmToggle');
+        const knob = toggle.querySelector('i');
+        toggle.classList.toggle('is-on', t > 6.86);
+        knob.style.transform = `translateX(${flip * 28}px)`;
+        knob.style.background = flip > 0.5 ? '#0a0a0c' : '#8e8e98';
+        card.classList.toggle('is-on', t > 6.86);
+
+        $('pmHint').textContent = t > 6.86 ? 'Включён · работает в фоне' : 'Выключен · нажмите, чтобы включить';
+
+        const foot = $('foot3');
+        foot.style.opacity = String(seg(t, 6.4, 6.8, E.std) * 0.9);
+      }
+
+      // ---------- 4. Безопасность ----------
+      function beat4(t) {
+        const el = $('b4');
+        const on = t > 8.38 && t < 11.85;
+        show(el, on);
+        if (!on) return;
+        el.style.opacity = String(seg(t, 8.42, 8.52, E.std) * (1 - seg(t, 11.62, 11.8, E.accel)));
+
+        caption(t, 8.46, 'cap4');
+
+        const dlg = $('dlg');
+        const p = seg(t, 8.98, 9.7, E.pop);
+        const out = seg(t, 11.5, 11.78, E.accel);
+        dlg.style.opacity = String(seg(t, 8.94, 9.1, E.std));
+        dlg.style.transform = `translateY(${lerp(70, 0, p) - 40 * out}px) scale(${lerp(0.9, 1, p) * (1 - 0.04 * out)})`;
+        dlg.style.filter = `blur(${lerp(10, 0, seg(t, 8.94, 9.45, E.std))}px)`;
+
+        // первая строка разрешений подсвечивается
+        const perm = $('perm1');
+        const hot = Math.exp(-Math.pow((t - 9.42) / 0.26, 2));
+        perm.style.boxShadow = `inset 0 0 0 ${lerp(1, 2, hot)}px rgba(242, 242, 244, ${lerp(0.06, 0.55, hot)})`;
+        perm.querySelector('i').style.background = hot > 0.55 ? '#f2f2f4' : '#8e8e98';
+
+        for (let i = 1; i <= 3; i++) {
+          const check = $('check' + i);
+          const cq = seg(t, 9.48 + (i - 1) * 0.12, 9.68 + (i - 1) * 0.12, E.decel);
+          check.style.opacity = String(cq);
+          check.style.transform = `translateY(${lerp(10, 0, cq)}px)`;
+        }
+
+        const foot = $('foot4');
+        foot.style.opacity = String(seg(t, 9.5, 9.9, E.std) * 0.9);
+      }
+
+      // ---------- 5. Телеграм ----------
+      function beat5(t) {
+        const el = $('b5');
+        const on = t > 11.72;
+        show(el, on);
+        if (!on) return;
+        const fade = 1 - seg(t, 14.52, 14.98, E.soft);
+        el.style.opacity = String(fade);
+
+        const logo = $('endLogo');
+        const p = seg(t, 11.78, 12.4, E.pop);
+        logo.style.opacity = String(seg(t, 11.78, 12.05, E.std));
+        logo.style.transform = `translateY(${lerp(40, 0, p)}px) scale(${lerp(0.86, 1, p)})`;
+        logo.style.filter = `contrast(1.04) brightness(${lerp(0.7, 1.04, seg(t, 11.78, 12.2, E.std))}) blur(${lerp(8, 0, seg(t, 11.78, 12.15, E.std))}px)`;
+
+        ripples(t, 'rip3', 12.0, 540, 366, 320, 1.6, 0.2);
+        ripples(t, 'rip4', 12.24, 540, 366, 320, 1.6, 0.2);
+
+        const word = $('endWord');
+        const pw = seg(t, 11.96, 12.5, E.pop);
+        word.style.opacity = String(seg(t, 11.96, 12.2, E.std));
+        word.style.transform = `translateY(${lerp(30, 0, pw)}px)`;
+        word.style.letterSpacing = `${lerp(-0.015, -0.045, pw)}em`;
+
+        const label = $('endLabel');
+        label.style.opacity = String(seg(t, 12.1, 12.45, E.std) * 0.95);
+        label.style.transform = `translateY(${lerp(14, 0, seg(t, 12.1, 12.45, E.decel))}px)`;
+
+        const card = $('tgCard');
+        const cq = seg(t, 12.16, 12.85, E.pop);
+        card.style.opacity = String(seg(t, 12.12, 12.3, E.std));
+        card.style.transform = `translateY(${lerp(70, 0, cq)}px) scale(${lerp(0.9, 1, cq)}) rotate(${lerp(2.5, 0, cq)}deg)`;
+
+        const plat = $('endPlat');
+        plat.style.opacity = String(seg(t, 12.72, 13.06, E.std));
+        plat.style.transform = `translateY(${lerp(14, 0, seg(t, 12.72, 13.06, E.decel))}px)`;
+
+        const lic = $('endLic');
+        lic.style.opacity = String(seg(t, 12.88, 13.2, E.std));
+      }
+
+      // ---------- Общее ----------
+      function caption(t, t0, id) {
+        const el = $(id);
+        const lines = el.querySelectorAll('.ln > span');
+        const lab = el.querySelector('.cap-label');
+        const lq = seg(t, t0, t0 + 0.24, E.emphasized);
+        lab.style.opacity = String(lq);
+        lab.style.transform = `translateY(${lerp(-12, 0, lq)}px)`;
+        lines.forEach((ln, i) => {
+          const p = seg(t, t0 + 0.03 + i * 0.075, t0 + 0.36 + i * 0.075, E.emphasized);
+          ln.style.transform = `translateY(${lerp(110, 0, p)}%)`;
+          ln.parentElement.style.opacity = String(seg(t, t0, t0 + 0.14, E.std));
+        });
+      }
+
+      function render(t) {
+        t = Math.max(0, Math.min(DUR - 1e-4, t));
+        $('prog').style.width = `${(t / DUR) * 1080}px`;
+
+        $('scene').style.transform = '';
+        for (const fn of [beat1, beat2, beat3, beat4, beat5]) fn(t);
+
+        const step = Math.floor(t * 12);
+        $('grain').style.backgroundPosition = `${(step * 37) % 160}px ${(step * 61) % 160}px`;
+      }
+
+      window.renderAt = (t) => { render(t); return true; };
+      window.DUR = DUR;
+
+      render(0);
+      document.fonts.ready.then(() => {
+        render(0);
+        document.body.dataset.ready = '1';
+      });
+    </script>
+  </body>
+</html>

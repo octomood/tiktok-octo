@@ -4,3 +4,5 @@ package-lock.json
 flatpak/npm-sources.json
 test-results/
 playwright-report/
+docs/promo/
+src/renderer/plugins-docs/

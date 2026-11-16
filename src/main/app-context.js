@@ -11,6 +11,7 @@ const { app } = require('electron');
 const { TITLEBAR_H, MAX_CHROME_H, PANEL_W } = require('./shared');
 const { COSMETIC_RULES } = require('./cosmetic-catalog');
 const { REGION_PRESETS } = require('./region-catalog');
+const { APP_LANGUAGES, SITE_LANGUAGES } = require('./language-catalog');
 const { writeState } = require('./store');
 
 const ctx = {
@@ -90,33 +91,78 @@ const ctx = {
   adsSkip: false,
   /** Подмена региона: пресет страны и адрес прокси (см. region.js). */
   region: { preset: 'off', proxy: '' },
+  /** Язык интерфейса оболочки (см. i18n.js). */
+  language: 'ru',
+  /** Язык сайта TikTok: auto или id из SITE_LANGUAGES (см. region.js). */
+  siteLanguage: 'auto',
   /** Результат проверки внешнего IP через текущий прокси. */
   regionCheck: { state: 'idle', text: 'Проверить' },
   /** Установлен ли AppImage в пользовательское меню приложений. */
   appimageInstalled: false,
+  /** Стикеры пользователя: файлы лежат в userData, здесь только метаданные. */
+  stickers: {
+    items: [],
+    dir: '',
+  },
+  /** Сводка системы плагинов для панели, палитры и трея. */
+  plugins: {
+    managerOpen: false,
+    installedCount: 0,
+    enabledCount: 0,
+    updateCount: 0,
+    errorCount: 0,
+    items: [],
+    rows: [],
+    commands: [],
+    docsUrl: '',
+    rulesUrl: '',
+  },
   toastSeq: 0,
 };
 
 function sendToWindow(channel, payload) {
-  if (ctx.win && !ctx.win.isDestroyed()) ctx.win.webContents.send(channel, payload);
+  if (!ctx.win || ctx.win.isDestroyed()) return;
+  const wc = ctx.win.webContents;
+  // Окно может быть уже закрыто, а webContents — уничтожен: send() в этот
+  // момент бросает «Object has been destroyed» и роняет main-процесс.
+  if (!wc || wc.isDestroyed()) return;
+  try {
+    wc.send(channel, payload);
+  } catch {
+    /* гонка с закрытием окна */
+  }
 }
 
 function toast(text) {
-  sendToWindow('octo:state', { toast: { id: ++ctx.toastSeq, text } });
+  let value = text;
+  try {
+    // Ленивый require: i18n сам зависит от app-context, поэтому на старте
+    // модулей его здесь ещё нет.
+    value = require('./i18n').t(text);
+  } catch {
+    /* язык ещё не готов — показываем исходную строку */
+  }
+  sendToWindow('octo:state', { toast: { id: ++ctx.toastSeq, text: value } });
 }
 
 /** Контент сайта занимает всё окно, кроме нашей полосы (и панелей). */
 function layout() {
   if (!ctx.win || ctx.win.isDestroyed() || !ctx.view) return;
-  const [width, height] = ctx.win.getContentSize();
-  const top = ctx.htmlFullscreen ? 0 : ctx.chromeHeight;
-  const left = ctx.htmlFullscreen ? 0 : ctx.panelOpen ? PANEL_W : 0;
-  ctx.view.setBounds({
-    x: left,
-    y: top,
-    width: Math.max(0, width - left),
-    height: Math.max(0, height - top),
-  });
+  const wc = ctx.view.webContents;
+  if (wc && wc.isDestroyed()) return;
+  try {
+    const [width, height] = ctx.win.getContentSize();
+    const top = ctx.htmlFullscreen ? 0 : ctx.chromeHeight;
+    const left = ctx.htmlFullscreen ? 0 : ctx.panelOpen ? PANEL_W : 0;
+    ctx.view.setBounds({
+      x: left,
+      y: top,
+      width: Math.max(0, width - left),
+      height: Math.max(0, height - top),
+    });
+  } catch {
+    /* окно или view уже закрываются */
+  }
 }
 
 /**
@@ -126,8 +172,10 @@ function layout() {
  */
 function repaintWindow() {
   if (!ctx.win || ctx.win.isDestroyed()) return;
+  const wc = ctx.win.webContents;
+  if (!wc || wc.isDestroyed()) return;
   try {
-    ctx.win.webContents.invalidate();
+    wc.invalidate();
   } catch {
     /* окно уже закрывается */
   }
@@ -161,6 +209,22 @@ function setCosmeticsState(saved = {}) {
   }));
 }
 
+/** Сводка плагинов обновляется из plugins/index.js, чтобы не плодить циклы. */
+function setPluginsState(summary) {
+  if (!summary || typeof summary !== 'object') return;
+  ctx.plugins = {
+    ...ctx.plugins,
+    ...summary,
+    items: Array.isArray(summary.items)
+      ? summary.items.map((item) => ({ ...item }))
+      : ctx.plugins.items,
+    rows: Array.isArray(summary.rows) ? summary.rows.map((row) => ({ ...row })) : ctx.plugins.rows,
+    commands: Array.isArray(summary.commands)
+      ? summary.commands.map((command) => ({ ...command }))
+      : ctx.plugins.commands,
+  };
+}
+
 /**
  * Палитра команд — модальное окно нашего интерфейса. На время показа
  * прячем WebContentsView, иначе он перекроет затемнение и карточку.
@@ -170,15 +234,29 @@ function setPaletteOpen(open) {
   if (next === ctx.paletteOpen) return;
   ctx.paletteOpen = next;
 
-  if (ctx.view && typeof ctx.view.setVisible === 'function') {
-    ctx.view.setVisible(!next);
+  if (
+    ctx.view &&
+    ctx.view.webContents &&
+    !ctx.view.webContents.isDestroyed() &&
+    typeof ctx.view.setVisible === 'function'
+  ) {
+    try {
+      ctx.view.setVisible(!next);
+    } catch {
+      /* view уже закрывается */
+    }
   }
 
   repaintWindow();
   setTimeout(repaintWindow, 40);
 
-  if (next) ctx.win?.webContents.focus();
-  else ctx.view?.webContents.focus();
+  if (ctx.win && !ctx.win.isDestroyed()) {
+    const wc = ctx.win.webContents;
+    if (next && wc && !wc.isDestroyed()) wc.focus();
+    else if (!next && ctx.view && !ctx.view.webContents.isDestroyed()) {
+      ctx.view.webContents.focus();
+    }
+  }
 
   pushState();
 }
@@ -203,16 +281,24 @@ function setChromeHeight(px) {
  * canGoBack() возвращает false при реально доступной предыдущей странице.
  */
 function canGoBack(wc) {
-  if (!wc) return false;
-  const history = wc.navigationHistory;
-  return history.length() > 1 && history.getActiveIndex() > 0;
+  if (!wc || wc.isDestroyed()) return false;
+  try {
+    const history = wc.navigationHistory;
+    return history.length() > 1 && history.getActiveIndex() > 0;
+  } catch {
+    return false;
+  }
 }
 
 function canGoForward(wc) {
-  if (!wc) return false;
-  const history = wc.navigationHistory;
-  const index = history.getActiveIndex();
-  return index >= 0 && index < history.length() - 1;
+  if (!wc || wc.isDestroyed()) return false;
+  try {
+    const history = wc.navigationHistory;
+    const index = history.getActiveIndex();
+    return index >= 0 && index < history.length() - 1;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -224,26 +310,33 @@ function canGoForward(wc) {
  */
 function stepHistory(delta) {
   if (!ctx.view) return;
-  const history = ctx.view.webContents.navigationHistory;
-  const target = history.getActiveIndex() + delta;
-  if (target < 0 || target >= history.length()) return;
-  history.goToIndex(target);
+  const wc = ctx.view.webContents;
+  if (!wc || wc.isDestroyed()) return;
+  try {
+    const history = wc.navigationHistory;
+    const target = history.getActiveIndex() + delta;
+    if (target < 0 || target >= history.length()) return;
+    history.goToIndex(target);
+  } catch {
+    /* view уже закрывается */
+  }
 }
 
 function currentState() {
   const wc = ctx.view?.webContents;
+  const alive = Boolean(wc && !wc.isDestroyed());
   return {
     canGoBack: canGoBack(wc),
     canGoForward: canGoForward(wc),
-    loading: !!wc && wc.isLoading(),
-    title: wc?.getTitle() || 'TikTok',
-    url: wc?.getURL() || '',
-    muted: !!wc && wc.isAudioMuted(),
-    onTop: !!ctx.win && ctx.win.isAlwaysOnTop(),
-    maximized: !!ctx.win && ctx.win.isMaximized(),
-    fullscreen: !!ctx.win && ctx.win.isFullScreen(),
+    loading: alive && wc.isLoading(),
+    title: (alive && wc.getTitle()) || 'TikTok',
+    url: (alive && wc.getURL()) || '',
+    muted: alive && wc.isAudioMuted(),
+    onTop: !!ctx.win && !ctx.win.isDestroyed() && ctx.win.isAlwaysOnTop(),
+    maximized: !!ctx.win && !ctx.win.isDestroyed() && ctx.win.isMaximized(),
+    fullscreen: !!ctx.win && !ctx.win.isDestroyed() && ctx.win.isFullScreen(),
     chromeHidden: ctx.htmlFullscreen,
-    zoom: wc ? Math.round(wc.getZoomFactor() * 100) : 100,
+    zoom: alive ? Math.round(wc.getZoomFactor() * 100) : 100,
     pip: ctx.pipActive,
     pipAuto: ctx.pipAuto,
     pipAdaptive: ctx.pipAdaptive,
@@ -264,9 +357,26 @@ function currentState() {
     autostart: ctx.autostart,
     startInTray: ctx.startInTray,
     adsSkip: ctx.adsSkip,
+    stickers: {
+      items: ctx.stickers.items.map((item) => ({ ...item })),
+      dir: ctx.stickers.dir,
+    },
     region: { ...ctx.region },
     regionCheck: { ...ctx.regionCheck },
     regions: REGION_PRESETS.map((preset) => ({ id: preset.id, label: preset.label })),
+    language: ctx.language,
+    siteLanguage: ctx.siteLanguage,
+    languages: APP_LANGUAGES.map((language) => ({ id: language.id, label: language.label })),
+    siteLanguages: [
+      { id: 'auto', label: 'Авто (как у сайта)' },
+      ...SITE_LANGUAGES.map((language) => ({ id: language.id, label: language.label })),
+    ],
+    plugins: {
+      ...ctx.plugins,
+      items: ctx.plugins.items.map((item) => ({ ...item })),
+      rows: ctx.plugins.rows.map((row) => ({ ...row })),
+      commands: ctx.plugins.commands.map((command) => ({ ...command })),
+    },
     appimage: {
       available: Boolean(process.env.APPIMAGE),
       installed: ctx.appimageInstalled,
@@ -275,7 +385,11 @@ function currentState() {
 }
 
 function pushState() {
-  sendToWindow('octo:state', currentState());
+  try {
+    sendToWindow('octo:state', currentState());
+  } catch (err) {
+    if (process.env.OCTO_DEBUG) console.warn('[octo] pushState failed:', err.message);
+  }
 }
 
 /** Бейдж непрочитанных на иконке приложения (macOS, Linux с Unity-лончером). */
@@ -300,6 +414,7 @@ module.exports = {
   setPanelOpen,
   setPaletteOpen,
   setCosmeticsState,
+  setPluginsState,
   setCloseToTray,
   canGoBack,
   canGoForward,

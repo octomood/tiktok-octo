@@ -7,6 +7,9 @@
 
 const api = window.octo;
 const $ = (id) => document.getElementById(id);
+// Для строк, которые собираются из нескольких частей: DOM-наблюдатель
+// переводит готовый текст, но не умеет переводить его фрагменты.
+const tr = (text) => (window.octoI18n ? window.octoI18n.translate(text) : text);
 
 const el = {
   chrome: $('chrome'),
@@ -43,6 +46,7 @@ const el = {
   downloadFill: $('downloadFill'),
   panel: $('panel'),
   btnPanel: $('btnPanel'),
+  btnStickers: $('btnStickers'),
   btnPanelClose: $('btnPanelClose'),
   panelVersion: $('panelVersion'),
   panelSearch: $('panelSearch'),
@@ -52,6 +56,13 @@ const el = {
   panelCosmetics: $('panelCosmetics'),
   panelDownloads: $('panelDownloads'),
   downloadsEmpty: $('downloadsEmpty'),
+  stickersCount: $('stickersCount'),
+  stickerGrid: $('stickerGrid'),
+  stickersEmpty: $('stickersEmpty'),
+  panelPlugins: $('panelPlugins'),
+  panelPluginActions: $('panelPluginActions'),
+  panelPluginsEmpty: $('panelPluginsEmpty'),
+  panelPluginsCount: $('panelPluginsCount'),
   sleepLabel: $('sleepLabel'),
   rowMute: $('rowMute'),
   volumeRange: $('volumeRange'),
@@ -72,6 +83,8 @@ const el = {
   regionProxyState: $('regionProxyState'),
   regionIpValue: $('regionIpValue'),
   regionIpResult: $('regionIpResult'),
+  appLanguageSelect: $('appLanguageSelect'),
+  siteLanguageSelect: $('siteLanguageSelect'),
   rowInstallApp: $('rowInstallApp'),
   installAppLabel: $('installAppLabel'),
   palette: $('palette'),
@@ -106,14 +119,29 @@ const state = {
   autostart: false,
   startInTray: false,
   adsSkip: false,
+  stickers: { items: [], dir: '' },
   region: { preset: 'off', proxy: '' },
   regionCheck: { state: 'idle', text: 'Проверить' },
   regions: [],
+  language: 'ru',
+  siteLanguage: 'auto',
+  languages: [],
+  siteLanguages: [],
   appimage: { available: false, installed: false },
   downloads: [],
   sleepTimerEnds: 0,
   sleepTimerMinutes: 0,
   version: '',
+  plugins: {
+    managerOpen: false,
+    installedCount: 0,
+    enabledCount: 0,
+    updateCount: 0,
+    errorCount: 0,
+    items: [],
+    rows: [],
+    commands: [],
+  },
 };
 
 let toastText = '';
@@ -133,6 +161,7 @@ const actions = [
   [el.forward, 'forward'],
   [el.reload, 'reload'],
   [el.home, 'home'],
+  [el.btnStickers, 'stickerPanel'],
   [el.pip, 'pip'],
   [el.pipPrev, 'feedPrev'],
   [el.pipPlay, 'togglePlayback'],
@@ -215,6 +244,24 @@ el.panel.addEventListener('click', (event) => {
     return;
   }
 
+  const pluginToggle = event.target.closest('[data-plugin-toggle]');
+  if (pluginToggle) {
+    api.cmd('pluginToggle', pluginToggle.dataset.pluginToggle);
+    return;
+  }
+
+  const stickerRemove = event.target.closest('[data-sticker-remove]');
+  if (stickerRemove) {
+    api.cmd('stickerRemove', stickerRemove.dataset.stickerRemove);
+    return;
+  }
+
+  const stickerSend = event.target.closest('[data-sticker-send]');
+  if (stickerSend) {
+    api.cmd('stickerSend', stickerSend.dataset.stickerSend);
+    return;
+  }
+
   const row = event.target.closest('[data-cmd]');
   if (!row) return;
   if (row.dataset.cmd === 'regionProxyApply') {
@@ -235,6 +282,14 @@ el.volumeRange.addEventListener('input', () => {
   }, 40);
 });
 
+// Язык: интерфейс перерисовывается сразу, язык сайта — после перезагрузки.
+el.appLanguageSelect.addEventListener('change', () =>
+  api.cmd('language', el.appLanguageSelect.value),
+);
+el.siteLanguageSelect.addEventListener('change', () =>
+  api.cmd('siteLanguage', el.siteLanguageSelect.value),
+);
+
 // Регион: выбор страны применяется сразу, прокси — по кнопке или Enter.
 el.regionSelect.addEventListener('change', () => api.cmd('region', el.regionSelect.value));
 el.regionProxy.addEventListener('keydown', (event) => {
@@ -246,6 +301,8 @@ api.onPanelCategory((id) => {
   if (!id) return;
   openCategories.add(id);
   applyPanelFilter();
+  const category = el.panel.querySelector(`[data-cat="${id}"]`);
+  if (category && category.scrollIntoView) category.scrollIntoView({ block: 'nearest' });
 });
 
 // Палитра команд.
@@ -374,6 +431,145 @@ function paintVolume(percent) {
 
 let cosmeticsSignature = '';
 let regionSignature = '';
+let pluginsSignature = '';
+
+function renderPlugins(summary) {
+  const plugins = summary || state.plugins || {};
+  const items = Array.isArray(plugins.items) ? plugins.items : [];
+  const updateCount = Number(plugins.updateCount) || 0;
+
+  el.panelPluginsEmpty.hidden = items.length > 0;
+  el.panelPluginsCount.textContent = items.length
+    ? updateCount > 0
+      ? `Плагинов: ${items.length} · обновлений: ${updateCount}`
+      : `Плагинов: ${items.length}`
+    : '';
+
+  const signature = items
+    .map(
+      (item) =>
+        `${item.id}:${item.version}:${item.enabled}:${item.update}:${item.dev}:${item.error}`,
+    )
+    .concat(
+      (Array.isArray(plugins.rows) ? plugins.rows : []).map(
+        (row) => `row:${row.id}:${row.label}:${row.pluginName}`,
+      ),
+    )
+    .join('|');
+  if (signature === pluginsSignature) return;
+  pluginsSignature = signature;
+  el.panelPlugins.replaceChildren();
+  el.panelPluginActions.replaceChildren();
+
+  for (const item of items) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = `panel-row panel-row-plugin${item.error ? ' is-error' : ''}`;
+    row.dataset.pluginToggle = item.id;
+    row.setAttribute('role', 'switch');
+    row.setAttribute('aria-checked', String(Boolean(item.enabled)));
+    row.title = item.error || `${item.name} ${item.version || ''}`.trim();
+
+    const label = document.createElement('span');
+    label.className = 'panel-row-label';
+    label.textContent = item.name;
+    row.append(label);
+
+    const badge = document.createElement('span');
+    badge.className = 'panel-row-badge';
+    if (item.error) {
+      badge.textContent = 'ошибка';
+      badge.classList.add('is-error');
+    } else if (item.dev) {
+      badge.textContent = 'dev';
+    } else if (item.update) {
+      badge.textContent = 'обновление';
+      badge.classList.add('is-update');
+    } else {
+      badge.textContent = item.version || '';
+    }
+    row.append(badge);
+
+    const toggle = document.createElement('span');
+    toggle.className = 'switch';
+    toggle.setAttribute('aria-hidden', 'true');
+    row.append(toggle);
+
+    el.panelPlugins.append(row);
+  }
+
+  for (const command of Array.isArray(plugins.rows) ? plugins.rows : []) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'panel-row panel-row-plugin';
+    row.dataset.cmd = command.id;
+    row.title = command.description || '';
+
+    const label = document.createElement('span');
+    label.className = 'panel-row-label';
+    label.textContent = command.label;
+    row.append(label);
+
+    const badge = document.createElement('span');
+    badge.className = 'panel-row-badge';
+    badge.textContent = command.pluginName;
+    row.append(badge);
+
+    el.panelPluginActions.append(row);
+  }
+}
+
+let stickersSignature = '';
+
+function renderStickers(summary) {
+  const items = Array.isArray(summary?.items) ? summary.items : [];
+
+  el.stickersCount.textContent = items.length ? String(items.length) : '';
+  el.stickersEmpty.hidden = items.length > 0;
+
+  const signature = items.map((item) => item.id).join('|');
+  if (signature === stickersSignature) return;
+  stickersSignature = signature;
+  el.stickerGrid.replaceChildren();
+
+  for (const item of items) {
+    const tile = document.createElement('div');
+    tile.className = 'sticker-tile';
+
+    const send = document.createElement('button');
+    send.type = 'button';
+    send.className = 'sticker-send';
+    send.dataset.stickerSend = item.id;
+    send.title = `Отправить «${item.name}»`;
+    send.setAttribute('aria-label', `Отправить стикер «${item.name}»`);
+
+    const image = document.createElement('img');
+    image.src = `octo-sticker://thumb/${encodeURIComponent(item.id)}`;
+    image.alt = item.name;
+    image.draggable = false;
+    image.loading = 'lazy';
+    image.addEventListener('error', () => {
+      image.remove();
+      const fallback = document.createElement('span');
+      fallback.className = 'sticker-fallback';
+      fallback.textContent = (item.name || '?').slice(0, 1).toUpperCase();
+      send.append(fallback);
+    });
+    send.append(image);
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'sticker-remove';
+    remove.dataset.stickerRemove = item.id;
+    remove.title = 'Удалить стикер';
+    remove.setAttribute('aria-label', `Удалить стикер «${item.name}»`);
+    remove.textContent = '×';
+
+    tile.append(send, remove);
+    el.stickerGrid.append(tile);
+  }
+}
+
 function renderCosmetics(list) {
   const items = Array.isArray(list) ? list : [];
   const signature = items.map((item) => item.id).join('|');
@@ -580,7 +776,16 @@ function paletteItems() {
     { label: 'Обновить без кэша', cmd: 'hardReload', hint: 'Ctrl Shift R' },
     { label: 'Поиск по странице', cmd: 'find', hint: 'Ctrl F' },
     { label: 'Панель функций', cmd: 'panel', hint: 'Ctrl Shift B' },
+    { label: 'Стикеры', cmd: 'stickerPanel' },
+    { label: 'Добавить стикеры…', cmd: 'stickerAdd' },
+    { label: 'Папка стикеров', cmd: 'stickerFolder' },
+    { label: 'Менеджер плагинов', cmd: 'plugins', hint: 'Ctrl Shift E' },
+    { label: 'Установить плагин из файла', cmd: 'pluginInstallFile' },
+    { label: 'Документация по плагинам', cmd: 'pluginDocs' },
+    { label: 'Правила публикации плагинов', cmd: 'pluginRules' },
+    { label: 'Папка плагинов', cmd: 'pluginFolder' },
     { label: 'Регион и прокси', cmd: 'regionPanel' },
+    { label: 'Язык', cmd: 'languagePanel' },
     { label: 'Снимок кадра', cmd: 'screenshot', hint: 'Ctrl Shift S' },
     { label: 'Звук вкл/выкл', cmd: 'mute', hint: 'Ctrl Shift M' },
     { label: 'Картинка в картинке', cmd: 'pip', hint: 'Ctrl Shift P' },
@@ -602,7 +807,7 @@ function paletteItems() {
 
   for (const rule of state.cosmetics) {
     items.push({
-      label: `${rule.enabled ? 'Отключить' : 'Включить'} «${rule.label}»`,
+      label: tr(rule.enabled ? `Отключить «${tr(rule.label)}»` : `Включить «${tr(rule.label)}»`),
       cmd: 'cosmetic',
       payload: rule.id,
     });
@@ -622,7 +827,7 @@ function paletteItems() {
     { label: 'Повторять видео', cmd: 'playerToggle', payload: 'loop' },
     { label: 'Пауза в фоне', cmd: 'playerToggle', payload: 'pauseOnBlur' },
     {
-      label: `${state.adsSkip ? 'Выключить' : 'Включить'} пропуск рекламы`,
+      label: tr(state.adsSkip ? 'Выключить пропуск рекламы' : 'Включить пропуск рекламы'),
       cmd: 'adsSkip',
     },
   );
@@ -642,6 +847,29 @@ function paletteItems() {
         ? 'Удалить из меню приложений'
         : 'Установить в меню приложений',
       cmd: 'appimageInstall',
+    });
+  }
+
+  const plugins = state.plugins || {};
+  for (const item of Array.isArray(plugins.items) ? plugins.items : []) {
+    items.push({
+      label: tr(
+        item.enabled ? `Выключить плагин «${item.name}»` : `Включить плагин «${item.name}»`,
+      ),
+      cmd: 'pluginToggle',
+      payload: item.id,
+    });
+  }
+  for (const command of Array.isArray(plugins.commands) ? plugins.commands : []) {
+    items.push({
+      label: `${command.title} · ${command.pluginName}`,
+      cmd: command.id,
+    });
+  }
+  for (const row of Array.isArray(plugins.rows) ? plugins.rows : []) {
+    items.push({
+      label: `${row.label} · ${row.pluginName}`,
+      cmd: row.id,
     });
   }
 
@@ -745,6 +973,45 @@ function renderPlayer() {
   setSwitch(el.rowPauseBlur, player.pauseOnBlur);
 }
 
+let languageSignature = '';
+let siteLanguageSignature = '';
+
+function fillLanguageSelect(select, items, selected, native) {
+  select.replaceChildren(
+    ...(Array.isArray(items) ? items : []).map((item) => {
+      const option = document.createElement('option');
+      option.value = item.id;
+      option.textContent = item.label;
+      option.selected = item.id === selected;
+      // Названия языков принято показывать на самом языке, не переводим.
+      if (native || item.id !== 'auto') option.dataset.i18nSkip = '1';
+      return option;
+    }),
+  );
+  select.value = selected;
+}
+
+function renderLanguages() {
+  const languages = Array.isArray(state.languages) ? state.languages : [];
+  const siteLanguages = Array.isArray(state.siteLanguages) ? state.siteLanguages : [];
+  const selected = state.language || 'ru';
+  const selectedSite = state.siteLanguage || 'auto';
+
+  const signature = `${selected}#${languages.map((item) => `${item.id}:${item.label}`).join('|')}`;
+  if (signature !== languageSignature) {
+    languageSignature = signature;
+    fillLanguageSelect(el.appLanguageSelect, languages, selected, true);
+  }
+
+  const siteSignature = `${selectedSite}#${siteLanguages
+    .map((item) => `${item.id}:${item.label}`)
+    .join('|')}`;
+  if (siteSignature !== siteLanguageSignature) {
+    siteLanguageSignature = siteSignature;
+    fillLanguageSelect(el.siteLanguageSelect, siteLanguages, selectedSite, false);
+  }
+}
+
 function renderRegion() {
   const region = state.region || { preset: 'off', proxy: '' };
   const regions = Array.isArray(state.regions) ? state.regions : [];
@@ -819,11 +1086,14 @@ function renderPanel() {
     ? 'Удалить из меню приложений'
     : 'Установить в приложения';
 
+  renderStickers(state.stickers);
   renderCosmetics(state.cosmetics);
+  renderPlugins(state.plugins);
   renderDownloads(state.downloads);
   renderSleep();
   renderPlayer();
   renderRegion();
+  renderLanguages();
   applyPanelFilter();
 }
 

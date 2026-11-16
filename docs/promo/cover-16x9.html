@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>TikTok octo — обложка 16:9</title>
+    <link rel="stylesheet" href="../../src/renderer/fonts.css" />
+    <style>
+      :root {
+        --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+        --ink: #f2f2f4;
+        --paper: #f2f2f4;
+        --paper-ink: #0a0a0c;
+        --gold-top: #f0d27f;
+        --gold-bottom: #c89f3d;
+        --gold-ink: #171204;
+      }
+
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        margin: 0;
+        overflow: hidden;
+        background: #0a0a0c;
+        color: var(--ink);
+        font-family: 'Inter', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+      }
+
+      .frame {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0a0a0c;
+      }
+
+      .bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(1200px 760px at 26% 18%, rgba(255, 255, 255, 0.07), transparent 64%),
+          radial-gradient(1100px 700px at 82% 96%, rgba(255, 255, 255, 0.03), transparent 70%),
+          #0a0a0c;
+      }
+
+      .vignette {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(120% 90% at 50% 45%, transparent 44%, rgba(0, 0, 0, 0.55) 100%);
+      }
+
+      .grain {
+        position: absolute;
+        inset: -8%;
+        opacity: 0.05;
+        mix-blend-mode: soft-light;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+        background-size: 160px 160px;
+      }
+
+      .header {
+        position: absolute;
+        top: 70px;
+        right: 90px;
+        left: 90px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .brand img {
+        display: block;
+        width: 60px;
+        height: 60px;
+        filter: contrast(1.04) brightness(1.04) drop-shadow(0 6px 18px rgba(0, 0, 0, 0.6));
+      }
+
+      .brand-name {
+        font-size: 31px;
+        font-weight: 600;
+        letter-spacing: -0.035em;
+        line-height: 1;
+      }
+
+      .brand-sub {
+        margin-top: 7px;
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.26em;
+        color: rgba(242, 242, 244, 0.42);
+        text-transform: uppercase;
+      }
+
+      .tg-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        height: 46px;
+        padding: 0 20px;
+        border-radius: 999px;
+        background: var(--paper);
+        color: var(--paper-ink);
+        font-family: var(--mono);
+        font-size: 16px;
+        letter-spacing: -0.01em;
+      }
+
+      .tg-pill svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .hero {
+        position: absolute;
+        top: 172px;
+        left: 90px;
+      }
+
+      .hero-line {
+        display: flex;
+        align-items: flex-end;
+        gap: 28px;
+      }
+
+      .hero-num {
+        font-size: 312px;
+        font-weight: 600;
+        letter-spacing: -0.065em;
+        line-height: 0.74;
+      }
+
+      .hero-word {
+        margin-bottom: 16px;
+        font-size: 106px;
+        font-weight: 600;
+        letter-spacing: -0.045em;
+        line-height: 0.95;
+      }
+
+      .hero-sub {
+        margin-top: 22px;
+        font-size: 29px;
+        letter-spacing: -0.01em;
+        color: rgba(242, 242, 244, 0.55);
+      }
+
+      .section-label {
+        position: absolute;
+        top: 484px;
+        font-family: var(--mono);
+        font-size: 16px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: rgba(242, 242, 244, 0.5);
+      }
+
+      .section-label.label-langs {
+        left: 90px;
+      }
+
+      .section-label.label-features {
+        left: 980px;
+      }
+
+      /* ---------- языки ---------- */
+
+      .langs {
+        position: absolute;
+        top: 516px;
+        left: 90px;
+        display: grid;
+        grid-template-columns: 406px 406px;
+        grid-auto-rows: 62px;
+        gap: 8px 16px;
+      }
+
+      .lang {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 0 20px;
+        border-radius: 14px;
+        background: #141419;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      }
+
+      .lang b {
+        font-size: 24px;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+      }
+
+      .lang span {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        color: rgba(242, 242, 244, 0.32);
+      }
+
+      .lang:nth-child(1) {
+        background: #f2f2f4;
+        color: #0a0a0c;
+        box-shadow: none;
+      }
+
+      .lang:nth-child(1) span {
+        color: rgba(10, 10, 12, 0.45);
+      }
+
+      /* ---------- что нового ---------- */
+
+      .features {
+        position: absolute;
+        top: 516px;
+        left: 980px;
+        display: grid;
+        grid-template-columns: 413px 413px;
+        grid-auto-rows: 138px;
+        gap: 10px 16px;
+      }
+
+      .tile {
+        position: relative;
+        padding: 18px 22px;
+        border-radius: 18px;
+        background: #141419;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      }
+
+      .tile svg {
+        display: block;
+        width: 26px;
+        height: 26px;
+        color: rgba(242, 242, 244, 0.9);
+      }
+
+      .tile-title {
+        margin-top: 12px;
+        font-size: 24px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .tile-sub {
+        margin-top: 4px;
+        font-size: 14px;
+        letter-spacing: -0.005em;
+        color: rgba(242, 242, 244, 0.48);
+        white-space: nowrap;
+      }
+
+      .plugins-strip {
+        position: absolute;
+        top: 826px;
+        left: 980px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        width: 842px;
+        height: 98px;
+        padding: 0 24px;
+        border-radius: 20px;
+        background: linear-gradient(155deg, var(--gold-top), var(--gold-bottom));
+        color: var(--gold-ink);
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 255, 255, 0.42),
+          0 18px 44px rgba(0, 0, 0, 0.4),
+          0 0 46px rgba(232, 198, 106, 0.14);
+      }
+
+      .plugins-strip svg {
+        flex: none;
+        width: 30px;
+        height: 30px;
+      }
+
+      .ps-title {
+        font-size: 24px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .ps-sub {
+        margin-top: 3px;
+        font-size: 14px;
+        color: rgba(23, 18, 4, 0.64);
+      }
+
+      .ps-badge {
+        display: grid;
+        flex: none;
+        place-items: center;
+        height: 32px;
+        margin-left: auto;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: var(--gold-ink);
+        color: var(--gold-top);
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+      }
+
+      /* ---------- подвал ---------- */
+
+      .divider {
+        position: absolute;
+        top: 512px;
+        left: 950px;
+        width: 1px;
+        height: 424px;
+        background: rgba(242, 242, 244, 0.07);
+      }
+
+      .footer {
+        position: absolute;
+        right: 90px;
+        bottom: 54px;
+        left: 90px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 18px;
+        border-top: 1px solid rgba(242, 242, 244, 0.08);
+        font-family: var(--mono);
+        font-size: 14px;
+        letter-spacing: 0.06em;
+        color: rgba(242, 242, 244, 0.4);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <div class="bg"></div>
+
+      <div class="header">
+        <div class="brand">
+          <img src="assets/tiktok-octo.png" alt="" />
+          <div>
+            <div class="brand-name">TikTok octo</div>
+            <div class="brand-sub">desktop client</div>
+          </div>
+        </div>
+        <div class="tg-pill">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.6 19.7c-.2 1-.9 1.3-1.7.8l-4.6-3.4-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.6 8.3-7.5c.4-.3-.1-.5-.6-.2L6.4 13.3 1.9 11.9c-1-.3-1-1 .2-1.4l18.3-7.1c.8-.3 1.6.2 1.5.9z" /></svg>
+          t.me/tiktok_octo
+        </div>
+      </div>
+
+      <div class="hero">
+        <div class="hero-line">
+          <div class="hero-num">12</div>
+          <div class="hero-word">языков</div>
+        </div>
+        <div class="hero-sub">интерфейс теперь на твоём языке</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section-label label-langs">Языки</div>
+      <div class="section-label label-features">Что нового</div>
+
+      <div class="langs">
+        <div class="lang"><b>Русский</b><span>RU</span></div>
+        <div class="lang"><b>English</b><span>EN</span></div>
+        <div class="lang"><b>Español</b><span>ES</span></div>
+        <div class="lang"><b>Português (Brasil)</b><span>PT</span></div>
+        <div class="lang"><b>Deutsch</b><span>DE</span></div>
+        <div class="lang"><b>Français</b><span>FR</span></div>
+        <div class="lang"><b>Türkçe</b><span>TR</span></div>
+        <div class="lang"><b>Bahasa Indonesia</b><span>ID</span></div>
+        <div class="lang"><b>Tiếng Việt</b><span>VI</span></div>
+        <div class="lang"><b>日本語</b><span>JA</span></div>
+        <div class="lang"><b>한국어</b><span>KO</span></div>
+        <div class="lang"><b>العربية</b><span>AR</span></div>
+      </div>
+
+      <div class="features">
+        <div class="tile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17" /><path d="M12 3.5c2.2 2.3 3.4 5.2 3.4 8.5s-1.2 6.2-3.4 8.5c-2.2-2.3-3.4-5.2-3.4-8.5S9.8 5.8 12 3.5Z" /></svg>
+          <div class="tile-title">Язык сайта</div>
+          <div class="tile-sub">лента на выбранном языке</div>
+        </div>
+
+        <div class="tile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 4h11l5 5v11H4z" /><path d="M15 4v5h5" /></svg>
+          <div class="tile-title">Стикеры в чате</div>
+          <div class="tile-sub">свои PNG, JPG, GIF</div>
+        </div>
+
+        <div class="tile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" /><circle cx="8.5" cy="9.5" r="1.5" /><path d="m4.5 17 5-5 4 4 3-3 3.5 3.5" /></svg>
+          <div class="tile-title">Стикер как фото</div>
+          <div class="tile-sub">отправка в один клик</div>
+        </div>
+
+        <div class="tile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z" /></svg>
+          <div class="tile-title">Тёмная тема</div>
+          <div class="tile-sub">везде, включая сообщения</div>
+        </div>
+      </div>
+
+      <div class="plugins-strip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5a2.5 2.5 0 0 0-5 0V5H4a2 2 0 0 0-2 2v4h1.5a2.5 2.5 0 0 1 0 5H2v4a2 2 0 0 0 2 2h4v-1.5a2.5 2.5 0 0 1 5 0V22h4a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 0 0-5z" /></svg>
+        <div>
+          <div class="ps-title">Плагины</div>
+          <div class="ps-sub">каталог, права и песочница</div>
+        </div>
+        <span class="ps-badge">уже в 0.5</span>
+      </div>
+
+      <div class="footer">
+        <span>LINUX · WINDOWS · MACOS</span>
+        <span>github.com/octomood/tiktok-octo</span>
+      </div>
+
+      <div class="vignette"></div>
+      <div class="grain"></div>
+    </div>
+
+    <script>
+      window.renderAt = () => true;
+      document.fonts.ready.then(() => {
+        document.body.dataset.ready = '1';
+      });
+    </script>
+  </body>
+</html>

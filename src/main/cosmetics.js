@@ -403,13 +403,16 @@ const FONT_DIR = path.join(__dirname, '../renderer/assets/fonts');
 /**
  * Тот же Inter, что и в оболочке, но для страницы сайта.
  *
- * Шрифты вшиваются в CSS как data: URI (CSP TikTok может их не пропустить —
- * тогда просто останется системный стек). Меняем только body и поля ввода,
- * чтобы не задеть иконочные шрифты самого TikTok.
+ * Шрифты вшиваются в CSS как data: URI (CSP TikTok их пропускает). Правило
+ * должно накрывать все элементы, а не только body: TikTok задаёт
+ * `font-family: TikTokFont/TikTokDisplayFont` на внутренних компонентах, и эти
+ * объявления перебивают наследование от body — часть интерфейса (шапки, имена
+ * в чатах) оставалась в фирменном шрифте, часть в Inter. Иконки на сайте —
+ * SVG, поэтому исключаем только их; иконочных шрифтов на живой странице нет.
  */
 function siteFontCss() {
   const stack = `'Inter', 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif`;
-  const bodyRule = `body { font-family: ${stack} !important; }
+  const fontRule = `html, body, body :not(svg):not(svg *) { font-family: ${stack} !important; }
 input, textarea, select { font-family: ${stack} !important; }`;
 
   try {
@@ -418,10 +421,64 @@ input, textarea, select { font-family: ${stack} !important; }`;
       const file = path.join(FONT_DIR, name);
       return `url('data:font/woff2;base64,${fs.readFileSync(file).toString('base64')}')`;
     });
-    return `${embedded}\n${bodyRule}`;
+    return `${embedded}\n${fontRule}`;
   } catch {
-    return bodyRule;
+    return fontRule;
   }
+}
+
+/**
+ * Тёмная тема сайта.
+ *
+ * TikTok хранит выбор темы в cookie, а провайдер styled-components в чате
+ * (`web_dm`) читает `isDark` только при монтировании. Поэтому тему включаем
+ * cookie до загрузки страницы, а не CSS поверх документа: тогда перекрашиваются
+ * и сообщения, и панели эмодзи, и меню, и системные диалоги сайта.
+ *
+ * Значения повторяют то, что выставляет сам сайт при ручном выборе темы:
+ * `theme_source` — выбранная тема, `theme_manual` — признак ручного выбора,
+ * `theme` — тема текущей страницы. Cookie живут 300 дней, как и у TikTok.
+ */
+const SITE_URL = 'https://www.tiktok.com/';
+const THEME_MAX_AGE = 300 * 24 * 60 * 60;
+const THEME_COOKIES = [
+  { name: 'tiktok_webapp_theme_manual', value: '1' },
+  { name: 'tiktok_webapp_theme_source', value: 'dark' },
+  { name: 'tiktok_webapp_theme', value: 'dark' },
+];
+
+async function syncThemeCookies(ses, enabled) {
+  if (!ses) return;
+
+  const expirationDate = Date.now() / 1000 + THEME_MAX_AGE;
+  await Promise.all(
+    THEME_COOKIES.map(async ({ name, value }) => {
+      try {
+        if (enabled) {
+          await ses.cookies.set({
+            url: SITE_URL,
+            name,
+            value,
+            expirationDate,
+            secure: true,
+            sameSite: 'lax',
+          });
+        } else {
+          await ses.cookies.remove(SITE_URL, name);
+        }
+      } catch {
+        /* cookie jar может быть недоступен в тестовом профиле */
+      }
+    }),
+  );
+}
+
+/**
+ * Ставит тему до первого рендера сайта: при старте окна и после сброса
+ * данных TikTok, который стирает cookie.
+ */
+async function prepareTheme(ses) {
+  await syncThemeCookies(ses, isEnabled('dark-theme'));
 }
 
 const IMPLEMENTATIONS = {
@@ -555,6 +612,18 @@ function toggle(id) {
   writeState({ cosmetics: { ...settings(), [id]: next } });
   setCosmeticsState(settings());
   apply();
+
+  // Тема сайта живёт в cookie и читается React-провайдером при монтировании,
+  // поэтому после переключения перезагружаем страницу, а не ждём перехода.
+  if (id === 'dark-theme') {
+    const wc = ctx.view?.webContents;
+    if (wc && !wc.isDestroyed()) {
+      syncThemeCookies(wc.session, next).finally(() => {
+        if (!wc.isDestroyed()) wc.reload();
+      });
+    }
+  }
+
   if (onChange) onChange();
   return next;
 }
@@ -576,6 +645,7 @@ module.exports = {
   apply,
   schedule,
   scheduleScripts,
+  prepareTheme,
   toggle,
   isEnabled,
   menuItems,

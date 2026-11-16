@@ -24,6 +24,8 @@ const media = require('./media');
 const pip = require('./pip');
 const mpris = require('./mpris');
 const find = require('./find');
+const plugins = require('./plugins');
+const region = require('./region');
 
 /** Окно OAuth: то же persistent-хранилище, но без Node и preload. */
 function authWindowOptions() {
@@ -242,10 +244,14 @@ function createView() {
     media.apply();
     pip.reapply();
     ads.apply();
+    plugins.onPageReady({ url: wc.getURL(), title: wc.getTitle() });
     // Промо в сайдбаре иногда дорисовывается позже — просканируем ещё раз.
     cosmetics.schedule(3000);
   });
-  wc.on('did-navigate-in-page', () => cosmetics.scheduleScripts());
+  wc.on('did-navigate-in-page', () => {
+    cosmetics.scheduleScripts();
+    plugins.onPageNavigate({ url: wc.getURL(), title: wc.getTitle() });
+  });
   wc.on('did-stop-loading', () => cosmetics.schedule(600));
 
   // --- Поиск по странице ---------------------------------------------------
@@ -269,7 +275,15 @@ function createView() {
   attachContextMenu(wc);
 
   layout();
-  wc.loadURL(startUrl());
+  // Тема сайта ставится cookie до первой загрузки: чат и другие разделы
+  // читают её при монтировании и иначе останутся светлыми до перезагрузки.
+  cosmetics
+    .prepareTheme(ses)
+    .catch(() => {})
+    .then(() => region.applySiteLanguageCookie(ses).catch(() => {}))
+    .finally(() => {
+      if (!wc.isDestroyed()) wc.loadURL(startUrl());
+    });
 }
 
 module.exports = { createView, authWindowOptions };

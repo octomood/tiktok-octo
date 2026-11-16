@@ -14,6 +14,13 @@ contextBridge.exposeInMainWorld('octo', {
     platform: process.platform,
     electron: process.versions.electron,
   },
+  /** Словарь текущего языка; renderer переводит им текст и атрибуты DOM. */
+  i18n: ipcRenderer.sendSync('octo:i18n'),
+  onI18n(callback) {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('octo:i18n-changed', listener);
+    return () => ipcRenderer.removeListener('octo:i18n-changed', listener);
+  },
   cmd(command, payload) {
     ipcRenderer.send('octo:cmd', command, payload);
   },

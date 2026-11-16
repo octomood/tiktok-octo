@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: https:; font-src 'self'; connect-src 'none';"
+    />
+    <title>Плагины — TikTok octo</title>
+    <link rel="stylesheet" href="fonts.css" />
+    <link rel="stylesheet" href="plugins.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <img class="brand-mark" src="assets/octo-logo-mark.png" alt="" draggable="false" />
+          <div class="brand-text">
+            <span class="eyebrow">TikTok octo</span>
+            <h1>Плагины</h1>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <label class="search" aria-label="Поиск плагинов">
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="9" r="5.2" />
+              <path d="m13 13 4 4" />
+            </svg>
+            <input id="search" type="search" placeholder="Поиск плагинов…" spellcheck="false" />
+          </label>
+
+          <button
+            class="icon-btn"
+            id="btnRefresh"
+            title="Обновить каталог"
+            aria-label="Обновить каталог"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M16 10a6 6 0 1 1-1.9-4.35" />
+              <path d="M16.4 4.2v3.5h-3.5" />
+            </svg>
+          </button>
+
+          <button class="primary" id="btnInstallFile">
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M10 3.5v8" />
+              <path d="m6.8 8.4 3.2 3.2 3.2-3.2" />
+              <path d="M4 14.5v1a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5v-1" />
+            </svg>
+            Установить из файла
+          </button>
+
+          <div class="win-controls" id="winControls">
+            <button class="win-btn" data-window="minimize" title="Свернуть" aria-label="Свернуть">
+              <svg
+                viewBox="0 0 20 20"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linecap="round"
+              >
+                <path d="M5 10h10" />
+              </svg>
+            </button>
+            <button
+              class="win-btn"
+              data-window="maximize"
+              title="Развернуть"
+              aria-label="Развернуть"
+            >
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4">
+                <rect x="5.6" y="5.6" width="8.8" height="8.8" rx="1.1" />
+              </svg>
+            </button>
+            <button
+              class="win-btn win-btn--close"
+              data-window="close"
+              title="Закрыть"
+              aria-label="Закрыть"
+            >
+              <svg
+                viewBox="0 0 20 20"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linecap="round"
+              >
+                <path d="M6.4 6.4l7.2 7.2M13.6 6.4l-7.2 7.2" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="layout">
+        <nav class="rail" aria-label="Разделы плагинов">
+          <div class="rail-group">
+            <button class="nav-item is-active" data-tab="catalog">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="3.5" width="6" height="6" rx="1.4" />
+                <rect x="11" y="3.5" width="6" height="6" rx="1.4" />
+                <rect x="3" y="11" width="6" height="6" rx="1.4" />
+                <rect x="11" y="11" width="6" height="6" rx="1.4" />
+              </svg>
+              <span>Каталог</span>
+              <span class="nav-badge" id="badgeCatalog" hidden></span>
+            </button>
+            <button class="nav-item" data-tab="installed">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 4.5h12v11H4z" />
+                <path d="M7 8h6M7 11h4" />
+              </svg>
+              <span>Установленные</span>
+              <span class="nav-badge" id="badgeInstalled" hidden></span>
+            </button>
+            <button class="nav-item" data-tab="updates">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M10 3.5v9" />
+                <path d="m6.5 9 3.5 3.5L13.5 9" />
+                <path d="M4 15.5h12" />
+              </svg>
+              <span>Обновления</span>
+              <span class="nav-badge nav-badge--accent" id="badgeUpdates" hidden></span>
+            </button>
+            <button class="nav-item" data-tab="settings">
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="10" cy="10" r="2.6" />
+                <path
+                  d="M10 3.2v1.4M10 15.4v1.4M3.2 10h1.4M15.4 10h1.4M5.2 5.2l1 1M13.8 13.8l1 1M14.8 5.2l-1 1M6.2 13.8l-1 1"
+                />
+              </svg>
+              <span>Настройки</span>
+            </button>
+          </div>
+
+          <div class="rail-foot">
+            <button class="rail-link" id="btnDocs">Документация</button>
+            <button class="rail-link" id="btnRules">Правила публикации</button>
+            <button class="rail-link" id="btnFolder">Папка плагинов</button>
+            <span class="rail-version" id="version"></span>
+          </div>
+        </nav>
+
+        <main class="content" id="content">
+          <div class="notice" id="notice" hidden>
+            <span id="noticeText"></span>
+            <button class="notice-close" id="btnNoticeClose" aria-label="Скрыть">×</button>
+          </div>
+
+          <section class="page" data-page="catalog">
+            <header class="page-head">
+              <div>
+                <h2>Каталог</h2>
+                <p class="page-sub" id="catalogMeta">Загрузка каталога…</p>
+              </div>
+              <button class="ghost" id="btnCatalogRefresh">Обновить</button>
+            </header>
+            <div class="category-chips" id="catalogCategories"></div>
+            <div class="cards" id="catalogList"></div>
+            <div class="empty" id="catalogEmpty" hidden>
+              <div class="empty-icon">◇</div>
+              <h3>Каталог пуст</h3>
+              <p>Проверьте соединение или укажите другой адрес каталога в настройках.</p>
+            </div>
+          </section>
+
+          <section class="page" data-page="installed" hidden>
+            <header class="page-head">
+              <div>
+                <h2>Установленные</h2>
+                <p class="page-sub" id="installedMeta">Пока ничего не установлено</p>
+              </div>
+            </header>
+            <div class="cards" id="installedList"></div>
+            <div class="empty" id="installedEmpty" hidden>
+              <div class="empty-icon">◇</div>
+              <h3>Плагинов пока нет</h3>
+              <p>Выберите что-нибудь в каталоге или установите файл <code>.octoplugin</code>.</p>
+            </div>
+          </section>
+
+          <section class="page" data-page="updates" hidden>
+            <header class="page-head">
+              <div>
+                <h2>Обновления</h2>
+                <p class="page-sub" id="updatesMeta">Всё актуально</p>
+              </div>
+              <div class="settings-actions">
+                <button class="ghost" id="btnCheckUpdates">Проверить</button>
+                <button class="primary" id="btnUpdateAll" hidden>Обновить всё</button>
+              </div>
+            </header>
+            <div class="cards" id="updatesList"></div>
+            <div class="empty" id="updatesEmpty" hidden>
+              <div class="empty-icon">✓</div>
+              <h3>Обновлений нет</h3>
+              <p>Приложение проверит каталог автоматически, если автообновления включены.</p>
+            </div>
+          </section>
+
+          <section class="page" data-page="settings" hidden>
+            <header class="page-head">
+              <div>
+                <h2>Настройки</h2>
+                <p class="page-sub">Общие правила для всех плагинов</p>
+              </div>
+            </header>
+
+            <div class="settings">
+              <div class="settings-group">
+                <h3>Обновления</h3>
+                <label class="setting-row">
+                  <span>
+                    <strong>Автообновления плагинов</strong>
+                    <small>Проверять каталог и тихо обновлять плагины без новых разрешений.</small>
+                  </span>
+                  <span
+                    class="switch"
+                    id="switchAutoUpdate"
+                    role="switch"
+                    tabindex="0"
+                    aria-checked="false"
+                  ></span>
+                </label>
+                <label class="setting-row">
+                  <span>
+                    <strong>Интервал проверки</strong>
+                    <small>Как часто смотреть каталог, пока приложение запущено.</small>
+                  </span>
+                  <select id="selectInterval" class="select">
+                    <option value="1">каждый час</option>
+                    <option value="6">каждые 6 часов</option>
+                    <option value="24">раз в сутки</option>
+                    <option value="0">никогда</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="settings-group">
+                <h3>Безопасность</h3>
+                <label class="setting-row">
+                  <span>
+                    <strong>Разрешать неподписанные плагины</strong>
+                    <small
+                      >Подписанные плагины помечаются как проверенные. Неподписанные ставятся только
+                      после подтверждения.</small
+                    >
+                  </span>
+                  <span
+                    class="switch"
+                    id="switchAllowUnsigned"
+                    role="switch"
+                    tabindex="0"
+                    aria-checked="false"
+                  ></span>
+                </label>
+                <label class="setting-row">
+                  <span>
+                    <strong>Только подписанные плагины</strong>
+                    <small
+                      >Строгий режим: установка и обновление плагинов без действительной подписи
+                      запрещены.</small
+                    >
+                  </span>
+                  <span
+                    class="switch"
+                    id="switchRequireSignatures"
+                    role="switch"
+                    tabindex="0"
+                    aria-checked="false"
+                  ></span>
+                </label>
+                <p class="hint">
+                  Даже в мягком режиме статическая проверка блокирует Node, eval, прямой сетевой
+                  доступ, cookie, нативные бинарники и обфускацию.
+                </p>
+              </div>
+
+              <div class="settings-group">
+                <h3>Каталог</h3>
+                <label class="field">
+                  <span class="field-label">Адрес registry.json</span>
+                  <input
+                    id="inputRegistry"
+                    class="text-input full"
+                    type="url"
+                    spellcheck="false"
+                    placeholder="https://raw.githubusercontent.com/…/registry.json"
+                  />
+                </label>
+                <div class="settings-actions">
+                  <button class="ghost" id="btnRegistrySave">Сохранить</button>
+                  <button class="ghost" id="btnRegistryReset">Сбросить</button>
+                </div>
+                <p class="hint" id="registryHint"></p>
+              </div>
+
+              <div class="settings-group">
+                <h3>Файлы</h3>
+                <div class="path-row">
+                  <code id="pluginDir"></code>
+                  <button class="ghost" id="btnOpenFolder">Открыть</button>
+                </div>
+                <div class="settings-actions">
+                  <button class="ghost" id="btnReloadDev">Перезагрузить dev-плагины</button>
+                  <button class="ghost" id="btnSettingsDocs">Документация</button>
+                  <button class="ghost" id="btnSettingsRules">Правила публикации</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" hidden></div>
+    <script src="i18n-dom.js"></script>
+    <script src="plugins.js"></script>
+  </body>
+</html>

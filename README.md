@@ -39,23 +39,26 @@ window and a handful of shortcuts that make sense on a desktop.
 
 ## What's inside
 
-|                                     |                                                                                                                                                                        |
-| :---------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **🪟&nbsp; A title bar of its own** | Back / forward / reload / home, a live page pill, unread count, native window buttons. Dragging and double-click to maximise come for free.                            |
-| **🔐&nbsp; Real login**             | A persistent `persist:octo-tiktok` session on disk — you stay signed in between launches. Google, Apple, Facebook and X OAuth windows open on top of the app.          |
-| **🔎&nbsp; Find in page**           | <kbd>Ctrl</kbd>+<kbd>F</kbd> opens a compact bar with a `1/3` counter. The page slides down instead of being covered; <kbd>Esc</kbd> closes it.                        |
-| **🎬&nbsp; Picture-in-picture**     | A compact always-on-top mini player: auto-advance, previous/next and adaptive sizing for your screen. Toolbar button or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>. |
-| **📌&nbsp; Always on top**          | Keep the feed above your work while you pretend to work. The mode survives restarts.                                                                                   |
-| **🔇&nbsp; Sound & volume**         | Instant mute with a click, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> or a media key, plus a 0–100 % volume slider in the Playback panel.                           |
-| **🗂&nbsp; Tray**                    | Hide the window, mute, pin, PiP, or enable "close to tray" and keep listening.                                                                                         |
-| **⬇️&nbsp; Downloads**              | Files go through the system save dialog; progress lives in the title bar, and the result is a toast.                                                                   |
-| **🔄&nbsp; Self-updating**          | Packaged builds check GitHub Releases and offer to restart when the update is ready.                                                                                   |
-| **🔍&nbsp; Browser-grade zoom**     | Chromium steps from 50 to 300 %, remembered across restarts.                                                                                                           |
-| **🌍&nbsp; Links stay polite**      | Anything that isn't `tiktok.com` opens in your system browser. TikTok links with `target=_blank` stay inside the app.                                                  |
-| **🌐&nbsp; Region & proxy**         | Pick a country to change `Accept-Language`, `navigator.language`, timezone and geolocation. Bring your own SOCKS5/HTTP proxy to change the actual IP.                  |
-| **🧠&nbsp; It remembers**           | Window geometry, maximised state, zoom, mute, always-on-top and the last page you were on.                                                                             |
-| **🧯&nbsp; It survives**            | Failed loads retry with backoff, a crashed renderer is brought back, a hung page says so instead of dying silently.                                                    |
-| **⛶&nbsp; Real fullscreen**         | Fullscreen video takes the whole window and the title bar gets out of the way.                                                                                         |
+|                                     |                                                                                                                                                                                                                      |
+| :---------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **🪟&nbsp; A title bar of its own** | Back / forward / reload / home, a live page pill, unread count, native window buttons. Dragging and double-click to maximise come for free.                                                                          |
+| **🔐&nbsp; Real login**             | A persistent `persist:octo-tiktok` session on disk — you stay signed in between launches. Google, Apple, Facebook and X OAuth windows open on top of the app.                                                        |
+| **🔎&nbsp; Find in page**           | <kbd>Ctrl</kbd>+<kbd>F</kbd> opens a compact bar with a `1/3` counter. The page slides down instead of being covered; <kbd>Esc</kbd> closes it.                                                                      |
+| **🎬&nbsp; Picture-in-picture**     | A compact always-on-top mini player: auto-advance, previous/next and adaptive sizing for your screen. Toolbar button or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>.                                               |
+| **📌&nbsp; Always on top**          | Keep the feed above your work while you pretend to work. The mode survives restarts.                                                                                                                                 |
+| **🔇&nbsp; Sound & volume**         | Instant mute with a click, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> or a media key, plus a 0–100 % volume slider in the Playback panel.                                                                         |
+| **🗂&nbsp; Tray**                    | Hide the window, mute, pin, PiP, or enable "close to tray" and keep listening.                                                                                                                                       |
+| **⬇️&nbsp; Downloads**              | Files go through the system save dialog; progress lives in the title bar, and the result is a toast.                                                                                                                 |
+| **🔄&nbsp; Self-updating**          | Packaged builds check GitHub Releases and offer to restart when the update is ready.                                                                                                                                 |
+| **🔍&nbsp; Browser-grade zoom**     | Chromium steps from 50 to 300 %, remembered across restarts.                                                                                                                                                         |
+| **🌍&nbsp; Links stay polite**      | Anything that isn't `tiktok.com` opens in your system browser. TikTok links with `target=_blank` stay inside the app.                                                                                                |
+| **🌐&nbsp; Region & proxy**         | Pick a country to change `Accept-Language`, `navigator.language`, timezone and geolocation. Bring your own SOCKS5/HTTP proxy to change the actual IP.                                                                |
+| **🗣️&nbsp; Language**               | 12 UI languages and 22 TikTok site languages via the documented `default_lang` cookie, `Accept-Language` and `navigator.language`. Your choice survives restarts.                                                    |
+| **🙂&nbsp; Chat stickers**          | Your PNG/GIF/WebP files go from the panel into the open TikTok chat as photos; a transparent background reads as a sticker.                                                                                          |
+| **🧩&nbsp; Plugins**                | A separate manager with a catalog, per-plugin permissions, static security audit, Ed25519 signatures, tamper checks, logs, version rollback and opt-out auto-updates. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>. |
+| **🧠&nbsp; It remembers**           | Window geometry, maximised state, zoom, mute, always-on-top and the last page you were on.                                                                                                                           |
+| **🧯&nbsp; It survives**            | Failed loads retry with backoff, a crashed renderer is brought back, a hung page says so instead of dying silently.                                                                                                  |
+| **⛶&nbsp; Real fullscreen**         | Fullscreen video takes the whole window and the title bar gets out of the way.                                                                                                                                       |
 
 <div align="center">
   <img src="docs/findbar.png" width="820" alt="Find in page bar with a match counter under the title bar" />
@@ -86,6 +89,75 @@ and can route the session through a proxy you provide.
 - The app ships no proxy list and no VPN. Use your own endpoint and follow
   TikTok's terms.
 
+## Language
+
+The **Language** section in the feature panel and the matching menu contain two
+independent choices:
+
+- **UI language** — menus, feature panel, tray, dialogs and the plugin manager.
+  Available: Russian, English, Spanish, Portuguese (Brazil), German, French,
+  Turkish, Indonesian, Vietnamese, Japanese, Korean and Arabic. Arabic switches
+  the layout to right-to-left.
+- **TikTok language** — the language of the site itself. The client sets the
+  documented `default_lang` cookie, overrides `Accept-Language` and the
+  `navigator` language, then reloads the page. 22 site languages are available,
+  including English, Russian, Spanish, Portuguese, German, French, Italian,
+  Turkish, Indonesian, Vietnamese, Japanese, Korean, Arabic, Thai, Hindi, Polish,
+  Dutch, Ukrainian, both Chinese variants, Malay and Filipino.
+- **Auto (like on the site)** removes the `default_lang` cookie and lets the
+  site and the region preset decide.
+- If a TikTok account stores its own language, the site may keep it: choose the
+  language in TikTok's own settings. The client does not bypass that or pretend
+  the cookie is an account-level language change.
+
+## Chat stickers
+
+TikTok's web client has no sticker picker, so the app sends your images through
+the site's own upload path: it puts the file into the chat's hidden file input
+and clicks Send when the button appears.
+
+- **Add stickers** — the feature panel (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>)
+  → «Stickers» → «Add stickers…». PNG, JPG, WebP and GIF up to 8 MB.
+- **Send** — open a conversation at `tiktok.com/messages`, then click a sticker
+  in the panel or the command palette. It arrives as a regular photo.
+- A **transparent PNG** looks like a sticker, but the recipient still sees a
+  photo. That is a limitation of TikTok's web client, not of the app. Square
+  images around 256–512 px look best.
+- Files live in the profile's `stickers/` directory; the panel can open the
+  folder or delete a sticker together with its file.
+
+## Plugins
+
+Plugins are small JavaScript packages that live in a sandboxed hidden window.
+They can add palette commands, rows in the feature panel, settings, storage,
+page CSS and isolated page scripts. Nothing else: no Node, no filesystem, no
+direct network, no cookies, no navigation.
+
+The **Plugins** manager (also <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>) has
+a catalog, local `.octoplugin` installs, per-plugin permissions, security
+reports, signature status, tamper detection and auto-updates that can be turned
+off globally or per plugin.
+
+Before installation the app validates the manifest and ZIP, runs a static audit
+(Node, `eval`, direct network, cookies, native binaries, obfuscation), checks
+SHA-256 and Ed25519 signatures, and shows every requested permission. Updates
+that add permissions always require confirmation.
+
+Developer guide: [docs/plugins/README.md](docs/plugins/README.md) ·
+Publishing rules: [docs/plugins/PUBLISHING.md](docs/plugins/PUBLISHING.md) ·
+Example: [plugins/examples/hello-octo](plugins/examples/hello-octo).
+
+The same guide is built into the app: `npm run docs:build` generates
+`src/renderer/plugins-docs`, and the Documentation / Publishing rules items open
+it in a local window. The static output can also be opened in a browser or hosted
+anywhere.
+
+```bash
+OCTO_PLUGIN_DEV_DIR="$PWD/plugins/examples" npm start
+node scripts/pack-plugin.js plugins/examples/hello-octo \
+  --out plugins/packages --update-registry plugins/registry.json
+```
+
 ## Shortcuts
 
 | Keys                                                                                                 | Action                                           |
@@ -102,6 +174,7 @@ and can route the session through a proxy you provide.
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>                                                        | Picture-in-picture                               |
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>←</kbd> / <kbd>→</kbd>                                         | Previous / next video                            |
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>                                                        | Always on top                                    |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>                                                        | Plugin manager                                   |
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd>                                                        | DevTools                                         |
 | <kbd>Ctrl</kbd>+<kbd>W</kbd> / <kbd>Ctrl</kbd>+<kbd>Q</kbd>                                          | Close window / quit                              |
 | <kbd>F11</kbd>                                                                                       | Fullscreen                                       |
@@ -174,16 +247,30 @@ src/
     links.js       handler for "open in the system browser"
     shared.js      constants and URL predicates
     preload.js     window.octo bridge for the title bar
+    plugin-host-preload.js / plugins-manager-preload.js
+                   capability bridge for plugins and the manager
+    plugins/       plugin engine: manifest, ZIP, audit, installer, registry,
+                   sandboxed hosts, manager window and auto-updates
   renderer/
     index.html     title bar + find bar markup
     styles.css     their styling
     titlebar.js    state, toasts, keyboard plumbing
+    plugins.html / plugins.css / plugins.js
+                   standalone plugin manager
     assets/
       tiktok-octo.png    source photo of the glass octopus
       octo-logo-mark.png mark only, transparent (title bar, narrow nav rail)
       octo-logo-full.png mark + tt-octo lockup (wide nav, header)
 test/
-  smoke.spec.js  Playwright smoke test
+  smoke.spec.js        Playwright smoke test
+  plugins.spec.js      live plugin host, commands, panel and manager
+  plugin-security.spec.js  manifest, audit, ZIP and signature tests
+plugins/
+  examples/hello-octo  sample plugin
+  packages/            built .octoplugin files
+  registry.json        sample catalog
+docs/plugins/          developer guide, publishing rules, built-in docs
+scripts/               pack-plugin.js, plugin-keygen.js, build-plugin-docs.js
 build/
   icon.svg / icon.png / entitlements.mac.plist
 ```
@@ -197,6 +284,16 @@ and keeps `contextIsolation` on. The site cannot reach our interface, and we ste
 it only through `webContents`. Permissions are an explicit allowlist (camera,
 microphone, notifications, fullscreen, clipboard write, pointer lock) granted only
 to `tiktok.com`; every other navigation goes to the system browser.
+
+Plugins are deliberately _not_ loaded into that view. Each one gets a hidden
+`BrowserWindow` with `sandbox: true`, `contextIsolation: true`, an ephemeral
+session, a custom `octo-plugin://` origin, a strict CSP and all network requests
+cancelled at the session level. The plugin sees only the frozen `window.octo`
+bridge; main validates every call against the manifest permissions. Page CSS and
+page scripts are executed against the site from main, the latter in an isolated
+world with runtime scanning. Before anything reaches disk, the package is
+validated, unpacked in memory, statically audited, hash-checked, signature-checked
+and shown to the user with every permission.
 
 Small things that took actual work:
 
@@ -232,7 +329,13 @@ Small things that took actual work:
 - **Unread badges** appear where the desktop supports them (macOS dock, Unity
   launcher); the count is read from the page title, not from private requests.
 - **Auto-update** works only for packaged builds published through GitHub
-  Releases.
+  Releases. Plugin auto-updates can be disabled globally or per plugin.
+- **Plugins are JavaScript-only.** Native modules, WebAssembly and workers are
+  rejected. A plugin with `page:script` shares the DOM with the site and can read
+  visible page content — install only sources you trust. The catalog requires
+  source links and signatures for the verified badge.
+- **The plugin catalog** is a JSON file in this repository; without network access
+  the manager shows the cached version and local installs still work.
 - **Region presets** change browser-side signals only. Without your own proxy or
   a system-wide VPN, TikTok still sees your real IP address; the app bundles no
   proxy list and no VPN.

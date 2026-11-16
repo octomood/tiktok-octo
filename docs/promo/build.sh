@@ -16,8 +16,8 @@ rm -rf "$BUILD/frames"
 node render.mjs --fps 30 --dsf 2 --out "$BUILD"
 
 echo "→ постер"
-node render.mjs --still 13.4 --out "$BUILD" >/dev/null
-ffmpeg -hide_banner -v error -y -i "$BUILD/poster-13.40.png" \
+node render.mjs --still 13.5 --out "$BUILD" >/dev/null
+ffmpeg -hide_banner -v error -y -i "$BUILD/poster-13.50.png" \
   -vf "scale=1080:1920:flags=lanczos" -frames:v 1 poster.png
 
 echo "→ кодирование"

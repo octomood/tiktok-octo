@@ -68,6 +68,14 @@ body {
     'Helvetica Neue',
     Arial,
     'Noto Sans',
+    'Noto Sans CJK JP',
+    'Noto Sans CJK KR',
+    'Hiragino Sans',
+    'Yu Gothic UI',
+    'Malgun Gothic',
+    'Noto Naskh Arabic',
+    'Noto Sans Thai',
+    'Noto Sans Devanagari',
     sans-serif;
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
@@ -752,6 +760,8 @@ body.is-downloading .progress {
 .panel-close:focus-visible,
 .panel-cat-head:focus-visible,
 .panel-search-clear:focus-visible,
+.sticker-send:focus-visible,
+.sticker-remove:focus-visible,
 .stepper-btn:focus-visible,
 .stepper-value:focus-visible,
 .timer-btn:focus-visible,
@@ -875,6 +885,90 @@ body.is-downloading .progress {
   animation: cat-in 0.18s cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* --- Стикеры в чате ------------------------------------------------------- */
+
+.sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 4px 2px 8px;
+}
+
+.sticker-grid:empty {
+  display: none;
+}
+
+.sticker-tile {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 10px;
+  background: var(--md-surface-container);
+}
+
+.sticker-send {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.sticker-send:hover {
+  background: var(--md-state-hover);
+}
+
+.sticker-send img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.sticker-fallback {
+  color: var(--md-primary);
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.sticker-remove {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.58);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.12s ease,
+    background 0.12s ease;
+}
+
+.sticker-tile:hover .sticker-remove,
+.sticker-remove:focus-visible {
+  opacity: 1;
+}
+
+.sticker-remove:hover {
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
+}
+
 @keyframes cat-in {
   from {
     opacity: 0;
@@ -919,6 +1013,7 @@ body.is-downloading .progress {
   color: var(--md-on-surface-variant);
   font: inherit;
   font-size: 13.5px;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
   transition:
@@ -990,6 +1085,11 @@ button.panel-row--danger:hover {
 .panel-select:focus-visible {
   outline: 2px solid var(--md-primary);
   outline-offset: 1px;
+}
+
+.panel-select--wide {
+  width: 100%;
+  max-width: none;
 }
 
 .panel-value {
@@ -1103,6 +1203,45 @@ button.panel-row--danger:hover {
 .panel-list {
   display: flex;
   flex-direction: column;
+}
+
+/* Плагины в панели функций */
+
+.panel-row-plugin {
+  gap: 8px;
+}
+
+.panel-row-plugin .panel-row-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.panel-row-badge {
+  flex: none;
+  max-width: 92px;
+  overflow: hidden;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface-variant);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.panel-row-badge.is-update {
+  background: color-mix(in srgb, var(--md-primary-container) 72%, transparent);
+  color: var(--md-on-primary-container);
+}
+
+.panel-row-badge.is-error {
+  background: color-mix(in srgb, var(--md-error) 16%, transparent);
+  color: var(--md-error);
+}
+
+.panel-row-plugin.is-error .panel-row-label {
+  color: var(--md-error);
 }
 
 /* Переключатель Material 3 */
@@ -1409,6 +1548,7 @@ body.is-muted .volume-range {
   color: var(--md-on-surface-variant);
   font: inherit;
   font-size: 13.5px;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
 }
@@ -1541,4 +1681,24 @@ body.is-muted .ico-sound {
 
 body.is-muted .ico-muted {
   display: inline;
+}
+
+/* Арабский интерфейс: текст справа, но системная полоса окна остаётся LTR. */
+[dir='rtl'] .panel-row-label,
+[dir='rtl'] .panel-note,
+[dir='rtl'] .panel-field-label,
+[dir='rtl'] .panel-head-text,
+[dir='rtl'] .panel-cat-title,
+[dir='rtl'] .panel-empty {
+  text-align: right;
+}
+
+[dir='rtl'] .titlebar,
+[dir='rtl'] .pipbar {
+  direction: ltr;
+}
+
+[dir='rtl'] .findbar,
+[dir='rtl'] .palette-card {
+  direction: rtl;
 }
