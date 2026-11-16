@@ -46,3 +46,23 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Без сертификатов подписи не ищем: сборка останется неподписанной.
           CSC_IDENTITY_AUTO_DISCOVERY: false
+
+  # electron-builder создаёт релиз с пустым описанием. Заполняем его разделом
+  # этой версии из CHANGELOG.md, когда все сборки уже загружены.
+  notes:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Заметки из CHANGELOG
+        run: node scripts/release-notes.js "$GITHUB_REF_NAME" > release-notes.md
+
+      - name: Описание релиза
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$GITHUB_REF_NAME" --notes-file release-notes.md

@@ -1,5 +1,13 @@
 # Changelog
 
+## Не выпущено
+
+### Изменено
+
+- **Описание релиза на GitHub** собирается из `CHANGELOG.md`: скрипт
+  `scripts/release-notes.js` и job `notes` в `release.yml` заполняют страницу
+  релиза разделом текущей версии, вместо пустого поля от electron-builder.
+
 ## 0.5.1
 
 ### Добавлено
