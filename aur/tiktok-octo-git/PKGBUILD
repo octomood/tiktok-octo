@@ -44,6 +44,8 @@ package() {
   install -dm755 "$pkgdir/opt/$_name"
   cp -a dist/linux-unpacked/. "$pkgdir/opt/$_name/"
 
+  chmod -R a+rX "$pkgdir/opt/$_name"
+
   # Chromium ищет SUID-хелпер песочницы: без него Electron не стартует
   # на системах, где обычным пользователям запрещены user namespaces.
   chown root:root "$pkgdir/opt/$_name/chrome-sandbox"

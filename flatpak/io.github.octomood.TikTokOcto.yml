@@ -75,24 +75,14 @@ modules:
       - install -Dm644 io.github.octomood.TikTokOcto.desktop -t /app/share/applications/
       - install -Dm644 build/icon.png /app/share/icons/hicolor/512x512/apps/io.github.octomood.TikTokOcto.png
     sources:
-      # Для Flathub замените этот блок на:
-      #   - type: git
-      #     url: https://github.com/octomood/tiktok-octo.git
-      #     tag: v0.5.0
-      #     commit: <полный sha коммита тега>
-      # и перегенерируйте npm-sources.json из того же коммита.
-      - type: dir
-        path: ../src
-        dest: src
-      - type: file
-        path: ../package.json
-      - type: file
-        path: ../package-lock.json
-      - type: file
-        path: ../LICENSE
-      - type: file
-        path: ../build/icon.png
-        dest: build
+      # Сборка идёт из тега: так же манифест живёт в репозитории Flathub.
+      # Для сборки из рабочего каталога замените этот блок на dir-источники
+      # src/, package.json, package-lock.json, LICENSE и build/icon.png
+      # (пример — в README.md, раздел «Локальная сборка»).
+      - type: git
+        url: https://github.com/octomood/tiktok-octo.git
+        tag: v0.5.1
+        commit: f3d1071495d33f44da13d0ff1561f70081e93ba3
       - npm-sources.json
       - type: file
         path: io.github.octomood.TikTokOcto.metainfo.xml

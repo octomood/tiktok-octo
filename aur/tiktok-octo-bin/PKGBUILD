@@ -2,7 +2,7 @@
 
 pkgname=tiktok-octo-bin
 _name=tiktok-octo
-pkgver=0.4.3
+pkgver=0.5.1
 pkgrel=1
 pkgdesc='Неофициальный десктоп-клиент TikTok: официальный сайт в нативной оболочке Electron'
 arch=('x86_64')
@@ -24,7 +24,7 @@ provides=('tiktok-octo')
 conflicts=('tiktok-octo' 'tiktok-octo-git')
 options=('!strip' '!debug')
 source=("$pkgname-$pkgver.AppImage::https://github.com/octomood/tiktok-octo/releases/download/v$pkgver/tiktok-octo-$pkgver-linux-x86_64.AppImage")
-sha256sums=('0e0a88a86e0d504ddebb86d24208153465269712301202d1d0ff58ddd7b5e637')
+sha256sums=('729822b867ff5a205763bdc4c356a0cca9a41c4f92fb0801b621c76188701b59')
 
 package() {
   cd "$srcdir"
@@ -36,6 +36,10 @@ package() {
 
   install -dm755 "$pkgdir/opt/$_name"
   cp -a squashfs-root/. "$pkgdir/opt/$_name/"
+
+  # В образе часть каталогов приходит с правами 700 — чиним, чтобы файлы
+  # читались обычным пользователем.
+  chmod -R a+rX "$pkgdir/opt/$_name"
 
   # Chromium ищет SUID-хелпер песочницы: без него Electron не стартует
   # на системах, где обычным пользователям запрещены user namespaces.

@@ -33,6 +33,26 @@ flatpak-builder --user --install --force-clean \
 flatpak run io.github.octomood.TikTokOcto
 ```
 
+Манифест собирает **тег** `vX.Y.Z` (так он же живёт в репозитории Flathub),
+поэтому незакоммиченные правки в сборку не попадут. Чтобы проверить рабочую
+копию, замените git-источник на файлы:
+
+```yaml
+sources:
+  - type: dir
+    path: ../src
+    dest: src
+  - type: file
+    path: ../package.json
+  - type: file
+    path: ../package-lock.json
+  - type: file
+    path: ../LICENSE
+  - type: file
+    path: ../build/icon.png
+    dest: build
+```
+
 Проверка метаданных:
 
 ```sh
@@ -48,17 +68,10 @@ appstreamcli validate io.github.octomood.TikTokOcto.metainfo.xml
    заявку. Сделайте 2–3 снимка окна (1280×720 или 1920×1080) и положите в
    `docs/screenshots/`. Существующие `docs/titlebar.png` (931×44) и
    `docs/banner.png` (1440×470) для этого не годятся — не тот формат.
-2. **Источник — git, а не dir.** В манифесте блок `type: dir` нужен только для
-   локальной сборки. Для PR замените его на:
-
-   ```yaml
-   - type: git
-     url: https://github.com/octomood/tiktok-octo.git
-     tag: vX.Y.Z
-     commit: <полный sha коммита тега>
-   ```
-
-   и перегенерируйте `npm-sources.json` из того же коммита (см. ниже).
+2. **Тег и коммит актуальны.** Манифест уже собирает git-тег; при выпуске
+   новой версии обновите `tag` и `commit` (см. «Обновление при релизе») и
+   перегенерируйте `npm-sources.json` из того же коммита, если менялись
+   зависимости.
 
 3. **Версия в метаинфо = версия сборки.** Верхний `<release>` должен совпадать
    с `package.json` тега.
