@@ -82,7 +82,7 @@ modules:
       - type: git
         url: https://github.com/octomood/tiktok-octo.git
         tag: v1.0.0
-        commit: 42be2f132b1b2e8ae4cf4fd178676e5f4b5463c0
+        commit: 9d5c6b58cb112a9b9f66a680d84095e1698abb49
       - npm-sources.json
       - type: file
         path: io.github.octomood.TikTokOcto.metainfo.xml
