@@ -2,7 +2,7 @@
 
 pkgname=tiktok-octo-bin
 _name=tiktok-octo
-pkgver=0.5.1
+pkgver=1.0.0
 pkgrel=1
 pkgdesc='Неофициальный десктоп-клиент TikTok: официальный сайт в нативной оболочке Electron'
 arch=('x86_64')
@@ -24,7 +24,7 @@ provides=('tiktok-octo')
 conflicts=('tiktok-octo' 'tiktok-octo-git')
 options=('!strip' '!debug')
 source=("$pkgname-$pkgver.AppImage::https://github.com/octomood/tiktok-octo/releases/download/v$pkgver/tiktok-octo-$pkgver-linux-x86_64.AppImage")
-sha256sums=('745fcb5eb68fce8045ccd8f5e1febdd20e764d34923f51781d314c3c6ba6422a')
+sha256sums=('d469672c56f089300f8bb03bde4332813989c9e422e3668c8e17a95c7f043784')
 
 package() {
   cd "$srcdir"
