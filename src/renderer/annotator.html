@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:;"
+    />
+    <title>Снимок с аннотацией</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="annotator.css" />
+  </head>
+  <body class="annotator">
+    <header class="annotator-bar">
+      <span class="annotator-title">Снимок с аннотацией</span>
+      <div class="annotator-tools" role="toolbar" aria-label="Инструменты">
+        <button type="button" class="annotator-tool is-on" data-tool="arrow" aria-pressed="true">
+          Стрелка
+        </button>
+        <button type="button" class="annotator-tool" data-tool="rect" aria-pressed="false">
+          Рамка
+        </button>
+        <button type="button" class="annotator-tool" data-tool="blur" aria-pressed="false">
+          Размытие
+        </button>
+        <button type="button" class="annotator-tool" id="btnUndo">Отменить</button>
+        <button type="button" class="annotator-tool" id="btnClear">Очистить</button>
+      </div>
+      <div class="annotator-actions">
+        <button type="button" class="annotator-btn" id="btnClose">Закрыть</button>
+        <button type="button" class="annotator-btn annotator-btn--primary" id="btnSave">
+          Сохранить
+        </button>
+      </div>
+    </header>
+
+    <main class="annotator-stage">
+      <canvas id="annotateCanvas" aria-label="Снимок для аннотации"></canvas>
+    </main>
+
+    <script src="i18n-dom.js"></script>
+    <script src="annotator.js"></script>
+  </body>
+</html>

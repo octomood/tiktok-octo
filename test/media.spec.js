@@ -185,6 +185,108 @@ test('зависшее видео восстанавливается, пауза
 });
 
 /**
+ * Регрессия «звук от старого видео»: TikTok после смены ролика (в том числе
+ * пока окно свёрнуто в трей) иногда оставляет играть предыдущий <video>.
+ * На экране новый кадр, а звучит старый. Сторож должен оставить звук только
+ * у ролика на экране и возобновить именно его после возврата окна.
+ */
+test('звук остаётся только у ролика на экране', async () => {
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-e2e-media-sole-'));
+  let app;
+
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: {
+        ...process.env,
+        OCTO_E2E: '1',
+        OCTO_USER_DATA: userData,
+        OCTO_HOME_URL: 'about:blank',
+      },
+    });
+
+    await app.firstWindow();
+    const view = await waitForView(app);
+    expect(view, 'страница сайта не появилась').toBeTruthy();
+    await expect.poll(() => view.evaluate(() => typeof window.__octoMedia)).toBe('object');
+
+    const result = await view.evaluate(() => {
+      const media = window.__octoMedia;
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'visible',
+      });
+
+      /** Ролик с управляемой паузой; top — положение на странице. */
+      const make = ({ top, paused }) => {
+        const video = document.createElement('video');
+        const control = { paused, pauses: 0, plays: 0 };
+        Object.defineProperties(video, {
+          paused: { get: () => control.paused },
+          ended: { get: () => false },
+          currentTime: { get: () => 10, set: () => {} },
+          readyState: { get: () => 4 },
+          networkState: { get: () => 1 },
+          error: { get: () => null },
+          currentSrc: { get: () => 'https://example.test/video.mp4' },
+        });
+        video.getBoundingClientRect = () => ({
+          width: 320,
+          height: 568,
+          left: 0,
+          top,
+          right: 320,
+          bottom: top + 568,
+          x: 0,
+          y: top,
+        });
+        video.getVideoPlaybackQuality = () => ({ totalVideoFrames: 100 });
+        video.pause = () => {
+          control.pauses += 1;
+          control.paused = true;
+        };
+        video.play = () => {
+          control.plays += 1;
+          control.paused = false;
+          return Promise.resolve();
+        };
+        document.body.appendChild(video);
+        return { video, control };
+      };
+
+      // Два ролика играют одновременно: прошлый остался за экраном.
+      const stale = make({ top: 2000, paused: false });
+      const shown = make({ top: 0, paused: false });
+      media.tick();
+      const stalePaused = stale.control.paused;
+      const shownPaused = shown.control.paused;
+
+      // Возврат окна: на экране новый ролик стоит на паузе, старый играет.
+      stale.control.paused = false;
+      shown.control.paused = true;
+      media.resume();
+      const afterResume = {
+        stalePaused: stale.control.paused,
+        shownPlaying: !shown.control.paused,
+      };
+
+      stale.video.remove();
+      shown.video.remove();
+      delete document.visibilityState;
+      return { stalePaused, shownPaused, afterResume };
+    });
+
+    expect(result.stalePaused, 'старый ролик остался со звуком').toBe(true);
+    expect(result.shownPaused, 'ролик на экране не должен вставать на паузу').toBe(false);
+    expect(result.afterResume.stalePaused, 'старый звук после возврата окна').toBe(true);
+    expect(result.afterResume.shownPlaying, 'видимый ролик не возобновился').toBe(true);
+  } finally {
+    if (app) await app.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+/**
  * Регрессия «звук идёт, картинка стоит»: сторож плеера не должен трогать
  * playbackRate, если скорость и так нужная. Запись на play и повтор через
  * 600 мс пересоздавала видео-конвейер в Chromium.

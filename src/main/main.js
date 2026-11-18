@@ -4,6 +4,8 @@ const { app, ipcMain, globalShortcut, nativeTheme } = require('electron');
 
 // Тесты подменяют каталог профиля, чтобы не трогать реальную сессию и логин.
 if (process.env.OCTO_USER_DATA) app.setPath('userData', process.env.OCTO_USER_DATA);
+// Тесты не должны писать в настоящую папку «Загрузки».
+if (process.env.OCTO_DOWNLOADS_DIR) app.setPath('downloads', process.env.OCTO_DOWNLOADS_DIR);
 
 /**
  * Аппаратный декодер на Linux — частая причина «звук идёт, картинка стоит»:
@@ -33,6 +35,11 @@ const plugins = require('./plugins');
 const stickers = require('./stickers');
 const i18n = require('./i18n');
 const session = require('./session');
+const settingsTransfer = require('./settings-transfer');
+const privacy = require('./privacy');
+const resilience = require('./resilience');
+const deepLinks = require('./deep-links');
+const jumpList = require('./jump-list');
 
 // Кастомные схемы (хосты плагинов и превью стикеров) должны быть объявлены
 // до app.whenReady().
@@ -42,6 +49,24 @@ stickers.registerScheme();
 const cliInstall = process.argv.includes('--install-appimage');
 const cliUninstall = process.argv.includes('--uninstall-appimage');
 const cliMode = cliInstall || cliUninstall;
+
+deepLinks.init();
+
+function applyStartupActions() {
+  const run = (flag, command) => {
+    if (!process.argv.includes(flag)) return;
+    setTimeout(() => {
+      try {
+        handleCommand(command);
+      } catch {
+        /* окно ещё не готово */
+      }
+    }, 1200);
+  };
+  run('--pip', 'pip');
+  run('--messages', 'chat');
+  run('--mute', 'mute');
+}
 
 let mediaKeysFailed = false;
 
@@ -73,9 +98,10 @@ const gotLock = cliMode ? true : app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, argv) => {
     if (ctx.win && !ctx.win.isDestroyed()) showWindow();
     else createWindow();
+    deepLinks.queueFrom(argv);
   });
 
   app.whenReady().then(() => {
@@ -93,6 +119,7 @@ if (!gotLock) {
       return;
     }
 
+    resilience.init();
     nativeTheme.themeSource = 'dark';
     app.setAppUserModelId('app.octo.tiktok');
     ctx.appimageInstalled = appimage.isInstalled();
@@ -109,6 +136,7 @@ if (!gotLock) {
     const rebuildMenus = () => {
       buildAppMenu();
       refreshTrayMenu();
+      jumpList.install();
     };
     cosmetics.setOnChange(rebuildMenus);
     region.setOnChange(rebuildMenus);
@@ -118,7 +146,18 @@ if (!gotLock) {
     });
     buildAppMenu();
     createWindow();
-    plugins.init({ onChange: rebuildMenus });
+    deepLinks.queueFrom(process.argv);
+    deepLinks.setReady();
+    applyStartupActions();
+    jumpList.install();
+    plugins.init({ onChange: rebuildMenus, safeMode: resilience.isSafeMode() });
+    settingsTransfer.init({
+      onChange: () => {
+        rebuildMenus();
+        session.applySpellChecker();
+      },
+    });
+    privacy.init();
 
     ctx.trayActions = {
       mute: () => handleCommand('mute'),

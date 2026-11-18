@@ -14,6 +14,16 @@ const tr = (text) => (window.octoI18n ? window.octoI18n.translate(text) : text);
 const el = {
   chrome: $('chrome'),
   titlebar: $('titlebar'),
+  baronly: $('baronly'),
+  barTitle: $('barTitle'),
+  barPrev: $('btnBarPrev'),
+  barPlay: $('btnBarPlay'),
+  barNext: $('btnBarNext'),
+  barPip: $('btnBarPip'),
+  barExit: $('btnBarExit'),
+  barMute: $('btnBarMute'),
+  barVolume: $('barVolume'),
+  barVolumeValue: $('barVolumeValue'),
   pipbar: $('pipbar'),
   pipTitle: $('pipTitle'),
   pipPrev: $('btnPipPrev'),
@@ -22,6 +32,9 @@ const el = {
   pipAuto: $('btnPipAuto'),
   pipAdaptive: $('btnPipAdaptive'),
   pipClose: $('btnPipClose'),
+  pipSeek: $('pipSeek'),
+  pipTime: $('pipTime'),
+  pipRewind: $('btnPipRewind'),
   back: $('btnBack'),
   forward: $('btnForward'),
   reload: $('btnReload'),
@@ -47,18 +60,86 @@ const el = {
   panel: $('panel'),
   btnPanel: $('btnPanel'),
   btnStickers: $('btnStickers'),
+  btnPluginsActive: $('btnPluginsActive'),
+  chat: $('btnChat'),
+  chatResize: $('chatResize'),
+  rowChatDock: $('rowChatDock'),
+  rowNotify: $('rowNotify'),
+  rowNotifyQuiet: $('rowNotifyQuiet'),
+  rowNotifyDnd: $('rowNotifyDnd'),
+  notifyFrom: $('notifyFrom'),
+  notifyTo: $('notifyTo'),
+  repliesInput: $('repliesInput'),
+  librarySearch: $('librarySearch'),
+  libraryList: $('libraryList'),
+  libraryEmpty: $('libraryEmpty'),
+  statsToday: $('statsToday'),
+  statsTodayVideos: $('statsTodayVideos'),
+  statsWeek: $('statsWeek'),
+  statsWeekVideos: $('statsWeekVideos'),
+  statsAuthors: $('statsAuthors'),
+  statsEmpty: $('statsEmpty'),
+  rowFocus: $('rowFocus'),
+  focusMinutes: $('focusMinutes'),
+  focusBreak: $('focusBreak'),
+  rowLibraryAuto: $('rowLibraryAuto'),
+  rowFilters: $('rowFilters'),
+  filterKeywords: $('filterKeywords'),
+  filterHashtags: $('filterHashtags'),
+  filterAuthors: $('filterAuthors'),
+  rowAdsPip: $('rowAdsPip'),
+  adsCount: $('adsCount'),
+  adsJournal: $('adsJournal'),
+  rowDownloadAuto: $('rowDownloadAuto'),
+  rowDownloadFolder: $('rowDownloadFolder'),
+  downloadTemplate: $('downloadTemplate'),
+  downloadLimit: $('downloadLimit'),
+  gifDuration: $('gifDuration'),
+  gifFps: $('gifFps'),
+  gifWidth: $('gifWidth'),
+  rowCustom: $('rowCustom'),
+  customCss: $('customCss'),
+  customJs: $('customJs'),
+  popover: $('popover'),
+  stickerPopover: $('stickerPopover'),
+  stickerPopoverGrid: $('stickerPopoverGrid'),
+  stickerPopoverEmpty: $('stickerPopoverEmpty'),
+  stickerPopoverCount: $('stickerPopoverCount'),
+  btnStickerAdd: $('btnStickerAdd'),
+  btnStickerFolder: $('btnStickerFolder'),
+  btnNativeStickers: $('btnNativeStickers'),
+  btnStickerPopoverClose: $('btnStickerPopoverClose'),
+  pluginsPopover: $('pluginsPopover'),
+  pluginsPopoverList: $('pluginsPopoverList'),
+  pluginsPopoverEmpty: $('pluginsPopoverEmpty'),
+  pluginsPopoverCount: $('pluginsPopoverCount'),
+  btnPluginsManager: $('btnPluginsManager'),
+  btnPluginsPopoverClose: $('btnPluginsPopoverClose'),
+  btnPanelBack: $('btnPanelBack'),
   btnPanelClose: $('btnPanelClose'),
+  panelHeadTitle: $('panelHeadTitle'),
+  panelDetailTitle: $('panelDetailTitle'),
   panelVersion: $('panelVersion'),
+  panelSearchBar: $('panelSearchBar'),
   panelSearch: $('panelSearch'),
   panelSearchClear: $('btnPanelSearchClear'),
   panelNoResults: $('panelNoResults'),
+  panelBody: $('panelBody'),
   panelZoom: $('panelZoom'),
+  backupLatest: $('backupLatest'),
+  privacySize: $('privacySize'),
+  privacyList: $('privacyList'),
+  offlineScreen: $('offlineScreen'),
+  rowSafeMode: $('rowSafeMode'),
+  safeModeNote: $('safeModeNote'),
+  rowMemoryGuard: $('rowMemoryGuard'),
+  rowEco: $('rowEco'),
+  ecoNote: $('ecoNote'),
+  uiScaleSelect: $('uiScaleSelect'),
+  rowBackupRestore: $('rowBackupRestore'),
   panelCosmetics: $('panelCosmetics'),
   panelDownloads: $('panelDownloads'),
   downloadsEmpty: $('downloadsEmpty'),
-  stickersCount: $('stickersCount'),
-  stickerGrid: $('stickerGrid'),
-  stickersEmpty: $('stickersEmpty'),
   panelPlugins: $('panelPlugins'),
   panelPluginActions: $('panelPluginActions'),
   panelPluginsEmpty: $('panelPluginsEmpty'),
@@ -67,6 +148,13 @@ const el = {
   rowMute: $('rowMute'),
   volumeRange: $('volumeRange'),
   volumeValue: $('volumeValue'),
+  eqSelect: $('eqSelect'),
+  rowMono: $('rowMono'),
+  audioSinkSelect: $('audioSinkSelect'),
+  rowSleepEnd: $('rowSleepEnd'),
+  rowSleepFade: $('rowSleepFade'),
+  sleepVideosLabel: $('sleepVideosLabel'),
+  sleepVideosValue: $('sleepVideosValue'),
   rowPip: $('rowPip'),
   rowPipAuto: $('rowPipAuto'),
   rowPipAdaptive: $('rowPipAdaptive'),
@@ -78,6 +166,26 @@ const el = {
   rowLoop: $('rowLoop'),
   rowPauseBlur: $('rowPauseBlur'),
   rowAdSkip: $('rowAdSkip'),
+  rowFeedKeys: $('rowFeedKeys'),
+  rowKeepAwake: $('rowKeepAwake'),
+  idlePauseSelect: $('idlePauseSelect'),
+  keymapProfile: $('keymapProfile'),
+  keymapRows: $('keymapRows'),
+  rowCaptions: $('rowCaptions'),
+  rowCaptionBg: $('rowCaptionBg'),
+  rowCaptionOutline: $('rowCaptionOutline'),
+  captionSizeRange: $('captionSizeRange'),
+  captionSizeValue: $('captionSizeValue'),
+  brightnessRange: $('brightnessRange'),
+  brightnessValue: $('brightnessValue'),
+  contrastRange: $('contrastRange'),
+  contrastValue: $('contrastValue'),
+  warmthRange: $('warmthRange'),
+  warmthValue: $('warmthValue'),
+  videoDateValue: $('videoDateValue'),
+  qrCard: $('qrCard'),
+  qrCanvas: $('qrCanvas'),
+  qrUrl: $('qrUrl'),
   regionSelect: $('regionSelect'),
   regionProxy: $('regionProxy'),
   regionProxyState: $('regionProxyState'),
@@ -111,9 +219,23 @@ const state = {
   find: { open: false, text: '', matches: 0, active: 0 },
   download: null,
   panel: false,
+  popover: null,
   panelWidth: 300,
   palette: false,
-  player: { speed: 1, volume: 1, startMuted: false, loop: false, pauseOnBlur: false },
+  player: {
+    speed: 1,
+    volume: 1,
+    startMuted: false,
+    loop: false,
+    pauseOnBlur: false,
+    sinkId: '',
+    equalizer: 'off',
+    mono: false,
+    brightness: 100,
+    contrast: 100,
+    warmth: 0,
+    fit: 'auto',
+  },
   cosmetics: [],
   closeToTray: false,
   autostart: false,
@@ -131,6 +253,50 @@ const state = {
   downloads: [],
   sleepTimerEnds: 0,
   sleepTimerMinutes: 0,
+  sleepTimerMode: 'off',
+  sleepTimerVideos: 3,
+  sleepTimerVideosLeft: 0,
+  sleepTimerFade: false,
+  audioDevices: [],
+  pipTime: 0,
+  pipDuration: 0,
+  feedKeys: true,
+  idlePause: 0,
+  keepAwake: false,
+  keymap: { profile: 'default', profiles: [], rows: [] },
+  subtitles: { enabled: false, size: 100, background: true, outline: true },
+  videoDate: '',
+  qr: null,
+  barOnly: false,
+  chat: { open: false, width: 420, dock: true },
+  notifications: {
+    enabled: false,
+    dnd: false,
+    dndFrom: '23:00',
+    dndTo: '08:00',
+    quietFocused: true,
+  },
+  replies: [],
+  library: { items: [], queue: [] },
+  stats: {
+    today: { minutes: 0, seconds: 0, videos: 0 },
+    week: { minutes: 0, videos: 0 },
+    topAuthors: [],
+  },
+  focus: { enabled: false, minutes: 25, breakMinutes: 5, phase: 'off', elapsed: 0, total: 1500 },
+  ambient: false,
+  filters: { enabled: false, keywords: [], hashtags: [], authors: [] },
+  adsInPip: true,
+  adsSkipped: 0,
+  adJournal: [],
+  downloadNaming: {
+    auto: false,
+    template: '{author}-{date}-{title}',
+    folderPerAuthor: false,
+    limit: 2,
+  },
+  gif: { duration: 3, fps: 10, width: 480 },
+  customCode: { enabled: false, cssLength: 0, jsLength: 0 },
   version: '',
   plugins: {
     managerOpen: false,
@@ -148,9 +314,22 @@ let toastText = '';
 let toastTimer = null;
 let findWasOpen = false;
 
-// Открытые разделы панели функций и текущий поисковый запрос.
-const openCategories = new Set(['page']);
+// Раздел, открытый как подстраница настроек, и текущий поисковый запрос.
+const PANEL_GROUPS = [
+  { title: 'Просмотр', cats: ['page', 'picture', 'filters', 'ads'] },
+  { title: 'Плеер и звук', cats: ['playback', 'player', 'gif'] },
+  { title: 'Управление', cats: ['keys', 'focus'] },
+  { title: 'Общение', cats: ['notify', 'replies'] },
+  { title: 'Библиотека', cats: ['library', 'stats', 'downloads'] },
+  { title: 'Внешний вид', cats: ['cosmetics', 'custom'] },
+  { title: 'Система', cats: ['region', 'language', 'plugins', 'data', 'privacy', 'app'] },
+];
+const panelGroupNodes = [];
+let panelCategory = null;
 let panelQuery = '';
+let panelListScroll = 0;
+
+buildPanelNav();
 
 if (api.ui.platform === 'darwin') document.body.classList.add('mac');
 
@@ -162,12 +341,21 @@ const actions = [
   [el.reload, 'reload'],
   [el.home, 'home'],
   [el.btnStickers, 'stickerPanel'],
+  [el.btnPluginsActive, 'pluginsActive'],
+  [el.chat, 'chat'],
   [el.pip, 'pip'],
+  [el.barPrev, 'feedPrev'],
+  [el.barPlay, 'togglePlayback'],
+  [el.barNext, 'feedNext'],
+  [el.barPip, 'barPip'],
+  [el.barExit, 'barExit'],
+  [el.barMute, 'mute'],
   [el.pipPrev, 'feedPrev'],
   [el.pipPlay, 'togglePlayback'],
   [el.pipNext, 'feedNext'],
   [el.pipAuto, 'pipAuto'],
   [el.pipAdaptive, 'pipAdaptive'],
+  [el.pipRewind, 'pipRewind'],
   [el.pipClose, 'pipClose'],
   [el.mute, 'mute'],
   [el.top, 'onTop'],
@@ -192,6 +380,7 @@ el.btnPanel.addEventListener('click', (event) => {
   api.cmd('panel');
 });
 el.btnPanelClose.addEventListener('click', () => api.cmd('panel'));
+el.btnPanelBack.addEventListener('click', closePanelCategory);
 
 el.panelSearch.addEventListener('input', applyPanelFilter);
 el.panelSearch.addEventListener('keydown', (event) => {
@@ -210,13 +399,22 @@ el.panelSearchClear.addEventListener('click', () => {
 el.panel.addEventListener('click', (event) => {
   const catHead = event.target.closest('[data-cat-head]');
   if (catHead) {
-    toggleCategory(catHead.dataset.catHead);
+    openPanelCategory(catHead.dataset.catHead);
     return;
   }
 
   const sleep = event.target.closest('[data-sleep]');
   if (sleep) {
     api.cmd('sleepTimer', Number(sleep.dataset.sleep));
+    return;
+  }
+
+  const sleepVideos = event.target.closest('[data-sleep-videos]');
+  if (sleepVideos) {
+    const raw = sleepVideos.dataset.sleepVideos;
+    const preset = Math.min(50, Math.max(1, Number(state.sleepTimerVideos) || 3));
+    const value = raw === 'start' ? preset : preset + Number(raw);
+    api.cmd('sleepVideos', Math.min(50, Math.max(1, value)));
     return;
   }
 
@@ -238,6 +436,12 @@ el.panel.addEventListener('click', (event) => {
     return;
   }
 
+  const fit = event.target.closest('[data-picture-fit]');
+  if (fit) {
+    api.cmd('pictureFit', fit.dataset.pictureFit);
+    return;
+  }
+
   const playerToggle = event.target.closest('[data-player-toggle]');
   if (playerToggle) {
     api.cmd('playerToggle', playerToggle.dataset.playerToggle);
@@ -256,20 +460,28 @@ el.panel.addEventListener('click', (event) => {
     return;
   }
 
-  const stickerRemove = event.target.closest('[data-sticker-remove]');
-  if (stickerRemove) {
-    api.cmd('stickerRemove', stickerRemove.dataset.stickerRemove);
-    return;
-  }
-
-  const stickerSend = event.target.closest('[data-sticker-send]');
-  if (stickerSend) {
-    api.cmd('stickerSend', stickerSend.dataset.stickerSend);
-    return;
-  }
-
   const row = event.target.closest('[data-cmd]');
   if (!row) return;
+  if (row.dataset.cmd === 'sleepMode') {
+    api.cmd('sleepMode', state.sleepTimerMode === 'end' ? 'off' : 'end');
+    return;
+  }
+  if (row.dataset.cmd === 'repliesSave') {
+    api.cmd('repliesSet', el.repliesInput.value);
+    return;
+  }
+  if (row.dataset.cmd === 'libraryExport') {
+    api.cmd('libraryExport', row.dataset.export || 'json');
+    return;
+  }
+  if (row.dataset.cmd === 'privacyDelete') {
+    api.cmd('privacyDelete', { id: row.dataset.id });
+    return;
+  }
+  if (row.dataset.cmd === 'customCodeApply') {
+    api.cmd('customCodeSet', { css: el.customCss.value, js: el.customJs.value });
+    return;
+  }
   if (row.dataset.cmd === 'regionProxyApply') {
     api.cmd('regionProxyApply', el.regionProxy.value.trim());
     return;
@@ -277,16 +489,286 @@ el.panel.addEventListener('click', (event) => {
   api.cmd(row.dataset.cmd);
 });
 
+// Быстрые меню под полосой: стикеры и действия активных плагинов.
+el.stickerPopover.addEventListener('click', (event) => {
+  const stickerSend = event.target.closest('[data-sticker-send]');
+  if (stickerSend) {
+    api.cmd('stickerSend', stickerSend.dataset.stickerSend);
+    return;
+  }
+
+  const stickerRemove = event.target.closest('[data-sticker-remove]');
+  if (stickerRemove) api.cmd('stickerRemove', stickerRemove.dataset.stickerRemove);
+});
+
+el.pluginsPopover.addEventListener('click', (event) => {
+  const action = event.target.closest('[data-plugin-action]');
+  if (action) api.cmd(action.dataset.pluginAction);
+});
+
+el.btnStickerAdd.addEventListener('click', () => api.cmd('stickerAdd'));
+el.btnStickerFolder.addEventListener('click', () => api.cmd('stickerFolder'));
+el.btnNativeStickers.addEventListener('click', () => api.cmd('nativeStickers'));
+el.btnStickerPopoverClose.addEventListener('click', () => api.cmd('stickerPanel'));
+el.btnPluginsManager.addEventListener('click', () => api.cmd('plugins'));
+el.btnPluginsPopoverClose.addEventListener('click', () => api.cmd('pluginsActive'));
+
 // Громкость: ползунок живёт в панели и меняет volume у видео сайта.
+// Выше 100 % громкость усиляет Web Audio-цепочка в странице (см. player.js).
 let volumeTimer = null;
 el.volumeRange.addEventListener('input', () => {
-  const percent = Math.min(100, Math.max(0, Math.round(Number(el.volumeRange.value) || 0)));
+  const percent = Math.min(200, Math.max(0, Math.round(Number(el.volumeRange.value) || 0)));
   paintVolume(percent);
   clearTimeout(volumeTimer);
   volumeTimer = setTimeout(() => {
     api.cmd('playerVolume', percent / 100);
   }, 40);
 });
+
+// Эквалайзер и аудиовыход: селекты применяются сразу.
+el.eqSelect.addEventListener('change', () => api.cmd('playerEqualizer', el.eqSelect.value));
+el.audioSinkSelect.addEventListener('change', () =>
+  api.cmd('playerSink', el.audioSinkSelect.value),
+);
+
+// Громкость в режиме «только полоса»: тот же playerVolume.
+let barVolumeTimer = null;
+el.barVolume.addEventListener('input', () => {
+  const percent = Math.min(200, Math.max(0, Math.round(Number(el.barVolume.value) || 0)));
+  paintBarVolume(percent);
+  clearTimeout(barVolumeTimer);
+  barVolumeTimer = setTimeout(() => {
+    api.cmd('playerVolume', percent / 100);
+  }, 40);
+});
+
+// Картинка: яркость, контраст, тёплый оттенок и размер субтитров.
+const pictureTimers = {};
+for (const key of ['brightness', 'contrast', 'warmth']) {
+  const range = el[`${key}Range`];
+  const value = el[`${key}Value`];
+  range.addEventListener('input', () => {
+    const number = Number(range.value) || 0;
+    paintRange(range, value, number);
+    clearTimeout(pictureTimers[key]);
+    pictureTimers[key] = setTimeout(() => {
+      api.cmd('picture', { [key]: number });
+    }, 60);
+  });
+}
+
+let captionTimer = null;
+el.captionSizeRange.addEventListener('input', () => {
+  const number = Number(el.captionSizeRange.value) || 100;
+  paintRange(el.captionSizeRange, el.captionSizeValue, number);
+  clearTimeout(captionTimer);
+  captionTimer = setTimeout(() => {
+    api.cmd('captionSize', number);
+  }, 60);
+});
+
+// Питание и простой.
+el.idlePauseSelect.addEventListener('change', () =>
+  api.cmd('idlePause', Number(el.idlePauseSelect.value) || 0),
+);
+
+// Фильтры контента: списки правил сохраняются целиком при любом изменении.
+const saveFilters = () =>
+  api.cmd('filtersSet', {
+    keywords: el.filterKeywords.value,
+    hashtags: el.filterHashtags.value,
+    authors: el.filterAuthors.value,
+  });
+
+el.filterKeywords.addEventListener('change', saveFilters);
+el.filterHashtags.addEventListener('change', saveFilters);
+el.filterAuthors.addEventListener('change', saveFilters);
+
+// Загрузки: шаблон имени и лимит одновременных.
+el.downloadTemplate.addEventListener('change', () =>
+  api.cmd('downloadTemplate', el.downloadTemplate.value),
+);
+el.downloadLimit.addEventListener('change', () =>
+  api.cmd('downloadLimit', Number(el.downloadLimit.value) || 2),
+);
+
+// GIF: параметры сохраняются сразу.
+el.gifDuration.addEventListener('change', () =>
+  api.cmd('gifDuration', Number(el.gifDuration.value)),
+);
+el.gifFps.addEventListener('change', () => api.cmd('gifFps', Number(el.gifFps.value)));
+el.gifWidth.addEventListener('change', () => api.cmd('gifWidth', Number(el.gifWidth.value)));
+
+// Focus mode: длительность просмотра и перерыва.
+el.focusMinutes.addEventListener('change', () =>
+  api.cmd('focusMinutes', Number(el.focusMinutes.value) || 25),
+);
+el.focusBreak.addEventListener('change', () =>
+  api.cmd('focusBreak', Number(el.focusBreak.value) || 5),
+);
+
+// Уведомления: расписание «не беспокоить».
+el.notifyFrom.addEventListener('change', () => api.cmd('notifyFrom', el.notifyFrom.value));
+el.notifyTo.addEventListener('change', () => api.cmd('notifyTo', el.notifyTo.value));
+
+// Библиотека: поиск по сохранённому и заметки.
+el.librarySearch.addEventListener('input', () => renderLibrary());
+
+el.libraryList.addEventListener('click', (event) => {
+  const item = event.target.closest('.library-item');
+  if (!item) return;
+  const id = item.dataset.id;
+  if (event.target.closest('[data-library-open]')) api.cmd('libraryOpen', id);
+  else if (event.target.closest('[data-library-remove]')) api.cmd('libraryRemove', id);
+  else if (event.target.closest('[data-library-queue]')) api.cmd('libraryQueue', id);
+});
+
+el.libraryList.addEventListener('change', (event) => {
+  const note = event.target.closest('[data-library-note]');
+  if (!note) return;
+  const item = note.closest('.library-item');
+  if (!item) return;
+  api.cmd('libraryNote', { id: item.dataset.id, note: note.value });
+});
+
+// Ширина чата: тянем полоску между чатом и лентой, двойной клик — сброс.
+let chatDrag = null;
+
+function chatLeftOffset() {
+  return Number(state.panel) ? Number(state.panelWidth) || 300 : 0;
+}
+
+function clampChatWidth(value) {
+  return Math.min(760, Math.max(300, Math.round(Number(value) || 420)));
+}
+
+el.chatResize.addEventListener('pointerdown', (event) => {
+  event.preventDefault();
+  const width = clampChatWidth(state.chat?.width || 420);
+  chatDrag = { startX: event.clientX, startWidth: width, width, timer: null };
+  document.body.classList.add('is-resizing-chat');
+  try {
+    el.chatResize.setPointerCapture(event.pointerId);
+  } catch {
+    /* синтетическое событие без захвата */
+  }
+});
+
+el.chatResize.addEventListener('dblclick', () => api.cmd('chatResize', 420));
+
+window.addEventListener('pointermove', (event) => {
+  if (!chatDrag) return;
+  chatDrag.width = clampChatWidth(chatDrag.startWidth + (event.clientX - chatDrag.startX));
+  el.chatResize.style.left = `${chatLeftOffset() + chatDrag.width}px`;
+  clearTimeout(chatDrag.timer);
+  chatDrag.timer = setTimeout(() => api.cmd('chatResize', chatDrag.width), 40);
+});
+
+const endChatDrag = () => {
+  if (!chatDrag) return;
+  clearTimeout(chatDrag.timer);
+  api.cmd('chatResize', chatDrag.width);
+  chatDrag = null;
+  document.body.classList.remove('is-resizing-chat');
+};
+
+window.addEventListener('pointerup', endChatDrag);
+window.addEventListener('pointercancel', endChatDrag);
+
+// Редактор горячих клавиш: клик по строке — ждём сочетание.
+let capturing = null;
+let keymapSignature = '';
+let keymapProfileSignature = '';
+
+el.keymapProfile.addEventListener('change', () => api.cmd('keymapProfile', el.keymapProfile.value));
+
+el.keymapRows.addEventListener('click', (event) => {
+  const row = event.target.closest('[data-keymap]');
+  if (!row) return;
+  capturing = row.dataset.keymap;
+  api.cmd('keymapCapturing', true);
+  renderKeymap();
+});
+
+function shortcutFromEvent(event) {
+  if (['Control', 'Shift', 'Alt', 'Meta'].includes(event.key)) return null;
+  const named = {
+    ArrowLeft: 'Left',
+    ArrowRight: 'Right',
+    ArrowUp: 'Up',
+    ArrowDown: 'Down',
+    ' ': 'Space',
+    Escape: 'Esc',
+  };
+  let key = named[event.key] || event.key;
+  if (key === '+') key = '=';
+  if (key.length === 1) key = key.toUpperCase();
+  if (!key || key.length > 10) return null;
+
+  const parts = [];
+  if (event.ctrlKey || event.metaKey) parts.push('Ctrl');
+  if (event.altKey) parts.push('Alt');
+  if (event.shiftKey) parts.push('Shift');
+  return [...parts, key].join('+');
+}
+
+// Пока ждём сочетание, перехватываем клавиши до остального интерфейса.
+window.addEventListener(
+  'keydown',
+  (event) => {
+    if (!capturing) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const id = capturing;
+    if (event.key === 'Escape') {
+      capturing = null;
+      api.cmd('keymapCapturing', false);
+      renderKeymap();
+      return;
+    }
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      capturing = null;
+      api.cmd('keymapCapturing', false);
+      api.cmd('keymapSet', { id, keys: '' });
+      return;
+    }
+
+    const keys = shortcutFromEvent(event);
+    if (!keys) return;
+    capturing = null;
+    api.cmd('keymapCapturing', false);
+    api.cmd('keymapSet', { id, keys });
+  },
+  true,
+);
+
+// Перемотка в PiP: пока тянем ползунок и сразу после перемотки не перебиваем
+// его значением из main, иначе он прыгает назад до ответа страницы.
+let pipSeeking = false;
+let pipSeekHold = 0;
+
+function pipSeekSeconds() {
+  const duration = Number(state.pipDuration) || 0;
+  return (Math.min(1000, Math.max(0, Number(el.pipSeek.value) || 0)) / 1000) * duration;
+}
+
+el.pipSeek.addEventListener('input', () => {
+  pipSeeking = true;
+  el.pipTime.textContent = `${formatTime(pipSeekSeconds())} / ${formatTime(
+    Number(state.pipDuration) || 0,
+  )}`;
+});
+
+const commitPipSeek = () => {
+  if (!pipSeeking) return;
+  pipSeeking = false;
+  pipSeekHold = Date.now() + 500;
+  api.cmd('pipSeek', pipSeekSeconds());
+};
+
+el.pipSeek.addEventListener('change', commitPipSeek);
+el.pipSeek.addEventListener('pointerup', commitPipSeek);
 
 // Язык: интерфейс перерисовывается сразу, язык сайта — после перезагрузки.
 el.appLanguageSelect.addEventListener('change', () =>
@@ -295,6 +777,11 @@ el.appLanguageSelect.addEventListener('change', () =>
 el.siteLanguageSelect.addEventListener('change', () =>
   api.cmd('siteLanguage', el.siteLanguageSelect.value),
 );
+
+// Масштаб меняет только нашу полосу и панель, не страницу TikTok.
+el.uiScaleSelect.addEventListener('change', () => {
+  api.cmd('uiScale', Number(el.uiScaleSelect.value));
+});
 
 // Регион: выбор страны применяется сразу, прокси — по кнопке или Enter.
 el.regionSelect.addEventListener('change', () => api.cmd('region', el.regionSelect.value));
@@ -305,17 +792,30 @@ el.regionProxy.addEventListener('keydown', (event) => {
 });
 api.onPanelCategory((id) => {
   if (!id) return;
-  clearPanelSearch();
-  openCategories.add(id);
-  applyPanelFilter();
-  const category = el.panel.querySelector(`[data-cat="${id}"]`);
-  if (category && category.scrollIntoView) category.scrollIntoView({ block: 'nearest' });
+  openPanelCategory(id);
 });
 
 // Палитра команд.
 el.paletteInput.addEventListener('input', () => {
   paletteIndex = 0;
   filterPalette();
+});
+
+el.palette.addEventListener('keydown', (event) => {
+  if (event.key !== 'Tab') return;
+  const focusables = [...el.palette.querySelectorAll('button, input, [tabindex]')].filter(
+    (node) => node.tabIndex >= 0 && node.offsetParent !== null,
+  );
+  if (!focusables.length) return;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 });
 
 el.paletteInput.addEventListener('keydown', (event) => {
@@ -431,9 +931,25 @@ function setSwitch(row, value) {
 }
 
 function paintVolume(percent) {
-  const value = Math.min(100, Math.max(0, Math.round(Number(percent) || 0)));
-  el.volumeRange.style.setProperty('--volume', `${value}%`);
+  const value = Math.min(200, Math.max(0, Math.round(Number(percent) || 0)));
+  // Ползунок идёт до 200 %, заливка трека — в долях от всей шкалы.
+  el.volumeRange.style.setProperty('--volume', `${value / 2}%`);
   el.volumeValue.textContent = `${value} %`;
+}
+
+function paintBarVolume(percent) {
+  const value = Math.min(200, Math.max(0, Math.round(Number(percent) || 0)));
+  el.barVolume.style.setProperty('--volume', `${value / 2}%`);
+  el.barVolumeValue.textContent = `${value} %`;
+}
+
+/** Заливка ползунка для произвольного диапазона (яркость, контраст и т. п.). */
+function paintRange(range, valueNode, value) {
+  const min = Number(range.min) || 0;
+  const max = Number(range.max) || 100;
+  const number = Math.min(max, Math.max(min, Math.round(Number(value) || 0)));
+  range.style.setProperty('--volume', `${((number - min) / (max - min)) * 100}%`);
+  valueNode.textContent = `${number} %`;
 }
 
 let cosmeticsSignature = '';
@@ -528,16 +1044,16 @@ function renderPlugins(summary) {
 
 let stickersSignature = '';
 
-function renderStickers(summary) {
+function renderStickerPicker(summary) {
   const items = Array.isArray(summary?.items) ? summary.items : [];
 
-  el.stickersCount.textContent = items.length ? String(items.length) : '';
-  el.stickersEmpty.hidden = items.length > 0;
+  el.stickerPopoverCount.textContent = items.length ? String(items.length) : '';
+  el.stickerPopoverEmpty.hidden = items.length > 0;
 
   const signature = items.map((item) => item.id).join('|');
   if (signature === stickersSignature) return;
   stickersSignature = signature;
-  el.stickerGrid.replaceChildren();
+  el.stickerPopoverGrid.replaceChildren();
 
   for (const item of items) {
     const tile = document.createElement('div');
@@ -548,7 +1064,7 @@ function renderStickers(summary) {
     send.className = 'sticker-send';
     send.dataset.stickerSend = item.id;
     send.title = `Отправить «${item.name}»`;
-    send.setAttribute('aria-label', `Отправить стикер «${item.name}»`);
+    send.setAttribute('aria-label', `Отправить «${item.name}»`);
 
     const image = document.createElement('img');
     image.src = `octo-sticker://thumb/${encodeURIComponent(item.id)}`;
@@ -568,12 +1084,98 @@ function renderStickers(summary) {
     remove.type = 'button';
     remove.className = 'sticker-remove';
     remove.dataset.stickerRemove = item.id;
-    remove.title = 'Удалить стикер';
-    remove.setAttribute('aria-label', `Удалить стикер «${item.name}»`);
+    remove.title = 'Удалить';
+    remove.setAttribute('aria-label', 'Удалить');
     remove.textContent = '×';
 
     tile.append(send, remove);
-    el.stickerGrid.append(tile);
+    el.stickerPopoverGrid.append(tile);
+  }
+}
+
+let activePluginsSignature = '';
+
+/**
+ * Меню активных плагинов: только включённые плагины и их действия.
+ * Строки панели и команды плагина запускаются тем же диспетчером, что и
+ * строки в боковой панели, поэтому отдельного моста не нужно.
+ */
+function renderActivePlugins(summary) {
+  const plugins = summary || state.plugins || {};
+  const items = (Array.isArray(plugins.items) ? plugins.items : []).filter((item) => item.enabled);
+  const rows = Array.isArray(plugins.rows) ? plugins.rows : [];
+  const commands = Array.isArray(plugins.commands) ? plugins.commands : [];
+
+  el.pluginsPopoverCount.textContent = items.length ? String(items.length) : '';
+  el.pluginsPopoverEmpty.hidden = items.length > 0;
+
+  const signature = `${items
+    .map((item) => `${item.id}:${item.version}:${item.error}`)
+    .join('|')}#${rows.map((row) => `${row.id}:${row.label}:${row.pluginId}`).join('|')}#${commands
+    .map((command) => `${command.id}:${command.title}:${command.pluginId}`)
+    .join('|')}`;
+  if (signature === activePluginsSignature) return;
+  activePluginsSignature = signature;
+  el.pluginsPopoverList.replaceChildren();
+
+  for (const item of items) {
+    const card = document.createElement('section');
+    card.className = 'active-plugin';
+
+    const head = document.createElement('header');
+    head.className = 'active-plugin-head';
+
+    const name = document.createElement('span');
+    name.className = 'active-plugin-name';
+    name.textContent = item.name;
+    name.dataset.i18nSkip = '1';
+    head.append(name);
+
+    const badge = document.createElement('span');
+    badge.className = 'panel-row-badge';
+    if (item.error) {
+      badge.textContent = 'ошибка';
+      badge.classList.add('is-error');
+    } else if (item.dev) {
+      badge.textContent = 'dev';
+    } else {
+      badge.textContent = item.version || '';
+    }
+    head.append(badge);
+    card.append(head);
+
+    const actions = [
+      ...rows
+        .filter((row) => row.pluginId === item.id)
+        .map((row) => ({ id: row.id, label: row.label, description: row.description })),
+      ...commands
+        .filter((command) => command.pluginId === item.id)
+        .map((command) => ({
+          id: command.id,
+          label: command.title,
+          description: command.description,
+        })),
+    ];
+
+    if (!actions.length) {
+      const empty = document.createElement('p');
+      empty.className = 'active-plugin-empty';
+      empty.textContent = 'Нет действий';
+      card.append(empty);
+    }
+
+    for (const action of actions) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'active-plugin-action';
+      button.dataset.pluginAction = action.id;
+      button.dataset.i18nSkip = '1';
+      if (action.description) button.title = action.description;
+      button.textContent = action.label;
+      card.append(button);
+    }
+
+    el.pluginsPopoverList.append(card);
   }
 }
 
@@ -680,6 +1282,36 @@ function renderDownloads(list) {
   }
 }
 
+/** Раскладывает разделы по смысловым группам, сохраняя сами разделы в DOM. */
+function buildPanelNav() {
+  if (!el.panelBody) return;
+  const cats = new Map(
+    [...el.panelBody.querySelectorAll('.panel-cat')].map((cat) => [cat.dataset.cat, cat]),
+  );
+
+  for (const group of PANEL_GROUPS) {
+    const label = document.createElement('p');
+    label.className = 'panel-group';
+    label.textContent = group.title;
+    el.panelBody.append(label);
+
+    const members = [];
+    for (const id of group.cats) {
+      const cat = cats.get(id);
+      if (!cat) continue;
+      members.push(cat);
+      el.panelBody.append(cat);
+    }
+    panelGroupNodes.push({ label, cats: members });
+  }
+}
+
+/** Русский исходник названия раздела: перевод подставляется отдельно. */
+function panelCategorySource(cat) {
+  const title = cat?.querySelector('.panel-cat-title');
+  return window.octoI18n?.source?.(title) || title?.textContent || '';
+}
+
 function normalizeSearch(text) {
   return (text || '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
@@ -693,15 +1325,32 @@ function clearPanelSearch() {
 }
 
 /**
- * Раскрывает нужные категории и прячет всё, что не подходит под запрос.
- * При активном поиске категории раскрываются сами: пользователь ищет
- * функцию, а не место, где она лежит.
+ * Показывает либо список разделов, либо открытый раздел, либо результаты
+ * поиска. В поиске подходят и названия, и подсказки, и строки настроек.
  */
 function applyPanelFilter() {
   const query = normalizeSearch(el.panelSearch.value);
   panelQuery = query;
   el.panelSearchClear.hidden = !query;
 
+  const mode = query ? 'search' : panelCategory ? 'detail' : 'list';
+  el.panel.dataset.view = mode;
+
+  const currentCat = panelCategory
+    ? el.panel.querySelector(`.panel-cat[data-cat="${panelCategory}"]`)
+    : null;
+  el.btnPanelBack.hidden = mode !== 'detail';
+  el.panelHeadTitle.hidden = mode === 'detail';
+  el.panelDetailTitle.hidden = mode !== 'detail';
+  el.panelVersion.hidden = mode === 'detail';
+  el.panelSearchBar.hidden = mode === 'detail';
+
+  if (mode === 'detail' && currentCat) {
+    const title = tr(panelCategorySource(currentCat));
+    if (el.panelDetailTitle.textContent !== title) el.panelDetailTitle.textContent = title;
+  }
+
+  const visible = new Set();
   let visibleCategories = 0;
 
   for (const cat of el.panel.querySelectorAll('.panel-cat')) {
@@ -732,27 +1381,55 @@ function applyPanelFilter() {
       hint.classList.toggle('is-filtered', Boolean(query) && !titleMatch && !noteMatch);
     }
 
-    const categoryMatch = !query || titleMatch || noteMatch || rowMatch;
-    if (categoryMatch) visibleCategories += 1;
-    cat.classList.toggle('is-filtered', !categoryMatch);
+    let categoryMatch = true;
+    if (mode === 'detail') categoryMatch = cat === currentCat;
+    else if (query) categoryMatch = titleMatch || noteMatch || rowMatch;
 
-    const expanded = query ? categoryMatch : openCategories.has(cat.dataset.cat);
+    const expanded =
+      mode === 'detail' ? cat === currentCat : mode === 'search' ? categoryMatch : false;
+    cat.classList.toggle('is-filtered', !categoryMatch);
+    cat.classList.toggle('is-current', mode === 'detail' && cat === currentCat);
     body.hidden = !expanded;
     cat.dataset.open = String(expanded);
     cat.querySelector('[data-cat-head]')?.setAttribute('aria-expanded', String(expanded));
+
+    if (categoryMatch) {
+      visibleCategories += 1;
+      visible.add(cat);
+    }
   }
 
-  el.panelNoResults.hidden = !(query && visibleCategories === 0);
+  for (const group of panelGroupNodes) {
+    group.label.hidden = mode === 'detail' || !group.cats.some((cat) => visible.has(cat));
+  }
+
+  el.panelNoResults.hidden = !(mode === 'search' && visibleCategories === 0);
 }
 
-function toggleCategory(id) {
+/** Открывает раздел как отдельную страницу настроек. */
+function openPanelCategory(id) {
   if (!id) return;
-  // Во время поиска клик по заголовку не должен ощущаться сломанным:
-  // сбрасываем фильтр и переключаем выбранный раздел.
+  const cat = el.panel.querySelector(`.panel-cat[data-cat="${id}"]`);
+  if (!cat) return;
+
+  if (!panelCategory) panelListScroll = el.panelBody.scrollTop;
+  panelCategory = id;
   clearPanelSearch();
-  if (openCategories.has(id)) openCategories.delete(id);
-  else openCategories.add(id);
   applyPanelFilter();
+  el.panelBody.scrollTop = 0;
+  if (!el.panel.hidden) el.btnPanelBack.focus({ preventScroll: true });
+}
+
+/** Возвращает из раздела к списку и на прежнее место прокрутки. */
+function closePanelCategory() {
+  if (!panelCategory) return;
+  const id = panelCategory;
+  panelCategory = null;
+  applyPanelFilter();
+  el.panelBody.scrollTop = panelListScroll;
+
+  const head = el.panel.querySelector(`[data-cat-head="${id}"]`);
+  if (head) head.focus({ preventScroll: true });
 }
 
 function formatRemaining(ms) {
@@ -762,9 +1439,16 @@ function formatRemaining(ms) {
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
+/** Таймкод ролика: «1:05». */
+function formatTime(seconds) {
+  const total = Math.max(0, Math.floor(Number(seconds) || 0));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
 function renderSleep() {
   const ends = Number(state.sleepTimerEnds) || 0;
-  const active = ends > Date.now();
+  const mode = state.sleepTimerMode || 'off';
+  const active = mode === 'minutes' && ends > Date.now();
   el.sleepLabel.textContent = active
     ? `Таймер сна · ${formatRemaining(ends - Date.now())}`
     : 'Таймер сна';
@@ -776,6 +1460,30 @@ function renderSleep() {
     button.classList.toggle('is-on', selected);
     button.setAttribute('aria-pressed', String(selected));
   }
+
+  setSwitch(el.rowSleepEnd, mode === 'end');
+  setSwitch(el.rowSleepFade, Boolean(state.sleepTimerFade));
+
+  const total = Math.max(1, Number(state.sleepTimerVideos) || 3);
+  const left = mode === 'videos' ? Math.max(0, Number(state.sleepTimerVideosLeft) || 0) : 0;
+  el.sleepVideosLabel.textContent =
+    mode === 'videos' ? `Стоп после видео · осталось ${left}` : 'Стоп после видео';
+  el.sleepVideosValue.textContent = String(mode === 'videos' ? left : total);
+  el.sleepVideosValue.classList.toggle('is-on', mode === 'videos');
+}
+
+/** Прогресс и таймкод в полосе PiP. */
+function renderPipProgress() {
+  if (!state.pip) pipSeeking = false;
+  if (pipSeeking || Date.now() < pipSeekHold) return;
+
+  const duration = Math.max(0, Number(state.pipDuration) || 0);
+  const time = Math.max(0, Number(state.pipTime) || 0);
+  const fraction = duration > 0 ? Math.min(1, time / duration) : 0;
+
+  el.pipSeek.value = String(Math.round(fraction * 1000));
+  el.pipSeek.style.setProperty('--progress', `${(fraction * 100).toFixed(1)}%`);
+  el.pipTime.textContent = duration > 0 ? `${formatTime(time)} / ${formatTime(duration)}` : '—';
 }
 
 // --- Палитра команд ---------------------------------------------------------
@@ -793,10 +1501,13 @@ function paletteItems() {
     { label: 'Обновить без кэша', cmd: 'hardReload', hint: 'Ctrl Shift R' },
     { label: 'Поиск по странице', cmd: 'find', hint: 'Ctrl F' },
     { label: 'Панель функций', cmd: 'panel', hint: 'Ctrl Shift B' },
-    { label: 'Стикеры', cmd: 'stickerPanel' },
-    { label: 'Добавить стикеры…', cmd: 'stickerAdd' },
-    { label: 'Папка стикеров', cmd: 'stickerFolder' },
+    { label: 'Чат сбоку', cmd: 'chat', hint: 'Ctrl Shift C' },
+    { label: 'Картинки в чат', cmd: 'stickerPanel' },
+    { label: 'Добавить картинки…', cmd: 'stickerAdd' },
+    { label: 'Папка картинок', cmd: 'stickerFolder' },
+    { label: 'Стикеры TikTok', cmd: 'nativeStickers' },
     { label: 'Менеджер плагинов', cmd: 'plugins', hint: 'Ctrl Shift E' },
+    { label: 'Активные плагины', cmd: 'pluginsActive' },
     { label: 'Установить плагин из файла', cmd: 'pluginInstallFile' },
     { label: 'Документация по плагинам', cmd: 'pluginDocs' },
     { label: 'Правила публикации плагинов', cmd: 'pluginRules' },
@@ -804,6 +1515,39 @@ function paletteItems() {
     { label: 'Регион и прокси', cmd: 'regionPanel' },
     { label: 'Язык', cmd: 'languagePanel' },
     { label: 'Снимок кадра', cmd: 'screenshot', hint: 'Ctrl Shift S' },
+    { label: 'Снимок с аннотацией', cmd: 'screenshotAnnotate' },
+    { label: 'Открыть в браузере', cmd: 'openInBrowser', hint: 'Ctrl Shift U' },
+    { label: 'QR-код видео', cmd: 'qrVideo' },
+    { label: 'Экспорт GIF', cmd: 'gifExport' },
+    {
+      label: tr((state.focus || {}).enabled ? 'Выключить фокус-режим' : 'Включить фокус-режим'),
+      cmd: 'focusToggle',
+    },
+    { label: 'Амбиентный режим', cmd: 'ambientToggle' },
+    { label: 'Экспорт архива (ZIP)', cmd: 'archiveExport' },
+    { label: 'Сохранить ролик в библиотеку', cmd: 'libraryAdd' },
+    { label: 'Добавить в «Посмотреть позже»', cmd: 'libraryQueueAdd' },
+    { label: 'Библиотека', cmd: 'libraryPanel' },
+    { label: 'Статистика просмотра', cmd: 'statsPanel' },
+    { label: 'Режим «только полоса»', cmd: 'barOnly' },
+    { label: 'Выйти из режима «только полоса»', cmd: 'barExit' },
+    { label: 'Кадр как на сайте', cmd: 'pictureFit', payload: 'auto' },
+    { label: 'Вписать кадр', cmd: 'pictureFit', payload: 'contain' },
+    { label: 'Заполнить окно', cmd: 'pictureFit', payload: 'cover' },
+    { label: 'Сбросить картинку', cmd: 'pictureReset' },
+    {
+      label: tr(
+        state.subtitles?.enabled
+          ? 'Выключить субтитры по умолчанию'
+          : 'Включить субтитры по умолчанию',
+      ),
+      cmd: 'captionToggle',
+    },
+    { label: 'Клавиши и сочетания', cmd: 'keysPanel' },
+    {
+      label: tr(state.feedKeys ? 'Выключить клавиатурную ленту' : 'Включить клавиатурную ленту'),
+      cmd: 'feedKeys',
+    },
     { label: 'Звук вкл/выкл', cmd: 'mute', hint: 'Ctrl Shift M' },
     { label: 'Картинка в картинке', cmd: 'pip', hint: 'Ctrl Shift P' },
     { label: 'Следующее видео', cmd: 'feedNext', hint: 'Ctrl Shift →' },
@@ -833,11 +1577,21 @@ function paletteItems() {
   for (const minutes of [15, 30, 60]) {
     items.push({ label: `Таймер сна: ${minutes} мин`, cmd: 'sleepTimer', payload: minutes });
   }
+  items.push({ label: 'Таймер сна: до конца ролика', cmd: 'sleepMode', payload: 'end' });
   items.push({ label: 'Таймер сна: выключить', cmd: 'sleepTimer', payload: 0 });
+  items.push({ label: 'Плавное затухание', cmd: 'sleepFade' });
 
   for (const speed of [0.5, 1, 1.5, 2]) {
     items.push({ label: `Скорость ${speed}×`, cmd: 'playerSpeed', payload: speed });
   }
+
+  items.push(
+    { label: 'Эквалайзер: речь', cmd: 'playerEqualizer', payload: 'speech' },
+    { label: 'Эквалайзер: музыка', cmd: 'playerEqualizer', payload: 'music' },
+    { label: 'Эквалайзер: выключить', cmd: 'playerEqualizer', payload: 'off' },
+    { label: 'Моно для одного наушника', cmd: 'playerToggle', payload: 'mono' },
+    { label: 'Обновить аудиовыходы', cmd: 'audioDevices' },
+  );
 
   items.push(
     { label: 'Запускать без звука', cmd: 'playerToggle', payload: 'startMuted' },
@@ -848,6 +1602,22 @@ function paletteItems() {
       cmd: 'adsSkip',
     },
   );
+
+  items.push(
+    {
+      label: tr(state.notifications?.enabled ? 'Выключить уведомления' : 'Включить уведомления'),
+      cmd: 'notifyToggle',
+    },
+    {
+      label: tr(state.chat?.dock !== false ? 'Чат поверх ленты' : 'Чат поджимает ленту'),
+      cmd: 'chatDock',
+    },
+  );
+
+  for (const [index, text] of (Array.isArray(state.replies) ? state.replies : []).entries()) {
+    const short = text.length > 48 ? `${text.slice(0, 47)}…` : text;
+    items.push({ label: tr(`Быстрый ответ: ${short}`), cmd: 'replyInsert', payload: index });
+  }
 
   if (state.region && state.region.proxy) {
     items.push({ label: 'Сбросить прокси', cmd: 'regionProxyClear' });
@@ -980,14 +1750,427 @@ function renderPlayer() {
   // Пока пользователь тянет ползунок, не перебиваем его значениями из main.
   if (document.activeElement !== el.volumeRange) {
     const volume = player.volume === undefined ? 1 : Number(player.volume);
-    const percent = Math.round(Math.min(1, Math.max(0, volume || 0)) * 100);
+    const percent = Math.round(Math.min(2, Math.max(0, volume || 0)) * 100);
     el.volumeRange.value = String(percent);
     paintVolume(percent);
+  }
+
+  if (document.activeElement !== el.eqSelect) {
+    el.eqSelect.value = player.equalizer || 'off';
   }
 
   setSwitch(el.rowStartMuted, player.startMuted);
   setSwitch(el.rowLoop, player.loop);
   setSwitch(el.rowPauseBlur, player.pauseOnBlur);
+  setSwitch(el.rowMono, player.mono);
+  setSwitch(el.rowKeepAwake, state.keepAwake);
+  el.idlePauseSelect.value = String(Number(state.idlePause) || 0);
+  renderAudioSinks(player);
+}
+
+let sinkSignature = '';
+
+/** Список аудиовыходов приходит из страницы: в main нет mediaDevices. */
+function renderAudioSinks(player) {
+  const devices = Array.isArray(state.audioDevices) ? state.audioDevices : [];
+  const selected = typeof player.sinkId === 'string' ? player.sinkId : '';
+  const signature = `${selected}#${devices.map((device) => `${device.id}:${device.label}`).join('|')}`;
+  if (signature === sinkSignature) return;
+  sinkSignature = signature;
+
+  const label = (index) => tr('Выход {0}').replace('{0}', String(index + 1));
+  const options = [{ id: '', label: 'Системный вывод', skip: false }];
+  devices.forEach((device, index) => {
+    options.push({ id: device.id, label: device.label || label(index), skip: true });
+  });
+  // Выбранного устройства может уже не быть в системе — не подменяем его чужим.
+  if (selected && !options.some((item) => item.id === selected)) {
+    options.push({ id: selected, label: 'Выбранное устройство', skip: false });
+  }
+
+  el.audioSinkSelect.replaceChildren(
+    ...options.map((item) => {
+      const option = document.createElement('option');
+      option.value = item.id;
+      option.textContent = item.label;
+      option.selected = item.id === selected;
+      if (item.skip) option.dataset.i18nSkip = '1';
+      return option;
+    }),
+  );
+  el.audioSinkSelect.value = selected;
+}
+
+/** Редактор горячих клавиш: профили, строки команд и подсветка конфликтов. */
+function renderKeymap() {
+  const keymap = state.keymap || { profile: 'default', profiles: [], rows: [] };
+  const profiles = Array.isArray(keymap.profiles) ? keymap.profiles : [];
+  const rows = Array.isArray(keymap.rows) ? keymap.rows : [];
+
+  const profileSignature = `${keymap.profile}#${profiles
+    .map((profile) => `${profile.id}:${profile.label}`)
+    .join('|')}`;
+  if (profileSignature !== keymapProfileSignature) {
+    keymapProfileSignature = profileSignature;
+    el.keymapProfile.replaceChildren(
+      ...profiles.map((profile) => {
+        const option = document.createElement('option');
+        option.value = profile.id;
+        option.textContent = profile.label;
+        option.selected = profile.id === keymap.profile;
+        return option;
+      }),
+    );
+    el.keymapProfile.value = keymap.profile;
+  }
+
+  setSwitch(el.rowFeedKeys, state.feedKeys !== false);
+
+  const signature = `${capturing || ''}#${rows.map((row) => `${row.id}:${row.keys}`).join('|')}`;
+  if (signature === keymapSignature) return;
+  keymapSignature = signature;
+
+  const counts = new Map();
+  for (const row of rows) {
+    if (!row.keys) continue;
+    counts.set(row.keys, (counts.get(row.keys) || 0) + 1);
+  }
+
+  el.keymapRows.replaceChildren(
+    ...rows.map((row) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'keymap-row';
+      button.dataset.keymap = row.id;
+      button.classList.toggle('is-capturing', capturing === row.id);
+      button.classList.toggle('is-conflict', Boolean(row.keys) && (counts.get(row.keys) || 0) > 1);
+
+      const label = document.createElement('span');
+      label.className = 'keymap-label';
+      label.textContent = row.label;
+
+      const key = document.createElement('kbd');
+      key.className = 'keymap-key';
+      key.textContent = capturing === row.id ? 'Нажмите сочетание…' : row.keys || 'Не назначено';
+
+      button.append(label, key);
+      return button;
+    }),
+  );
+}
+
+/** Картинка и субтитры: ползунки, «вписать/заполнить» и тумблеры. */
+function renderPicture() {
+  const player = state.player || {};
+  const subtitles = state.subtitles || {};
+
+  if (document.activeElement !== el.brightnessRange) {
+    el.brightnessRange.value = String(Math.round(player.brightness ?? 100));
+  }
+  paintRange(el.brightnessRange, el.brightnessValue, Number(el.brightnessRange.value));
+
+  if (document.activeElement !== el.contrastRange) {
+    el.contrastRange.value = String(Math.round(player.contrast ?? 100));
+  }
+  paintRange(el.contrastRange, el.contrastValue, Number(el.contrastRange.value));
+
+  if (document.activeElement !== el.warmthRange) {
+    el.warmthRange.value = String(Math.round(player.warmth ?? 0));
+  }
+  paintRange(el.warmthRange, el.warmthValue, Number(el.warmthRange.value));
+
+  if (document.activeElement !== el.captionSizeRange) {
+    el.captionSizeRange.value = String(Math.round(subtitles.size ?? 100));
+  }
+  paintRange(el.captionSizeRange, el.captionSizeValue, Number(el.captionSizeRange.value));
+
+  const fit = player.fit === 'contain' || player.fit === 'cover' ? player.fit : 'auto';
+  for (const button of el.panel.querySelectorAll('[data-picture-fit]')) {
+    const active = button.dataset.pictureFit === fit;
+    button.classList.toggle('is-on', active);
+    button.setAttribute('aria-pressed', String(active));
+  }
+
+  setSwitch(el.rowCaptions, subtitles.enabled);
+  setSwitch(el.rowCaptionBg, subtitles.background !== false);
+  setSwitch(el.rowCaptionOutline, subtitles.outline !== false);
+
+  el.videoDateValue.textContent = state.videoDate || '—';
+}
+
+let qrSignature = '';
+
+/** QR рисуем на canvas: CSP не нужно расширять ради картинки из data:. */
+function renderQr() {
+  const qr = state.qr;
+  el.qrCard.hidden = !qr;
+  if (!qr) {
+    qrSignature = '';
+    return;
+  }
+
+  el.qrUrl.textContent = qr.url;
+  const signature = `${qr.url}#${qr.count}`;
+  if (signature === qrSignature) return;
+  qrSignature = signature;
+
+  const canvas = el.qrCanvas;
+  const context = canvas.getContext('2d');
+  if (!context) return;
+
+  const size = canvas.width;
+  const cell = size / qr.count;
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, size, size);
+  context.fillStyle = '#000000';
+  for (let y = 0; y < qr.count; y += 1) {
+    const row = qr.rows[y] || '';
+    for (let x = 0; x < row.length; x += 1) {
+      if (row[x] !== '1') continue;
+      context.fillRect(
+        Math.floor(x * cell),
+        Math.floor(y * cell),
+        Math.ceil(cell),
+        Math.ceil(cell),
+      );
+    }
+  }
+}
+
+/** Компактный пульт: без сайта и видео, только управление. */
+function renderBar() {
+  const bar = Boolean(state.barOnly);
+  document.body.classList.toggle('is-bar', bar);
+  el.baronly.hidden = !bar;
+  if (!bar) return;
+
+  el.barTitle.textContent = toastText || prettyTitle(state.title);
+  el.barTitle.classList.toggle('is-toast', Boolean(toastText));
+  el.barPlay.classList.toggle('is-playing', Boolean(state.playing));
+  el.barPlay.title = state.playing ? 'Пауза' : 'Играть';
+  el.barPlay.setAttribute('aria-label', state.playing ? 'Пауза' : 'Играть');
+  el.barMute.classList.toggle('is-on', Boolean(state.muted));
+  el.barMute.setAttribute('aria-pressed', String(Boolean(state.muted)));
+
+  if (document.activeElement !== el.barVolume) {
+    const percent = Math.round(Math.min(2, Math.max(0, Number(state.player?.volume ?? 1))) * 100);
+    el.barVolume.value = String(percent);
+    paintBarVolume(percent);
+  }
+}
+
+/** Полоска ширины чата: видна только когда чат открыт и не в PiP/полосе. */
+function renderChatHandle() {
+  const chat = state.chat || {};
+  const visible = Boolean(chat.open) && !state.pip && !state.barOnly && !state.chromeHidden;
+  el.chatResize.hidden = !visible;
+  if (!visible) return;
+  if (chatDrag) return; // во время перетаскивания позицией управляет pointermove
+  el.chatResize.style.left = `${chatLeftOffset() + clampChatWidth(chat.width || 420)}px`;
+}
+
+function renderNotifications() {
+  const settings = state.notifications || {};
+  setSwitch(el.rowNotify, settings.enabled);
+  setSwitch(el.rowNotifyQuiet, settings.quietFocused !== false);
+  setSwitch(el.rowNotifyDnd, settings.dnd);
+
+  if (document.activeElement !== el.notifyFrom) {
+    el.notifyFrom.value = settings.dndFrom || '23:00';
+  }
+  if (document.activeElement !== el.notifyTo) {
+    el.notifyTo.value = settings.dndTo || '08:00';
+  }
+}
+
+function renderReplies() {
+  const replies = Array.isArray(state.replies) ? state.replies : [];
+  if (document.activeElement === el.repliesInput) return;
+  const text = replies.join('\n');
+  if (el.repliesInput.value !== text) el.repliesInput.value = text;
+}
+
+let librarySignature = '';
+let statsSignature = '';
+
+function createLibraryItem(item, inQueue) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'library-item';
+  wrapper.dataset.id = item.id;
+
+  const head = document.createElement('div');
+  head.className = 'library-head';
+
+  const open = document.createElement('button');
+  open.type = 'button';
+  open.className = 'library-open';
+  open.dataset.libraryOpen = '1';
+  open.textContent = item.title || item.url;
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'library-remove';
+  remove.dataset.libraryRemove = '1';
+  remove.title = 'Удалить';
+  remove.setAttribute('aria-label', 'Удалить');
+  remove.textContent = '×';
+
+  head.append(open, remove);
+
+  const meta = document.createElement('div');
+  meta.className = 'library-meta';
+  meta.textContent = [item.author ? `@${item.author}` : '', formatTime(item.time)]
+    .filter(Boolean)
+    .join(' · ');
+
+  const note = document.createElement('input');
+  note.type = 'text';
+  note.className = 'library-note';
+  note.dataset.libraryNote = '1';
+  note.placeholder = 'Заметка';
+  note.setAttribute('aria-label', 'Заметка');
+  note.value = item.note || '';
+
+  const actions = document.createElement('div');
+  actions.className = 'library-actions';
+
+  const queue = document.createElement('button');
+  queue.type = 'button';
+  queue.className = `library-chip${inQueue ? ' is-on' : ''}`;
+  queue.dataset.libraryQueue = '1';
+  queue.textContent = inQueue ? 'Из очереди' : 'В очередь';
+  queue.setAttribute('aria-pressed', String(inQueue));
+
+  actions.append(queue);
+  wrapper.append(head, meta, note, actions);
+  return wrapper;
+}
+
+function renderLibrary() {
+  const library = state.library || { items: [], queue: [] };
+  const items = Array.isArray(library.items) ? library.items : [];
+  const queue = new Set(Array.isArray(library.queue) ? library.queue : []);
+  const query = el.librarySearch.value.trim().toLowerCase();
+
+  const visible = items.filter((item) => {
+    if (!query) return true;
+    return `${item.title} ${item.author} ${item.note}`.toLowerCase().includes(query);
+  });
+
+  el.libraryEmpty.hidden = visible.length > 0;
+  el.libraryEmpty.textContent = items.length
+    ? 'Ничего не найдено'
+    : 'Пока пусто: сохраните ролик кнопкой выше.';
+
+  const signature = `${query}#${visible
+    .map((item) => `${item.id}:${item.note}:${item.title}:${queue.has(item.id) ? 1 : 0}`)
+    .join('|')}`;
+  if (signature === librarySignature) return;
+  librarySignature = signature;
+
+  el.libraryList.replaceChildren(
+    ...visible.map((item) => createLibraryItem(item, queue.has(item.id))),
+  );
+}
+
+function renderStats() {
+  const stats = state.stats || {};
+  const today = stats.today || { minutes: 0, videos: 0 };
+  const week = stats.week || { minutes: 0, videos: 0 };
+  const authors = Array.isArray(stats.topAuthors) ? stats.topAuthors : [];
+
+  el.statsToday.textContent = String(Number(today.minutes) || 0);
+  el.statsTodayVideos.textContent = String(Number(today.videos) || 0);
+  el.statsWeek.textContent = String(Number(week.minutes) || 0);
+  el.statsWeekVideos.textContent = String(Number(week.videos) || 0);
+
+  const signature = authors.map((author) => `${author.name}:${author.videos}`).join('|');
+  el.statsEmpty.hidden = authors.length > 0;
+  if (signature === statsSignature) return;
+  statsSignature = signature;
+
+  el.statsAuthors.replaceChildren(
+    ...authors.map((author) => {
+      const row = document.createElement('div');
+      row.className = 'library-item';
+
+      const head = document.createElement('div');
+      head.className = 'library-head';
+
+      const name = document.createElement('span');
+      name.className = 'library-open';
+      name.dataset.i18nSkip = '1';
+      name.textContent = `@${author.name}`;
+
+      const count = document.createElement('span');
+      count.className = 'library-chip';
+      count.dataset.i18nSkip = '1';
+      count.textContent = String(author.videos);
+
+      head.append(name, count);
+      row.append(head);
+      return row;
+    }),
+  );
+}
+
+let adsSignature = '';
+
+/** Фильтры, пропуск рекламы и настройки загрузок. */
+function renderFiltersSettings() {
+  const filters = state.filters || {};
+  setSwitch(el.rowFilters, filters.enabled === true);
+
+  const fill = (field, list) => {
+    if (document.activeElement === field) return;
+    const text = (Array.isArray(list) ? list : []).join('\n');
+    if (field.value !== text) field.value = text;
+  };
+  fill(el.filterKeywords, filters.keywords);
+  fill(el.filterHashtags, filters.hashtags);
+  fill(el.filterAuthors, filters.authors);
+
+  setSwitch(el.rowAdsPip, state.adsInPip !== false);
+  el.adsCount.textContent = String(Number(state.adsSkipped) || 0);
+
+  const journal = Array.isArray(state.adJournal) ? state.adJournal : [];
+  const signature = journal.join('|');
+  if (signature !== adsSignature) {
+    adsSignature = signature;
+    el.adsJournal.replaceChildren(
+      ...journal.map((at) => {
+        const date = new Date(Number(at) || Date.now());
+        const item = document.createElement('span');
+        item.className = 'ad-journal-item';
+        item.textContent = `${String(date.getHours()).padStart(2, '0')}:${String(
+          date.getMinutes(),
+        ).padStart(2, '0')}`;
+        item.title = date.toLocaleString();
+        return item;
+      }),
+    );
+  }
+
+  const naming = state.downloadNaming || {};
+  setSwitch(el.rowDownloadAuto, naming.auto === true);
+  setSwitch(el.rowDownloadFolder, naming.folderPerAuthor === true);
+  if (document.activeElement !== el.downloadTemplate) {
+    el.downloadTemplate.value = naming.template || '{author}-{date}-{title}';
+  }
+  if (document.activeElement !== el.downloadLimit) {
+    el.downloadLimit.value = String(Number(naming.limit) || 2);
+  }
+
+  const gif = state.gif || {};
+  if (document.activeElement !== el.gifDuration) {
+    el.gifDuration.value = String(Number(gif.duration) || 3);
+  }
+  if (document.activeElement !== el.gifFps) {
+    el.gifFps.value = String(Number(gif.fps) || 10);
+  }
+  if (document.activeElement !== el.gifWidth) {
+    el.gifWidth.value = String(Number(gif.width) || 480);
+  }
 }
 
 let languageSignature = '';
@@ -1027,6 +2210,88 @@ function renderLanguages() {
     siteLanguageSignature = siteSignature;
     fillLanguageSelect(el.siteLanguageSelect, siteLanguages, selectedSite, false);
   }
+}
+
+function renderResilience() {
+  el.offlineScreen.hidden = state.offline !== true;
+  const safeMode = state.safeMode === true;
+  el.rowSafeMode.hidden = !safeMode;
+  el.safeModeNote.hidden = !safeMode;
+  setSwitch(el.rowMemoryGuard, state.memoryGuard !== false);
+  setSwitch(el.rowEco, state.ecoOnBattery !== false);
+
+  if (document.activeElement !== el.uiScaleSelect) {
+    el.uiScaleSelect.value = String(state.uiScale || 1);
+  }
+
+  const parts = [];
+  parts.push(state.onBattery === true ? 'Питание: батарея' : 'Питание: сеть');
+  if (state.eco === true) parts.push('экономный режим включён');
+  el.ecoNote.textContent = parts.join(' · ');
+}
+
+function formatSize(bytes) {
+  const value = Number(bytes) || 0;
+  if (value < 1024) return `${value} Б`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} КБ`;
+  return `${(value / 1024 / 1024).toFixed(1)} МБ`;
+}
+
+let privacySignature = '';
+
+function renderPrivacy(privacy) {
+  const items = Array.isArray(privacy.items) ? privacy.items : [];
+  const signature = items
+    .map((item) => `${item.id}:${item.bytes}:${item.detail}:${item.deletable}`)
+    .join('|');
+  el.privacySize.textContent = formatSize(privacy.totalBytes || 0);
+
+  if (signature === privacySignature) return;
+  privacySignature = signature;
+
+  el.privacyList.replaceChildren(
+    ...items.map((item) => {
+      const row = document.createElement('div');
+      row.className = 'panel-row panel-row--static privacy-row';
+
+      const main = document.createElement('span');
+      main.className = 'privacy-main';
+      const label = document.createElement('span');
+      label.className = 'panel-row-label';
+      label.textContent = item.label;
+      const detail = document.createElement('span');
+      detail.className = 'privacy-detail';
+      detail.textContent = item.detail || '';
+      main.append(label, detail);
+      row.append(main);
+
+      const size = document.createElement('span');
+      size.className = 'panel-value';
+      size.textContent = formatSize(item.bytes);
+      row.append(size);
+
+      if (item.deletable) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'panel-mini privacy-delete';
+        button.dataset.cmd = 'privacyDelete';
+        button.dataset.id = item.id;
+        button.textContent = 'Удалить';
+        button.setAttribute('aria-label', `${tr('Удалить')}: ${tr(item.label)}`);
+        row.append(button);
+      }
+      return row;
+    }),
+  );
+}
+
+function renderBackups(backups) {
+  const date = backups.latest ? new Date(backups.latest) : null;
+  el.backupLatest.textContent =
+    date && !Number.isNaN(date.getTime())
+      ? date.toLocaleDateString(state.language || 'ru', { day: '2-digit', month: '2-digit' })
+      : '—';
+  el.rowBackupRestore.disabled = !(Number(backups.count) > 0);
 }
 
 function renderRegion() {
@@ -1076,20 +2341,49 @@ function renderRegion() {
   el.regionIpResult.classList.toggle('is-error', check.state === 'error');
 }
 
+function renderPopovers() {
+  const active = state.popover === 'stickers' || state.popover === 'plugins' ? state.popover : null;
+  const hidden = !active || state.pip || state.chromeHidden;
+
+  el.popover.hidden = hidden;
+  el.stickerPopover.hidden = active !== 'stickers';
+  el.pluginsPopover.hidden = active !== 'plugins';
+
+  el.btnStickers.classList.toggle('is-on', active === 'stickers');
+  el.btnStickers.setAttribute('aria-pressed', String(active === 'stickers'));
+  el.btnPluginsActive.classList.toggle('is-on', active === 'plugins');
+  el.btnPluginsActive.setAttribute('aria-pressed', String(active === 'plugins'));
+}
+
 function renderPanel() {
   el.panel.hidden = !state.panel;
   el.btnPanel.classList.toggle('is-on', Boolean(state.panel));
   el.btnPanel.setAttribute('aria-pressed', String(Boolean(state.panel)));
 
-  // Закрытая панель не должна хранить поиск: при следующем открытии пользователь
-  // ожидает увидеть все разделы, а не случайно скрытые фильтром.
-  if (!state.panel) clearPanelSearch();
+  // Закрытая панель не должна хранить поиск и открытую подстраницу: при
+  // следующем открытии пользователь ожидает список разделов.
+  if (!state.panel) {
+    clearPanelSearch();
+    panelCategory = null;
+    if (el.panelBody) el.panelBody.scrollTop = 0;
+  }
+
+  // Панель закрыли во время захвата сочетания — отпускаем Esc обратно.
+  if (!state.panel && capturing) {
+    capturing = null;
+    api.cmd('keymapCapturing', false);
+  }
 
   const width = Number(state.panelWidth) || 300;
   document.documentElement.style.setProperty('--panel-w', `${width}px`);
 
+  applyPanelFilter();
+
   el.panelVersion.textContent = `v${state.version || '—'} · Electron ${api.ui.electron}`;
   el.panelZoom.textContent = `${state.zoom || 100} %`;
+  renderBackups(state.backups || {});
+  renderPrivacy(state.privacy || {});
+  renderResilience();
 
   setSwitch(el.rowMute, !state.muted);
   setSwitch(el.rowPip, state.pip);
@@ -1100,6 +2394,19 @@ function renderPanel() {
   setSwitch(el.rowAutostart, state.autostart);
   setSwitch(el.rowStartTray, state.startInTray);
   setSwitch(el.rowAdSkip, state.adsSkip);
+  setSwitch(el.rowChatDock, (state.chat || {}).dock !== false);
+  setSwitch(el.rowLibraryAuto, (state.library || {}).auto === true);
+
+  setSwitch(el.rowCustom, (state.customCode || {}).enabled === true);
+
+  const focus = state.focus || {};
+  setSwitch(el.rowFocus, focus.enabled === true);
+  if (document.activeElement !== el.focusMinutes) {
+    el.focusMinutes.value = String(Number(focus.minutes) || 25);
+  }
+  if (document.activeElement !== el.focusBreak) {
+    el.focusBreak.value = String(Number(focus.breakMinutes) || 5);
+  }
 
   const appimage = state.appimage || { available: false, installed: false };
   el.rowInstallApp.hidden = !appimage.available;
@@ -1107,12 +2414,19 @@ function renderPanel() {
     ? 'Удалить из меню приложений'
     : 'Установить в приложения';
 
-  renderStickers(state.stickers);
   renderCosmetics(state.cosmetics);
   renderPlugins(state.plugins);
   renderDownloads(state.downloads);
   renderSleep();
   renderPlayer();
+  renderKeymap();
+  renderPicture();
+  renderQr();
+  renderNotifications();
+  renderReplies();
+  renderLibrary();
+  renderStats();
+  renderFiltersSettings();
   renderRegion();
   renderLanguages();
   applyPanelFilter();
@@ -1124,6 +2438,9 @@ function render() {
 
   el.pip.classList.toggle('is-on', Boolean(state.pip));
   el.pip.setAttribute('aria-pressed', String(Boolean(state.pip)));
+  const chatOpen = Boolean(state.chat && state.chat.open);
+  el.chat.classList.toggle('is-on', chatOpen);
+  el.chat.setAttribute('aria-pressed', String(chatOpen));
   el.mute.classList.toggle('is-on', state.muted);
   el.mute.setAttribute('aria-pressed', String(state.muted));
   el.top.classList.toggle('is-on', state.onTop);
@@ -1137,6 +2454,7 @@ function render() {
 
   document.body.classList.toggle('is-muted', state.muted);
   document.body.classList.toggle('is-maximized', state.maximized);
+  document.body.classList.toggle('is-ambient', Boolean(state.ambient));
 
   // Режим PiP: обычная полоса уступает место компактному мини-плееру.
   const pip = Boolean(state.pip);
@@ -1153,6 +2471,9 @@ function render() {
   el.pipAuto.setAttribute('aria-pressed', String(Boolean(state.pipAuto)));
   el.pipAdaptive.classList.toggle('is-on', Boolean(state.pipAdaptive));
   el.pipAdaptive.setAttribute('aria-pressed', String(Boolean(state.pipAdaptive)));
+  renderPipProgress();
+  renderBar();
+  renderChatHandle();
 
   el.max.title = state.maximized ? 'Восстановить' : 'Развернуть';
   el.max.setAttribute('aria-label', state.maximized ? 'Восстановить' : 'Развернуть');
@@ -1161,6 +2482,9 @@ function render() {
   renderFind();
   renderDownload();
   renderPanel();
+  renderPopovers();
+  renderStickerPicker(state.stickers);
+  renderActivePlugins(state.plugins);
   renderPalette();
 }
 
@@ -1182,6 +2506,13 @@ function apply(next) {
     return;
   }
   render();
+}
+
+// Свой CSS/JS в pushState не ездит: забираем один раз при запуске.
+const storedCustomCode = api.customCode ? api.customCode() : null;
+if (storedCustomCode) {
+  el.customCss.value = storedCustomCode.css || '';
+  el.customJs.value = storedCustomCode.js || '';
 }
 
 api.onState(apply);

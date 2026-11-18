@@ -68,6 +68,16 @@
     return null;
   }
 
+  /** Русский исходник текста: перевод не должен становиться новым ключом. */
+  function sourceOf(node) {
+    if (!node) return '';
+    if (node.nodeType === 3) return textSources.get(node) || node.nodeValue || '';
+    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+    let text = walker.nextNode();
+    while (text && !text.nodeValue.trim()) text = walker.nextNode();
+    return text ? textSources.get(text) || text.nodeValue || '' : '';
+  }
+
   function translate(source) {
     if (lang === 'ru' || !source) return source;
     const current = { exact: currentCompiled.exact, patterns };
@@ -238,6 +248,7 @@
 
   window.octoI18n = {
     translate,
+    source: sourceOf,
     set: setI18n,
     refresh: () => setI18n({ lang, dir, dict, fallback }),
     current: () => ({ lang, dir }),

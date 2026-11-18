@@ -1,0 +1,39 @@
+{
+  "id": "app.octo.shelf",
+  "name": "Полка",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "minAppVersion": "0.5.1",
+  "description": "Закладки внутри приложения: сохраните видео, профиль или поиск, вернитесь к ним позже и достаньте случайную страницу. Всё хранится локально, без сети и аккаунта.",
+  "author": {
+    "name": "octo",
+    "url": "https://github.com/octomood"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/octomood/tiktok-octo/tree/main/plugins/shelf",
+  "source": "https://github.com/octomood/tiktok-octo/tree/main/plugins/shelf",
+  "main": "index.js",
+  "icon": "icon.svg",
+  "permissions": ["page:css", "page:script", "navigation", "shortcuts"],
+  "settings": [
+    {
+      "key": "show_badge",
+      "type": "boolean",
+      "title": "Метка «На полке»",
+      "description": "Показывать маленькую метку в углу страницы, когда она уже сохранена.",
+      "default": true
+    },
+    {
+      "key": "max_items",
+      "type": "number",
+      "title": "Размер полки",
+      "description": "Сколько последних страниц хранить. Самые старые удаляются автоматически.",
+      "default": 20,
+      "min": 4,
+      "max": 40,
+      "step": 1
+    }
+  ],
+  "changelog": "Первый выпуск: сохранение страниц и ссылок, полка в палитре команд, случайная страница, метка «На полке» и очистка в два шага.",
+  "categories": ["bookmarks", "productivity", "offline"]
+}

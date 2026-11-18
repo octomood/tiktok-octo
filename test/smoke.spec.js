@@ -74,12 +74,24 @@ test('окно, команды, поиск и панель функций', asyn
     await page.evaluate(() => window.octo.find('close'));
     await expect(page.locator('#findbar')).toBeHidden();
 
-    // Панель функций: категории-аккордеоны, поиск, косметика и реклама.
+    // Панель функций: разделы настроек, подстраницы, поиск, косметика и реклама.
     await page.click('#btnPanel');
     await expect(page.locator('#panel')).toBeVisible();
     await expect(page.locator('#btnPanel')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#btnPanel')).toContainText('Функции');
+    await expect(page.locator('[data-cat-head="page"]')).toBeVisible();
+    await expect(page.locator('#catPage')).toBeHidden();
+    await expect(page.locator('.panel-group').first()).toBeVisible();
+
+    // Раздел открывается как подстраница, «Назад» возвращает список.
+    await page.locator('[data-cat-head="page"]').click();
     await expect(page.locator('#catPage')).toBeVisible();
-    await expect(page.locator('#catCosmetics')).toBeHidden();
+    await expect(page.locator('#btnPanelBack')).toBeVisible();
+    await expect(page.locator('#panelHeadTitle')).toBeHidden();
+    await expect(page.locator('#panelDetailTitle')).toHaveText('Страница');
+    await page.locator('#btnPanelBack').click();
+    await expect(page.locator('#catPage')).toBeHidden();
+    await expect(page.locator('#btnPanelBack')).toBeHidden();
 
     // Поиск раскрывает подходящую категорию и прячет остальные.
     await page.locator('#panelSearch').fill('таймер');
@@ -90,23 +102,38 @@ test('окно, команды, поиск и панель функций', asyn
     await expect(page.locator('#panelNoResults')).toBeVisible();
     await page.locator('#btnPanelSearchClear').click();
     await expect(page.locator('#panelNoResults')).toBeHidden();
-    await expect(page.locator('#catPage')).toBeVisible();
+    await expect(page.locator('[data-cat-head="page"]')).toBeVisible();
+    await expect(page.locator('#catPage')).toBeHidden();
 
-    // Поиск не блокирует аккордеон: клик по найденному заголовку сбрасывает фильтр.
+    // Поиск не блокирует переход: клик по найденному заголовку сбрасывает фильтр.
     await page.locator('#panelSearch').fill('тё');
     await expect(page.locator('#catPage')).toBeHidden();
     await page.locator('[data-cat-head="cosmetics"]').click();
     await expect(page.locator('#panelSearch')).toHaveValue('');
     await expect(page.locator('#catCosmetics')).toBeVisible();
-    await page.locator('[data-cat-head="cosmetics"]').click();
+    await page.locator('#btnPanelBack').click();
+    await expect(page.locator('#catCosmetics')).toBeHidden();
 
-    // Команда «Стикеры» из полосы заголовка тоже не должна упираться в фильтр.
-    await page.locator('#panelSearch').fill('язык');
+    // Быстрое меню стикеров открывается из полосы заголовка и закрывает панель.
     await page.click('#btnStickers');
-    await expect(page.locator('#panelSearch')).toHaveValue('');
-    await expect(page.locator('#catStickers')).toBeVisible();
+    await expect(page.locator('#stickerPopover')).toBeVisible();
+    await expect(page.locator('#panel')).toBeHidden();
+    await expect(page.locator('#stickerPopoverEmpty')).toBeVisible();
+    await expect(page.locator('#btnStickers')).toHaveAttribute('aria-pressed', 'true');
+    await page.click('#btnStickers');
+    await expect(page.locator('#popover')).toBeHidden();
 
-    // Косметика: категория раскрывается по клику.
+    // Такое же меню для активных плагинов: без плагинов — пустое состояние.
+    await page.click('#btnPluginsActive');
+    await expect(page.locator('#pluginsPopover')).toBeVisible();
+    await expect(page.locator('#pluginsPopoverEmpty')).toBeVisible();
+    await page.click('#btnPluginsActive');
+    await expect(page.locator('#popover')).toBeHidden();
+
+    await page.click('#btnPanel');
+    await expect(page.locator('#panel')).toBeVisible();
+
+    // Косметика: раздел открывается по клику.
     await page.locator('[data-cat-head="cosmetics"]').click();
     const cosmetic = page.locator('#panelCosmetics [data-cosmetic="dark-scrollbars"]');
     await expect(cosmetic).toHaveAttribute('aria-checked', 'true');
@@ -114,6 +141,7 @@ test('окно, команды, поиск и панель функций', asyn
     await expect(cosmetic).toHaveAttribute('aria-checked', 'false');
     await cosmetic.click();
     await expect(cosmetic).toHaveAttribute('aria-checked', 'true');
+    await page.locator('#btnPanelBack').click();
 
     // Пропуск рекламы по умолчанию выключен.
     await page.locator('[data-cat-head="ads"]').click();
@@ -123,6 +151,7 @@ test('окно, команды, поиск и панель функций', asyn
     await expect(adSkip).toHaveAttribute('aria-checked', 'true');
     await adSkip.click();
     await expect(adSkip).toHaveAttribute('aria-checked', 'false');
+    await page.locator('#btnPanelBack').click();
 
     // Регион: пресет применяется, переживает pushState и выключается обратно.
     await page.locator('[data-cat-head="region"]').click();
@@ -134,16 +163,19 @@ test('окно, команды, поиск и панель функций', asyn
     await expect(page.locator('[data-cmd="regionResetData"]')).toBeVisible();
     await page.selectOption('#regionSelect', 'off');
     await expect(page.locator('#regionSelect')).toHaveValue('off');
+    await page.locator('#btnPanelBack').click();
 
     // Загрузки: пустое состояние и таймер сна.
     await page.locator('[data-cat-head="downloads"]').click();
     await expect(page.locator('#downloadsEmpty')).toBeVisible();
+    await page.locator('#btnPanelBack').click();
     await page.locator('[data-cat-head="playback"]').click();
     await page.locator('[data-sleep="15"]').click();
     await expect(page.locator('[data-sleep="15"]')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#sleepLabel')).toContainText('·');
     await page.locator('[data-sleep="0"]').click();
     await expect(page.locator('#sleepLabel')).toHaveText('Таймер сна');
+    await page.locator('#btnPanelBack').click();
 
     await page.locator('#panelSearch').fill('язык');
     await page.click('#btnPanelClose');
@@ -153,6 +185,9 @@ test('окно, команды, поиск и панель функций', asyn
     // Поиск не переживает закрытие панели: при открытии видны все разделы.
     await page.click('#btnPanel');
     await expect(page.locator('#panelSearch')).toHaveValue('');
+    await expect(page.locator('[data-cat-head="page"]')).toBeVisible();
+    await expect(page.locator('#catPage')).toBeHidden();
+    await expect(page.locator('#btnPanelBack')).toBeHidden();
     await page.click('#btnPanelClose');
     await expect(page.locator('#panel')).toBeHidden();
 

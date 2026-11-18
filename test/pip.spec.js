@@ -119,6 +119,37 @@ test('PiP: автолистание, переключение и адаптив�
     await expect(page.locator('body')).toHaveClass(/is-pip/);
     await expect(page.locator('#titlebar')).toBeHidden();
 
+    // Скраб-бар: таймкод, перемотка ползунком и «−10 секунд».
+    await site.evaluate(() => {
+      const video = document.getElementById('fake-video');
+      let time = 5;
+      Object.defineProperty(video, 'duration', { configurable: true, get: () => 30 });
+      Object.defineProperty(video, 'currentTime', {
+        configurable: true,
+        get: () => time,
+        set: (value) => {
+          time = value;
+        },
+      });
+    });
+
+    await expect.poll(() => page.locator('#pipTime').textContent()).toContain('/ 0:30');
+    await expect(page.locator('#pipTime')).toContainText('0:05');
+
+    await page.locator('#pipSeek').evaluate((element) => {
+      element.value = '500';
+      element.dispatchEvent(new window.Event('input', { bubbles: true }));
+      element.dispatchEvent(new window.Event('change', { bubbles: true }));
+    });
+    await expect
+      .poll(() => site.evaluate(() => document.getElementById('fake-video').currentTime))
+      .toBeCloseTo(15, 0);
+
+    await page.click('#btnPipRewind');
+    await expect
+      .poll(() => site.evaluate(() => document.getElementById('fake-video').currentTime))
+      .toBeCloseTo(5, 0);
+
     if (canResize) {
       await expect.poll(async () => (await mainBounds(app)).width).toBeLessThan(before.width);
       await expect.poll(async () => (await mainBounds(app)).height).toBeLessThan(before.height);

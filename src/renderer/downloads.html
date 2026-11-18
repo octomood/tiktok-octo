@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:;"
+    />
+    <title>Менеджер загрузок</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="downloads-manager.css" />
+  </head>
+  <body class="manager">
+    <header class="manager-head">
+      <h1 class="manager-title">Менеджер загрузок</h1>
+      <div class="manager-actions">
+        <button type="button" class="manager-btn" id="btnOpenFolder">Открыть папку загрузок</button>
+        <button type="button" class="manager-btn" id="btnClear">Очистить список</button>
+        <button type="button" class="manager-btn manager-btn--ghost" id="btnClose">Закрыть</button>
+      </div>
+    </header>
+
+    <main class="manager-list" id="managerList" aria-live="polite"></main>
+    <p class="manager-empty" id="managerEmpty">Пока ничего не скачано</p>
+
+    <script src="i18n-dom.js"></script>
+    <script src="downloads.js"></script>
+  </body>
+</html>

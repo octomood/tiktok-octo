@@ -3,7 +3,7 @@
 const { BrowserWindow } = require('electron');
 const path = require('node:path');
 const { TITLEBAR_H } = require('./shared');
-const { ctx, layout, pushState, setCloseToTray } = require('./app-context');
+const { ctx, layout, pushState, setCloseToTray, clampUiScale } = require('./app-context');
 const { readState, writeState } = require('./store');
 const { createView } = require('./view');
 const { handleShortcut } = require('./shortcuts');
@@ -11,17 +11,22 @@ const { refreshTrayMenu } = require('./tray');
 const player = require('./player');
 const media = require('./media');
 const pip = require('./pip');
+const barOnly = require('./bar-only');
+const ambient = require('./ambient');
 const plugins = require('./plugins');
+const chat = require('./chat');
+const windowsMedia = require('./windows-media');
 
 function saveGeometry(win) {
-  // В PiP окно маленькое — сохраняем геометрию, которая была до режима.
-  const saved = pip.savedGeometry();
+  // В PiP и в «только полоса» окно маленькое — сохраняем геометрию до режима.
+  const saved = pip.savedGeometry() || barOnly.savedGeometry();
   writeState(saved || { bounds: win.getNormalBounds(), maximized: win.isMaximized() });
 }
 
 function createWindow() {
   const saved = readState();
   const bounds = saved.bounds || {};
+  const uiScale = clampUiScale(saved.uiScale);
 
   const win = new BrowserWindow({
     width: bounds.width ?? 1280,
@@ -50,7 +55,10 @@ function createWindow() {
   });
 
   ctx.win = win;
-  ctx.chromeHeight = TITLEBAR_H;
+  ctx.uiScale = uiScale;
+  ctx.chromeHeightCss = TITLEBAR_H;
+  ctx.chromeHeight = Math.round(TITLEBAR_H * uiScale);
+  win.webContents.setZoomFactor(uiScale);
   ctx.panelOpen = saved.panelOpen === true;
   ctx.paletteOpen = false;
   ctx.startInTray = saved.startInTray === true;
@@ -135,7 +143,10 @@ function createWindow() {
   });
 
   win.on('closed', () => {
+    chat.dispose();
     pip.reset();
+    barOnly.reset();
+    ambient.reset();
     ctx.win = null;
     ctx.view = null;
     plugins.suspend();
@@ -149,6 +160,7 @@ function createWindow() {
   });
 
   createView();
+  windowsMedia.install(win, ctx.playing);
   plugins.resume();
   return win;
 }

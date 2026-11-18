@@ -298,6 +298,21 @@ function validateManifest(raw) {
     warnings.push('networkHosts указаны, но разрешение network не запрошено');
   }
 
+  // Косметический пак — только CSS: никаких скриптов, сети и навигации.
+  const cosmetic = raw.cosmetic === true;
+  if (raw.cosmetic !== undefined && typeof raw.cosmetic !== 'boolean') {
+    errors.push('cosmetic: ожидается true или false');
+  }
+  if (cosmetic) {
+    if (!permissions.includes('page:css')) {
+      errors.push('cosmetic: косметическому паку нужно разрешение page:css');
+    }
+    const extra = permissions.filter((permission) => permission !== 'page:css');
+    if (extra.length) {
+      errors.push(`cosmetic: косметическому паку нельзя разрешения ${extra.join(', ')}`);
+    }
+  }
+
   const settings = [];
   if (raw.settings !== undefined) {
     if (!Array.isArray(raw.settings)) {
@@ -353,6 +368,7 @@ function validateManifest(raw) {
       screenshots,
       permissions,
       networkHosts,
+      cosmetic,
       settings,
       changelog,
       categories,

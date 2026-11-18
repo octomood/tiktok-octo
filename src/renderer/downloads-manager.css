@@ -1,0 +1,142 @@
+/* Отдельное окно менеджера загрузок */
+
+body.manager {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100vh;
+  margin: 0;
+  padding: 18px 20px 24px;
+  background: var(--bg, #0b0b0f);
+  color: var(--fg, #f4f4f5);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 13px;
+}
+
+.manager-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manager-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.manager-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.manager-btn {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--md-outline-variant, #3f3f46);
+  border-radius: 8px;
+  background: var(--md-surface-container, #18181b);
+  color: var(--md-on-surface, #f4f4f5);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.manager-btn:hover {
+  border-color: var(--md-primary, #7c9cff);
+}
+
+.manager-btn--small {
+  height: 26px;
+  padding: 0 9px;
+  font-size: 11px;
+}
+
+.manager-btn--ghost {
+  background: transparent;
+  color: var(--muted, #a1a1aa);
+}
+
+.manager-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.manager-row {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px 12px;
+  border: 1px solid var(--md-outline-variant, #3f3f46);
+  border-radius: 12px;
+  background: var(--md-surface-container-high, #202024);
+}
+
+.manager-row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.manager-name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.manager-status {
+  flex: none;
+  color: var(--muted, #a1a1aa);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.manager-bar {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--md-surface-container-highest, #2d2d33);
+}
+
+.manager-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--md-primary, #7c9cff);
+  transition: width 0.2s ease;
+}
+
+.manager-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.manager-empty {
+  margin: 24px 0;
+  color: var(--muted, #a1a1aa);
+  text-align: center;
+}
+
+:where(button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 2px solid var(--md-primary, #6c8cff);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

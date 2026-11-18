@@ -37,6 +37,17 @@
             <input id="search" type="search" placeholder="Поиск плагинов…" spellcheck="false" />
           </label>
 
+          <select id="catalogSort" class="select" aria-label="Сортировка каталога">
+            <option value="name">По названию</option>
+            <option value="date">По дате</option>
+            <option value="installs">По установкам</option>
+            <option value="updates">Сначала обновления</option>
+          </select>
+
+          <select id="catalogSource" class="select" aria-label="Источник каталога">
+            <option value="">Все источники</option>
+          </select>
+
           <button
             class="icon-btn"
             id="btnRefresh"
@@ -344,6 +355,21 @@
                 <div class="settings-actions">
                   <button class="ghost" id="btnRegistrySave">Сохранить</button>
                   <button class="ghost" id="btnRegistryReset">Сбросить</button>
+                </div>
+                <label class="field">
+                  <span class="field-label"
+                    >Дополнительные каталоги (по одному в строке, до 3)</span
+                  >
+                  <textarea
+                    id="inputRegistries"
+                    class="text-input full"
+                    rows="3"
+                    spellcheck="false"
+                    placeholder="https://example.com/registry.json"
+                  ></textarea>
+                </label>
+                <div class="settings-actions">
+                  <button class="ghost" id="btnRegistriesSave">Сохранить каталоги</button>
                 </div>
                 <p class="hint" id="registryHint"></p>
               </div>

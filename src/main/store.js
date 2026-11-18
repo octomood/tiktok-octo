@@ -28,4 +28,13 @@ function writeState(patch) {
   }
 }
 
-module.exports = { readState, writeState, statePath };
+/** Полная замена состояния: нужна восстановлению резервной копии. */
+function replaceState(value) {
+  const next = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  fs.mkdirSync(path.dirname(statePath()), { recursive: true });
+  const tmp = `${statePath()}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(next, null, 2));
+  fs.renameSync(tmp, statePath());
+}
+
+module.exports = { readState, writeState, replaceState, statePath };

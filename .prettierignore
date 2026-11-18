@@ -6,3 +6,4 @@ test-results/
 playwright-report/
 docs/promo/
 src/renderer/plugins-docs/
+src/renderer/vendor/

@@ -39,28 +39,53 @@ window and a handful of shortcuts that make sense on a desktop.
 
 ## What's inside
 
-|                                     |                                                                                                                                                                                                                      |
-| :---------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **🪟&nbsp; A title bar of its own** | Back / forward / reload / home, a live page pill, unread count, native window buttons. Dragging and double-click to maximise come for free.                                                                          |
-| **🔐&nbsp; Real login**             | A persistent `persist:octo-tiktok` session on disk — you stay signed in between launches. Google, Apple, Facebook and X OAuth windows open on top of the app.                                                        |
-| **🔎&nbsp; Find in page**           | <kbd>Ctrl</kbd>+<kbd>F</kbd> opens a compact bar with a `1/3` counter. The page slides down instead of being covered; <kbd>Esc</kbd> closes it.                                                                      |
-| **🎬&nbsp; Picture-in-picture**     | A compact always-on-top mini player: auto-advance, previous/next and adaptive sizing for your screen. Toolbar button or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>.                                               |
-| **📌&nbsp; Always on top**          | Keep the feed above your work while you pretend to work. The mode survives restarts.                                                                                                                                 |
-| **🔇&nbsp; Sound & volume**         | Instant mute with a click, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> or a media key, plus a 0–100 % volume slider in the Playback panel.                                                                         |
-| **🗂&nbsp; Tray**                    | Hide the window, mute, pin, PiP, or enable "close to tray" and keep listening.                                                                                                                                       |
-| **⬇️&nbsp; Downloads**              | Files go through the system save dialog; progress lives in the title bar, and the result is a toast.                                                                                                                 |
-| **🔄&nbsp; Self-updating**          | Packaged builds check GitHub Releases and offer to restart when the update is ready.                                                                                                                                 |
-| **🔍&nbsp; Browser-grade zoom**     | Chromium steps from 50 to 300 %, remembered across restarts.                                                                                                                                                         |
-| **🌍&nbsp; Links stay polite**      | Anything that isn't `tiktok.com` opens in your system browser. TikTok links with `target=_blank` stay inside the app.                                                                                                |
-| **🌐&nbsp; Region & proxy**         | Pick a country to change `Accept-Language`, `navigator.language`, timezone and geolocation. Bring your own SOCKS5/HTTP proxy to change the actual IP.                                                                |
-| **🗣️&nbsp; Language**               | 12 UI languages and 22 TikTok site languages via the documented `default_lang` cookie, `Accept-Language` and `navigator.language`. Your choice survives restarts.                                                    |
-| **🙂&nbsp; Chat stickers**          | Your PNG/GIF/WebP files go from the panel into the open TikTok chat as photos, including Business Suite; a transparent background reads as a sticker.                                                                |
-| **🌙&nbsp; Dark theme everywhere**  | TikTok theme cookies are written for the whole domain, and Chromium auto dark mode covers Business Suite and service pages, so no white TikTok pages remain.                                                         |
-| **🔤&nbsp; Shell font on the site** | Inter is applied to all site text, including nested frames and web components in shadow DOM. SVG icons are left untouched.                                                                                           |
-| **🧩&nbsp; Plugins**                | A separate manager with a catalog, per-plugin permissions, static security audit, Ed25519 signatures, tamper checks, logs, version rollback and opt-out auto-updates. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>. |
-| **🧠&nbsp; It remembers**           | Window geometry, maximised state, zoom, mute, always-on-top and the last page you were on.                                                                                                                           |
-| **🧯&nbsp; It survives**            | Failed loads retry with backoff, a crashed renderer is brought back, a hung page says so instead of dying silently.                                                                                                  |
-| **⛶&nbsp; Real fullscreen**         | Fullscreen video takes the whole window and the title bar gets out of the way.                                                                                                                                       |
+|                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| :---------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **🪟&nbsp; A title bar of its own** | Back / forward / reload / home, a live page pill, unread count, native window buttons. Dragging and double-click to maximise come for free.                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **🔐&nbsp; Real login**             | A persistent `persist:octo-tiktok` session on disk — you stay signed in between launches. Google, Apple, Facebook and X OAuth windows open on top of the app.                                                                                                                                                                                                                                                                                                                                                                                                                |
+| **🔎&nbsp; Find in page**           | <kbd>Ctrl</kbd>+<kbd>F</kbd> opens a compact bar with a `1/3` counter. The page slides down instead of being covered; <kbd>Esc</kbd> closes it.                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **🎬&nbsp; Picture-in-picture**     | A compact always-on-top mini player: auto-advance, previous/next, a scrub bar with timecode and a "−10 seconds" button, adaptive sizing for your screen. Toolbar button or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>.                                                                                                                                                                                                                                                                                                                                                    |
+| **📌&nbsp; Always on top**          | Keep the feed above your work while you pretend to work. The mode survives restarts.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **🔇&nbsp; Sound & volume**         | Instant mute with a click, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> or a media key, plus a 0–200 % volume slider in the Playback panel, audio output selection, speech/music equalizer and mono for one earbud.                                                                                                                                                                                                                                                                                                                                                         |
+| **⏱️&nbsp; Sleep timer**            | 15/30/60 minutes, "until the video ends" or "stop after N videos" with a smooth fade-out. The countdown survives restarts.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **⌨️&nbsp; Keyboard**               | J / L seek 10 seconds, K and space pause, 0–9 jump to a percentage, S takes a screenshot, ? shows the hint. Every command can be remapped with profiles and conflict highlighting.                                                                                                                                                                                                                                                                                                                                                                                           |
+| **😴&nbsp; Auto-pause**             | No input for N minutes pauses the video; coming back resumes it. "Keep screen awake" holds the display on with `powerSaveBlocker`.                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **🖼️&nbsp; Picture & captions**     | Brightness, contrast, warm tone and fit/fill for the video. Captions are turned on by the site's own button; size, background and outline change without touching account settings.                                                                                                                                                                                                                                                                                                                                                                                          |
+| **🔳&nbsp; QR & mini bar**          | The current video's QR code is built locally, with no external services. "Bar only" mode is a compact remote without the site: title, play/pause, volume and PiP.                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **🗂&nbsp; Tray**                    | Hide the window, mute, pin, PiP, or enable "close to tray" and keep listening.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **⬇️&nbsp; Downloads**              | Files go through the dialog or a `{author}-{date}-{title}` template with a per-author folder. A separate manager window shows progress, a simultaneous limit, pause, the queue and "show in folder".                                                                                                                                                                                                                                                                                                                                                                         |
+| **✂️&nbsp; Annotated snapshot**     | A snapshot opens an editor with an arrow, rectangle and blur; the PNG is saved to Pictures and copied to the clipboard.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **🎞️&nbsp; GIF from video**         | A 3–10 second fragment from the current second: 5–15 fps and 320–640 px wide. Encoded locally, with no external services.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **🧪&nbsp; Custom code**            | Advanced mode: your own CSS and JavaScript for the page. Off by default, warns when enabled and turns off with one button.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **🚫&nbsp; Content filters**        | Hide by words, hashtags and authors: a match in the visible DOM advances the feed like ad skipping does.                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| **🔄&nbsp; Self-updating**          | Packaged builds check GitHub Releases and offer to restart when the update is ready.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **🔍&nbsp; Browser-grade zoom**     | Chromium steps from 50 to 300 %, remembered across restarts.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **🔠&nbsp; Interface scale**        | The title bar, panel and dialogs scale independently from the site: 80–150 %. Page zoom stays on <kbd>Ctrl</kbd>+<kbd>+</kbd> and <kbd>Ctrl</kbd>+<kbd>−</kbd>.                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **⌨️&nbsp; Accessibility**          | Focus rings on every button and field, focus containment in the command palette, `prefers-reduced-motion`, ARIA roles and an RTL Arabic layout.                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **🌍&nbsp; Links stay polite**      | Anything that isn't `tiktok.com` opens in your system browser. TikTok links with `target=_blank` stay inside the app.                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **🌐&nbsp; Region & proxy**         | Pick a country to change `Accept-Language`, `navigator.language`, timezone and geolocation. Bring your own SOCKS5/HTTP proxy to change the actual IP.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **🗣️&nbsp; Language**               | 12 UI languages and 22 TikTok site languages via the documented `default_lang` cookie, `Accept-Language` and `navigator.language`. Your choice survives restarts.                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **🙂&nbsp; Chat stickers**          | Your PNG/GIF/WebP files go from the quick menu into the open TikTok chat as photos, including Business Suite; a transparent background reads as a sticker.                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **💬&nbsp; Side chat**              | «Messages» opens as a panel on the left that squeezes the feed by default: drag the handle to resize, the width is remembered, and the video keeps playing. Double-click opens the regular messages page.                                                                                                                                                                                                                                                                                                                                                                    |
+| **🔔&nbsp; Notifications**          | A native notification when the unread count in the page title grows; clicking opens «Messages». «Do not disturb» schedule and «no notifications while the window is active».                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **⚡&nbsp; Quick replies**          | Your templates go from the command palette into the open chat's message field — you decide whether to send.                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **📚&nbsp; Library**                | Bookmarks with a timecode and a note, search, jump to the saved second, Markdown/JSON export, plus a "watch later" queue.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **📊&nbsp; Statistics**             | Time and video count for today and the week, top authors. Counted locally and never sent anywhere.                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **🎯&nbsp; Focus mode**             | A 15/25/50/90-minute viewing limit and a 3/5/10-minute break: the feed dims and pauses, then comes back. <kbd>Esc</kbd> turns it off.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **🖥️&nbsp; Ambient**                | The feed on another monitor with no sound and no UI: just video. <kbd>Esc</kbd> restores the window and sound.                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **🗄️&nbsp; My archive**             | A ZIP with bookmarks, statistics, settings and stickers — one file on disk, nothing sent anywhere.                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **🌙&nbsp; Dark theme everywhere**  | TikTok theme cookies are written for the whole domain, and Chromium auto dark mode covers Business Suite and service pages, so no white TikTok pages remain.                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **🔤&nbsp; Shell font on the site** | Inter is applied to all site text, including nested frames and web components in shadow DOM. SVG icons are left untouched.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **🧩&nbsp; Plugins**                | A separate manager with a catalog, permissions, static audit, Ed25519 signatures, tamper checks, logs, rollback and auto-updates. Developers get an SDK with types and a mock, a generator and hot reload. Cosmetic packs are CSS-only plugins with preview and rollback. The catalog sorts by name, date, installs and updates, shows a verified badge, install counts and a permission diff, merges up to three custom registries with the official one, and can show system notifications with the `os:notify` permission. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>. |
+| **💾&nbsp; Settings and backups**   | Export and import settings as one JSON file, a daily state backup on launch (last 8) and one-click restore. Cookies, chats and passwords never go into the files.                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **🛡️&nbsp; Privacy**                | A privacy panel shows how much local data takes, deletes it item by item, copies diagnostics without paths or tokens, and lists licenses with an honest "not affiliated with TikTok" page.                                                                                                                                                                                                                                                                                                                                                                                   |
+| **🧠&nbsp; It remembers**           | Window geometry, maximised state, zoom, mute, always-on-top and the last page you were on.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **🧯&nbsp; It survives**            | Failed loads retry with backoff, a crashed renderer is brought back, a hung page says so instead of dying silently. Two crashes bring safe mode, the white screen becomes "No connection", and battery power enables saver mode.                                                                                                                                                                                                                                                                                                                                             |
+| **⛶&nbsp; Real fullscreen**         | Fullscreen video takes the whole window and the title bar gets out of the way.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+
+The **Functions** panel opens from the labelled title-bar button or
+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>: sections are grouped by topic,
+open as a subpage with a Back button, and search covers every setting at once.
 
 <div align="center">
   <img src="docs/findbar.png" width="820" alt="Find in page bar with a match counter under the title bar" />
@@ -112,36 +137,81 @@ independent choices:
   language in TikTok's own settings. The client does not bypass that or pretend
   the cookie is an account-level language change.
 
-## Chat stickers
+## Images in chat
 
-TikTok's web client has no sticker picker, so the app sends your images through
-the site's own upload path: it puts the file into the chat's hidden file input
-and clicks Send when the button appears.
+TikTok's web client does not let you add your own image to its sticker set, so
+the app sends it through the site's own upload path: it puts the file into the
+chat's file input and clicks Send when the button appears. For the recipient it
+is a regular photo, not a native TikTok sticker.
 
-- **Add stickers** — the feature panel (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>)
-  → «Stickers» → «Add stickers…». PNG, JPG, WebP and GIF up to 8 MB.
-- **Send** — open a conversation at `tiktok.com/messages`, then click a sticker
-  in the panel or the command palette. It arrives as a regular photo.
+- **Images menu** — the smiley button in the title bar. It opens on its own and
+  scrolls through as many images as you have.
+- **Add images** — the «+» in the menu, View → Images in chat, or the command
+  palette. PNG, JPG, WebP and GIF up to 8 MB.
+- **Send** — open a conversation at `tiktok.com/messages` or in the side chat
+  panel, then click an image in the menu or the command palette.
 - **Business Suite and nested frames** — the message composer is located in every
-  frame and open shadow root, so stickers also work where the chat is embedded in
-  the Business Suite shell, not only at `tiktok.com/messages`.
-- A **transparent PNG** looks like a sticker, but the recipient still sees a
-  photo. That is a limitation of TikTok's web client, not of the app. Square
-  images around 256–512 px look best.
-- Files live in the profile's `stickers/` directory; the panel can open the
-  folder or delete a sticker together with its file.
+  frame and open or closed shadow root, and the attachment button is clicked with
+  a trusted input event, so sending also works in Business Suite.
+- A **transparent PNG** looks like a sticker, but the recipient sees a photo.
+  Square images around 256–512 px look best.
+- **Photos in direct messages are not available in every region.** If the
+  recipient's TikTok does not have this feature, the photo will not be displayed;
+  the app detects that error and reports it. The client cannot work around this:
+  it uses TikTok's own upload.
+- Files live in the profile's `stickers/` directory; the menu can open the folder
+  or delete an image together with its file.
+
+## TikTok stickers
+
+The **«TikTok stickers»** button in the images menu opens the site's native
+sticker panel. From there you can send real TikTok stickers: they do not depend
+on regional availability of photos in direct messages. Your own PNGs cannot be
+added to that panel — the site does not allow it without a private API.
+
+## Side chat
+
+Messages do not have to take the whole window on desktop. A single click on
+«Messages» in TikTok's sidebar or header opens a panel on the left: by default
+it squeezes the feed and the video keeps playing. The panel shares the main
+window's session, so sign-in, theme and conversations are already there.
+
+- **Width** — when opened, the panel fits itself to the messages page (up to
+  760 px) so the conversation list, messages and the input are not clipped; when
+  docked, the feed keeps at least 320 px. You can still drag the handle;
+  double-click it to reset to 420 px.
+- **Dock** — the "Chat squeezes the feed" switch; turning it off brings back the
+  old behaviour where the panel floats over the feed.
+
+- **Double-click** on «Messages» (or a second click in a row) opens the regular
+  messages page in the whole window.
+- **Close the panel** with the speech-bubble button in the title bar,
+  <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> or <kbd>Esc</kbd>.
+- **Theme, font and cosmetics** — the same rules apply to the panel as to the
+  feed: dark theme, Inter, dark scrollbars and hidden app promos. Toggles in
+  the feature panel affect the side chat too.
+- The site's global navigation and header are hidden inside the panel:
+  otherwise only a narrow strip would remain for the conversation list. Links
+  from a conversation to other TikTok pages open in the main window, external
+  links go to the system browser.
+- **Limitation**: this is the same TikTok web client, not a separate chat. If
+  the site changes the messages layout, the panel shows what the site renders;
+  there are no private requests and no bypassing protections.
 
 ## Plugins
 
 Plugins are small JavaScript packages that live in a sandboxed hidden window.
 They can add palette commands, rows in the feature panel, settings, storage,
 page CSS and isolated page scripts. Nothing else: no Node, no filesystem, no
-direct network, no cookies, no navigation.
+direct network or cookies; navigation is limited to TikTok pages and needs the
+`navigation` permission.
 
 The **Plugins** manager (also <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>) has
 a catalog, local `.octoplugin` installs, per-plugin permissions, security
 reports, signature status, tamper detection and auto-updates that can be turned
-off globally or per plugin.
+off globally or per plugin. The puzzle button next to the sticker menu opens a
+quick list of enabled plugins and runs their actions without opening the feature
+panel.
 
 Before installation the app validates the manifest and ZIP, runs a static audit
 (Node, `eval`, direct network, cookies, native binaries, obfuscation), checks
@@ -151,6 +221,8 @@ that add permissions always require confirmation.
 Developer guide: [docs/plugins/README.md](docs/plugins/README.md) ·
 Publishing rules: [docs/plugins/PUBLISHING.md](docs/plugins/PUBLISHING.md) ·
 Example: [plugins/examples/hello-octo](plugins/examples/hello-octo).
+The first ready-made plugin: [plugins/shelf](plugins/shelf) — local bookmarks with
+hotkeys, a context-menu item and an on-page badge.
 
 The same guide is built into the app: `npm run docs:build` generates
 `src/renderer/plugins-docs`, and the Documentation / Publishing rules items open
@@ -162,6 +234,26 @@ OCTO_PLUGIN_DEV_DIR="$PWD/plugins/examples" npm start
 node scripts/pack-plugin.js plugins/examples/hello-octo \
   --out plugins/packages --update-registry plugins/registry.json
 ```
+
+## Links and system menus
+
+The `tiktok-octo://` scheme opens a video in the app:
+
+```bash
+xdg-open 'tiktok-octo://www.tiktok.com/@author/video/123'
+```
+
+`tiktok-octo://open?url=https%3A%2F%2Fwww.tiktok.com%2F...` works too, as does
+a regular `https://www.tiktok.com/...` link passed as a launch argument. Other
+hosts are rejected.
+
+The task menu — Windows jump list, macOS dock menu and Linux launchers — offers
+Picture-in-Picture, Messages and Mute. The app icon shows download progress, and
+MPRIS exposes cover art and seeking.
+
+A direct `https://` handler cannot be claimed: browsers and the OS do not hand
+that protocol to a third-party app. For links clicked in a browser, use a
+shortcut or an extension that opens `tiktok-octo://`.
 
 ## Shortcuts
 
@@ -178,6 +270,11 @@ node scripts/pack-plugin.js plugins/examples/hello-octo \
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd>                                                        | Mute / unmute                                    |
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>                                                        | Picture-in-picture                               |
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>←</kbd> / <kbd>→</kbd>                                         | Previous / next video                            |
+| <kbd>J</kbd> / <kbd>L</kbd>                                                                          | Seek 10 seconds back / forward                   |
+| <kbd>K</kbd> / <kbd>Space</kbd>                                                                      | Pause / resume                                   |
+| <kbd>0</kbd>–<kbd>9</kbd>                                                                            | Jump to 0–90 % of the video                      |
+| <kbd>S</kbd> / <kbd>?</kbd>                                                                          | Screenshot / keyboard hint                       |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>U</kbd>                                                        | Open the current page in your browser            |
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>                                                        | Always on top                                    |
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>                                                        | Plugin manager                                   |
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd>                                                        | DevTools                                         |
@@ -185,7 +282,10 @@ node scripts/pack-plugin.js plugins/examples/hello-octo \
 | <kbd>F11</kbd>                                                                                       | Fullscreen                                       |
 | Media keys                                                                                           | Play / pause, stop (mute), next / previous video |
 
-On macOS use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd>.
+On macOS use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd>. Everything except
+<kbd>Esc</kbd>, media keys and the keyboard feed can be remapped in the
+**Keys** section: standard, compact and custom profiles, with conflicts
+highlighted.
 
 ## Quick start
 
@@ -223,11 +323,22 @@ in-app updater reads.
 npm run lint          # eslint
 npm run format:check  # prettier
 npm test              # Playwright smoke test on the real Electron app
+npm run install:local # AppImage from the working tree + app-menu entry
 ```
 
+`npm run install:local` builds a fresh version from the current files and updates
+the “TikTok octo (локальная сборка)” item in the app menu, so changes can be
+checked without starting the app from a terminal. It publishes nothing; if the
+app is already running, quit it first or the old instance will be focused.
+OpenCode agents are not allowed to launch the app or Playwright by hand
+(`opencode.json`): UI is verified by tests, and the build lands in the menu with
+the same command.
+
 The smoke test launches the app with a temporary profile and `about:blank` as the
-home page, so it touches neither your session nor the network. CI runs it under
-`xvfb`.
+home page, so it touches neither your session nor the network. On Linux `npm test`
+re-launches itself under `Xvfb` (`scripts/run-tests.js`), so no app windows pop up
+over your work; CI does the same. To watch the test run on a real display use
+`OCTO_TEST_WINDOW=1 npm test`.
 
 ```
 src/
@@ -236,6 +347,7 @@ src/
     app-context.js shared window state and the main → title bar bridge
     window.js      BrowserWindow, geometry, close-to-tray
     view.js        WebContentsView with the site, history, retries, fullscreen
+    chat.js        side chat panel over the feed
     session.js     persistent session, permissions, downloads
     region.js      region presets, Accept-Language and proxy
     region-catalog.js  countries, locales and timezones
@@ -269,9 +381,11 @@ src/
 test/
   smoke.spec.js        Playwright smoke test
   plugins.spec.js      live plugin host, commands, panel and manager
+  plugin-shelf.spec.js “Shelf” plugin: bookmarks, badge and clearing
   plugin-security.spec.js  manifest, audit, ZIP and signature tests
 plugins/
   examples/hello-octo  sample plugin
+  shelf/               ready-made “Shelf” plugin: local bookmarks
   packages/            built .octoplugin files
   registry.json        sample catalog
 docs/plugins/          developer guide, publishing rules, built-in docs
@@ -329,6 +443,43 @@ Small things that took actual work:
   Wayland the compositor may still ignore window size and position. **Global
   media keys** do depend on the portal and may not work on some setups (the app
   tells you when it can).
+- **Volume above 100 %**, the equalizer and mono go through Web Audio. They work
+  for videos the site plays from its own origin (`blob:`) or with CORS enabled.
+  When a video comes straight from another domain, the app keeps the normal
+  volume and says so — otherwise Chromium would output silence.
+- **Captions and the publish date** depend on TikTok's markup: the app looks for
+  the caption button and the date by signals the site may change. Without that
+  signal captions are not toggled blindly and the date stays empty.
+- **"Bar only" mode** keeps the site loaded: sound continues, but video is not
+  drawn until the window returns to the normal mode.
+- **Notifications** rely on the unread count in the page title: the type
+  (message, like, comment) cannot be told apart, so the notification says
+  "something new" and clicking it opens «Messages».
+- **Files dropped on chat** are sent only from the «Messages» panel and only as
+  photos (PNG/JPG/WebP/GIF up to 8 MB); the site's own uploader is not touched.
+- **Quick replies** only insert text into the field; sending and edits are yours.
+- **Library, queue and statistics** live in the app's local state: no
+  cross-device sync, moving them means exporting.
+- **Auto-advance** works only for items opened from the queue; if the site
+  switches the video on its own, the queue does not follow.
+- **Focus mode** counts real playback only: nothing accumulates while paused or
+  during a break. The overlay clears after the break or with <kbd>Esc</kbd>.
+- **Ambient** without a second monitor stays on the current one: it just hides
+  the interface and the sound.
+- **The archive** is a snapshot at export time; restoring from it is not there yet.
+- **The file-name template** uses the download date when the site does not
+  expose the publish date.
+- **Content filters** only look at the visible DOM: TikTok markup changes can
+  break a rule, and preloaded videos are not checked.
+- **The download manager** shows the current session only: the list is empty
+  after a restart while the files stay on disk.
+- **Annotations** are an arrow, a rectangle and blur; there is no text or shape
+  set yet.
+- **Custom JavaScript** runs in an isolated world: the site's JS is out of
+  reach, but the DOM is shared, so the code can change or break the feed. Only
+  enable your own trusted code.
+- **GIF** covers up to 10 seconds and 60 frames, without sound; if the browser
+  refuses to expose frames of a protected video, the export says so.
 - The tray needs **StatusNotifier** on Linux; without it the app simply runs
   without an icon.
 - **Unread badges** appear where the desktop supports them (macOS dock, Unity

@@ -31,6 +31,7 @@ const { DOCS_URL, PUBLISHING_URL, LIMITS } = require('./constants');
  */
 
 let initialized = false;
+let safeMode = false;
 let onChange = null;
 let autoStartTimer = null;
 let autoInterval = null;
@@ -43,6 +44,10 @@ let catalog = {
 };
 let busy = null;
 let devRecords = [];
+let devWatcher = null;
+let devWatchTimer = null;
+const previewTimers = new Map();
+const PREVIEW_MS = Number(process.env.OCTO_PLUGIN_PREVIEW_MS) || 20000;
 
 function settings() {
   return state.getSettings();
@@ -167,6 +172,7 @@ function installedView(record) {
     enabled: record.enabled === true,
     autoUpdate: record.autoUpdate !== false,
     dev: record.dev === true,
+    cosmetic: record.manifest?.cosmetic === true || record.cosmetic === true,
     tampered: record.tampered === true,
     lastError: record.lastError || '',
     signature: record.signature || 'unsigned',
@@ -198,6 +204,37 @@ function installedView(record) {
     update,
     pendingUpdate: record.pendingUpdate || '',
     active: Boolean(host.getHost(record.id)?.active),
+    resources: resourceReport(record),
+  };
+}
+
+/** Сколько плагин занимает: хранилище, команды, строки панели, таймауты. */
+function resourceReport(record) {
+  const entry = host.getHost(record.id);
+  let storageBytes = 0;
+  try {
+    storageBytes = Buffer.byteLength(JSON.stringify(record.storage || {}), 'utf8');
+  } catch {
+    storageBytes = 0;
+  }
+  return {
+    storageBytes,
+    storageLimit: LIMITS.storageBytes,
+    commands: entry?.commands?.size || 0,
+    commandsLimit: LIMITS.maxCommands,
+    rows: entry?.panelRows?.size || 0,
+    rowsLimit: LIMITS.maxPanelRows,
+    scriptTimeoutMs: 10000,
+  };
+}
+
+function permissionDiff(from, to) {
+  const labels = (ids) => describePermissions(ids).map((permission) => permission.label);
+  const before = new Set(Array.isArray(from) ? from : []);
+  const after = new Set(Array.isArray(to) ? to : []);
+  return {
+    added: labels([...after].filter((id) => !before.has(id))),
+    removed: labels([...before].filter((id) => !after.has(id))),
   };
 }
 
@@ -206,6 +243,7 @@ function catalogView(plugin) {
   const release = plugin.latest;
   const update = record ? updateInfo(record, release) : null;
   const signature = registry.releaseSignature(release);
+  const previous = plugin.releases[1] || null;
 
   return {
     id: plugin.id,
@@ -229,6 +267,15 @@ function catalogView(plugin) {
     signature,
     signatureLabel: installer.signatureLabel(signature),
     releases: plugin.releases.length,
+    installs: plugin.installs || 0,
+    registryLabel: plugin.registryLabel || 'официальный',
+    registryUrl: plugin.registryUrl || '',
+    permissionChanges: previous
+      ? permissionDiff(previous.permissions, release.permissions)
+      : { added: [], removed: [] },
+    installedPermissionChanges: record
+      ? permissionDiff(record.permissions || [], release.permissions || [])
+      : null,
     installedVersion: record?.version || '',
     installedEnabled: record?.enabled === true,
     update,
@@ -250,6 +297,8 @@ function managerState() {
       updatedAt: catalog.updatedAt,
       fetchedAt: catalog.fetchedAt,
       error: catalog.error,
+      warnings: Array.isArray(catalog.warnings) ? catalog.warnings : [],
+      sources: Array.isArray(catalog.sources) ? catalog.sources : [],
       plugins: catalog.plugins.map(catalogView),
     },
     installed,
@@ -631,7 +680,7 @@ async function installFromRegistry(id) {
     }
     return await installInspection(inspection, {
       source: 'registry',
-      registryUrl: settings().registryUrl,
+      registryUrl: item.registryUrl || settings().registryUrl,
       entry: release,
       managedBusy: true,
     });
@@ -708,7 +757,8 @@ async function performUpdate(record, release, { auto = false } = {}) {
 
     const result = installer.install(inspection, {
       source: 'registry',
-      registryUrl: record.registryUrl || settings().registryUrl,
+      registryUrl:
+        findCatalogItem(record.id)?.registryUrl || record.registryUrl || settings().registryUrl,
       entry: release,
     });
 
@@ -808,6 +858,8 @@ async function refreshCatalog({ silent = false, force = true } = {}) {
       updatedAt: result.updatedAt,
       fetchedAt: result.fetchedAt,
       error: result.error,
+      warnings: Array.isArray(result.warnings) ? result.warnings : [],
+      sources: Array.isArray(result.sources) ? result.sources : [],
       plugins: result.plugins,
     };
     if (!silent) {
@@ -920,6 +972,28 @@ function loadDevPlugins() {
     devRecords.push(record);
     if (record.enabled) loadRecord(record, { silent: true });
   }
+
+  watchDevPlugins(dir);
+}
+
+/** Изменения в папке разработки перезагружают dev-плагины автоматически. */
+function watchDevPlugins(dir) {
+  if (devWatcher) return;
+  try {
+    devWatcher = fs.watch(dir, { recursive: true }, () => {
+      clearTimeout(devWatchTimer);
+      devWatchTimer = setTimeout(() => {
+        reloadDevPlugins().catch((err) => {
+          if (process.env.OCTO_DEBUG) console.warn('[octo] dev reload failed:', err.message);
+        });
+      }, 400);
+    });
+    devWatcher.on('error', (err) => {
+      if (process.env.OCTO_DEBUG) console.warn('[octo] dev watch:', err.message);
+    });
+  } catch (err) {
+    if (process.env.OCTO_DEBUG) console.warn('[octo] dev watch failed:', err.message);
+  }
 }
 
 async function reloadDevPlugins() {
@@ -933,6 +1007,11 @@ async function reloadDevPlugins() {
 async function setEnabled(id, enabled) {
   const record = getRecord(id);
   if (!record) return { ok: false, error: 'Плагин не найден' };
+  const preview = previewTimers.get(id);
+  if (preview) {
+    clearTimeout(preview);
+    previewTimers.delete(id);
+  }
   if (record.tampered) return { ok: false, error: 'Плагин изменён после установки' };
 
   if (enabled) {
@@ -952,6 +1031,31 @@ async function setEnabled(id, enabled) {
     toast(`Плагин «${record.name}» выключен`);
     publishSummary();
   }
+  return { ok: true };
+}
+
+/** Превью косметического пака: включаем на время и возвращаем как было. */
+async function previewPlugin(id) {
+  const record = getRecord(id);
+  if (!record) return { ok: false, error: 'Плагин не найден' };
+  if (!(record.manifest?.cosmetic === true || record.cosmetic === true)) {
+    return { ok: false, error: 'Это не косметический пак' };
+  }
+  if (record.enabled === true) return { ok: false, error: 'Пакет уже включён' };
+
+  const result = await setEnabled(id, true);
+  if (!result.ok) return result;
+
+  const seconds = Math.max(1, Math.round(PREVIEW_MS / 1000));
+  toast(`Превью «${record.name}»: ${seconds} с`);
+  const timer = setTimeout(() => {
+    previewTimers.delete(id);
+    setEnabled(id, false)
+      .catch(() => {})
+      .then(() => toast(`Превью «${record.name}» закончилось`));
+  }, PREVIEW_MS);
+  if (typeof timer.unref === 'function') timer.unref();
+  previewTimers.set(id, timer);
   return { ok: true };
 }
 
@@ -1078,6 +1182,24 @@ function saveSettings(patch) {
     if (![0, 1, 6, 24].includes(value)) return { ok: false, error: 'Некорректный интервал' };
     next.updateIntervalHours = value;
   }
+  if (patch.registryUrls !== undefined) {
+    if (!Array.isArray(patch.registryUrls)) {
+      return { ok: false, error: 'Список каталогов должен быть массивом' };
+    }
+    const urls = [];
+    for (const item of patch.registryUrls.slice(0, 3)) {
+      const url = String(item || '').trim();
+      if (!url) continue;
+      if (!registry.isAllowedRegistryUrl(url)) {
+        return {
+          ok: false,
+          error: 'Адреса каталогов должны быть https:// (или localhost для разработки)',
+        };
+      }
+      if (!urls.includes(url)) urls.push(url);
+    }
+    next.registryUrls = urls;
+  }
   if (patch.registryUrl !== undefined) {
     const url = String(patch.registryUrl || '').trim();
     if (!registry.isAllowedRegistryUrl(url)) {
@@ -1093,7 +1215,10 @@ function saveSettings(patch) {
   state.saveSettings(next);
   const current = settings();
 
-  if (current.registryUrl !== previous.registryUrl) {
+  if (
+    current.registryUrl !== previous.registryUrl ||
+    JSON.stringify(current.registryUrls) !== JSON.stringify(previous.registryUrls)
+  ) {
     registry.reset();
     catalog = { status: 'idle', updatedAt: '', fetchedAt: 0, error: '', plugins: [] };
     if (current.autoUpdate) {
@@ -1166,6 +1291,9 @@ async function dispatchAction(action, payload) {
       return setEnabled(String(payload.id || ''), payload.enabled === true);
     case 'reload':
       return reloadPlugin(String(payload.id || ''));
+
+    case 'preview':
+      return previewPlugin(String(payload.id || ''));
     case 'rollback':
       return rollbackPlugin(String(payload.id || ''), String(payload.version || ''));
     case 'logs':
@@ -1208,6 +1336,7 @@ async function dispatchAction(action, payload) {
 function init(options = {}) {
   if (initialized) return;
   initialized = true;
+  safeMode = options.safeMode === true;
   onChange = typeof options.onChange === 'function' ? options.onChange : null;
 
   state.ensureDirs();
@@ -1252,6 +1381,12 @@ function init(options = {}) {
     onChange: () => safePublish(),
   });
 
+  if (safeMode) {
+    publishSummary();
+    scheduleAutoCheck();
+    return;
+  }
+
   loadInstalled()
     .catch((err) => console.warn('[octo] plugins load failed:', err.message))
     .finally(() => {
@@ -1264,6 +1399,15 @@ function init(options = {}) {
 function dispose() {
   clearTimeout(autoStartTimer);
   clearInterval(autoInterval);
+  clearTimeout(devWatchTimer);
+  if (devWatcher) {
+    try {
+      devWatcher.close();
+    } catch {
+      /* наблюдатель уже закрыт */
+    }
+    devWatcher = null;
+  }
   docsWindow.close();
   managerWindow.close();
   host.unloadAll().catch(() => {});
@@ -1277,7 +1421,7 @@ async function suspend() {
 }
 
 async function resume() {
-  if (!initialized || !ctx.win) return;
+  if (!initialized || !ctx.win || safeMode) return;
   for (const record of devRecords) {
     if (record.enabled) await loadRecord(record, { silent: true });
   }
@@ -1378,6 +1522,7 @@ module.exports = {
   getState: managerState,
   getSummary: () => ctx.plugins,
   setEnabled,
+  setSettings: saveSettings,
   toggle: togglePlugin,
   reloadDevPlugins,
 };

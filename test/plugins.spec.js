@@ -110,6 +110,19 @@ test('плагин, команды, панель и менеджер', async () 
     await page.locator('#panelPlugins [data-plugin-toggle]').click();
     await expect(page.locator('#panelPluginActions .panel-row')).toHaveCount(1);
 
+    // Быстрое меню показывает только активные плагины и их действия.
+    await page.click('#btnPluginsActive');
+    await expect(page.locator('#pluginsPopover')).toBeVisible();
+    await expect(page.locator('#pluginsPopoverList')).toContainText('Hello octo');
+    const quickRow = page
+      .locator('#pluginsPopoverList .active-plugin-action')
+      .filter({ hasText: 'Посчитать видео' });
+    await expect(quickRow).toBeVisible();
+    await quickRow.click();
+    await expect(page.locator('#pageTitle')).toContainText('Hello octo: Видео на странице: 0');
+    await page.click('#btnPluginsPopoverClose');
+    await expect(page.locator('#popover')).toBeHidden();
+
     // Отдельный менеджер: установленные, отчёт и настройки.
     await page.evaluate(() => window.octo.cmd('plugins'));
     const manager = await waitForWindow(
@@ -128,6 +141,8 @@ test('плагин, команды, панель и менеджер', async () 
     await expect(manager.locator('#installedList')).toContainText('Скрипты на странице');
     await expect(manager.locator('#installedList')).toContainText('замечаний нет');
     await expect(manager.locator('#installedList .plugin-logs')).toContainText('активирован');
+    await expect(manager.locator('#installedList')).toContainText('Хранилище:');
+    await expect(manager.locator('#installedList')).toContainText('Команды: 1 из 64');
 
     await manager.locator('[data-tab="settings"]').click();
     await expect(manager.locator('#switchAutoUpdate')).toHaveAttribute('aria-checked', 'true');

@@ -56,6 +56,7 @@ module.exports = [
       'test-results/**',
       'playwright-report/**',
       'src/renderer/plugins-docs/**',
+      'src/renderer/vendor/**',
     ],
   },
   {
@@ -72,6 +73,16 @@ module.exports = [
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'script',
+      globals: browserGlobals,
+    },
+    rules,
+  },
+  {
+    // Модуль-кодировщик GIF: в браузере он грузится как type="module".
+    files: ['src/renderer/gif-worker.js'],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: 'module',
       globals: browserGlobals,
     },
     rules,

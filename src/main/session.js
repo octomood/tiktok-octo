@@ -20,6 +20,9 @@ const ALLOWED_PERMISSIONS = new Set([
   'clipboard-sanitized-write',
   'pointerLock',
   'background-sync',
+  // Выбор аудиовыхода: setSinkId для конкретного устройства требует этого
+  // разрешения. Захвата звука оно не даёт — только выбор, куда его выводить.
+  'speaker-selection',
 ]);
 
 const preparedSessions = new Set();

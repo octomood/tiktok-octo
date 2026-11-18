@@ -23,6 +23,8 @@ const DEFAULT_SETTINGS = {
   allowUnsigned: true,
   requireSignatures: false,
   registryUrl: DEFAULT_REGISTRY_URL,
+  // Дополнительные каталоги рядом с официальным (до трёх).
+  registryUrls: [],
 };
 
 function baseDir() {
@@ -91,6 +93,13 @@ function read() {
     typeof settings.registryUrl === 'string' && settings.registryUrl.trim()
       ? settings.registryUrl.trim()
       : DEFAULT_SETTINGS.registryUrl;
+
+  const urls = Array.isArray(settings.registryUrls) ? settings.registryUrls : [];
+  settings.registryUrls = urls
+    .filter((url) => typeof url === 'string' && url.trim())
+    .map((url) => url.trim())
+    .filter((url, index, list) => list.indexOf(url) === index && url !== settings.registryUrl)
+    .slice(0, 3);
 
   return { schema: SCHEMA, settings, plugins };
 }

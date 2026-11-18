@@ -60,9 +60,47 @@ const PAGE_SCRIPT = `(() => {
     return rect.width > 80 && rect.height > 80;
   };
 
+  // Лента держит в DOM соседние ролики: размер у всех большой, поэтому
+  // «на экране» — это ещё и центр в пределах окна.
+  const onScreen = (video) => {
+    if (!visible(video)) return false;
+    const rect = video.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    return x >= 0 && x <= window.innerWidth && y >= 0 && y <= window.innerHeight;
+  };
+
+  /**
+   * Оставить звук одному ролику. После смены видео TikTok иногда продолжает
+   * играть предыдущий <video>: на экране уже другой кадр, а звучит старый.
+   * Если на экране вообще нет ролика, не вмешиваемся — возможно, это не лента.
+   */
+  const solePlayer = () => {
+    const playing = videos().filter((video) => !video.paused && !video.ended);
+    if (!playing.length) return null;
+    const screen = playing.find(onScreen) || null;
+    const onPage = screen || videos().find(onScreen) || null;
+    if (!onPage) return null;
+    let paused = false;
+    for (const video of playing) {
+      if (video === screen) continue;
+      // Два ролика на экране — не наш случай: не угадываем, какой главный.
+      if (screen && onScreen(video)) continue;
+      try {
+        video.pause();
+        paused = true;
+      } catch (err) {
+        /* элемент уже выгружен */
+      }
+    }
+    return paused ? screen : null;
+  };
+
   const activeVideo = () => {
     const list = videos();
     return (
+      list.find((video) => onScreen(video) && !video.paused && !video.ended) ||
+      list.find(onScreen) ||
       list.find((video) => visible(video) && !video.paused && !video.ended) ||
       list.find(visible) ||
       list[0] ||
@@ -222,6 +260,10 @@ const PAGE_SCRIPT = `(() => {
   function tick() {
     if (pageHidden()) return;
 
+    // Сайт иногда оставляет играть прошлый ролик — звук от него, картинка от
+    // нового. Здесь же ловим это и без сворачивания окна.
+    solePlayer();
+
     const video = activeVideo();
     if (!video) {
       forget();
@@ -290,7 +332,11 @@ const PAGE_SCRIPT = `(() => {
   };
 
   const onVisibility = () => {
-    if (!pageHidden() && state.video) reset(state.video);
+    if (pageHidden()) return;
+    // Пока окно было скрыто, сайт мог переключить ролик: звук старого
+    // оставался, а на экране уже другой. Гасим лишние и начинаем заново.
+    solePlayer();
+    forget();
   };
 
   // Первый кадр нового ролика иногда не доезжает до экрана: просим
@@ -330,6 +376,17 @@ const PAGE_SCRIPT = `(() => {
     resume() {
       const video = activeVideo();
       if (!video) return;
+      // Старый ролик мог остаться играть, пока окно было в трее: его звук
+      // слышен, а на экране уже другое видео. Гасим всех, кроме текущего.
+      for (const other of videos()) {
+        if (other === video || other.paused || other.ended) continue;
+        if (onScreen(other)) continue;
+        try {
+          other.pause();
+        } catch (err) {
+          /* элемент уже выгружен */
+        }
+      }
       kick(video);
       if (video.paused && !video.ended) video.play().catch(() => {});
     },

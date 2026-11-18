@@ -119,6 +119,8 @@ function normalizePlugin(raw) {
   return {
     id,
     name,
+    registryUrl: typeof raw.registryUrl === 'string' ? raw.registryUrl.slice(0, 500) : '',
+    registryLabel: typeof raw.registryLabel === 'string' ? raw.registryLabel.slice(0, 80) : '',
     author: normalizeAuthor(raw.author),
     description: typeof raw.description === 'string' ? raw.description.trim().slice(0, 600) : '',
     homepage:
@@ -136,6 +138,8 @@ function normalizePlugin(raw) {
       : [],
     releases,
     latest,
+    // Необязательный счётчик установок: каталог может его не присылать.
+    installs: Math.max(0, Math.round(Number(raw.installs) || 0)),
     verified: latest.signature ? verifySignature(latest) === 'verified' : false,
   };
 }
@@ -162,12 +166,16 @@ function normalizeRegistry(raw) {
   };
 }
 
-async function readRegistryText(settings) {
-  if (process.env.OCTO_PLUGIN_REGISTRY_FILE) {
-    return fs.readFileSync(process.env.OCTO_PLUGIN_REGISTRY_FILE, 'utf8');
+function hostLabel(url) {
+  try {
+    return new URL(url).hostname.slice(0, 80) || 'каталог';
+  } catch {
+    return 'каталог';
   }
+}
 
-  const url = settings.registryUrl;
+/** Текст каталога по адресу: общий путь для официального и дополнительных. */
+async function fetchRegistryText(url) {
   if (!isAllowedRegistryUrl(url)) throw new Error('Некорректный адрес каталога');
 
   const controller = new AbortController();
@@ -196,17 +204,34 @@ async function readRegistryText(settings) {
   }
 }
 
+async function readRegistryText(settings) {
+  if (process.env.OCTO_PLUGIN_REGISTRY_FILE) {
+    return fs.readFileSync(process.env.OCTO_PLUGIN_REGISTRY_FILE, 'utf8');
+  }
+  return fetchRegistryText(settings.registryUrl);
+}
+
 function loadCache() {
   if (cache) return cache;
   const saved = state.readRegistryCache();
   if (saved) {
     try {
+      const plugins = normalizeRegistry(saved).plugins;
+      const sources = [];
+      for (const plugin of plugins) {
+        const url = plugin.registryUrl || '';
+        const label = plugin.registryLabel || 'официальный';
+        if (sources.some((source) => source.url === url)) continue;
+        sources.push({ url, label, count: 0 });
+      }
       cache = {
         status: 'stale',
         updatedAt: saved.updatedAt || '',
         fetchedAt: saved.fetchedAt || 0,
         error: '',
-        plugins: normalizeRegistry(saved).plugins,
+        warnings: [],
+        sources,
+        plugins,
       };
     } catch {
       cache = null;
@@ -228,22 +253,55 @@ async function load({ force = false, settings } = {}) {
     return { ...cache, ok: cache.status !== 'error' };
   }
 
+  const current = settings || state.getSettings();
   try {
-    const text = await readRegistryText(settings || state.getSettings());
+    const text = await readRegistryText(current);
     const parsed = normalizeRegistry(JSON.parse(text));
     const fetchedAt = Date.now();
+    const primaryUrl = process.env.OCTO_PLUGIN_REGISTRY_FILE
+      ? process.env.OCTO_PLUGIN_REGISTRY_FILE
+      : current.registryUrl;
+
+    let plugins = parsed.plugins.map((plugin) => ({
+      ...plugin,
+      registryUrl: primaryUrl,
+      registryLabel: 'официальный',
+    }));
+    const sources = [{ url: primaryUrl, label: 'официальный', count: plugins.length }];
+    const warnings = [];
+    const known = new Set(plugins.map((plugin) => plugin.id));
+
+    // Дополнительные каталоги не ломают основной: их ошибки — предупреждения.
+    for (const url of (current.registryUrls || []).slice(0, 3)) {
+      try {
+        const extraText = await fetchRegistryText(url);
+        const extra = normalizeRegistry(JSON.parse(extraText));
+        const label = hostLabel(url);
+        const added = extra.plugins
+          .filter((plugin) => !known.has(plugin.id))
+          .map((plugin) => ({ ...plugin, registryUrl: url, registryLabel: label }));
+        for (const plugin of added) known.add(plugin.id);
+        plugins = plugins.concat(added);
+        sources.push({ url, label, count: added.length });
+      } catch (err) {
+        warnings.push(`${hostLabel(url)}: ${err.message}`);
+      }
+    }
+
     cache = {
       status: 'ready',
       updatedAt: parsed.updatedAt,
       fetchedAt,
       error: '',
-      plugins: parsed.plugins,
+      warnings,
+      sources,
+      plugins,
     };
     state.writeRegistryCache({
       schema: 1,
       updatedAt: parsed.updatedAt,
       fetchedAt,
-      plugins: parsed.plugins.map((plugin) => ({
+      plugins: plugins.map((plugin) => ({
         ...plugin,
         latest: undefined,
         releases: plugin.releases,

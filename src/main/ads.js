@@ -113,6 +113,7 @@ const PAGE_SCRIPT = `(() => {
   let running = true;
   let timer = null;
   let lastSkip = 0;
+  let skipped = 0;
   const attempts = new WeakMap();
 
   const isVisible = (el) => {
@@ -309,6 +310,7 @@ const PAGE_SCRIPT = `(() => {
 
     if (acted && !noticed.has(marker)) {
       noticed.add(marker);
+      skipped += 1;
       showNotice();
     }
   }
@@ -334,7 +336,7 @@ const PAGE_SCRIPT = `(() => {
     delete window.__octoAds;
   }
 
-  window.__octoAds = { start, stop, tick };
+  window.__octoAds = { start, stop, tick, stats: () => ({ skipped }) };
   start();
   return 1;
 })()`;
@@ -347,19 +349,106 @@ const CLEANUP_SCRIPT = `(() => {
   document.querySelectorAll('[${MARK}]').forEach((el) => el.removeAttribute('${MARK}'));
 })()`;
 
+const POLL_MS = Number(process.env.OCTO_ADS_POLL_MS) || 3000;
+const JOURNAL_MAX = 20;
+
+let pollTimer = null;
+let lastPageCount = 0;
+
+function readSettings() {
+  const saved = readState();
+  const journal = Array.isArray(saved.adJournal)
+    ? saved.adJournal.map(Number).filter(Number.isFinite).slice(0, JOURNAL_MAX)
+    : [];
+  return {
+    enabled: saved.adsSkip === true,
+    inPip: saved.adsInPip !== false,
+    skipped: Math.max(0, Number(saved.adsSkipped) || 0),
+    journal,
+  };
+}
+
+/** Читает настройки с диска и синхронизирует состояние для интерфейса. */
+function sync() {
+  const settings = readSettings();
+  ctx.adsSkip = settings.enabled;
+  ctx.adsInPip = settings.inPip;
+  ctx.adsSkipped = settings.skipped;
+  ctx.adJournal = settings.journal;
+}
+
 function isEnabled() {
   return ctx.adsSkip === true;
 }
 
-/** Читает настройку с диска один раз при старте приложения. */
-function sync() {
-  ctx.adsSkip = readState().adsSkip === true;
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => {
+      setTimeout(() => resolve(null), ms);
+    }),
+  ]);
+}
+
+/** Счётчик живёт в страничном скрипте; после перезагрузки он начинается с нуля. */
+async function poll() {
+  if (!isEnabled()) return;
+  const wc = ctx.view?.webContents;
+  if (!wc || wc.isDestroyed()) return;
+
+  try {
+    const stats = await withTimeout(
+      wc.executeJavaScript(
+        `(() => (window.__octoAds && window.__octoAds.stats ? window.__octoAds.stats() : null))()`,
+        false,
+      ),
+      1200,
+    );
+    if (!stats || typeof stats.skipped !== 'number') return;
+
+    if (stats.skipped < lastPageCount) lastPageCount = stats.skipped;
+    const delta = stats.skipped - lastPageCount;
+    if (delta <= 0) return;
+
+    lastPageCount = stats.skipped;
+    ctx.adsSkipped += delta;
+    const now = Date.now();
+    for (let index = 0; index < delta; index += 1) ctx.adJournal.unshift(now);
+    ctx.adJournal = ctx.adJournal.slice(0, JOURNAL_MAX);
+    writeState({ adsSkipped: ctx.adsSkipped, adJournal: ctx.adJournal });
+    pushState();
+  } catch {
+    /* страница ещё грузится */
+  }
+}
+
+function startPoll() {
+  if (pollTimer) return;
+  pollTimer = setInterval(poll, POLL_MS);
+  if (typeof pollTimer.unref === 'function') pollTimer.unref();
+}
+
+function stopPoll() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = null;
+  lastPageCount = 0;
 }
 
 function apply() {
   const wc = ctx.view?.webContents;
   if (!wc || wc.isDestroyed()) return;
-  evalInPage(wc, [isEnabled() ? PAGE_SCRIPT : CLEANUP_SCRIPT]);
+
+  const active = isEnabled() && (ctx.adsInPip || !ctx.pipActive);
+  evalInPage(wc, [active ? PAGE_SCRIPT : CLEANUP_SCRIPT]);
+  if (active) startPoll();
+  else stopPoll();
+}
+
+/** PiP без пропуска рекламы: снимаем страничный скрипт, счётчик сохраняем. */
+function suspend() {
+  const wc = ctx.view?.webContents;
+  if (wc && !wc.isDestroyed()) evalInPage(wc, [CLEANUP_SCRIPT]);
+  stopPoll();
 }
 
 function setEnabled(value) {
@@ -367,6 +456,7 @@ function setEnabled(value) {
   writeState({ adsSkip: ctx.adsSkip });
   apply();
   pushState();
+  return ctx.adsSkip;
 }
 
 function toggle() {
@@ -374,6 +464,29 @@ function toggle() {
   return isEnabled();
 }
 
+function setInPip(value) {
+  ctx.adsInPip = Boolean(value);
+  writeState({ adsInPip: ctx.adsInPip });
+  if (ctx.pipActive) apply();
+  pushState();
+}
+
+function resetCounter() {
+  ctx.adsSkipped = 0;
+  ctx.adJournal = [];
+  writeState({ adsSkipped: 0, adJournal: [] });
+  pushState();
+}
+
 sync();
 
-module.exports = { isEnabled, sync, apply, setEnabled, toggle };
+module.exports = {
+  isEnabled,
+  sync,
+  apply,
+  suspend,
+  setEnabled,
+  toggle,
+  setInPip,
+  resetCounter,
+};

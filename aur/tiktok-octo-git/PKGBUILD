@@ -70,5 +70,19 @@ Icon=tiktok-octo
 StartupWMClass=tiktok-octo
 Categories=Network;Video;
 Keywords=tiktok;video;social;
+MimeType=x-scheme-handler/tiktok-octo;
+Actions=pip;messages;mute;
+
+[Desktop Action pip]
+Name=Картинка в картинке
+Exec=tiktok-octo --pip
+
+[Desktop Action messages]
+Name=Сообщения
+Exec=tiktok-octo --messages
+
+[Desktop Action mute]
+Name=Без звука
+Exec=tiktok-octo --mute
 EOF
 }

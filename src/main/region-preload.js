@@ -1,6 +1,6 @@
 'use strict';
 
-const { ipcRenderer, webFrame } = require('electron');
+const { ipcRenderer, webFrame, webUtils } = require('electron');
 
 /**
  * Preload страницы TikTok для подмены региона.
@@ -127,8 +127,239 @@ function installRegion(config) {
 }
 
 const config = ipcRenderer.sendSync('octo:region-config');
+// «chat» — панель сообщений, «feed» — основной сайт. Нужно, чтобы перетаскивание
+// файлов работало только в чате и не ломало загрузку на самом TikTok.
+const pageRole = ipcRenderer.sendSync('octo:page-role');
 const host = window.location?.hostname || '';
 const isTikTok = host === 'tiktok.com' || host.endsWith('.tiktok.com');
+
+// Перехват «Сообщений» ставим раньше скриптов сайта: иначе собственный чат
+// TikTok успевает открыться на pointerdown/mousedown до нашего click.
+// Слушатель живёт в изолированном мире preload и не отдаёт странице ничего,
+// кроме факта перехвата: сама страница не может отправить этот IPC.
+function installChatLinks() {
+  const isMessages = (raw) => {
+    try {
+      const url = new URL(raw);
+      return /(^|\.)tiktok\.com$/.test(url.hostname) && /^\/messages(?:\/|$)/.test(url.pathname);
+    } catch {
+      return false;
+    }
+  };
+  const hrefOf = (target) => {
+    if (!(target instanceof window.Element)) return null;
+    let anchor = target.closest('a[href]');
+    let href = anchor ? anchor.href : '';
+    if (!isMessages(href)) {
+      const item = target.closest('[data-e2e*="message"], [data-e2e*="inbox"]');
+      anchor = item ? item.closest('a[href]') : null;
+      href = anchor ? anchor.href : '';
+      if (!href && !item) {
+        const candidate = target.closest('a, button, [role="button"], [role="link"], [data-e2e]');
+        if (!candidate) return null;
+        const text = (candidate.innerText || '').trim().toLowerCase();
+        const aria = (
+          candidate.getAttribute('aria-label') ||
+          candidate.getAttribute('title') ||
+          ''
+        ).toLowerCase();
+        const byText = /^(сообщения|messages|inbox|direct messages)\b/.test(text);
+        const byAria = /(messages|сообщен|inbox|direct)/.test(aria);
+        if (!byText && !byAria) return null;
+      }
+      if (!isMessages(href)) href = 'https://www.tiktok.com/messages';
+    }
+    return href;
+  };
+
+  const onPage = () => /^\/messages(?:\/|$)/.test(window.location.pathname);
+  let pending = null;
+  const onPress = (event) => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    if (onPage() || !hrefOf(event.target)) return;
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+  };
+  const onClick = (event) => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    if (onPage()) return;
+    const href = hrefOf(event.target);
+    if (!href) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    clearTimeout(pending);
+    if (event.detail > 1) {
+      ipcRenderer.send('octo:chat-open', { url: href, full: true });
+      pending = null;
+      return;
+    }
+    // Панель перекроет ссылку, поэтому даём второму клику двойного нажатия
+    // дойти до страницы, и только потом просим открыть панель.
+    pending = setTimeout(() => {
+      pending = null;
+      ipcRenderer.send('octo:chat-open', { url: href, full: false });
+    }, 280);
+  };
+
+  window.addEventListener('pointerdown', onPress, true);
+  window.addEventListener('pointerup', onPress, true);
+  window.addEventListener('mousedown', onPress, true);
+  window.addEventListener('mouseup', onPress, true);
+  window.addEventListener('click', onClick, true);
+  // Страничному fallback-скрипту сообщаем, что перехват уже стоит.
+  webFrame
+    .executeJavaScript('window.__octoChatLinks = window.__octoChatLinks || { native: true }')
+    .catch(() => {});
+}
+
+if (isTikTok && !/^\/messages(?:\/|$)/.test(window.location.pathname)) {
+  try {
+    installChatLinks();
+  } catch {
+    /* DOM ещё не готов — обработчики не нужны */
+  }
+}
+
+/**
+ * Клавиатурная лента.
+ *
+ * Слушатель живёт в изолированном мире preload: страница не может отправить
+ * этот IPC, а обычный ввод в комментариях и поиске не перехватывается.
+ * preventDefault нужен, чтобы пробел не прокручивал ленту поверх действия.
+ */
+let feedKeysEnabled = true;
+
+function installFeedKeys() {
+  const isEditable = (element) => {
+    if (!element || element.nodeType !== 1) return false;
+    const tag = element.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (element.isContentEditable) return true;
+    return Boolean(
+      typeof element.closest === 'function' &&
+      element.closest(
+        '[contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]',
+      ),
+    );
+  };
+
+  const actionOf = (event) => {
+    const key = event.key;
+    if (key === ' ' || key === 'k' || key === 'K') return 'playPause';
+    if (key === 'j' || key === 'J') return 'seekBack';
+    if (key === 'l' || key === 'L') return 'seekForward';
+    if (key === 's' || key === 'S') return 'screenshot';
+    // «?» зависит от раскладки: на US это Shift+/, на других — свой символ.
+    if (key === '?' || (event.code === 'Slash' && event.shiftKey)) return 'help';
+    if (/^[0-9]$/.test(key)) return 'seekPercent';
+    return null;
+  };
+
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      if (!feedKeysEnabled || !event.isTrusted || event.defaultPrevented) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (isEditable(event.target) || isEditable(document.activeElement)) return;
+
+      const action = actionOf(event);
+      if (!action) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+
+      const repeat = event.repeat === true;
+      if (repeat && action !== 'seekBack' && action !== 'seekForward' && action !== 'seekPercent') {
+        return;
+      }
+      ipcRenderer.send(
+        'octo:feed-key',
+        action,
+        action === 'seekPercent' ? Number(event.key) : undefined,
+        repeat,
+      );
+    },
+    true,
+  );
+}
+
+ipcRenderer.on('octo:feed-keys', (_event, enabled) => {
+  feedKeysEnabled = enabled !== false;
+});
+
+try {
+  installFeedKeys();
+} catch {
+  /* DOM ещё не готов — обработчики не нужны */
+}
+
+/**
+ * Перетаскивание файлов в панель чата: drop = отправить как фото.
+ *
+ * Работает только в роли «chat»: на самом сайте TikTok файл, брошенный в
+ * загрузчик, должен остаться загрузчиком. Путь к файлу даёт webUtils —
+ * страница его не видит и IPC отправить не может.
+ */
+function installDropFiles() {
+  if (pageRole !== 'chat') return;
+  const IMAGE = /\.(png|jpe?g|webp|gif)$/i;
+
+  const pathsOf = (event) => {
+    const files = event.dataTransfer ? Array.from(event.dataTransfer.files || []) : [];
+    const paths = [];
+    for (const file of files) {
+      let full = '';
+      try {
+        full = webUtils.getPathForFile ? webUtils.getPathForFile(file) : file.path || '';
+      } catch {
+        full = '';
+      }
+      if (full && IMAGE.test(full)) paths.push(full);
+    }
+    return paths;
+  };
+
+  window.addEventListener(
+    'dragover',
+    (event) => {
+      const types = event.dataTransfer ? Array.from(event.dataTransfer.types || []) : [];
+      if (!types.includes('Files')) return;
+      event.preventDefault();
+      try {
+        event.dataTransfer.dropEffect = 'copy';
+      } catch {
+        /* тип данных уже зафиксирован */
+      }
+    },
+    true,
+  );
+
+  window.addEventListener(
+    'drop',
+    (event) => {
+      const types = event.dataTransfer ? Array.from(event.dataTransfer.types || []) : [];
+      if (!types.includes('Files')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const paths = pathsOf(event);
+      if (paths.length) ipcRenderer.send('octo:chat-files', { paths });
+    },
+    true,
+  );
+}
+
+try {
+  installDropFiles();
+} catch {
+  /* DOM ещё не готов — перетаскивание не нужно */
+}
 
 if (config && config.locale && isTikTok) {
   const script = `(${installRegion.toString()})(${JSON.stringify(config)})`;

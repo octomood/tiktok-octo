@@ -84,6 +84,17 @@ button {
   outline-offset: 2px;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 .shell {
   display: flex;
   flex-direction: column;
@@ -678,6 +689,20 @@ body.mac .topbar {
   line-height: 1.55;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+}
+
+.permission-diff {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 2px 0 8px;
+}
+
+.permission-diff-title {
+  width: 100%;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .chips {

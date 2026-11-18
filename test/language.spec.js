@@ -59,7 +59,9 @@ test('язык интерфейса и сайта переключается и 
     await expect(page.locator('html')).toHaveAttribute('lang', 'de');
     await expect(page.locator('[data-cat="page"] .panel-cat-title')).toHaveText('Seite');
     await expect(page.locator('[data-cat="language"] .panel-cat-title')).toHaveText('Sprache');
-    await expect(page.locator('.panel-head-title')).toHaveText('Funktionen');
+    await expect(page.locator('#panelHeadTitle')).toHaveText('Funktionen');
+    await expect(page.locator('#panelDetailTitle')).toHaveText('Sprache');
+    await expect(page.locator('.panel-group').first()).toHaveText('Anzeige');
 
     const menu = await app.evaluate(({ Menu }) =>
       Menu.getApplicationMenu().items.map((item) => item.label),
@@ -101,7 +103,11 @@ test('язык интерфейса и сайта переключается и 
     await app.firstWindow();
     const restarted = await waitForFileWindow(app);
     await expect(restarted.locator('html')).toHaveAttribute('lang', 'de');
-    if (!(await restarted.locator('#panel').isVisible())) await restarted.click('#btnPanel');
+    await expect(restarted.locator('#panelVersion')).toContainText('v');
+    if (await restarted.locator('#panel').evaluate((node) => node.hidden)) {
+      await restarted.click('#btnPanel');
+    }
+    await expect(restarted.locator('#panel')).not.toHaveAttribute('hidden', '');
     await restarted.click('[data-cat-head="language"]');
     await expect(restarted.locator('#appLanguageSelect')).toHaveValue('de');
     await expect(restarted.locator('#siteLanguageSelect')).toHaveValue('de');

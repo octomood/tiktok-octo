@@ -543,8 +543,7 @@ function enabledShadowCss() {
  * Основной документ уже получает CSS через insertCSS, поэтому ему передаём
  * только правило для shadow root.
  */
-async function injectFrameStyles() {
-  const wc = ctx.view?.webContents;
+async function injectFrameStyles(wc = ctx.view?.webContents) {
   if (!wc || wc.isDestroyed()) return;
 
   const documentCss = enabledCss();
@@ -683,11 +682,26 @@ const IMPLEMENTATIONS = {
  */
 const RULES = COSMETIC_RULES.map((rule) => ({ ...rule, ...(IMPLEMENTATIONS[rule.id] || {}) }));
 
-let insertedKeys = [];
-let generation = 0;
+/**
+ * Вставленный CSS живёт отдельно для каждого webContents: у основного окна и
+ * панели чата свои ключи. removeInsertedCSS со старым ключом после навигации
+ * просто отклоняется, это нормально.
+ */
+const insertionState = new WeakMap();
+
+function stateOf(wc) {
+  let state = insertionState.get(wc);
+  if (!state) {
+    state = { generation: 0, keys: [] };
+    insertionState.set(wc, state);
+  }
+  return state;
+}
+
 let timer = null;
 let scriptTimer = null;
 let onChange = null;
+let eco = false;
 
 function settings() {
   const value = readState().cosmetics;
@@ -706,38 +720,37 @@ function setOnChange(callback) {
   onChange = callback;
 }
 
-async function apply() {
-  const wc = ctx.view?.webContents;
+async function apply(wc = ctx.view?.webContents) {
   if (!wc || wc.isDestroyed()) return;
 
-  const currentGeneration = ++generation;
-  const previous = insertedKeys;
-  insertedKeys = [];
+  const state = stateOf(wc);
+  const currentGeneration = ++state.generation;
+  const previous = state.keys;
+  state.keys = [];
 
   await Promise.all(previous.map((key) => wc.removeInsertedCSS(key).catch(() => {})));
-  if (currentGeneration !== generation) return;
+  if (currentGeneration !== state.generation) return;
 
   const css = enabledCss();
 
   if (css.trim()) {
     try {
       const key = await wc.insertCSS(css, { cssOrigin: 'user' });
-      if (currentGeneration === generation) insertedKeys.push(key);
+      if (currentGeneration === state.generation) state.keys.push(key);
     } catch {
       /* документ сменился между вызовом и вставкой */
     }
   }
-  if (currentGeneration !== generation) return;
+  if (currentGeneration !== state.generation) return;
 
-  runScripts();
-  injectFrameStyles().catch(() => {});
+  runScripts(wc);
+  injectFrameStyles(wc).catch(() => {});
 }
 
-let scriptRunning = false;
+const scriptRunning = new WeakSet();
 
-async function runScripts() {
-  const wc = ctx.view?.webContents;
-  if (!wc || wc.isDestroyed() || scriptRunning) return;
+async function runScripts(wc = ctx.view?.webContents) {
+  if (!wc || wc.isDestroyed() || scriptRunning.has(wc)) return;
 
   const enabled = RULES.filter((rule) => isEnabled(rule.id));
   const scripts = [];
@@ -750,19 +763,33 @@ async function runScripts() {
 
   if (!scripts.length) return;
 
-  scriptRunning = true;
+  scriptRunning.add(wc);
   try {
     await evalInPage(wc, scripts);
   } finally {
-    scriptRunning = false;
+    scriptRunning.delete(wc);
   }
 }
 
 function scheduleScripts(delay = 500) {
   clearTimeout(scriptTimer);
+  if (eco) return;
   scriptTimer = setTimeout(() => {
     runScripts();
   }, delay);
+}
+
+/** Экономный режим на батарее: декоративные скрипты не пересканируют DOM. */
+function setEco(value) {
+  const next = Boolean(value);
+  if (eco === next) return;
+  eco = next;
+  if (eco) {
+    clearTimeout(timer);
+    clearTimeout(scriptTimer);
+  } else {
+    scheduleScripts(0);
+  }
 }
 
 /** SPA-переходы и поздние баннеры: пересканировать DOM с небольшой задержкой. */
@@ -781,17 +808,21 @@ function toggle(id) {
   writeState({ cosmetics: { ...settings(), [id]: next } });
   setCosmeticsState(settings());
   apply();
+  const chatWc = ctx.chatView?.webContents;
+  if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
 
   // Тема сайта живёт в cookie и читается React-провайдером при монтировании,
   // поэтому после переключения перезагружаем страницу, а не ждём перехода.
+  // Панель чата — отдельный webContents, её перезагружаем тоже.
   if (id === 'dark-theme') {
-    const wc = ctx.view?.webContents;
-    if (wc && !wc.isDestroyed()) {
-      autoTheme.setEnabled(wc, next).catch(() => {});
-      syncThemeCookies(wc.session, next).finally(() => {
+    const views = [ctx.view?.webContents, chatWc].filter((wc) => wc && !wc.isDestroyed());
+    for (const wc of views) autoTheme.setEnabled(wc, next).catch(() => {});
+    const ses = ctx.view?.webContents?.session || ctx.chatView?.webContents?.session;
+    syncThemeCookies(ses, next).finally(() => {
+      for (const wc of views) {
         if (!wc.isDestroyed()) wc.reload();
-      });
-    }
+      }
+    });
   }
 
   if (onChange) onChange();
@@ -819,6 +850,7 @@ module.exports = {
   prepareTheme,
   toggle,
   isEnabled,
+  setEco,
   menuItems,
   setOnChange,
 };

@@ -13,7 +13,8 @@ const { ctx } = require('./app-context');
 let player = null;
 let metadataTimer = null;
 let metadataPending = false;
-let lastMeta = { title: '', artist: '' };
+let lastMeta = { title: '', artist: '', art: '', duration: 0 };
+let lastPosition = 0;
 
 const PAUSE_ALL_JS = 'document.querySelectorAll("video").forEach((video) => video.pause())';
 
@@ -99,12 +100,22 @@ function navigate(direction) {
     .catch(() => {});
 }
 
-function publishMetadata(title, artist, url) {
+function publishMetadata(title, artist, url, art = '', duration = 0) {
   if (!player) return;
   const safeTitle = (title || 'TikTok').replace(/\s+/g, ' ').slice(0, 140);
   const safeArtist = (artist || 'TikTok').replace(/\s+/g, ' ').slice(0, 70);
-  if (safeTitle === lastMeta.title && safeArtist === lastMeta.artist) return;
-  lastMeta = { title: safeTitle, artist: safeArtist };
+  const safeArt = typeof art === 'string' && /^https?:\/\//i.test(art) ? art.slice(0, 1000) : '';
+  const durationValue = Number(duration);
+  const safeDuration = Number.isFinite(durationValue) && durationValue > 0 ? durationValue : 0;
+  if (
+    safeTitle === lastMeta.title &&
+    safeArtist === lastMeta.artist &&
+    safeArt === lastMeta.art &&
+    safeDuration === lastMeta.duration
+  ) {
+    return;
+  }
+  lastMeta = { title: safeTitle, artist: safeArtist, art: safeArt, duration: safeDuration };
 
   try {
     player.metadata = {
@@ -112,10 +123,35 @@ function publishMetadata(title, artist, url) {
       'xesam:title': safeTitle,
       'xesam:artist': [safeArtist],
       'xesam:url': url || '',
+      ...(safeArt ? { 'mpris:artUrl': safeArt } : {}),
+      ...(safeDuration ? { 'mpris:length': Math.round(safeDuration * 1e6) } : {}),
     };
   } catch (err) {
     console.warn('[octo] MPRIS metadata failed:', err.message);
   }
+}
+
+/** Перемотка по запросу MPRIS: секунды, не микросекунды. */
+function seekTo(seconds) {
+  const wc = contents();
+  const target = Math.max(0, Number(seconds) || 0);
+  if (!wc || wc.isDestroyed()) return;
+  lastPosition = target;
+  runInPage(
+    `(() => {
+      const videos = [...document.querySelectorAll('video')];
+      const video =
+        videos.find((item) => {
+          const rect = item.getBoundingClientRect();
+          return rect.width > 120 && rect.height > 120;
+        }) || videos[0];
+      if (!video) return;
+      const limit = Number.isFinite(video.duration) ? video.duration : ${target};
+      video.currentTime = Math.min(limit, ${target});
+    })()`,
+    true,
+  );
+  if (player) player.seeked(Math.round(target * 1e6));
 }
 
 const INVISIBLE = /[\u200B-\u200F\uFEFF]/g;
@@ -191,6 +227,11 @@ async function refreshMetadata() {
       );
 
       return {
+        art:
+          (video && video.poster) ||
+          (document.querySelector('meta[property="og:image"]')?.content || ''),
+        time: video ? Number(video.currentTime) || 0 : 0,
+        duration: video ? Number(video.duration) || 0 : 0,
         title: pick([
           '[data-e2e="video-desc"]',
           '[data-e2e="anchoring-description-layer"]',
@@ -205,7 +246,8 @@ async function refreshMetadata() {
     const artist = cleanArtist(info.artist) || 'TikTok';
     const title = cleanTitle(info.title || fallback, artist === 'TikTok' ? '' : artist) || fallback;
 
-    publishMetadata(title, artist, wc.getURL());
+    lastPosition = Number(info.time) || 0;
+    publishMetadata(title, artist, wc.getURL(), info.art, info.duration);
   } catch {
     /* DOM ещё не готов */
   } finally {
@@ -252,8 +294,9 @@ function initMpris() {
   player.canPause = true;
   player.canGoNext = true;
   player.canGoPrevious = true;
-  player.canSeek = false;
+  player.canSeek = true;
   player.playbackStatus = 'Paused';
+  player.getPosition = () => Math.round(lastPosition * 1e6);
 
   // Метаданные должны существовать сразу, даже если DOM ещё грузится:
   // иначе клиенты (playerctl, GNOME) считают плеер «без трека».
@@ -269,6 +312,11 @@ function initMpris() {
   });
   player.on('next', () => navigate('next'));
   player.on('previous', () => navigate('prev'));
+  player.on('seek', (offset) => seekTo(lastPosition + Number(offset || 0) / 1e6));
+  player.on('position', (event) => {
+    if (!event || event.trackId !== '/com/octo/tiktok/current') return;
+    seekTo(Number(event.position || 0) / 1e6);
+  });
 
   player.on('raise', () => {
     if (!ctx.win) return;

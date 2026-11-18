@@ -1,6 +1,14 @@
 'use strict';
 
-const { BrowserWindow, ipcMain, protocol, session, safeStorage } = require('electron');
+const {
+  BrowserWindow,
+  Notification,
+  clipboard,
+  ipcMain,
+  protocol,
+  session,
+  safeStorage,
+} = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { ctx, toast } = require('../app-context');
@@ -11,6 +19,10 @@ const { verifyInstalled, manifestFor, saveRecord, setRecordSettings } = require(
 const { LIMITS, PROTOCOL } = require('./constants');
 const state = require('./state');
 const { normalizeTikTokUrl } = require('./navigation');
+const { evalInPage } = require('../page-eval');
+const player = require('../player');
+const i18n = require('../i18n');
+const { findAppLanguage } = require('../language-catalog');
 const { normalizeAccelerator, matchesInput } = require('./accelerator');
 
 /**
@@ -330,6 +342,8 @@ async function load(record) {
     notifyCalls: [],
     networkCalls: [],
     pageCalls: [],
+    downloadCalls: [],
+    systemCalls: [],
     cssCalls: [],
     logs: [],
     saveTimer: null,
@@ -930,6 +944,240 @@ async function handleApi(entry, method, payload) {
       } catch (err) {
         return hostForbidden(`Ошибка на странице: ${err.message}`);
       }
+    }
+
+    case 'playback.status': {
+      if (!entry.manifest.permissions.includes('playback')) {
+        return hostForbidden('Нет разрешения playback');
+      }
+      const info = await player.status();
+      const wc = await pageContents(entry);
+      return {
+        ok: true,
+        result: {
+          playing: Boolean(ctx.playing),
+          muted: Boolean(wc && wc.isAudioMuted()),
+          time: Number(info?.time) || 0,
+          duration: Number(info?.duration) || 0,
+          volume: Number(ctx.player?.volume ?? 1),
+          speed: Number(ctx.player?.speed ?? 1),
+        },
+      };
+    }
+
+    case 'playback.playPause': {
+      if (!entry.manifest.permissions.includes('playback')) {
+        return hostForbidden('Нет разрешения playback');
+      }
+      if (rateLimited(entry, 'systemCalls', 120, 60_000)) {
+        return hostForbidden('Слишком много вызовов API');
+      }
+      require('../commands').handleCommand('togglePlayback');
+      return { ok: true };
+    }
+
+    case 'playback.seek': {
+      if (!entry.manifest.permissions.includes('playback')) {
+        return hostForbidden('Нет разрешения playback');
+      }
+      if (rateLimited(entry, 'systemCalls', 120, 60_000)) {
+        return hostForbidden('Слишком много вызовов API');
+      }
+      const seconds = Number(payload?.seconds);
+      if (!Number.isFinite(seconds) || seconds < 0 || seconds > 24 * 3600) {
+        return hostForbidden('Некорректная позиция');
+      }
+      player.seekTo(seconds);
+      return { ok: true, result: { seconds } };
+    }
+
+    case 'playback.volume': {
+      if (!entry.manifest.permissions.includes('playback')) {
+        return hostForbidden('Нет разрешения playback');
+      }
+      const value = Number(payload?.value);
+      if (!Number.isFinite(value) || value < 0 || value > 1) {
+        return hostForbidden('Громкость должна быть от 0 до 1');
+      }
+      player.setVolume(value);
+      return { ok: true, result: { volume: value } };
+    }
+
+    case 'playback.speed': {
+      if (!entry.manifest.permissions.includes('playback')) {
+        return hostForbidden('Нет разрешения playback');
+      }
+      const value = Number(payload?.value);
+      if (!Number.isFinite(value) || value < 0.5 || value > 3) {
+        return hostForbidden('Скорость должна быть от 0.5 до 3');
+      }
+      player.setSpeed(value);
+      return { ok: true, result: { speed: value } };
+    }
+
+    case 'feed.next':
+    case 'feed.prev': {
+      if (!entry.manifest.permissions.includes('feed')) {
+        return hostForbidden('Нет разрешения feed');
+      }
+      if (rateLimited(entry, 'systemCalls', 120, 60_000)) {
+        return hostForbidden('Слишком много вызовов API');
+      }
+      require('../commands').handleCommand(method === 'feed.next' ? 'feedNext' : 'feedPrev');
+      return { ok: true };
+    }
+
+    case 'downloads.add': {
+      if (!entry.manifest.permissions.includes('downloads')) {
+        return hostForbidden('Нет разрешения downloads');
+      }
+      const raw = typeof payload?.url === 'string' ? payload.url.trim() : '';
+      let url;
+      try {
+        url = new URL(raw);
+      } catch {
+        return hostForbidden('Некорректный URL');
+      }
+      const tiktokHost =
+        /(^|\.)tiktok\.com$/i.test(url.hostname) ||
+        /(^|\.)tiktokcdn(-[a-z0-9]+)?\.com$/i.test(url.hostname);
+      const testHost =
+        process.env.OCTO_E2E === '1' && /^(127\.0\.0\.1|localhost)$/.test(url.hostname);
+      if (url.protocol !== 'https:' && !testHost) {
+        return hostForbidden('Разрешены только https-ссылки');
+      }
+      if (!tiktokHost && !testHost) {
+        return hostForbidden('Можно скачивать только файлы TikTok');
+      }
+      if (rateLimited(entry, 'downloadCalls', 5, 60_000)) {
+        return hostForbidden('Слишком много загрузок из плагина');
+      }
+      const wc = await pageContents(entry);
+      if (!wc) return hostForbidden('Страница ещё не готова');
+      const wcForDownload = wc;
+      try {
+        wcForDownload.downloadURL(url.href);
+      } catch (err) {
+        return hostForbidden(`Загрузка не началась: ${err.message}`);
+      }
+      return { ok: true, result: { url: url.href } };
+    }
+
+    case 'overlay.show': {
+      if (!entry.manifest.permissions.includes('overlay')) {
+        return hostForbidden('Нет разрешения overlay');
+      }
+      if (rateLimited(entry, 'systemCalls', 60, 60_000)) {
+        return hostForbidden('Слишком много вызовов API');
+      }
+      const text = String(payload?.text || '')
+        .trim()
+        .slice(0, 200);
+      const timeout = Math.min(15000, Math.max(500, Number(payload?.timeoutMs) || 2500));
+      if (!text) return hostForbidden('Нужен текст плашки');
+      const wc = await pageContents(entry);
+      if (!wc) return hostForbidden('Страница ещё не готова');
+      const id = `ov-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      const nodeId = `octo-plugin-overlay-${id}`;
+      evalInPage(wc, [
+        `(() => {
+           const ID = ${JSON.stringify(nodeId)};
+           let node = document.getElementById(ID);
+           if (!node) {
+             node = document.createElement('div');
+             node.id = ID;
+             node.setAttribute('role', 'status');
+             const set = (name, value) => node.style.setProperty(name, value, 'important');
+             set('position', 'fixed');
+             set('top', '24px');
+             set('left', '50%');
+             set('transform', 'translate(-50%, 0)');
+             set('z-index', '2147483647');
+             set('padding', '10px 18px');
+             set('border-radius', '999px');
+             set('background', 'rgba(24, 24, 27, 0.92)');
+             set('color', '#ffffff');
+             set('font', '500 14px/1.2 system-ui, -apple-system, sans-serif');
+             set('pointer-events', 'none');
+             document.documentElement.appendChild(node);
+           }
+           node.textContent = ${JSON.stringify(text)};
+           clearTimeout(node.__octoTimer);
+           node.__octoTimer = setTimeout(() => node.remove(), ${timeout});
+         })()`,
+      ]);
+      return { ok: true, result: { id } };
+    }
+
+    case 'overlay.hide': {
+      if (!entry.manifest.permissions.includes('overlay')) {
+        return hostForbidden('Нет разрешения overlay');
+      }
+      const id = String(payload?.id || '');
+      if (!/^ov-[a-z0-9-]{4,40}$/.test(id)) return hostForbidden('Некорректный id плашки');
+      const wc = await pageContents(entry);
+      if (!wc) return hostForbidden('Страница ещё не готова');
+      evalInPage(wc, [
+        `(() => {
+           const node = document.getElementById(${JSON.stringify('octo-plugin-overlay-')} + ${JSON.stringify(id)});
+           if (node) node.remove();
+         })()`,
+      ]);
+      return { ok: true };
+    }
+
+    case 'i18n.get': {
+      if (!entry.manifest.permissions.includes('i18n')) {
+        return hostForbidden('Нет разрешения i18n');
+      }
+      const language = i18n.currentLanguage();
+      return {
+        ok: true,
+        result: { locale: language, dir: findAppLanguage(language).dir },
+      };
+    }
+
+    case 'clipboard.write': {
+      if (!entry.manifest.permissions.includes('clipboard')) {
+        return hostForbidden('Нет разрешения clipboard');
+      }
+      if (rateLimited(entry, 'systemCalls', 30, 60_000)) {
+        return hostForbidden('Слишком часто копируете');
+      }
+      const text = typeof payload?.text === 'string' ? payload.text.slice(0, 10000) : '';
+      if (!text) return hostForbidden('Нужен текст');
+      clipboard.writeText(text);
+      return { ok: true, result: { length: text.length } };
+    }
+
+    case 'os.notify': {
+      if (!entry.manifest.permissions.includes('os:notify')) {
+        return hostForbidden('Нет разрешения os:notify');
+      }
+      if (rateLimited(entry, 'systemCalls', 10, 60_000)) {
+        return hostForbidden('Слишком много системных уведомлений');
+      }
+      const title =
+        typeof payload?.title === 'string'
+          ? payload.title.trim().slice(0, 80)
+          : entry.manifest.name;
+      const body = typeof payload?.body === 'string' ? payload.body.trim().slice(0, 300) : '';
+      if (!title && !body) return hostForbidden('Пустое уведомление');
+      const note = { title: title || entry.manifest.name, body };
+      if (process.env.OCTO_NOTIFY_LOG) {
+        try {
+          fs.mkdirSync(path.dirname(process.env.OCTO_NOTIFY_LOG), { recursive: true });
+          fs.appendFileSync(process.env.OCTO_NOTIFY_LOG, `${JSON.stringify(note)}\n`);
+        } catch {
+          /* журнал только для тестов */
+        }
+      }
+      try {
+        if (Notification.isSupported()) new Notification(note).show();
+      } catch {
+        toast(`${entry.manifest.name}: ${body || title}`);
+      }
+      return { ok: true };
     }
 
     case 'net.fetch':

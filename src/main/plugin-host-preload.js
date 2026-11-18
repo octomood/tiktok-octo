@@ -295,6 +295,18 @@ const api = {
         return call('contextMenu.remove', { id: String(id) });
       },
     },
+    overlay: {
+      show(spec) {
+        const options = spec && typeof spec === 'object' ? spec : {};
+        return call('overlay.show', {
+          text: String(options.text || '').slice(0, 200),
+          timeoutMs: Number(options.timeoutMs) || 2500,
+        });
+      },
+      hide(id) {
+        return call('overlay.hide', { id: String(id) });
+      },
+    },
   },
   shortcuts: {
     add(spec) {
@@ -332,6 +344,54 @@ const api = {
   net: {
     fetch(url, options = {}) {
       return call('net.fetch', { url: String(url), ...options });
+    },
+  },
+  playback: {
+    status() {
+      return call('playback.status', {});
+    },
+    playPause() {
+      return call('playback.playPause', {});
+    },
+    seek(seconds) {
+      return call('playback.seek', { seconds: Number(seconds) });
+    },
+    setVolume(value) {
+      return call('playback.volume', { value: Number(value) });
+    },
+    setSpeed(value) {
+      return call('playback.speed', { value: Number(value) });
+    },
+  },
+  feed: {
+    next() {
+      return call('feed.next', {});
+    },
+    prev() {
+      return call('feed.prev', {});
+    },
+  },
+  downloads: {
+    add(url) {
+      return call('downloads.add', { url: String(url) });
+    },
+  },
+  i18n: {
+    get() {
+      return call('i18n.get', {});
+    },
+  },
+  clipboard: {
+    write(text) {
+      return call('clipboard.write', { text: String(text) });
+    },
+  },
+  os: {
+    notify(spec = {}) {
+      return call('os.notify', {
+        title: String(spec.title || ''),
+        body: String(spec.body || ''),
+      });
     },
   },
   navigate(url) {

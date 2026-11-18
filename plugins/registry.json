@@ -1,7 +1,33 @@
 {
   "schema": 1,
-  "updatedAt": "2026-11-16T10:43:42.102Z",
+  "updatedAt": "2026-11-17T16:12:24.690Z",
   "plugins": [
+    {
+      "id": "app.octo.shelf",
+      "name": "Полка",
+      "author": {
+        "name": "octo",
+        "url": "https://github.com/octomood"
+      },
+      "description": "Закладки внутри приложения: сохраните видео, профиль или поиск, вернитесь к ним позже и достаньте случайную страницу. Всё хранится локально, без сети и аккаунта.",
+      "homepage": "https://github.com/octomood/tiktok-octo/tree/main/plugins/shelf",
+      "source": "https://github.com/octomood/tiktok-octo/tree/main/plugins/shelf",
+      "license": "MIT",
+      "categories": ["bookmarks", "productivity", "offline"],
+      "releases": [
+        {
+          "version": "1.0.0",
+          "minAppVersion": "0.5.1",
+          "download": "https://raw.githubusercontent.com/octomood/tiktok-octo/main/plugins/packages/app.octo.shelf-1.0.0.octoplugin",
+          "sha256": "882c51b5b266f57554d316856d55349905cb28ae3ee9cbc7077e481c81cd5f5e",
+          "size": 8501,
+          "publishedAt": "2026-11-17T16:12:24.690Z",
+          "changelog": "Первый выпуск: сохранение страниц и ссылок, полка в палитре команд, случайная страница, метка «На полке» и очистка в два шага.",
+          "permissions": ["page:css", "page:script", "navigation", "shortcuts"],
+          "networkHosts": []
+        }
+      ]
+    },
     {
       "id": "app.octo.hello",
       "name": "Hello octo",

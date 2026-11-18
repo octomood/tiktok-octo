@@ -18,18 +18,21 @@ const find = require('./find');
  * кадр, а управление живёт в собственной полосе PiP.
  */
 
-const BAR_H = 40;
+const BAR_H = 56;
 const MIN_W = 240;
-const MIN_H = 220;
+const MIN_H = 240;
 const NORMAL_MIN_W = 900;
 const NORMAL_MIN_H = 600;
 const MARGIN = 16;
+const STATUS_MS = 500;
 const DEFAULTS = { auto: true, adaptive: false };
 
 let normal = null;
 let entering = false;
 let fitTimer = null;
 let moveTimer = null;
+let statusTimer = null;
+let lastStatusPush = 0;
 let lastDisplayId = null;
 let displayWatchers = false;
 
@@ -91,6 +94,8 @@ async function videoInfo(wc) {
                  height: video.videoHeight || 0,
                  paused: Boolean(video.paused),
                  ended: Boolean(video.ended),
+                 currentTime: Number(video.currentTime) || 0,
+                 duration: Number.isFinite(video.duration) ? video.duration : 0,
                }
              : null;
          })()`,
@@ -108,6 +113,42 @@ function aspectOf(info) {
   const width = Number(info?.width) || 0;
   const height = Number(info?.height) || 0;
   return width > 0 && height > 0 ? width / height : 9 / 16;
+}
+
+/**
+ * Таймкод и прогресс полосы PiP. Сайт не присылает timeupdate в main, поэтому,
+ * пока PiP открыт, раз в полсекунды спрашиваем страницу о текущем ролике.
+ */
+async function pollStatus() {
+  if (!ctx.pipActive) return;
+  const info = await videoInfo(contents());
+  if (!ctx.pipActive || !info) return;
+
+  const time = Number(info.currentTime) || 0;
+  const duration = Number(info.duration) || 0;
+  const paused = Boolean(info.paused);
+  const moved = Math.abs(time - ctx.pipTime) > 0.24 || duration !== ctx.pipDuration;
+  const playingChanged = !paused !== ctx.playing;
+
+  ctx.pipTime = time;
+  ctx.pipDuration = duration;
+  ctx.playing = !paused;
+
+  if (!moved && !playingChanged) return;
+  const now = Date.now();
+  if (moved && now - lastStatusPush < 300) return;
+  lastStatusPush = now;
+  pushState();
+}
+
+function startStatus() {
+  if (statusTimer) return;
+  statusTimer = setInterval(pollStatus, STATUS_MS);
+}
+
+function stopStatus() {
+  if (statusTimer) clearInterval(statusTimer);
+  statusTimer = null;
 }
 
 /** Размер окна под экран и пропорции текущего видео. */
@@ -590,6 +631,23 @@ function pageScript(auto) {
           if (video.paused) video.play().catch(() => {});
           else video.pause();
         },
+        seek(seconds) {
+          const video = state.video || activeVideo();
+          if (!video) return false;
+          const duration = Number.isFinite(video.duration) ? video.duration : 0;
+          const target = Math.max(0, Number(seconds) || 0);
+          try {
+            video.currentTime = duration > 0 ? Math.min(duration, target) : target;
+          } catch (err) {
+            return false;
+          }
+          return true;
+        },
+        nudge(delta) {
+          const video = state.video || activeVideo();
+          if (!video) return false;
+          return window.__octoPip.seek((Number(video.currentTime) || 0) + (Number(delta) || 0));
+        },
         info() {
           const video = state.video || activeVideo();
           if (!video) return null;
@@ -598,6 +656,8 @@ function pageScript(auto) {
             height: video.videoHeight || 0,
             paused: Boolean(video.paused),
             ended: Boolean(video.ended),
+            currentTime: Number(video.currentTime) || 0,
+            duration: Number.isFinite(video.duration) ? video.duration : 0,
           };
         },
       };
@@ -660,6 +720,9 @@ async function enter() {
   setPanelOpen(false, { persist: false });
   setPaletteOpen(false);
   find.close({ focusView: false });
+  // Панель закрыта — дата ролика больше не нужна.
+  require('./player').watchPanel(false);
+  if (!ctx.adsInPip) require('./ads').suspend();
 
   normal = {
     bounds: win.getNormalBounds(),
@@ -692,6 +755,11 @@ async function enter() {
   lastDisplayId = screen.getDisplayMatching(bounds).id;
   attachWatchers();
 
+  ctx.pipTime = Number(info.currentTime) || 0;
+  ctx.pipDuration = Number(info.duration) || 0;
+  lastStatusPush = 0;
+  startStatus();
+
   applyPage(true);
 
   win.show();
@@ -714,9 +782,14 @@ function exit({ silent = false, restore = true } = {}) {
   clearTimeout(moveTimer);
   fitTimer = null;
   moveTimer = null;
+  stopStatus();
+  ctx.pipTime = 0;
+  ctx.pipDuration = 0;
 
   applyPage(false);
   detachWatchers();
+  // Возвращаем страничный скрипт рекламы, если его снимали на время PiP.
+  require('./ads').apply();
 
   if (ctx.win && !ctx.win.isDestroyed()) {
     const win = ctx.win;
@@ -816,6 +889,26 @@ function prev() {
   scheduleFit(1200);
 }
 
+/** Перемотка внутри текущего ролика: значение в секундах. */
+function seek(seconds) {
+  const wc = contents();
+  if (!wc || wc.isDestroyed()) return;
+  const value = Math.max(0, Number(seconds) || 0);
+  evalInPage(wc, [`window.__octoPip && window.__octoPip.seek(${value})`]);
+  ctx.pipTime = value;
+  pushState();
+}
+
+/** «−10 секунд» в полосе PiP. */
+function nudge(delta) {
+  const wc = contents();
+  if (!wc || wc.isDestroyed()) return;
+  const step = Number(delta) || 0;
+  evalInPage(wc, [`window.__octoPip && window.__octoPip.nudge(${step})`]);
+  ctx.pipTime = Math.max(0, ctx.pipTime + step);
+  pushState();
+}
+
 function toggleAuto() {
   ctx.pipAuto = !ctx.pipAuto;
   save({ auto: ctx.pipAuto });
@@ -865,6 +958,9 @@ function reset() {
   clearTimeout(moveTimer);
   fitTimer = null;
   moveTimer = null;
+  stopStatus();
+  ctx.pipTime = 0;
+  ctx.pipDuration = 0;
   detachWatchers();
 }
 
@@ -876,6 +972,8 @@ module.exports = {
   toggle,
   next,
   prev,
+  seek,
+  nudge,
   toggleAuto,
   toggleAdaptive,
   reapply,

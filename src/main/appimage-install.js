@@ -16,6 +16,7 @@ const path = require('node:path');
 
 const APP_ID = 'tiktok-octo';
 const APP_NAME = 'TikTok octo';
+const PROTOCOL = 'tiktok-octo';
 const ICON_SIZES = [512, 256, 128, 64, 48, 32];
 
 function dataHome() {
@@ -92,6 +93,20 @@ function desktopEntry(execPath) {
     'Categories=Network;',
     'StartupNotify=true',
     'X-GNOME-UsesNotifications=true',
+    `MimeType=x-scheme-handler/${PROTOCOL};`,
+    'Actions=pip;messages;mute;',
+    '',
+    '[Desktop Action pip]',
+    'Name=Картинка в картинке',
+    `Exec="${execPath}" --pip`,
+    '',
+    '[Desktop Action messages]',
+    'Name=Сообщения',
+    `Exec="${execPath}" --messages`,
+    '',
+    '[Desktop Action mute]',
+    'Name=Без звука',
+    `Exec="${execPath}" --mute`,
     '',
   ].join('\n');
 }

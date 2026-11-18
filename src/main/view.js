@@ -11,7 +11,15 @@ const {
   isInternalUrl,
   parseUnreadCount,
 } = require('./shared');
-const { ctx, layout, pushState, toast, setUnread, setPanelOpen } = require('./app-context');
+const {
+  ctx,
+  layout,
+  pushState,
+  toast,
+  setUnread,
+  setPanelOpen,
+  syncViewVisibility,
+} = require('./app-context');
 const { prepareSession } = require('./session');
 const { readState, writeState } = require('./store');
 const { openExternal } = require('./links');
@@ -22,11 +30,20 @@ const ads = require('./ads');
 const player = require('./player');
 const media = require('./media');
 const pip = require('./pip');
+const feedKeys = require('./feed-keys');
+const qr = require('./qr');
+const stats = require('./stats');
+const focus = require('./focus');
+const filters = require('./filters');
+const customCode = require('./custom-code');
 const mpris = require('./mpris');
 const find = require('./find');
 const plugins = require('./plugins');
 const region = require('./region');
 const autoTheme = require('./auto-theme');
+const chat = require('./chat');
+const resilience = require('./resilience');
+const windowsMedia = require('./windows-media');
 
 /** Окно OAuth: то же persistent-хранилище, но без Node и preload. */
 function authWindowOptions() {
@@ -46,6 +63,7 @@ function authWindowOptions() {
 }
 
 function startUrl() {
+  if (resilience.isSafeMode()) return HOME_URL;
   const saved = readState();
   // В тестах и при явном OCTO_HOME_URL не восстанавливаем прошлую страницу.
   if (process.env.OCTO_HOME_URL) return HOME_URL;
@@ -78,6 +96,14 @@ function createView() {
   ctx.win.contentView.addChildView(view);
 
   const wc = view.webContents;
+  const setOffline = (next) => {
+    const value = Boolean(next);
+    if (ctx.offline === value) return;
+    ctx.offline = value;
+    syncViewVisibility();
+    pushState();
+  };
+
   wc.setUserAgent(CHROME_UA);
   // Непрозрачный фон: полупрозрачный WebContentsView на Linux заставляет
   // композитор собирать видео через лишний слой и кадры могут «застыть».
@@ -86,6 +112,12 @@ function createView() {
 
   // --- Навигация: внутри приложения только TikTok и OAuth --------------------
   wc.on('will-navigate', (event, url) => {
+    // «Сообщения» живут в панели: не отдаём им всё окно, даже если клик
+    // проскочил мимо перехватчика в странице.
+    if (chat.interceptNavigation(url, wc.getURL())) {
+      event.preventDefault();
+      return;
+    }
     if (isInternalUrl(url)) return;
     event.preventDefault();
     openExternal(url);
@@ -123,6 +155,10 @@ function createView() {
     wc.on(event, refresh);
   }
 
+  // Предыдущий адрес нужен, чтобы отличить переход на сообщения из ленты от
+  // внутреннего перехода уже открытой страницы сообщений.
+  let lastUrl = wc.getURL();
+
   let lastUrlTimer = null;
   const rememberUrl = (url) => {
     if (!isTikTokUrl(url)) return;
@@ -132,21 +168,47 @@ function createView() {
   };
 
   wc.on('did-navigate', () => {
+    const previousUrl = lastUrl;
+    lastUrl = wc.getURL();
     ctx.playing = false;
+    // Ссылка сменилась — старый QR-код показывал бы чужую страницу.
+    qr.clear();
     find.resetOnNavigate();
     rememberUrl(wc.getURL());
+    stats.noteVideo(wc.getURL());
     mpris.setPlaying(false);
     mpris.scheduleMetadata(1200);
     pushState();
+    // Восстановленная сессия могла закончиться на /messages: показываем чат
+    // панелью и возвращаем ленту вместо страницы на всё окно.
+    if (chat.interceptNavigation(wc.getURL(), previousUrl)) {
+      wc.loadURL(HOME_URL).catch(() => {});
+    }
   });
 
   wc.on('did-navigate-in-page', () => {
-    rememberUrl(wc.getURL());
+    const previousUrl = lastUrl;
+    const currentUrl = wc.getURL();
+    lastUrl = currentUrl;
+    rememberUrl(currentUrl);
+    stats.noteVideo(currentUrl);
     mpris.scheduleMetadata();
+    // SPA-роутер мог успеть уйти на страницу сообщений. Возвращаем ленту:
+    // переписка уже открыта панелью слева.
+    if (!chat.interceptNavigation(currentUrl, previousUrl)) return;
+    try {
+      const history = wc.navigationHistory;
+      const index = history.getActiveIndex();
+      if (index > 0) history.goToIndex(index - 1);
+      else wc.loadURL(HOME_URL);
+    } catch {
+      /* история недоступна — панель всё равно открыта */
+    }
   });
 
   wc.on('media-started-playing', () => {
     ctx.playing = true;
+    windowsMedia.setPlaying(true);
     mpris.setPlaying(true);
     mpris.scheduleMetadata(400);
     // Новое видео может быть другим по пропорциям — адаптивный PiP подстроится.
@@ -156,6 +218,7 @@ function createView() {
 
   wc.on('media-paused', () => {
     ctx.playing = false;
+    windowsMedia.setPlaying(false);
     mpris.setPlaying(false);
     pushState();
   });
@@ -167,14 +230,16 @@ function createView() {
 
   // --- Ошибки загрузки: повтор с backoff, без бесконечного цикла -----------
   let loadFailures = 0;
+  let loadFailed = false;
   let crashCount = 0;
   let retryTimer = null;
   let crashTimer = null;
 
   wc.on('did-fail-load', (_event, code, description, url, isMainFrame) => {
     if (!isMainFrame || code === -3 /* ERR_ABORTED */) return;
-    if (process.env.OCTO_E2E) return;
 
+    loadFailed = true;
+    setOffline(true);
     loadFailures += 1;
     if (loadFailures > 3) {
       toast('Не удалось загрузить — нажмите ⟳ для повтора');
@@ -210,8 +275,27 @@ function createView() {
   });
 
   wc.on('did-finish-load', () => {
+    // did-finish-load приходит и после сетевой ошибки, когда документ пустой.
+    // В этом случае оставляем свой экран и не сбрасываем счётчик повторов.
+    if (loadFailed) {
+      wc.executeJavaScript(
+        '!document.body || (document.body.childElementCount === 0 && !document.body.innerText.trim())',
+        true,
+      )
+        .then((empty) => {
+          if (empty) {
+            setOffline(true);
+            return;
+          }
+          loadFailed = false;
+          setOffline(false);
+        })
+        .catch(() => setOffline(true));
+      return;
+    }
     loadFailures = 0;
     crashCount = 0;
+    setOffline(false);
     autoTheme.sync(wc).catch(() => {});
     cosmetics.injectFrameStyles().catch(() => {});
     pushState();
@@ -245,9 +329,13 @@ function createView() {
     cosmetics.apply();
     autoTheme.sync(wc).catch(() => {});
     player.apply();
+    focus.reapply();
     media.apply();
     pip.reapply();
+    feedKeys.sync();
     ads.apply();
+    filters.apply();
+    customCode.reapply();
     plugins.onPageReady({ url: wc.getURL(), title: wc.getTitle() });
     // Промо в сайдбаре иногда дорисовывается позже — просканируем ещё раз.
     cosmetics.schedule(3000);
@@ -283,6 +371,7 @@ function createView() {
 
   wc.on('before-input-event', handleShortcut);
   attachContextMenu(wc);
+  chat.attach(wc);
 
   layout();
   // Auto dark mode включается до первой загрузки: страницы, которые не

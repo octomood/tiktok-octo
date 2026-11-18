@@ -10,6 +10,7 @@ const region = require('./region');
 const plugins = require('./plugins');
 const i18n = require('./i18n');
 const autoTheme = require('./auto-theme');
+const privacy = require('./privacy');
 
 const isMac = process.platform === 'darwin';
 
@@ -168,13 +169,15 @@ function buildAppMenu() {
       label: 'Вид',
       submenu: [
         { label: 'Панель функций', click: () => handleCommand('panel') },
+        { label: 'Чат сбоку', click: () => handleCommand('chat') },
         { label: 'Палитра команд', click: () => handleCommand('palette') },
         {
-          label: 'Стикеры',
+          label: 'Картинки в чат',
           submenu: [
-            { label: 'Панель стикеров', click: () => handleCommand('stickerPanel') },
-            { label: 'Добавить стикеры…', click: () => handleCommand('stickerAdd') },
-            { label: 'Папка стикеров', click: () => handleCommand('stickerFolder') },
+            { label: 'Меню картинок', click: () => handleCommand('stickerPanel') },
+            { label: 'Добавить картинки…', click: () => handleCommand('stickerAdd') },
+            { label: 'Папка картинок', click: () => handleCommand('stickerFolder') },
+            { label: 'Стикеры TikTok', click: () => handleCommand('nativeStickers') },
           ],
         },
         { type: 'separator' },
@@ -201,6 +204,7 @@ function buildAppMenu() {
       label: 'Плагины',
       submenu: [
         { label: 'Менеджер плагинов', click: () => handleCommand('plugins') },
+        { label: 'Активные плагины', click: () => handleCommand('pluginsActive') },
         { label: 'Установить из файла…', click: () => handleCommand('pluginInstallFile') },
         { type: 'separator' },
         ...plugins.menuItems(),
@@ -227,7 +231,17 @@ function buildAppMenu() {
     },
     ...(isMac
       ? []
-      : [{ label: 'Справка', submenu: [{ label: 'О программе', click: showAboutDialog }] }]),
+      : [
+          {
+            label: 'Справка',
+            submenu: [
+              { label: 'О программе', click: showAboutDialog },
+              { label: 'Диагностика', click: () => privacy.copyDiagnostics() },
+              { label: 'Лицензии', click: () => privacy.showLicenses() },
+              { label: 'Не связан с TikTok', click: () => privacy.showDisclaimer() },
+            ],
+          },
+        ]),
   ];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(i18n.applyToMenuTemplate(template)));

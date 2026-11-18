@@ -1,0 +1,101 @@
+/* Окно снимка с аннотацией */
+
+body.annotator {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin: 0;
+  background: #050507;
+  color: var(--fg, #f4f4f5);
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.annotator-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line, #27272a);
+  background: var(--bar-top, #141418);
+}
+
+.annotator-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.annotator-tools,
+.annotator-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.annotator-tool,
+.annotator-btn {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--md-outline-variant, #3f3f46);
+  border-radius: 8px;
+  background: var(--md-surface-container, #18181b);
+  color: var(--md-on-surface, #f4f4f5);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.annotator-tool:hover,
+.annotator-btn:hover {
+  border-color: var(--md-primary, #7c9cff);
+}
+
+.annotator-tool.is-on {
+  border-color: var(--md-primary, #7c9cff);
+  background: var(--md-secondary-container, #26304d);
+  color: var(--md-on-secondary-container, #dbe4ff);
+}
+
+.annotator-btn--primary {
+  border-color: transparent;
+  background: var(--md-primary, #7c9cff);
+  color: #0b0b0f;
+  font-weight: 600;
+}
+
+.annotator-stage {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 14px;
+}
+
+#annotateCanvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  background: #000;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+:where(button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 2px solid var(--md-primary, #6c8cff);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

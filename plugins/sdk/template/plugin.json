@@ -1,0 +1,25 @@
+{
+  "id": "__ID__",
+  "name": "__NAME__",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "minAppVersion": "0.5.0",
+  "description": "Стартовый плагин TikTok octo: команда, строка панели, настройка и хранилище.",
+  "author": {
+    "name": "octo",
+    "url": "https://github.com/octomood"
+  },
+  "license": "MIT",
+  "main": "index.js",
+  "permissions": [],
+  "settings": [
+    {
+      "key": "greeting",
+      "type": "string",
+      "title": "Приветствие",
+      "description": "Текст, который показывает команда «Сказать привет».",
+      "default": "Привет из плагина!",
+      "maxLength": 120
+    }
+  ]
+}

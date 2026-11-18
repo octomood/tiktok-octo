@@ -8,7 +8,7 @@
  */
 
 const { app } = require('electron');
-const { TITLEBAR_H, MAX_CHROME_H, PANEL_W } = require('./shared');
+const { TITLEBAR_H, MAX_CHROME_H, PANEL_W, CHAT_W, CHAT_HANDLE_W } = require('./shared');
 const { COSMETIC_RULES } = require('./cosmetic-catalog');
 const { REGION_PRESETS } = require('./region-catalog');
 const { APP_LANGUAGES, SITE_LANGUAGES } = require('./language-catalog');
@@ -19,6 +19,52 @@ const ctx = {
   win: null,
   /** @type {import('electron').WebContentsView | null} */
   view: null,
+  /**
+   * Панель чата слева: отдельный WebContentsView поверх ленты.
+   * @type {import('electron').WebContentsView | null}
+   */
+  chatView: null,
+  /** Открыта ли панель чата. */
+  chatOpen: false,
+  /** Ширина панели чата: тянется за полоску между чатом и лентой. */
+  chatWidth: CHAT_W,
+  /** Чат поджимает ленту (иначе лежит поверх неё). */
+  chatDock: true,
+  /** Уведомления о новых сообщениях: тип по заголовку не определить, только счётчик. */
+  notifications: {
+    enabled: false,
+    dnd: false,
+    dndFrom: '23:00',
+    dndTo: '08:00',
+    quietFocused: true,
+  },
+  /** Быстрые ответы: строки-шаблоны для палитры и вставки в диалог. */
+  replies: [],
+  /** Библиотека: закладки с таймкодом и очередь «посмотреть позже». */
+  library: { items: [], queue: [] },
+  /** Настройки GIF-экспорта: длительность, fps и ширина. */
+  gif: { duration: 3, fps: 10, width: 480 },
+  /** Свой CSS/JS на страницу (расширенный режим). */
+  customCode: { enabled: false, cssLength: 0, jsLength: 0 },
+  /** Фильтры контента: правила и включённость. */
+  filters: { enabled: false, keywords: [], hashtags: [], authors: [] },
+  /** Настройки имён файлов загрузок и лимит одновременных. */
+  downloadNaming: {
+    auto: false,
+    template: '{author}-{date}-{title}',
+    folderPerAuthor: false,
+    limit: 2,
+  },
+  /** Сводка статистики просмотра за сегодня и неделю. */
+  stats: {
+    today: { minutes: 0, seconds: 0, videos: 0 },
+    week: { minutes: 0, videos: 0 },
+    topAuthors: [],
+  },
+  /** Focus mode: лимит просмотра, перерыв и затемнение ленты. */
+  focus: { enabled: false, minutes: 25, breakMinutes: 5, phase: 'off', elapsed: 0, total: 1500 },
+  /** Амбиентный режим: лента без звука и интерфейса на другом мониторе. */
+  ambient: false,
   /** @type {import('electron').Tray | null} */
   tray: null,
   /** Действия трея подставляет main.js, чтобы tray.js не зависел от commands.js. */
@@ -27,8 +73,14 @@ const ctx = {
   htmlFullscreen: false,
   /** Высота нашего интерфейса над контентом: 44 или 44 + панель поиска. */
   chromeHeight: TITLEBAR_H,
+  /** Высота полосы в CSS-пикселях: масштаб интерфейса пересчитывает её в DIP. */
+  chromeHeightCss: TITLEBAR_H,
+  /** Масштаб собственного интерфейса; сайт масштабируется отдельно. */
+  uiScale: 1,
   /** Открыта ли боковая панель функций. */
   panelOpen: false,
+  /** Какое быстрое меню открыто под полосой: стикеры или активные плагины. */
+  popover: null,
   /** Открыта ли палитра команд (view на время скрывается). */
   paletteOpen: false,
   /** Настройки плеера, которых нет у сайта. */
@@ -38,9 +90,25 @@ const ctx = {
     startMuted: false,
     loop: false,
     pauseOnBlur: false,
+    sinkId: '',
+    equalizer: 'off',
+    mono: false,
   },
   /** Кеш настройки «закрывать в трей» — чтобы не читать диск на каждый pushState. */
   closeToTray: false,
+  /** Последняя резервная копия состояния: показывается в панели. */
+  backups: { latest: '', count: 0 },
+  /** Локальные данные: размеры и удаление по пунктам. */
+  privacy: { items: [], totalBytes: 0, updatedAt: 0 },
+  /** Безопасный режим после двух падений подряд. */
+  safeMode: false,
+  /** Экономный режим и питание: влияет на фоновые скрипты. */
+  eco: false,
+  ecoOnBattery: true,
+  onBattery: false,
+  memoryGuard: true,
+  /** Страница не загрузилась: показываем свой экран вместо белого. */
+  offline: false,
   /**
    * Состояние косметических правил для панели функций.
    * @type {Array<{ id: string, label: string, enabled: boolean }>}
@@ -85,10 +153,46 @@ const ctx = {
   downloads: [],
   sleepTimerEnds: 0,
   sleepTimerMinutes: 0,
+  /** Режим таймера сна: off, minutes, end (до конца ролика) или videos. */
+  sleepTimerMode: 'off',
+  /** Сколько видео выбрал пользователь в режиме «стоп после N видео». */
+  sleepTimerVideos: 3,
+  /** Сколько роликов ещё осталось до остановки. */
+  sleepTimerVideosLeft: 0,
+  /** Плавно гасить звук перед остановкой. */
+  sleepTimerFade: false,
+  /** Клавиатурная лента: J/K/L, пробел, цифры и «?». */
+  feedKeys: true,
+  /** Автопауза, если системного ввода нет N минут (0 — выключена). */
+  idlePause: 0,
+  /** Не давать экрану засыпать, пока идёт воспроизведение. */
+  keepAwake: false,
+  /** Состояние редактора горячих клавиш для панели. */
+  keymapState: { profile: 'default', profiles: [], rows: [] },
+  /** Субтитры по умолчанию и их оформление (см. captions.js). */
+  subtitles: { enabled: false, size: 100, background: true, outline: true },
+  /** Дата публикации текущего ролика, если сайт её показывает. */
+  videoDate: '',
+  /** QR текущей страницы: матрица модулей, которую renderer рисует на canvas. */
+  qr: null,
+  /** Режим «только полоса»: сайт скрыт, остаётся компактный пульт. */
+  barOnly: false,
+  /** Настройки таймера сна для страничного скрипта плеера. */
+  sleepPage: { endsAt: 0, stopAtEnd: false, videosLeft: null, fade: false },
+  /** Список аудиовыходов, собранный в странице сайта. */
+  audioDevices: [],
+  /** Позиция и длительность ролика для полосы PiP. */
+  pipTime: 0,
+  pipDuration: 0,
   autostart: false,
   startInTray: false,
   /** Автоматически пролистывать рекламные ролики в ленте. */
   adsSkip: false,
+  /** Пропускать рекламу и в режиме PiP. */
+  adsInPip: true,
+  /** Сколько рекламных роликов пропущено и когда. */
+  adsSkipped: 0,
+  adJournal: [],
   /** Подмена региона: пресет страны и адрес прокси (см. region.js). */
   region: { preset: 'off', proxy: '' },
   /** Язык интерфейса оболочки (см. i18n.js). */
@@ -145,6 +249,38 @@ function toast(text) {
   sendToWindow('octo:state', { toast: { id: ++ctx.toastSeq, text: value } });
 }
 
+// Минимальная ширина ленты, которую чат оставляет при доке. Панель чата не
+// должна поджимать ленту до нечитаемой полоски.
+const CHAT_FEED_MIN = 320;
+
+/** Ширина, доступная сайту: окно минус открытая панель функций. */
+function contentWidth() {
+  if (!ctx.win || ctx.win.isDestroyed()) return 0;
+  const [width] = ctx.win.getContentSize();
+  const panelWidth = Math.round(PANEL_W * (ctx.uiScale || 1));
+  return Math.max(0, width - (ctx.htmlFullscreen ? 0 : ctx.panelOpen ? panelWidth : 0));
+}
+
+/**
+ * Предел ширины чата. В доке оставляем ленте минимум, поверх ленты — ничего:
+ * перекрытой ленте место не нужно, и чат может занять всё окно.
+ */
+function chatWidthLimit(available = contentWidth()) {
+  const spare = ctx.chatDock === false ? 0 : CHAT_FEED_MIN;
+  return Math.max(200, available - spare);
+}
+
+/** Показать view только когда нет палитры, «только полосы» и экрана ошибки. */
+function syncViewVisibility() {
+  if (!ctx.view || typeof ctx.view.setVisible !== 'function') return;
+  if (ctx.view.webContents && ctx.view.webContents.isDestroyed()) return;
+  try {
+    ctx.view.setVisible(!ctx.offline && !ctx.paletteOpen && !ctx.barOnly);
+  } catch {
+    /* view уже закрывается */
+  }
+}
+
 /** Контент сайта занимает всё окно, кроме нашей полосы (и панелей). */
 function layout() {
   if (!ctx.win || ctx.win.isDestroyed() || !ctx.view) return;
@@ -152,14 +288,45 @@ function layout() {
   if (wc && wc.isDestroyed()) return;
   try {
     const [width, height] = ctx.win.getContentSize();
-    const top = ctx.htmlFullscreen ? 0 : ctx.chromeHeight;
-    const left = ctx.htmlFullscreen ? 0 : ctx.panelOpen ? PANEL_W : 0;
+    const top = ctx.htmlFullscreen || ctx.ambient ? 0 : ctx.chromeHeight;
+    const panelWidth = Math.round(PANEL_W * (ctx.uiScale || 1));
+    const left = ctx.htmlFullscreen ? 0 : ctx.panelOpen ? panelWidth : 0;
+    const available = Math.max(0, width - left);
+
+    // Чат виден только в обычном окне; в PiP, полном экране и палитре он спрятан.
+    const chat = ctx.chatView;
+    const chatAlive = Boolean(chat && !chat.webContents.isDestroyed());
+    const chatVisible =
+      chatAlive &&
+      ctx.chatOpen &&
+      !ctx.htmlFullscreen &&
+      !ctx.pipActive &&
+      !ctx.paletteOpen &&
+      !ctx.barOnly;
+    const chatWidth = Math.min(ctx.chatWidth, chatWidthLimit(available));
+    // «Док» поджимает ленту; иначе панель лежит поверх неё, как раньше.
+    const docked = chatVisible && ctx.chatDock !== false;
+
     ctx.view.setBounds({
-      x: left,
+      x: left + (docked ? chatWidth + CHAT_HANDLE_W : 0),
       y: top,
-      width: Math.max(0, width - left),
+      width: Math.max(0, available - (docked ? chatWidth + CHAT_HANDLE_W : 0)),
       height: Math.max(0, height - top),
     });
+
+    syncViewVisibility();
+
+    if (chat && !chat.webContents.isDestroyed()) {
+      chat.setVisible(chatVisible);
+      if (chatVisible) {
+        chat.setBounds({
+          x: left,
+          y: top,
+          width: chatWidth,
+          height: Math.max(0, height - top),
+        });
+      }
+    }
   } catch {
     /* окно или view уже закрываются */
   }
@@ -195,8 +362,32 @@ function setPanelOpen(open, { persist = true } = {}) {
   const next = Boolean(open);
   if (next === ctx.panelOpen) return;
   ctx.panelOpen = next;
+  // Панель и быстрое меню занимают одно и то же место под полосой.
+  if (next) ctx.popover = null;
   if (persist) writeState({ panelOpen: next });
   layoutSoon();
+  pushState();
+}
+
+/**
+ * Открыть быстрое меню под полосой заголовка: «stickers» или «plugins».
+ * Меню живёт в renderer, но состояние хранится здесь, чтобы Esc и команды
+ * из меню/трея закрывали его так же, как боковую панель.
+ */
+function setPopover(id, { toggle = true } = {}) {
+  let next = id === 'stickers' || id === 'plugins' ? id : null;
+  // Повторный клик по той же кнопке закрывает меню, а команда «добавить»
+  // должна только открыть его, даже если оно уже открыто.
+  if (toggle && next && next === ctx.popover) next = null;
+  if (next === ctx.popover) return;
+  ctx.popover = next;
+
+  if (next && ctx.panelOpen) {
+    ctx.panelOpen = false;
+    writeState({ panelOpen: false });
+    layoutSoon();
+  }
+
   pushState();
 }
 
@@ -234,18 +425,18 @@ function setPaletteOpen(open) {
   if (next === ctx.paletteOpen) return;
   ctx.paletteOpen = next;
 
-  if (
-    ctx.view &&
-    ctx.view.webContents &&
-    !ctx.view.webContents.isDestroyed() &&
-    typeof ctx.view.setVisible === 'function'
-  ) {
+  syncViewVisibility();
+
+  // Палитра — модальное окно поверх всего: спрятать нужно и панель чата,
+  // иначе она окажется выше затемнения. При закрытии layout вернёт её.
+  if (next && ctx.chatView && !ctx.chatView.webContents.isDestroyed()) {
     try {
-      ctx.view.setVisible(!next);
+      ctx.chatView.setVisible(false);
     } catch {
       /* view уже закрывается */
     }
   }
+  if (!next) layout();
 
   repaintWindow();
   setTimeout(repaintWindow, 40);
@@ -267,8 +458,41 @@ function setCloseToTray(value) {
 }
 
 /** Renderer сообщает фактическую высоту своего интерфейса (панель поиска). */
+function clampUiScale(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 1;
+  return Math.min(1.75, Math.max(0.75, Math.round(number * 100) / 100));
+}
+
+/** Масштаб интерфейса: меняет только нашу полосу, панель и диалоги. */
+function setUiScale(value) {
+  const next = clampUiScale(value);
+  if (next === ctx.uiScale) return ctx.uiScale;
+  ctx.uiScale = next;
+  if (ctx.win && !ctx.win.isDestroyed()) {
+    try {
+      ctx.win.webContents.setZoomFactor(next);
+    } catch {
+      /* окно ещё не загрузилось */
+    }
+  }
+  ctx.chromeHeight = Math.min(
+    MAX_CHROME_H,
+    Math.max(Math.round(TITLEBAR_H * next), Math.round((ctx.chromeHeightCss || TITLEBAR_H) * next)),
+  );
+  layoutSoon();
+  pushState();
+  return ctx.uiScale;
+}
+
 function setChromeHeight(px) {
-  const next = Math.min(MAX_CHROME_H, Math.max(TITLEBAR_H, Math.round(Number(px) || TITLEBAR_H)));
+  // В амбиентном режиме, PiP, «только полосе» и полноэкранном сайте высоту
+  // задаёт режим. Запоздавший замер полосы из renderer'а иначе вернул бы
+  // сдвиг ленты на 44 px прямо посреди амбиента.
+  if (ctx.ambient || ctx.barOnly || ctx.pipActive || ctx.htmlFullscreen) return;
+  const css = Math.min(MAX_CHROME_H, Math.max(TITLEBAR_H, Math.round(Number(px) || TITLEBAR_H)));
+  ctx.chromeHeightCss = css;
+  const next = Math.min(MAX_CHROME_H, Math.max(Math.round(css * (ctx.uiScale || 1)), 1));
   if (next === ctx.chromeHeight) return;
   ctx.chromeHeight = next;
   layoutSoon();
@@ -343,20 +567,84 @@ function currentState() {
     playing: ctx.playing,
     unread: ctx.unread,
     panel: ctx.panelOpen,
+    popover: ctx.popover,
     panelWidth: PANEL_W,
+    uiScale: ctx.uiScale,
+    // Ширина для полоски-ручки: фактическая, а не желаемая — в узком окне
+    // чат упирается в предел и ручка должна стоять на его краю.
+    chat: {
+      open: ctx.chatOpen,
+      width: Math.min(ctx.chatWidth, chatWidthLimit()),
+      dock: ctx.chatDock,
+    },
+    notifications: { ...ctx.notifications },
+    downloadNaming: { ...ctx.downloadNaming },
+    gif: { ...ctx.gif },
+    customCode: { ...ctx.customCode },
+    filters: {
+      enabled: ctx.filters.enabled,
+      keywords: ctx.filters.keywords.slice(),
+      hashtags: ctx.filters.hashtags.slice(),
+      authors: ctx.filters.authors.slice(),
+    },
+    replies: ctx.replies.slice(),
+    library: {
+      items: ctx.library.items.map((item) => ({ ...item })),
+      queue: ctx.library.queue.slice(),
+    },
+    stats: {
+      today: { ...ctx.stats.today },
+      week: { ...ctx.stats.week },
+      topAuthors: ctx.stats.topAuthors.map((author) => ({ ...author })),
+    },
+    focus: { ...ctx.focus },
+    ambient: ctx.ambient,
     palette: ctx.paletteOpen,
     player: { ...ctx.player },
     cosmetics: ctx.cosmetics,
     closeToTray: ctx.closeToTray,
+    backups: { ...ctx.backups },
+    privacy: {
+      ...ctx.privacy,
+      items: ctx.privacy.items.map((item) => ({ ...item })),
+    },
+    safeMode: ctx.safeMode,
+    eco: ctx.eco,
+    ecoOnBattery: ctx.ecoOnBattery,
+    onBattery: ctx.onBattery,
+    memoryGuard: ctx.memoryGuard,
+    offline: ctx.offline,
     version: app.getVersion(),
     find: { ...ctx.find },
     download: ctx.download ? { ...ctx.download } : null,
     downloads: ctx.downloads.map((entry) => ({ ...entry })),
     sleepTimerEnds: ctx.sleepTimerEnds,
     sleepTimerMinutes: ctx.sleepTimerMinutes,
+    sleepTimerMode: ctx.sleepTimerMode,
+    sleepTimerVideos: ctx.sleepTimerVideos,
+    sleepTimerVideosLeft: ctx.sleepTimerVideosLeft,
+    sleepTimerFade: ctx.sleepTimerFade,
+    feedKeys: ctx.feedKeys !== false,
+    idlePause: ctx.idlePause,
+    keepAwake: ctx.keepAwake,
+    keymap: {
+      ...ctx.keymapState,
+      profiles: ctx.keymapState.profiles.map((profile) => ({ ...profile })),
+      rows: ctx.keymapState.rows.map((row) => ({ ...row })),
+    },
+    subtitles: { ...ctx.subtitles },
+    videoDate: ctx.videoDate,
+    qr: ctx.qr ? { url: ctx.qr.url, count: ctx.qr.count, rows: ctx.qr.rows.slice() } : null,
+    barOnly: ctx.barOnly,
+    audioDevices: ctx.audioDevices.map((device) => ({ ...device })),
+    pipTime: ctx.pipTime,
+    pipDuration: ctx.pipDuration,
     autostart: ctx.autostart,
     startInTray: ctx.startInTray,
     adsSkip: ctx.adsSkip,
+    adsInPip: ctx.adsInPip,
+    adsSkipped: ctx.adsSkipped,
+    adJournal: ctx.adJournal.slice(),
     stickers: {
       items: ctx.stickers.items.map((item) => ({ ...item })),
       dir: ctx.stickers.dir,
@@ -396,11 +684,18 @@ function pushState() {
 function setUnread(count) {
   const next = Math.max(0, Number(count) || 0);
   if (next === ctx.unread) return;
+  const previous = ctx.unread;
   ctx.unread = next;
   try {
     app.setBadgeCount(next);
   } catch {
     /* платформа не поддерживает бейджи */
+  }
+  try {
+    // Ленивый require: notifications сам зависит от app-context.
+    require('./notifications').onUnread(previous, next);
+  } catch {
+    /* уведомления не критичны */
   }
   pushState();
 }
@@ -410,12 +705,19 @@ module.exports = {
   sendToWindow,
   toast,
   layout,
+  layoutSoon,
   setChromeHeight,
   setPanelOpen,
+  setPopover,
   setPaletteOpen,
   setCosmeticsState,
   setPluginsState,
   setCloseToTray,
+  setUiScale,
+  clampUiScale,
+  syncViewVisibility,
+  contentWidth,
+  chatWidthLimit,
   canGoBack,
   canGoForward,
   stepHistory,

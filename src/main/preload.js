@@ -27,6 +27,10 @@ contextBridge.exposeInMainWorld('octo', {
   find(action, text) {
     ipcRenderer.send('octo:find', { action, text });
   },
+  /** Свой CSS/JS живёт в main и в pushState не ездит: забираем по запросу. */
+  customCode() {
+    return ipcRenderer.sendSync('octo:custom-code');
+  },
   /** Renderer сообщает, сколько места занимает его интерфейс (панель поиска). */
   setChromeHeight(height) {
     ipcRenderer.send('octo:chrome-height', height);

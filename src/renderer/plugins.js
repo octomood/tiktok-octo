@@ -21,6 +21,9 @@ const PERMISSION_LABELS = {
 const el = {
   content: $('content'),
   search: $('search'),
+  catalogSort: $('catalogSort'),
+  catalogSource: $('catalogSource'),
+  inputRegistries: $('inputRegistries'),
   btnRefresh: $('btnRefresh'),
   version: $('version'),
   pluginDir: $('pluginDir'),
@@ -63,6 +66,8 @@ let info = {};
 let activeTab = 'catalog';
 let activeCategory = '';
 let query = '';
+let catalogSort = 'name';
+let catalogSource = '';
 let dismissedNotice = '';
 let toastTimer = null;
 let rendered = false;
@@ -415,6 +420,22 @@ function addAboutDetail(container, record) {
   if (record.installedAt) {
     list.append(node('li', '', `Установлен: ${formatDate(record.installedAt)}`));
   }
+  const resources = record.resources;
+  if (resources) {
+    const kb = (value) => `${Math.round((Number(value) || 0) / 1024)} КБ`;
+    list.append(
+      node('li', '', `Хранилище: ${kb(resources.storageBytes)} из ${kb(resources.storageLimit)}`),
+    );
+    list.append(node('li', '', `Команды: ${resources.commands} из ${resources.commandsLimit}`));
+    list.append(node('li', '', `Строки панели: ${resources.rows} из ${resources.rowsLimit}`));
+    list.append(
+      node(
+        'li',
+        '',
+        `Скрипт страницы: таймаут ${Math.round((resources.scriptTimeoutMs || 0) / 1000)} с`,
+      ),
+    );
+  }
   if (record.updatedAt) list.append(node('li', '', `Обновлён: ${formatDate(record.updatedAt)}`));
   block.append(list);
 
@@ -438,6 +459,30 @@ function permissionIdsText(ids) {
   return (Array.isArray(ids) ? ids : []).map(permissionLabel).join(', ');
 }
 
+function sortedCatalog(items) {
+  const byName = (left, right) => (left.name || '').localeCompare(right.name || '', 'ru');
+  const list = [...items];
+  if (catalogSort === 'date') {
+    return list.sort(
+      (left, right) =>
+        String(right.publishedAt || '').localeCompare(String(left.publishedAt || '')) ||
+        byName(left, right),
+    );
+  }
+  if (catalogSort === 'installs') {
+    return list.sort(
+      (left, right) =>
+        (Number(right.installs) || 0) - (Number(left.installs) || 0) || byName(left, right),
+    );
+  }
+  if (catalogSort === 'updates') {
+    return list.sort(
+      (left, right) => (left.update ? 0 : 1) - (right.update ? 0 : 1) || byName(left, right),
+    );
+  }
+  return list.sort(byName);
+}
+
 function catalogCard(item) {
   const card = node('article', 'card');
   if (item.blocked) card.classList.add('card--error');
@@ -448,7 +493,10 @@ function catalogCard(item) {
   const titleRow = node('div', 'card-title-row');
   titleRow.append(node('h3', 'card-title', item.name));
   titleRow.append(pill(`v${item.version}`));
-  titleRow.append(signaturePill(item.signature));
+  if (item.verified) titleRow.append(pill('проверено', 'ok'));
+  if (item.registryLabel && item.registryLabel !== 'официальный') {
+    titleRow.append(pill(item.registryLabel, 'info'));
+  } else titleRow.append(signaturePill(item.signature));
   titleBlock.append(titleRow);
   titleBlock.append(
     node('p', 'card-author', `${item.author?.name || 'неизвестный автор'} · ${item.license}`),
@@ -480,8 +528,26 @@ function catalogCard(item) {
       item.categories?.length ? item.categories.join(' · ') : 'без категории',
       item.size ? formatBytes(item.size) : '',
       item.publishedAt ? formatDate(item.publishedAt) : '',
+      item.installs ? `установок: ${item.installs}` : '',
     ]),
   );
+
+  const changes = item.installedPermissionChanges || item.permissionChanges;
+  if (changes && (changes.added.length || changes.removed.length)) {
+    const block = node('div', 'permission-diff');
+    block.append(
+      node(
+        'span',
+        'permission-diff-title',
+        item.installedPermissionChanges
+          ? 'Изменения разрешений при обновлении'
+          : 'Изменения разрешений к прошлой версии',
+      ),
+    );
+    for (const label of changes.added) block.append(pill(`+ ${label}`, 'warn'));
+    for (const label of changes.removed) block.append(pill(`− ${label}`, 'ok'));
+    card.append(block);
+  }
 
   if (!item.compatible) {
     card.append(
@@ -561,7 +627,33 @@ function catalogCard(item) {
 function renderCatalog() {
   const catalog = state.catalog || {};
   renderCategories(catalog);
-  const items = (catalog.plugins || []).filter((item) => matches(item));
+  const sources = Array.isArray(catalog.sources) ? catalog.sources : [];
+  const labels = sources.map((source) => source.label).filter(Boolean);
+  const sourceSignature = labels.join('|');
+  if (sourceSignature !== el.catalogSource.dataset.signature) {
+    el.catalogSource.dataset.signature = sourceSignature;
+    el.catalogSource.replaceChildren();
+    const all = document.createElement('option');
+    all.value = '';
+    all.textContent = 'Все источники';
+    el.catalogSource.append(all);
+    for (const label of labels) {
+      const option = document.createElement('option');
+      option.value = label;
+      option.textContent = label;
+      el.catalogSource.append(option);
+    }
+  }
+  if (catalogSource && !labels.includes(catalogSource)) catalogSource = '';
+  el.catalogSource.value = catalogSource;
+
+  const items = sortedCatalog(
+    (catalog.plugins || []).filter(
+      (item) =>
+        matches(item) &&
+        (!catalogSource || (item.registryLabel || 'официальный') === catalogSource),
+    ),
+  );
   el.catalogList.replaceChildren(...items.map(catalogCard));
   el.catalogEmpty.hidden = items.length > 0 || catalog.status === 'loading';
   const unpublished = catalog.status === 'empty' && !query;
@@ -589,7 +681,10 @@ function renderCatalog() {
   } else if (catalog.status === 'error' && !catalog.plugins?.length) {
     el.catalogMeta.textContent = catalog.error || 'Каталог недоступен';
   } else if (catalog.plugins?.length) {
-    el.catalogMeta.textContent = `Плагинов в каталоге: ${catalog.plugins.length}`;
+    const warnings = Array.isArray(catalog.warnings) ? catalog.warnings.length : 0;
+    el.catalogMeta.textContent = `Плагинов в каталоге: ${catalog.plugins.length}${
+      warnings ? ` · предупреждений: ${warnings}` : ''
+    }`;
   } else {
     el.catalogMeta.textContent = 'Каталог ещё не загружен';
   }
@@ -634,6 +729,7 @@ function installedCard(record) {
   titleRow.append(sourcePill(record));
   titleRow.append(signaturePill(record.signature));
   if (record.update) titleRow.append(pill(`есть ${record.update.version}`, 'update'));
+  if (record.cosmetic) titleRow.append(pill('косметика', 'ok'));
   if (record.pendingUpdate) titleRow.append(pill('ждёт подтверждения', 'warn'));
   titleBlock.append(titleRow);
   titleBlock.append(
@@ -652,6 +748,17 @@ function installedCard(record) {
         `Обновить до ${record.update.version}`,
         'primary',
         'update',
+        { id: record.id },
+        { disabled: Boolean(state.busy) },
+      ),
+    );
+  }
+  if (record.cosmetic && !record.enabled) {
+    actions.append(
+      makeButton(
+        'Превью',
+        'ghost',
+        'preview',
         { id: record.id },
         { disabled: Boolean(state.busy) },
       ),
@@ -895,6 +1002,9 @@ function renderSettings() {
   if (document.activeElement !== el.inputRegistry) {
     el.inputRegistry.value = settings.registryUrl || '';
   }
+  if (document.activeElement !== el.inputRegistries) {
+    el.inputRegistries.value = (settings.registryUrls || []).join('\n');
+  }
 
   const catalog = state.catalog || {};
   const note = catalog.fetchedAt
@@ -988,6 +1098,7 @@ el.content.addEventListener('click', async (event) => {
   else if (kind === 'update') run('update', { id });
   else if (kind === 'remove') run('remove', { id });
   else if (kind === 'reload') run('reload', { id });
+  else if (kind === 'preview') run('preview', { id });
   else if (kind === 'rollback') {
     run('rollback', { id, version: action.dataset.version || '' });
   } else if (kind === 'logs') {
@@ -1048,6 +1159,16 @@ el.catalogCategories.addEventListener('click', (event) => {
   render();
 });
 
+el.catalogSort.addEventListener('change', () => {
+  catalogSort = el.catalogSort.value;
+  renderCatalog();
+});
+
+el.catalogSource.addEventListener('change', () => {
+  catalogSource = el.catalogSource.value;
+  renderCatalog();
+});
+
 el.search.addEventListener('input', () => {
   query = el.search.value.trim().toLowerCase();
   render();
@@ -1097,6 +1218,20 @@ $('btnRegistrySave').addEventListener('click', async () => {
     showToast('Адрес каталога сохранён');
     run('refreshCatalog');
   }
+});
+
+$('btnRegistriesSave').addEventListener('click', async () => {
+  const urls = el.inputRegistries.value
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const result = await run('setSettings', { patch: { registryUrls: urls } });
+  if (!result.ok) {
+    showToast(result.error || 'Не удалось сохранить каталоги', true);
+    return;
+  }
+  showToast('Дополнительные каталоги сохранены');
+  run('refreshCatalog');
 });
 
 $('btnRegistryReset').addEventListener('click', async () => {

@@ -204,6 +204,13 @@
     },
     {
         "type": "file",
+        "url": "https://registry.npmjs.org/gifenc/-/gifenc-1.0.3.tgz",
+        "sha512": "c5dafa01dadf18171fce770e3543a55cc06e739c090ed3ae784ddce6b746d28360b4834b0fe7f6885665b6b051658cc00916caafe992554ff1f7ccefdaede39b",
+        "dest-filename": "fa01dadf18171fce770e3543a55cc06e739c090ed3ae784ddce6b746d28360b4834b0fe7f6885665b6b051658cc00916caafe992554ff1f7ccefdaede39b",
+        "dest": "flatpak-node/npm-cache/_cacache/content-v2/sha512/c5/da"
+    },
+    {
+        "type": "file",
         "url": "https://registry.npmjs.org/gopd/-/gopd-1.2.0.tgz",
         "sha512": "65429187afe4505a0089302d4d83d9277870f70371c7e04804e8a39e51bd3e7ac9b027128ecd70cb20fabc9a5a62d827cc3aca6114aa7f738ee917daf77c6c46",
         "dest-filename": "9187afe4505a0089302d4d83d9277870f70371c7e04804e8a39e51bd3e7ac9b027128ecd70cb20fabc9a5a62d827cc3aca6114aa7f738ee917daf77c6c46",
@@ -376,6 +383,13 @@
         "sha512": "7b71419572e637f0f54becc7cda9cfe04ff867ad281406b73b4e75aadd69c5aec310958a0328a5eaea5855709669d127ba8a9ae0f91cf68531f73b3161e46ff0",
         "dest-filename": "419572e637f0f54becc7cda9cfe04ff867ad281406b73b4e75aadd69c5aec310958a0328a5eaea5855709669d127ba8a9ae0f91cf68531f73b3161e46ff0",
         "dest": "flatpak-node/npm-cache/_cacache/content-v2/sha512/7b/71"
+    },
+    {
+        "type": "file",
+        "url": "https://registry.npmjs.org/qrcode-generator/-/qrcode-generator-1.4.4.tgz",
+        "sha512": "1ccef263c3b68a5aa19942f118ca5c1d2175121249f72063f20bc312e67a33e286274618da12a99d7bd10fe8593cbac355c9371312068663ed49d7230be82ebb",
+        "dest-filename": "f263c3b68a5aa19942f118ca5c1d2175121249f72063f20bc312e67a33e286274618da12a99d7bd10fe8593cbac355c9371312068663ed49d7230be82ebb",
+        "dest": "flatpak-node/npm-cache/_cacache/content-v2/sha512/1c/ce"
     },
     {
         "type": "file",
@@ -580,6 +594,12 @@
     },
     {
         "type": "inline",
+        "contents": "41a02925159bd4e16f8c99957f5230028e1a414b\t{\"key\": \"make-fetch-happen:request-cache:https://registry.npmjs.org/qrcode-generator/-/qrcode-generator-1.4.4.tgz\", \"integrity\": \"sha512-HM7yY8O2ilqhmULxGMpcHSF1EhJJ9yBj8gvDEuZ6M+KGJ0YY2hKpnXvRD+hZPLrDVck3ExIGhmPtSdcjC+guuw==\", \"time\": 0, \"size\": 46334, \"metadata\": {\"url\": \"https://registry.npmjs.org/qrcode-generator/-/qrcode-generator-1.4.4.tgz\", \"reqHeaders\": {}, \"resHeaders\": {}}}",
+        "dest-filename": "3a453bbd2bc8013e57d1fdbe807a097b0a43ddffb92aba1ce9e5dcff30ad",
+        "dest": "flatpak-node/npm-cache/_cacache/index-v5/94/28"
+    },
+    {
+        "type": "inline",
         "contents": "42386021ee394ae5f54b4a84f81f242e2a08e771\t{\"key\": \"make-fetch-happen:request-cache:https://registry.npmjs.org/from/-/from-0.1.7.tgz\", \"integrity\": \"sha512-twe20eF1OxVxp/ML/kq2p1uc6KvFK/+vs8WjEbeKmV2He22MKm7YF2ANIt+EOqhJ5L3K/SuuPhk0hWQDjOM23g==\", \"time\": 0, \"size\": 3268, \"metadata\": {\"url\": \"https://registry.npmjs.org/from/-/from-0.1.7.tgz\", \"reqHeaders\": {}, \"resHeaders\": {}}}",
         "dest-filename": "4b012d694c4d626bd637b5ea7588a81bc688897aa4543e5772853d525c99",
         "dest": "flatpak-node/npm-cache/_cacache/index-v5/1a/9a"
@@ -685,6 +705,12 @@
         "contents": "8c084c7ae5707b44c8c6538a46398ea4595e9711\t{\"key\": \"make-fetch-happen:request-cache:https://registry.npmjs.org/object-keys/-/object-keys-1.1.1.tgz\", \"integrity\": \"sha512-NuAESUOUMrlIXOfHKzD6bpPu3tYt3xvjNdRIQ+FeT0lNb4K8WR70CaDxhuNguS2XG+GjkyMwOzsN5ZktImfhLA==\", \"time\": 0, \"size\": 7677, \"metadata\": {\"url\": \"https://registry.npmjs.org/object-keys/-/object-keys-1.1.1.tgz\", \"reqHeaders\": {}, \"resHeaders\": {}}}",
         "dest-filename": "4823d25a60802304e58edaa16fb53111bb559d3aa89a535a31db203d673c",
         "dest": "flatpak-node/npm-cache/_cacache/index-v5/43/e2"
+    },
+    {
+        "type": "inline",
+        "contents": "8f6e73db592dab7f7d5dd97b4476d118f51c5165\t{\"key\": \"make-fetch-happen:request-cache:https://registry.npmjs.org/gifenc/-/gifenc-1.0.3.tgz\", \"integrity\": \"sha512-xdr6AdrfGBcfzncONUOlXMBuc5wJDtOueE3c5rdG0oNgtINLD+f2iFZltrBRZYzACRbKr+mSVU/x98zv2u3jmw==\", \"time\": 0, \"size\": 43036, \"metadata\": {\"url\": \"https://registry.npmjs.org/gifenc/-/gifenc-1.0.3.tgz\", \"reqHeaders\": {}, \"resHeaders\": {}}}",
+        "dest-filename": "89da6b211298b7879bc215733493ff45a7c1f8d6c7f1b6f25a54bb08be3c",
+        "dest": "flatpak-node/npm-cache/_cacache/index-v5/85/40"
     },
     {
         "type": "inline",

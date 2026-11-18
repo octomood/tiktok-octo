@@ -17,7 +17,10 @@ const docsWindow = require('./plugins/docs-window');
 
 function isOwnContents(wc) {
   return (
-    wc === ctx.win?.webContents || wc === ctx.view?.webContents || docsWindow.isDocsContents(wc)
+    wc === ctx.win?.webContents ||
+    wc === ctx.view?.webContents ||
+    wc === ctx.chatView?.webContents ||
+    docsWindow.isDocsContents(wc)
   );
 }
 

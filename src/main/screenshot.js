@@ -36,13 +36,27 @@ function outputDir() {
   }
 }
 
+/** Кадр может быть пустым сразу после навигации — даём странице дорисоваться. */
+async function grabFrame(wc) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const image = await wc.capturePage();
+      if (image && !image.isEmpty()) return image;
+    } catch {
+      /* рендерер ещё не готов */
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return null;
+}
+
 async function captureFrame() {
   const wc = ctx.view?.webContents;
   if (!wc || wc.isDestroyed()) return;
 
   try {
-    const image = await wc.capturePage();
-    if (!image || image.isEmpty()) {
+    const image = await grabFrame(wc);
+    if (!image) {
       toast('Не удалось сделать снимок');
       return;
     }
@@ -64,4 +78,29 @@ async function captureFrame() {
   }
 }
 
-module.exports = { captureFrame };
+/**
+ * Снимок для редактора: отдаём PNG как data URL, файл сохранит окно
+ * аннотаций после правок.
+ */
+async function captureForAnnotation() {
+  const wc = ctx.view?.webContents;
+  if (!wc || wc.isDestroyed()) return null;
+
+  try {
+    const image = await grabFrame(wc);
+    if (!image) {
+      toast('Не удалось сделать снимок');
+      return null;
+    }
+
+    const dataUrl = `data:image/png;base64,${image.toPNG().toString('base64')}`;
+    const name = `tiktok-octo-${timestamp()}-annotated.png`;
+    require('./annotator').open({ dataUrl, name });
+    return dataUrl;
+  } catch {
+    toast('Не удалось сделать снимок');
+    return null;
+  }
+}
+
+module.exports = { captureFrame, captureForAnnotation, outputDir, timestamp };

@@ -15,11 +15,17 @@ const HOME_URL = process.env.OCTO_HOME_URL || 'https://www.tiktok.com/';
 // Высота нашей собственной полосы заголовка (px).
 const TITLEBAR_H = 44;
 
-// Верхняя граница «хрома»: полоса заголовка + панель поиска по странице.
-const MAX_CHROME_H = 120;
+// Верхняя граница «хрома»: полоса заголовка, панель поиска и меню стикеров.
+const MAX_CHROME_H = 480;
 
 // Ширина боковой панели функций.
 const PANEL_W = 300;
+
+// Ширина панели чата: список переписок и узкий диалог помещаются целиком.
+const CHAT_W = 420;
+
+// Полоска между чатом и лентой: за неё тянем ширину чата.
+const CHAT_HANDLE_W = 6;
 
 // Отдельная persistent-сессия: логин и настройки сайта живут между запусками.
 const PARTITION = 'persist:octo-tiktok';
@@ -107,6 +113,19 @@ function isExternalUrl(rawUrl) {
   return /^(?:https?|mailto):/i.test(rawUrl || '');
 }
 
+/** Имя автора из адреса ролика: `tiktok.com/@name/video/123`. */
+function authorFromUrl(rawUrl) {
+  const url = parseUrl(rawUrl);
+  if (!url) return '';
+  const match = /^\/@([^/]+)/.exec(url.pathname);
+  if (!match) return '';
+  try {
+    return decodeURIComponent(match[1]).slice(0, 80);
+  } catch {
+    return match[1].slice(0, 80);
+  }
+}
+
 /** Внутри приложения живут только TikTok, OAuth-экраны и служебные схемы. */
 function isInternalUrl(rawUrl) {
   return isTikTokUrl(rawUrl) || isAuthUrl(rawUrl) || /^about:blank$/i.test(rawUrl || '');
@@ -129,6 +148,8 @@ module.exports = {
   TITLEBAR_H,
   MAX_CHROME_H,
   PANEL_W,
+  CHAT_W,
+  CHAT_HANDLE_W,
   PARTITION,
   REGION_PRELOAD,
   AUTH_RULES,
@@ -137,6 +158,7 @@ module.exports = {
   isAuthUrl,
   isAuthHost,
   isExternalUrl,
+  authorFromUrl,
   isInternalUrl,
   parseUnreadCount,
 };

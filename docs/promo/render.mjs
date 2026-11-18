@@ -24,7 +24,7 @@ const still = arg('still', null);
 const scene = arg('scene', 'scene.html');
 const outDir = path.resolve(here, arg('out', 'build'));
 const framesDir = path.join(outDir, 'frames');
-const DUR = 15;
+const DEFAULT_DUR = 15;
 
 fs.mkdirSync(framesDir, { recursive: true });
 
@@ -37,7 +37,7 @@ function findChromium() {
   const dirs = fs
     .readdirSync(base)
     .filter((d) => /^chromium-\d+$/.test(d))
-    .sort((a, b) => Number(b.split('-')[1]) - Number(a.split('-')[1]));
+    .sort((a, b) => Number(b.split('-').pop()) - Number(a.split('-').pop()));
   for (const d of dirs) {
     const p = path.join(base, d, 'chrome-linux64', 'chrome');
     if (fs.existsSync(p)) return p;
@@ -74,6 +74,8 @@ page.on('pageerror', (e) => console.error('[scene error]', e.message));
 await page.goto(pathToFileURL(path.join(here, scene)).href, { waitUntil: 'load' });
 await page.evaluate(() => document.fonts.ready);
 await page.waitForFunction(() => document.body.dataset.ready === '1');
+
+const DUR = await page.evaluate(() => window.DUR || DEFAULT_DUR);
 
 if (still != null) {
   const t = Number(still);
