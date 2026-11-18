@@ -470,9 +470,22 @@ function markReady(entry) {
   notifyChange();
 
   const wc = ctx.view?.webContents;
-  if (wc && !wc.isDestroyed() && !wc.isLoading()) {
+  if (!wc || wc.isDestroyed()) return;
+
+  const announce = () => {
+    if (entry.error || !entry.active || wc.isDestroyed()) return;
     send(entry, 'page-ready', { url: wc.getURL(), title: wc.getTitle() });
+  };
+
+  if (!wc.isLoading()) {
+    announce();
+    return;
   }
+
+  // Плагин мог загрузиться уже после dom-ready, когда страница ещё
+  // догружается. Ждём did-stop-loading: иначе onPageReady терялся и,
+  // например, hello-плагин не ставил свой маркер.
+  wc.once('did-stop-loading', announce);
 }
 
 function rateLimited(entry, bucket, limit, windowMs) {
