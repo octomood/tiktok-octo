@@ -81,8 +81,8 @@ modules:
       # (пример — в README.md, раздел «Локальная сборка»).
       - type: git
         url: https://github.com/octomood/tiktok-octo.git
-        tag: v1.0.0
-        commit: 9d5c6b58cb112a9b9f66a680d84095e1698abb49
+        tag: v1.1.0
+        commit: 045dc1c57a306acdbdcc19dd1f53887c2758de89
       - npm-sources.json
       - type: file
         path: io.github.octomood.TikTokOcto.metainfo.xml
