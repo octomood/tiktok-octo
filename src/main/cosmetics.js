@@ -652,6 +652,106 @@ async function prepareTheme(ses) {
   await syncThemeCookies(ses, isEnabled('dark-theme'));
 }
 
+/**
+ * Правая колонка страницы видео.
+ *
+ * На десктопе TikTok всегда держит справа панель с вкладками «Комментарии» и
+ * «Вам может понравиться», даже когда комментарии не нужны. Прячем её и
+ * освобождаем место ролику; значок комментариев возвращает панель, а Esc,
+ * повторный клик по значку или переход на другой ролик снова её убирают.
+ * Скрываем только контейнер страницы видео, чтобы лента и чат не менялись.
+ */
+const COMMENTS_PANEL_MARK = 'data-octo-comments-panel';
+
+const COMMENTS_PANEL_CSS = `
+  [class*="DivVideoDetailContainer"] [class*="DivVideoListTabBarWrapper"] {
+    display: none !important;
+  }
+  html[${COMMENTS_PANEL_MARK}="open"]
+    [class*="DivVideoDetailContainer"]
+    [class*="DivVideoListTabBarWrapper"] {
+    display: flex !important;
+  }
+`;
+
+const COMMENTS_PANEL_JS = `(() => {
+  const MARK = '${COMMENTS_PANEL_MARK}';
+  if (window.__octoCommentsPanel) return 0;
+
+  const root = document.documentElement;
+  const isOpen = () => root.getAttribute(MARK) === 'open';
+  const open = () => root.setAttribute(MARK, 'open');
+  const close = () => root.removeAttribute(MARK);
+
+  // Вкладка «Комментарии» отрисована, только когда сайт показывает список.
+  const commentsVisible = () => Boolean(document.querySelector('[class*="DivCommentListContainer"]'));
+
+  const onClick = (event) => {
+    const target =
+      event.target instanceof Element ? event.target.closest('[data-e2e="comment-icon"]') : null;
+    if (!target) return;
+    // Первый клик открывает панель, повторный по уже открытым комментариям —
+    // закрывает. Если сайт успел переключиться на «Вам может понравиться»,
+    // клик по значку возвращает вкладку комментариев и панель не прячет.
+    if (isOpen() && commentsVisible()) {
+      close();
+      return;
+    }
+    open();
+  };
+
+  const onKeyDown = (event) => {
+    if (event.key !== 'Escape' || !isOpen()) return;
+    const target = event.target;
+    const editing =
+      target instanceof Element &&
+      Boolean(target.closest('input, textarea, [contenteditable=""], [contenteditable="true"]'));
+    if (editing) return;
+    close();
+  };
+
+  // SPA меняет ролик без перезагрузки: новая страница снова начинается
+  // со скрытой панелью, иначе она оставалась бы открытой с прошлого раза.
+  const closeOnNavigate = () => close();
+  const wrapHistory = (name) => {
+    const original = history[name];
+    if (typeof original !== 'function') return;
+    history[name] = function wrappedHistory(...args) {
+      const before = location.href;
+      const result = original.apply(this, args);
+      if (location.href !== before) close();
+      return result;
+    };
+  };
+  wrapHistory('pushState');
+  wrapHistory('replaceState');
+
+  document.addEventListener('click', onClick, true);
+  document.addEventListener('keydown', onKeyDown, true);
+  window.addEventListener('popstate', closeOnNavigate);
+
+  window.__octoCommentsPanel = {
+    stop() {
+      document.removeEventListener('click', onClick, true);
+      document.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('popstate', closeOnNavigate);
+      close();
+      delete window.__octoCommentsPanel;
+    },
+  };
+
+  close();
+  return 1;
+})()`;
+
+const COMMENTS_PANEL_CLEANUP_JS = `(() => {
+  if (window.__octoCommentsPanel) {
+    window.__octoCommentsPanel.stop();
+    return;
+  }
+  document.documentElement.removeAttribute('${COMMENTS_PANEL_MARK}');
+})()`;
+
 const IMPLEMENTATIONS = {
   'octo-brand': {
     css: '[data-octo-brand] > svg { display: none !important; }',
@@ -668,6 +768,11 @@ const IMPLEMENTATIONS = {
   // data-e2e у TikTok стабильнее хешированных классов.
   'hide-live-nav': { css: 'h2:has([data-e2e="nav-live"]) { display: none !important; }' },
   'hide-drama-nav': { css: 'h2:has([data-e2e="nav-short-drama"]) { display: none !important; }' },
+  'comments-panel': {
+    css: COMMENTS_PANEL_CSS,
+    js: COMMENTS_PANEL_JS,
+    cleanupJs: COMMENTS_PANEL_CLEANUP_JS,
+  },
 };
 
 /**
@@ -720,7 +825,19 @@ function setOnChange(callback) {
   onChange = callback;
 }
 
-async function apply(wc = ctx.view?.webContents) {
+const applyQueues = new WeakMap();
+
+function apply(wc = ctx.view?.webContents) {
+  if (!wc || wc.isDestroyed()) return Promise.resolve();
+  // Быстрые переключения и dom-ready не должны вставлять CSS параллельно:
+  // иначе ключ от первой вставки теряется и правило не снять до перезагрузки.
+  const previous = applyQueues.get(wc) || Promise.resolve();
+  const next = previous.then(() => applyNow(wc)).catch(() => {});
+  applyQueues.set(wc, next);
+  return next;
+}
+
+async function applyNow(wc) {
   if (!wc || wc.isDestroyed()) return;
 
   const state = stateOf(wc);

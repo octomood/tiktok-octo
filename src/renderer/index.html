@@ -1358,6 +1358,29 @@
               <span class="panel-row-label">Дата публикации</span>
               <span class="panel-value" id="videoDateValue">—</span>
             </div>
+            <div class="panel-row panel-row--static">
+              <span class="panel-row-label">Качество</span>
+              <span class="panel-value panel-value--wide" id="videoQualityValue">—</span>
+            </div>
+            <div class="panel-row panel-row--static">
+              <span class="panel-row-label">HEVC (H.265)</span>
+              <span class="panel-value panel-value--wide" id="videoHevcValue">—</span>
+            </div>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowHardwareVideo"
+              role="switch"
+              aria-checked="false"
+              data-cmd="hardwareVideo"
+            >
+              <span class="panel-row-label">Аппаратный декодер</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+            <p class="panel-note" id="hardwareVideoNote">
+              На Linux включает системный декодер HEVC. Применяется после перезапуска; если кадры
+              замирают, выключите.
+            </p>
           </div>
         </section>
 
@@ -1516,6 +1539,22 @@
               </span>
             </div>
             <div class="panel-row panel-row--static">
+              <label class="panel-row-label" for="sharpnessRange">Резкость</label>
+              <span class="volume-group">
+                <input
+                  id="sharpnessRange"
+                  class="volume-range"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value="0"
+                  aria-label="Резкость"
+                />
+                <span class="volume-value" id="sharpnessValue">0 %</span>
+              </span>
+            </div>
+            <div class="panel-row panel-row--static">
               <label class="panel-row-label" for="warmthRange">Тёплый оттенок</label>
               <span class="volume-group">
                 <input
@@ -1541,6 +1580,9 @@
                 <button type="button" class="speed-btn" data-picture-fit="cover">Заполнить</button>
               </span>
             </div>
+            <button type="button" class="panel-row" data-cmd="pictureEnhance">
+              <span class="panel-row-label">Улучшить картинку</span>
+            </button>
             <button type="button" class="panel-row" data-cmd="pictureReset">
               <span class="panel-row-label">Сбросить картинку</span>
             </button>
@@ -2556,11 +2598,31 @@
               </div>
             </div>
             <p class="panel-note" id="regionProxyState">Прокси не задан — сайт видит ваш IP.</p>
+            <button
+              type="button"
+              class="panel-row"
+              id="rowDpiBypass"
+              role="switch"
+              aria-checked="false"
+              data-cmd="dpiToggle"
+            >
+              <span class="panel-row-label">Обход DPI (экспериментально)</span>
+              <span class="switch" aria-hidden="true"></span>
+            </button>
+            <p class="panel-note">
+              Фрагментирует TLS-рукопожатие локально: без прокси и VPN, трафик не идёт через третьи
+              руки. Помогает при блокировке по имени сайта; если TikTok недоступен по IP, не
+              сработает.
+            </p>
             <button type="button" class="panel-row" data-cmd="regionCheckIp">
               <span class="panel-row-label">Внешний IP</span>
               <span class="panel-value" id="regionIpValue">Проверить</span>
             </button>
             <p class="panel-result" id="regionIpResult" data-i18n-skip hidden></p>
+            <button type="button" class="panel-row" data-cmd="welcomeOpen">
+              <span class="panel-row-label">Мастер настройки</span>
+              <span class="panel-value">Прокси и язык</span>
+            </button>
             <button type="button" class="panel-row panel-row--danger" data-cmd="regionResetData">
               <span class="panel-row-label">Сбросить данные сайта</span>
             </button>
@@ -3048,9 +3110,102 @@
       </div>
     </div>
 
+    <div
+      class="welcome"
+      id="welcome"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="welcomeTitle"
+      hidden
+    >
+      <div class="welcome-card">
+        <img class="welcome-logo" src="assets/octo-logo-mark.png" alt="" width="56" height="56" />
+        <h2 id="welcomeTitle">Добро пожаловать в TikTok octo</h2>
+        <p class="welcome-note">
+          Выберите язык интерфейса. Прокси нужен, только если TikTok не открывается без него.
+        </p>
+
+        <label class="welcome-field-label" for="welcomeLanguage">Язык интерфейса</label>
+        <select
+          id="welcomeLanguage"
+          class="panel-select panel-select--wide"
+          aria-label="Язык интерфейса"
+        ></select>
+
+        <div class="welcome-toggle-row">
+          <span class="welcome-toggle-label" id="welcomeProxyLabel">Использовать прокси</span>
+          <button
+            type="button"
+            class="panel-row welcome-toggle"
+            id="welcomeProxyToggle"
+            role="switch"
+            aria-checked="false"
+            aria-labelledby="welcomeProxyLabel"
+          >
+            <span class="switch" aria-hidden="true"></span>
+          </button>
+        </div>
+
+        <div class="welcome-proxy" id="welcomeProxyFields" hidden>
+          <div class="panel-field">
+            <label class="panel-field-label" for="welcomeProxy">Адрес прокси</label>
+            <input
+              id="welcomeProxy"
+              class="panel-input"
+              type="text"
+              placeholder="socks5://127.0.0.1:1080"
+              spellcheck="false"
+              autocomplete="off"
+              aria-label="Адрес прокси"
+            />
+          </div>
+          <button type="button" class="panel-row" id="welcomeDiscover">
+            <span class="panel-row-label">Найти локальный прокси</span>
+          </button>
+          <p class="panel-note" id="welcomeScanState" aria-live="polite" hidden></p>
+          <select
+            id="welcomeFound"
+            class="panel-select panel-select--wide"
+            aria-label="Найденные прокси"
+            hidden
+          ></select>
+          <p class="panel-note" id="welcomeProxyHint">
+            Ищем клиент v2ray, Clash или Tor на портах localhost. Приложение ничего не скачивает из
+            сети.
+          </p>
+        </div>
+
+        <div class="welcome-toggle-row">
+          <span class="welcome-toggle-label" id="welcomeDpiLabel"
+            >Обход DPI (экспериментально)</span
+          >
+          <button
+            type="button"
+            class="panel-row welcome-toggle"
+            id="welcomeDpiToggle"
+            role="switch"
+            aria-checked="false"
+            aria-labelledby="welcomeDpiLabel"
+          >
+            <span class="switch" aria-hidden="true"></span>
+          </button>
+        </div>
+        <p class="panel-note" id="welcomeDpiNote" hidden>
+          Без прокси и VPN: приложение само фрагментирует TLS при подключении. Помогает не всегда —
+          при блокировке по IP не сработает.
+        </p>
+
+        <div class="welcome-actions">
+          <button type="button" class="welcome-btn" id="welcomeSkip">Пропустить</button>
+          <button type="button" class="primary welcome-btn" id="welcomeContinue">Продолжить</button>
+        </div>
+      </div>
+    </div>
+
     <div class="chat-resize" id="chatResize" hidden></div>
 
     <script src="i18n-dom.js"></script>
+    <script src="welcome.js"></script>
     <script src="titlebar.js"></script>
   </body>
 </html>

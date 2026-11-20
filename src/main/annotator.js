@@ -21,7 +21,9 @@ function open(image) {
   if (!image || typeof image.dataUrl !== 'string') return null;
   if (win && !win.isDestroyed()) win.close();
 
-  win = new BrowserWindow({
+  // Окно запоминаем локально: closed старого окна приходит позже и не должен
+  // обнулять ссылку на только что созданное новое.
+  const editor = new BrowserWindow({
     width: 980,
     height: 740,
     minWidth: 560,
@@ -36,16 +38,17 @@ function open(image) {
       sandbox: true,
     },
   });
+  win = editor;
 
-  win.loadFile(path.join(__dirname, '../renderer/annotator.html'));
-  win.webContents.once('did-finish-load', () => {
-    if (win && !win.isDestroyed()) win.webContents.send('octo:annotate-image', image);
+  editor.loadFile(path.join(__dirname, '../renderer/annotator.html'));
+  editor.webContents.once('did-finish-load', () => {
+    if (!editor.isDestroyed()) editor.webContents.send('octo:annotate-image', image);
   });
-  win.on('closed', () => {
-    win = null;
+  editor.on('closed', () => {
+    if (win === editor) win = null;
   });
 
-  return win;
+  return editor;
 }
 
 function fromEditor(event) {

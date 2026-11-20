@@ -2,13 +2,17 @@
 
 const { app } = require('electron');
 const { toast } = require('./app-context');
-const { showMessageBox } = require('./dialogs');
+const updateWindow = require('./update-window');
 
 /**
  * Автообновление (electron-updater) — только для упакованной сборки.
  *
  * Работает, если в build.publish указан репозиторий GitHub (см. package.json
  * и README). В dev-режиме модуль молчит, чтобы не мешать отладке.
+ *
+ * Скачивание не начинается само: при запуске проверяем релиз и показываем
+ * окно с предложением. Если пользователь закрыл окно, на следующем запуске
+ * предложение появится снова. После загрузки окно просит перезапуститься.
  */
 
 /**
@@ -20,6 +24,47 @@ const IS_FLATPAK = Boolean(process.env.FLATPAK_ID);
 /** @type {import('electron-updater').AppUpdater | null} */
 let autoUpdater = null;
 let packaged = false;
+
+/** idle → available → downloading → ready | error */
+let phase = 'idle';
+let offeredVersion = '';
+let checking = false;
+
+async function startDownload() {
+  if (!autoUpdater || (phase !== 'available' && phase !== 'error')) return;
+
+  phase = 'downloading';
+  updateWindow.show({ phase, percent: 0 });
+
+  try {
+    await autoUpdater.downloadUpdate();
+  } catch (err) {
+    console.warn('[octo] update download failed:', err?.message ?? err);
+    phase = 'error';
+    updateWindow.show({ phase, percent: 0 });
+  }
+}
+
+function restartNow() {
+  if (!autoUpdater || phase !== 'ready') return;
+  // isSilent=false: пользователь сам попросил перезапуск, показываем установку.
+  // isForceRunAfter=true: после установки приложение запускается снова.
+  autoUpdater.quitAndInstall(false, true);
+}
+
+function offer(info, { force = false } = {}) {
+  const version = String(info?.version || '');
+  if (!version) return;
+  // Не сбиваем уже идущую загрузку или готовое обновление новой карточкой.
+  if (phase === 'downloading' || phase === 'ready') return;
+  if (!force && phase === 'available' && offeredVersion === version && updateWindow.isOpen()) {
+    return;
+  }
+
+  phase = 'available';
+  offeredVersion = version;
+  updateWindow.show({ phase, version, percent: 0 });
+}
 
 function initUpdates() {
   // В Electron 45 app.isPackaged бывает true и при запуске из папки,
@@ -35,29 +80,52 @@ function initUpdates() {
     return;
   }
 
-  autoUpdater.autoDownload = true;
+  updateWindow.setHandlers({
+    install: startDownload,
+    restart: restartNow,
+  });
+
+  autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
 
   autoUpdater.on('error', (err) => {
     console.warn('[octo] update error:', err?.message ?? err);
+    if (phase !== 'downloading') return;
+    phase = 'error';
+    updateWindow.show({ phase, percent: 0 });
   });
 
-  autoUpdater.on('update-downloaded', async (info) => {
-    const { response } = await showMessageBox({
-      type: 'info',
-      title: 'Обновление готово',
-      message: `Версия ${info.version} загружена`,
-      detail: 'Перезапустить приложение сейчас?',
-      buttons: ['Перезапустить', 'Позже'],
-      defaultId: 0,
-      cancelId: 1,
+  autoUpdater.on('update-available', (info) => offer(info));
+
+  autoUpdater.on('update-not-available', () => {
+    if (phase !== 'available') return;
+    phase = 'idle';
+    updateWindow.close();
+  });
+
+  autoUpdater.on('download-progress', (info) => {
+    if (phase !== 'downloading') return;
+    updateWindow.progress(Number(info?.percent) || 0);
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    phase = 'ready';
+    updateWindow.show({
+      phase,
+      version: String(info?.version || offeredVersion),
+      percent: 100,
     });
-    if (response === 0) autoUpdater.quitAndInstall();
   });
 
-  autoUpdater.checkForUpdates().catch((err) => {
-    console.warn('[octo] update check failed:', err?.message ?? err);
-  });
+  checking = true;
+  autoUpdater
+    .checkForUpdates()
+    .catch((err) => {
+      console.warn('[octo] update check failed:', err?.message ?? err);
+    })
+    .finally(() => {
+      checking = false;
+    });
 }
 
 /** Ручная проверка из панели функций. */
@@ -72,15 +140,23 @@ async function checkNow() {
     return;
   }
 
+  // Уже качаем или ждём перезапуска — просто показываем окно, без новой проверки.
+  if (phase === 'downloading' || phase === 'ready') {
+    updateWindow.show({ phase });
+    return;
+  }
+
+  if (checking) return;
+  checking = true;
+
   try {
     const result = await autoUpdater.checkForUpdates();
-    if (!result?.updateInfo || result.updateInfo.version === app.getVersion()) {
-      toast('Обновлений нет');
-    } else {
-      toast(`Доступна версия ${result.updateInfo.version}`);
-    }
+    const version = String(result?.updateInfo?.version || '');
+    if (!version || version === app.getVersion()) toast('Обновлений нет');
   } catch {
     toast('Не удалось проверить обновления');
+  } finally {
+    checking = false;
   }
 }
 

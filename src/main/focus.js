@@ -176,6 +176,36 @@ function reapply() {
   run(curtainScript(ctx.focus?.breakMinutes || DEFAULTS.breakMinutes));
 }
 
+/**
+ * Перечитать лимиты после импорта настроек и привести режим к ним: выключенный
+ * Focus останавливает счётчик и снимает затемнение, включённый — запускает
+ * новый отсчёт. Без этого импорт менял только файл, а панель и счётчик жили
+ * по старым значениям до перезапуска.
+ */
+function sync() {
+  const settings = readSettings();
+
+  if (!settings.enabled) {
+    if (phase !== 'off') {
+      stopTicker();
+      if (breakTimer) clearTimeout(breakTimer);
+      breakTimer = null;
+      phase = 'off';
+      elapsed = 0;
+      run(REMOVE_SCRIPT);
+    }
+    syncState();
+    return;
+  }
+
+  if (phase === 'off') {
+    phase = 'focus';
+    elapsed = 0;
+    startTicker();
+  }
+  syncState();
+}
+
 syncState();
 
 // Режим переживает перезапуск: если он был включён, счётчик стартует с нуля.
@@ -185,4 +215,12 @@ if (readSettings().enabled) {
   syncState();
 }
 
-module.exports = { toggle, stop, setMinutes, setBreak, reapply, isOn: () => phase !== 'off' };
+module.exports = {
+  toggle,
+  stop,
+  setMinutes,
+  setBreak,
+  reapply,
+  sync,
+  isOn: () => phase !== 'off',
+};

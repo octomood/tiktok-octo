@@ -1,0 +1,2284 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>TikTok octo — plugins meme ad</title>
+    <link rel="stylesheet" href="../../src/renderer/fonts.css" />
+    <style>
+      /* ----------------------------------------------------------------
+         Мемная реклама системы плагинов, 1080×1920, 24 с.
+         Всё состояние считается из t: renderAt(t) — чистая функция.
+         ---------------------------------------------------------------- */
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg: #0a0a0c;
+        --ink: #f4f4f6;
+        --dim: #a8a8b2;
+        --line: #33333a;
+        --card: #16161a;
+        --card-2: #1e1e23;
+        --paper: #f4f4f6;
+        --paper-ink: #0b0b0d;
+        --yellow: #ffd60a;
+        --red: #ff5c5c;
+        --green: #6ee7a0;
+        --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+        --sans: 'Inter', system-ui, sans-serif;
+      }
+
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        margin: 0;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+      }
+
+      #scene {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+
+      #world {
+        position: absolute;
+        inset: 0;
+        will-change: transform;
+      }
+
+      .bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(900px 760px at 50% 26%, rgba(255, 255, 255, 0.07), transparent 68%),
+          radial-gradient(1200px 900px at 50% 106%, rgba(255, 255, 255, 0.04), transparent 70%),
+          #0a0a0c;
+      }
+
+      .sun {
+        position: absolute;
+        left: 50%;
+        top: 860px;
+        width: 1200px;
+        height: 1200px;
+        margin: -600px 0 0 -600px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 214, 10, 0.2), transparent 62%);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .vignette {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(120% 84% at 50% 46%, transparent 40%, rgba(0, 0, 0, 0.66) 100%);
+      }
+
+      .grain {
+        position: absolute;
+        inset: -8%;
+        pointer-events: none;
+        opacity: 0.06;
+        mix-blend-mode: soft-light;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+        background-size: 160px 160px;
+      }
+
+      .flash {
+        position: absolute;
+        inset: 0;
+        z-index: 90;
+        background: #ffffff;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .hud {
+        position: absolute;
+        inset: 0;
+        z-index: 80;
+        pointer-events: none;
+      }
+
+      .hud-top {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1080px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.09);
+      }
+
+      .hud-top-fill {
+        height: 100%;
+        width: 0;
+        background: var(--yellow);
+      }
+
+      .hud-brand {
+        position: absolute;
+        left: 48px;
+        top: 58px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--mono);
+        font-size: 19px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: rgba(244, 244, 246, 0.5);
+      }
+
+      .hud-brand i {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--yellow);
+        box-shadow: 0 0 18px var(--yellow);
+      }
+
+      section {
+        position: absolute;
+        inset: 0;
+        display: none;
+      }
+
+      .mono {
+        font-family: var(--mono);
+      }
+
+      .m {
+        font-weight: 900;
+        font-size: 88px;
+        line-height: 1.04;
+        letter-spacing: -0.035em;
+        text-align: center;
+        text-wrap: balance;
+      }
+
+      .m.dim {
+        color: #b9b9c2;
+      }
+
+      .m.small {
+        font-size: 58px;
+        color: #c6c6cf;
+      }
+
+      .hl {
+        display: inline-block;
+        background: var(--yellow);
+        color: var(--paper-ink);
+        padding: 0 0.08em 0.02em;
+        border-radius: 0.06em;
+        transform: rotate(-1.2deg);
+      }
+
+      .emoji {
+        font-family: 'Noto Color Emoji', var(--sans);
+        font-weight: 400;
+      }
+
+      .lbl {
+        font-family: var(--mono);
+        font-size: 20px;
+        letter-spacing: 0.26em;
+        text-transform: uppercase;
+        color: rgba(244, 244, 246, 0.44);
+        text-align: center;
+      }
+
+      .cursor {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 34px;
+        height: 34px;
+        z-index: 40;
+        transform-origin: 0 0;
+        opacity: 0;
+      }
+
+      .click-ring {
+        position: absolute;
+        border-radius: 50%;
+        border: 3px solid var(--yellow);
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        z-index: 39;
+      }
+
+      /* ------------------------- 1. POV ------------------------- */
+
+      #s1 {
+        display: block;
+      }
+
+      .s1-top {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 196px;
+        text-align: center;
+      }
+
+      .s1-lines {
+        position: absolute;
+        left: 60px;
+        right: 60px;
+        top: 500px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .s1-lines .m {
+        font-size: 84px;
+      }
+
+      .s1-big {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 790px;
+        font-weight: 900;
+        font-size: 108px;
+        line-height: 1;
+        letter-spacing: -0.05em;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .s1-spoiler {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 960px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 25px;
+        letter-spacing: 0.05em;
+        color: var(--yellow);
+        opacity: 0;
+      }
+
+      .toolbar-mini {
+        position: absolute;
+        left: 50%;
+        top: 1290px;
+        width: 600px;
+        height: 150px;
+        margin-left: -300px;
+        border-radius: 24px;
+        background: #15151a;
+        border: 1px solid #3a3a45;
+        box-shadow: 0 34px 80px rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 22px;
+      }
+
+      .tm-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #4a4a55;
+      }
+
+      .tm-pill {
+        padding: 14px 20px;
+        border-radius: 12px;
+        background: #202027;
+        font-family: var(--mono);
+        font-size: 18px;
+        color: #a7a7b1;
+      }
+
+      .tm-add {
+        margin-left: auto;
+        width: 74px;
+        height: 74px;
+        border-radius: 16px;
+        border: 2px dashed #5b5b67;
+        display: grid;
+        place-items: center;
+        font-size: 46px;
+        line-height: 1;
+        color: #8e8e99;
+      }
+
+      /* ------------------------- 2. Установка ------------------------- */
+
+      .s2-head {
+        position: absolute;
+        left: 50px;
+        right: 50px;
+        top: 206px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .s2-head .m {
+        font-size: 76px;
+      }
+
+      .s2-head .m.small {
+        font-size: 50px;
+      }
+
+      .file {
+        position: absolute;
+        left: 130px;
+        top: 480px;
+        width: 820px;
+        height: 190px;
+        border-radius: 26px;
+        background: #17171c;
+        border: 1px solid #3b3b46;
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        padding: 0 28px;
+        transform-origin: 50% 50%;
+      }
+
+      .file-ico {
+        flex: none;
+        width: 106px;
+        height: 106px;
+        border-radius: 22px;
+        display: grid;
+        place-items: center;
+        background: var(--yellow);
+        color: #17150a;
+        font-family: var(--mono);
+        font-size: 34px;
+        font-weight: 700;
+      }
+
+      .file-name {
+        font-size: 34px;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+      }
+
+      .file-meta {
+        margin-top: 8px;
+        font-family: var(--mono);
+        font-size: 18px;
+        color: #9b9ba6;
+      }
+
+      .file-badge {
+        margin-left: auto;
+        align-self: flex-start;
+        margin-top: 28px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(110, 231, 160, 0.4);
+        color: var(--green);
+        font-family: var(--mono);
+        font-size: 15px;
+        white-space: nowrap;
+      }
+
+      .dlg {
+        position: absolute;
+        left: 110px;
+        top: 748px;
+        width: 860px;
+        border-radius: 30px;
+        background: #17171c;
+        border: 1px solid #40404c;
+        box-shadow: 0 46px 110px rgba(0, 0, 0, 0.75);
+        padding: 36px 40px 34px;
+        transform-origin: 50% 40%;
+      }
+
+      .dlg-head {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .dlg-lock {
+        flex: none;
+        width: 68px;
+        height: 68px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: #24242c;
+        color: var(--yellow);
+      }
+
+      .dlg-lock svg {
+        width: 34px;
+        height: 34px;
+      }
+
+      .dlg-title {
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+      }
+
+      .dlg-sub {
+        margin-top: 4px;
+        font-family: var(--mono);
+        font-size: 17px;
+        color: #9b9ba6;
+      }
+
+      .dlg-risk {
+        margin-left: auto;
+        padding: 9px 15px;
+        border-radius: 8px;
+        background: rgba(255, 214, 10, 0.14);
+        border: 1px solid rgba(255, 214, 10, 0.4);
+        color: var(--yellow);
+        font-family: var(--mono);
+        font-size: 16px;
+        white-space: nowrap;
+      }
+
+      .dlg-perms {
+        margin-top: 26px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .perm-row {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        padding: 18px 20px;
+        border-radius: 14px;
+        background: #202027;
+      }
+
+      .perm-row b {
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .perm-row span {
+        font-family: var(--mono);
+        font-size: 16px;
+        color: #9b9ba6;
+      }
+
+      .dlg-checks {
+        margin-top: 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+      }
+
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: var(--mono);
+        font-size: 18px;
+        color: #c9c9d2;
+      }
+
+      .check svg {
+        width: 20px;
+        height: 20px;
+        flex: none;
+        color: var(--green);
+      }
+
+      .dlg-actions {
+        margin-top: 26px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+
+      .btn {
+        padding: 18px 30px;
+        border-radius: 14px;
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .btn.ghost {
+        background: #26262e;
+        color: #c9c9d2;
+      }
+
+      .btn.go {
+        background: var(--yellow);
+        color: #17150a;
+      }
+
+      .s2-foot {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 1290px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 21px;
+        letter-spacing: 0.04em;
+        color: rgba(244, 244, 246, 0.44);
+      }
+
+      /* ------------------------- 3. Менеджер ------------------------- */
+
+      .s3-head {
+        position: absolute;
+        left: 50px;
+        right: 50px;
+        top: 200px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .s3-head .m {
+        font-size: 86px;
+      }
+
+      .s3-head .m.small {
+        font-size: 54px;
+      }
+
+      .pm {
+        position: absolute;
+        left: 60px;
+        top: 480px;
+        width: 960px;
+        height: 1020px;
+        border-radius: 28px;
+        background: #111115;
+        border: 1px solid #3b3b46;
+        box-shadow: 0 46px 110px rgba(0, 0, 0, 0.75);
+        overflow: hidden;
+        transform-origin: 50% 20%;
+      }
+
+      .pm-bar {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        height: 84px;
+        padding: 0 22px;
+        background: #1b1b21;
+        border-bottom: 1px solid #2c2c35;
+      }
+
+      .pm-mark {
+        width: 34px;
+        height: 34px;
+        filter: brightness(1.15);
+      }
+
+      .pm-title {
+        font-size: 25px;
+        font-weight: 700;
+      }
+
+      .pm-install {
+        margin-left: auto;
+        height: 44px;
+        padding: 0 18px;
+        border-radius: 10px;
+        background: var(--paper);
+        color: var(--paper-ink);
+        display: grid;
+        place-items: center;
+        font-size: 17px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .pm-win {
+        display: flex;
+        gap: 12px;
+        font-family: var(--mono);
+        font-size: 17px;
+        color: #77777f;
+      }
+
+      .pm-body {
+        padding: 24px;
+      }
+
+      .pm-section {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: var(--mono);
+        font-size: 16px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #8e8e99;
+        margin-bottom: 16px;
+      }
+
+      .pm-count {
+        display: grid;
+        place-items: center;
+        min-width: 28px;
+        height: 28px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: #26262e;
+        color: #d6d6de;
+        letter-spacing: 0;
+        font-size: 14px;
+      }
+
+      .pm-card {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        height: 208px;
+        padding: 0 24px;
+        margin-bottom: 16px;
+        border-radius: 22px;
+        background: #191920;
+        border: 1px solid #34343e;
+        transition: none;
+      }
+
+      .pm-icon {
+        flex: none;
+        width: 96px;
+        height: 96px;
+        border-radius: 22px;
+        object-fit: cover;
+        filter: brightness(1.12);
+        background: #0c0c0f;
+      }
+
+      .pm-icon--mono {
+        display: grid;
+        place-items: center;
+        font-family: var(--mono);
+        font-size: 27px;
+        color: #e6e6eb;
+        background: #2b2b34;
+        border-radius: 22px;
+      }
+
+      .pm-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .pm-name {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 29px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+      }
+
+      .pm-badge {
+        padding: 5px 10px;
+        border-radius: 7px;
+        background: rgba(110, 231, 160, 0.13);
+        color: var(--green);
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 400;
+        letter-spacing: 0;
+      }
+
+      .pm-badge.ghost {
+        background: rgba(255, 255, 255, 0.07);
+        color: #a9a9b4;
+      }
+
+      .pm-meta {
+        margin-top: 6px;
+        font-family: var(--mono);
+        font-size: 15px;
+        color: #85858f;
+      }
+
+      .pm-desc {
+        margin-top: 10px;
+        font-size: 21px;
+        color: #b9b9c2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .pm-chips {
+        display: flex;
+        gap: 7px;
+        margin-top: 12px;
+      }
+
+      .pm-chips span {
+        padding: 5px 10px;
+        border-radius: 7px;
+        background: #26262e;
+        font-family: var(--mono);
+        font-size: 13px;
+        color: #9b9ba6;
+      }
+
+      .pm-toggle {
+        flex: none;
+        position: relative;
+        width: 84px;
+        height: 46px;
+        border-radius: 999px;
+        background: #33333c;
+        border: 1px solid #44444f;
+      }
+
+      .pm-toggle i {
+        position: absolute;
+        left: 5px;
+        top: 5px;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: #8e8e99;
+      }
+
+      .pm-toggle.is-on {
+        background: rgba(255, 214, 10, 0.22);
+        border-color: rgba(255, 214, 10, 0.55);
+      }
+
+      .pm-toggle.is-on i {
+        left: 43px;
+        background: var(--yellow);
+        box-shadow: 0 0 18px rgba(255, 214, 10, 0.5);
+      }
+
+      .pm-hint {
+        position: absolute;
+        left: 24px;
+        right: 24px;
+        bottom: 24px;
+        height: 56px;
+        border-radius: 12px;
+        background: #111116;
+        border: 1px solid #2b2b33;
+        display: flex;
+        align-items: center;
+        padding: 0 18px;
+        font-family: var(--mono);
+        font-size: 16px;
+        color: #8e8e99;
+      }
+
+      .s3-foot {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 1540px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 20px;
+        letter-spacing: 0.08em;
+        color: rgba(244, 244, 246, 0.42);
+      }
+
+      /* ------------------------- 4. Песочница ------------------------- */
+
+      .s4-head {
+        position: absolute;
+        left: 40px;
+        right: 40px;
+        top: 190px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .s4-head .m {
+        font-size: 108px;
+      }
+
+      .s4-head .m.small {
+        font-size: 44px;
+      }
+
+      .sandbox {
+        position: absolute;
+        left: 70px;
+        top: 460px;
+        width: 940px;
+        height: 1020px;
+        border-radius: 30px;
+        background: #121216;
+        border: 1px solid #3b3b46;
+        box-shadow: 0 46px 110px rgba(0, 0, 0, 0.75);
+        padding: 34px 34px 30px;
+        transform-origin: 50% 20%;
+      }
+
+      .sb-top {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .sb-icon {
+        width: 92px;
+        height: 92px;
+        border-radius: 22px;
+        background: #1e1e25;
+        border: 1px solid #373741;
+        display: grid;
+        place-items: center;
+      }
+
+      .sb-icon img {
+        width: 62px;
+        height: 62px;
+        filter: brightness(1.1);
+      }
+
+      .sb-title {
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+      }
+
+      .sb-sub {
+        margin-top: 4px;
+        font-family: var(--mono);
+        font-size: 17px;
+        color: #8e8e99;
+      }
+
+      .sb-lock {
+        margin-left: auto;
+        padding: 10px 16px;
+        border-radius: 9px;
+        border: 1px solid rgba(255, 214, 10, 0.4);
+        color: var(--yellow);
+        font-family: var(--mono);
+        font-size: 16px;
+      }
+
+      .sb-rows {
+        margin-top: 26px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .sb-row {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        height: 112px;
+        padding: 0 22px;
+        border-radius: 16px;
+        background: #1a1a21;
+        border: 1px solid #303039;
+      }
+
+      .sb-row code {
+        font-family: var(--mono);
+        font-size: 26px;
+        color: #e6e6eb;
+      }
+
+      .sb-row .why {
+        margin-left: auto;
+        font-family: var(--mono);
+        font-size: 16px;
+        color: #8e8e99;
+        white-space: nowrap;
+      }
+
+      .sb-no {
+        flex: none;
+        width: 46px;
+        height: 46px;
+        border-radius: 13px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 92, 92, 0.13);
+        border: 1px solid rgba(255, 92, 92, 0.45);
+        color: var(--red);
+        font-size: 25px;
+        font-weight: 800;
+      }
+
+      .sb-yes {
+        flex: none;
+        width: 46px;
+        height: 46px;
+        border-radius: 13px;
+        display: grid;
+        place-items: center;
+        background: rgba(110, 231, 160, 0.13);
+        border: 1px solid rgba(110, 231, 160, 0.45);
+        color: var(--green);
+        font-size: 24px;
+        font-weight: 800;
+      }
+
+      .sb-row.ok {
+        border-color: rgba(110, 231, 160, 0.35);
+        background: #17201b;
+      }
+
+      .s4-stamp {
+        position: absolute;
+        right: 42px;
+        bottom: 36px;
+        padding: 12px 20px;
+        border: 3px solid var(--yellow);
+        border-radius: 10px;
+        color: var(--yellow);
+        font-family: var(--mono);
+        font-size: 25px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        transform: rotate(-7deg);
+        opacity: 0;
+      }
+
+      .s4-foot {
+        position: absolute;
+        left: 40px;
+        right: 40px;
+        top: 1530px;
+        text-align: center;
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #d3d3da;
+      }
+
+      .s4-foot b {
+        color: var(--yellow);
+      }
+
+      /* ------------------------- 5. Разрешения ------------------------- */
+
+      .s5-head {
+        position: absolute;
+        left: 40px;
+        right: 40px;
+        top: 190px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .s5-head .m {
+        font-size: 90px;
+      }
+
+      .s5-head .m.small {
+        font-size: 48px;
+      }
+
+      .perm-cards {
+        position: absolute;
+        left: 80px;
+        right: 80px;
+        top: 470px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+
+      .perm-card {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        height: 226px;
+        padding: 0 28px;
+        border-radius: 26px;
+        background: #17171c;
+        border: 1px solid #3a3a45;
+        box-shadow: 0 22px 55px rgba(0, 0, 0, 0.45);
+        transform-origin: 100% 50%;
+      }
+
+      .perm-key {
+        flex: none;
+        min-width: 250px;
+        font-family: var(--mono);
+        font-size: 30px;
+        color: var(--yellow);
+      }
+
+      .perm-t {
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+      }
+
+      .perm-s {
+        margin-top: 7px;
+        font-family: var(--mono);
+        font-size: 18px;
+        color: #9b9ba6;
+      }
+
+      .perm-risk {
+        margin-left: auto;
+        padding: 8px 13px;
+        border-radius: 8px;
+        font-family: var(--mono);
+        font-size: 14px;
+        white-space: nowrap;
+      }
+
+      .perm-risk.medium {
+        background: rgba(255, 214, 10, 0.12);
+        color: var(--yellow);
+        border: 1px solid rgba(255, 214, 10, 0.3);
+      }
+
+      .perm-risk.high {
+        background: rgba(255, 92, 92, 0.12);
+        color: #ff9b9b;
+        border: 1px solid rgba(255, 92, 92, 0.3);
+      }
+
+      .s5-foot {
+        position: absolute;
+        left: 50px;
+        right: 50px;
+        top: 1280px;
+        text-align: center;
+        font-size: 33px;
+        font-weight: 700;
+        line-height: 1.3;
+        letter-spacing: -0.02em;
+        color: #c9c9d2;
+      }
+
+      .s5-foot b {
+        color: var(--yellow);
+      }
+
+      .s5-stamp {
+        position: absolute;
+        left: 50%;
+        top: 1460px;
+        margin-left: -270px;
+        width: 540px;
+        padding: 16px 0;
+        text-align: center;
+        border: 3px solid var(--green);
+        border-radius: 12px;
+        color: var(--green);
+        font-family: var(--mono);
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        transform: rotate(-4deg);
+        opacity: 0;
+      }
+
+      /* ------------------------- 6. Свой плагин ------------------------- */
+
+      .s6-head {
+        position: absolute;
+        left: 40px;
+        right: 40px;
+        top: 190px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .s6-head .m {
+        font-size: 88px;
+      }
+
+      .s6-head .m.small {
+        font-size: 50px;
+      }
+
+      .code {
+        position: absolute;
+        left: 60px;
+        top: 450px;
+        width: 960px;
+        height: 700px;
+        border-radius: 26px;
+        background: #0f0f13;
+        border: 1px solid #3b3b46;
+        box-shadow: 0 40px 100px rgba(0, 0, 0, 0.7);
+        overflow: hidden;
+        transform-origin: 50% 20%;
+      }
+
+      .code-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 64px;
+        padding: 0 20px;
+        background: #1b1b21;
+        border-bottom: 1px solid #2c2c35;
+        font-family: var(--mono);
+        font-size: 17px;
+        color: #9b9ba6;
+      }
+
+      .code-bar i {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #4a4a55;
+      }
+
+      .code-body {
+        padding: 26px 30px;
+        font-family: var(--mono);
+        font-size: 28px;
+        line-height: 1.62;
+        white-space: normal;
+      }
+
+      .code-line {
+        opacity: 0;
+        white-space: pre;
+      }
+
+      .tok-key {
+        color: #f4f4f6;
+        font-weight: 600;
+      }
+
+      .tok-fn {
+        color: var(--green);
+      }
+
+      .tok-str {
+        color: var(--yellow);
+      }
+
+      .tok-dim {
+        color: #66666f;
+      }
+
+      .statuses {
+        position: absolute;
+        left: 80px;
+        right: 80px;
+        top: 1200px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .status-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        height: 104px;
+        padding: 0 22px;
+        border-radius: 18px;
+        background: #17171c;
+        border: 1px solid #33333d;
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.015em;
+      }
+
+      .status-row svg {
+        flex: none;
+        width: 30px;
+        height: 30px;
+        color: var(--green);
+      }
+
+      .status-row span {
+        margin-left: auto;
+        font-family: var(--mono);
+        font-size: 16px;
+        font-weight: 400;
+        color: #8e8e99;
+        white-space: nowrap;
+      }
+
+      .s6-foot {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 1560px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 22px;
+        letter-spacing: 0.06em;
+        color: rgba(244, 244, 246, 0.5);
+      }
+
+      /* ------------------------- 7. Каталог ------------------------- */
+
+      .s7-head {
+        position: absolute;
+        left: 40px;
+        right: 40px;
+        top: 200px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .s7-head .m {
+        font-size: 92px;
+      }
+
+      .s7-head .m.small {
+        font-size: 50px;
+      }
+
+      .cat-cards {
+        position: absolute;
+        left: 80px;
+        right: 80px;
+        top: 500px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+
+      .cat-card {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        height: 236px;
+        padding: 0 26px;
+        border-radius: 26px;
+        background: #17171c;
+        border: 1px solid #3a3a45;
+        box-shadow: 0 22px 55px rgba(0, 0, 0, 0.45);
+        transform-origin: 100% 50%;
+      }
+
+      .cat-card .pm-icon {
+        width: 104px;
+        height: 104px;
+      }
+
+      .cat-name {
+        font-size: 34px;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+      }
+
+      .cat-desc {
+        margin-top: 6px;
+        font-size: 21px;
+        color: #a9a9b4;
+      }
+
+      .cat-chips {
+        display: flex;
+        gap: 7px;
+        margin-top: 12px;
+      }
+
+      .cat-chips span {
+        padding: 5px 10px;
+        border-radius: 7px;
+        background: #26262e;
+        font-family: var(--mono);
+        font-size: 13px;
+        color: #9b9ba6;
+      }
+
+      .cat-add {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        height: 236px;
+        padding: 0 26px;
+        border-radius: 26px;
+        background: rgba(255, 214, 10, 0.04);
+        border: 2px dashed rgba(255, 214, 10, 0.45);
+      }
+
+      .cat-plus {
+        flex: none;
+        width: 104px;
+        height: 104px;
+        border-radius: 24px;
+        display: grid;
+        place-items: center;
+        border: 2px dashed rgba(255, 214, 10, 0.55);
+        color: var(--yellow);
+        font-size: 48px;
+      }
+
+      .cat-add .cat-name {
+        color: var(--yellow);
+      }
+
+      .cat-add .cat-desc {
+        color: #b9a95a;
+      }
+
+      .s7-foot {
+        position: absolute;
+        left: 40px;
+        right: 40px;
+        top: 1400px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 21px;
+        letter-spacing: 0.02em;
+        color: rgba(244, 244, 246, 0.46);
+      }
+
+      /* ------------------------- 8. CTA ------------------------- */
+
+      .s8-head {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 240px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .s8-head .m {
+        font-size: 134px;
+        letter-spacing: -0.055em;
+      }
+
+      .s8-head .m.second {
+        font-size: 80px;
+      }
+
+      .tg-card {
+        position: absolute;
+        left: 50%;
+        top: 760px;
+        width: 820px;
+        height: 800px;
+        margin-left: -410px;
+        border-radius: 44px;
+        background: var(--paper);
+        color: var(--paper-ink);
+        padding: 54px 70px 40px;
+        box-shadow:
+          0 4px 0 rgba(0, 0, 0, 0.28),
+          0 50px 120px rgba(0, 0, 0, 0.72);
+        transform-origin: 50% 40%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .tg-label {
+        font-family: var(--mono);
+        font-size: 20px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #7b7b84;
+        text-align: center;
+      }
+
+      .tg-qr {
+        display: block;
+        width: 400px;
+        height: 400px;
+        margin: 22px auto 0;
+      }
+
+      .tg-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 18px;
+        font-family: var(--mono);
+        font-size: 42px;
+        letter-spacing: -0.02em;
+      }
+
+      .tg-link img {
+        width: 34px;
+        height: 34px;
+      }
+
+      .tg-note {
+        margin-top: 14px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 16px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #8b8b94;
+      }
+
+      .tg-sticker {
+        position: absolute;
+        right: 28px;
+        top: -48px;
+        z-index: 4;
+        padding: 12px 20px;
+        background: var(--yellow);
+        color: #17150a;
+        font-family: var(--mono);
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        border-radius: 8px;
+        transform: rotate(7deg);
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+      }
+
+      .s8-foot {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 1650px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 19px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(244, 244, 246, 0.44);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="scene">
+      <div id="world">
+        <div class="bg"></div>
+        <div class="sun" id="sun"></div>
+
+        <!-- ============ 1. POV ============ -->
+        <section id="s1">
+          <div class="s1-top lbl">POV · тебе нужна одна кнопка</div>
+          <div class="s1-lines">
+            <div class="m" id="s1a">тебе мало</div>
+            <div class="m dim" id="s1b">стандартного TikTok?</div>
+            <div class="m" id="s1c">ты хочешь</div>
+          </div>
+          <div class="s1-big" id="s1d"><span class="hl">СВОЮ КНОПКУ</span> <span class="emoji">💀</span></div>
+          <div class="s1-spoiler" id="s1e">и чтобы клиент не сломался</div>
+
+          <div class="toolbar-mini" id="s1mini">
+            <span class="tm-dot"></span>
+            <span class="tm-pill">лента</span>
+            <span class="tm-pill">чат</span>
+            <span class="tm-pill">плагины</span>
+            <span class="tm-add">+</span>
+          </div>
+        </section>
+
+        <!-- ============ 2. Установка ============ -->
+        <section id="s2">
+          <div class="s2-head">
+            <div class="m" id="s2a">ПЛАГИН — ЭТО ФАЙЛ.</div>
+            <div class="m small" id="s2b">БЕЗ .EXE И «NEXT → NEXT».</div>
+          </div>
+
+          <div class="file" id="file">
+            <span class="file-ico">&lt;/&gt;</span>
+            <span>
+              <div class="file-name">app.octo.gradient-frame</div>
+              <div class="file-meta">1.0.0 · 8,5 КБ · .octoplugin</div>
+            </span>
+            <span class="file-badge">✓ .octoplugin</span>
+          </div>
+
+          <div class="dlg" id="dlg">
+            <div class="dlg-head">
+              <span class="dlg-lock">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" /><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" /></svg>
+              </span>
+              <div>
+                <div class="dlg-title">Установить плагин?</div>
+                <div class="dlg-sub">Градиентная обводка · 1.0.0 · @octo</div>
+              </div>
+              <span class="dlg-risk">средний риск</span>
+            </div>
+
+            <div class="dlg-perms">
+              <div class="perm-row" id="perm1"><b>Стили страницы</b><span>page:css · средний</span></div>
+            </div>
+
+            <div class="dlg-checks">
+              <div class="check" id="check1"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 10 4 4 8-9" /></svg>Статический аудит пройден</div>
+              <div class="check" id="check2"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 10 4 4 8-9" /></svg>SHA-256 посчитан</div>
+              <div class="check" id="check3"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 10 4 4 8-9" /></svg>Файлы пакета проверены</div>
+            </div>
+
+            <div class="dlg-actions">
+              <span class="btn ghost">Отмена</span>
+              <span class="btn go" id="installBtn">Установить</span>
+            </div>
+          </div>
+
+          <div class="s2-foot" id="s2foot">10 секунд · без установщика · без 12 экранов «Далее»</div>
+
+          <svg class="cursor" id="cursor2" viewBox="0 0 34 34">
+            <path d="M6 4 L27 17 L18 19 L22 28 L18 30 L14 21 L8 26 Z" fill="#ffffff" stroke="#0a0a0c" stroke-width="2" stroke-linejoin="round" />
+          </svg>
+          <div class="click-ring" id="ring2"></div>
+        </section>
+
+        <!-- ============ 3. Менеджер ============ -->
+        <section id="s3">
+          <div class="s3-head">
+            <div class="m" id="s3a">В ОДНОМ ОКНЕ.</div>
+            <div class="m small" id="s3b">И БЕЗ ПЕРЕЗАПУСКА.</div>
+          </div>
+
+          <div class="pm" id="pm">
+            <div class="pm-bar">
+              <img class="pm-mark" src="assets/tiktok-octo.png" alt="" />
+              <div class="pm-title">Плагины</div>
+              <div class="pm-install">Установить из файла</div>
+              <div class="pm-win"><span>–</span><span>□</span><span>×</span></div>
+            </div>
+            <div class="pm-body">
+              <div class="pm-section">Установленные <span class="pm-count">3</span></div>
+
+              <div class="pm-card" id="pm1">
+                <img class="pm-icon" src="assets/tiktok-octo.png" alt="" />
+                <div class="pm-info">
+                  <div class="pm-name">Градиентная обводка <span class="pm-badge ghost">без подписи</span></div>
+                  <div class="pm-meta">1.0.0 · @octo · 8,5 КБ</div>
+                  <div class="pm-desc">Переливающаяся рамка вокруг ролика или окна</div>
+                  <div class="pm-chips"><span>оформление</span><span>page:css</span></div>
+                </div>
+                <div class="pm-toggle is-on" id="pmToggle1"><i></i></div>
+              </div>
+
+              <div class="pm-card" id="pm2">
+                <span class="pm-icon pm-icon--mono">П</span>
+                <div class="pm-info">
+                  <div class="pm-name">Полка <span class="pm-badge ghost">без подписи</span></div>
+                  <div class="pm-meta">1.0.0 · @octo · 8,5 КБ</div>
+                  <div class="pm-desc">Закладки на видео, профили и поиск</div>
+                  <div class="pm-chips"><span>закладки</span><span>shortcuts</span></div>
+                </div>
+                <div class="pm-toggle is-on" id="pmToggle2"><i></i></div>
+              </div>
+
+              <div class="pm-card" id="pm3">
+                <span class="pm-icon pm-icon--mono">OT</span>
+                <div class="pm-info">
+                  <div class="pm-name">octo-test <span class="pm-badge ghost">разработка</span></div>
+                  <div class="pm-meta">1.0.1 · @octo</div>
+                  <div class="pm-desc">Пример: розовая рамка и бейдж OCTO TEST OK</div>
+                  <div class="pm-chips"><span>интерфейс</span><span>page:css</span></div>
+                </div>
+                <div class="pm-toggle is-on"><i></i></div>
+              </div>
+
+              <div class="pm-hint" id="pmHint">Все включены · перезапуск не нужен</div>
+            </div>
+          </div>
+
+          <div class="s3-foot" id="s3foot">Ctrl + Shift + E · менеджер плагинов</div>
+
+          <svg class="cursor" id="cursor3" viewBox="0 0 34 34">
+            <path d="M6 4 L27 17 L18 19 L22 28 L18 30 L14 21 L8 26 Z" fill="#ffffff" stroke="#0a0a0c" stroke-width="2" stroke-linejoin="round" />
+          </svg>
+          <div class="click-ring" id="ring3"></div>
+        </section>
+
+        <!-- ============ 4. Песочница ============ -->
+        <section id="s4">
+          <div class="s4-head">
+            <div class="m" id="s4a">ПЕСОЧНИЦА.</div>
+            <div class="m small" id="s4b">ПЛАГИН — В ОТДЕЛЬНОМ ОКНЕ.</div>
+          </div>
+
+          <div class="sandbox" id="sandbox">
+            <div class="sb-top">
+              <span class="sb-icon"><img src="assets/tiktok-octo.png" alt="" /></span>
+              <span>
+                <div class="sb-title">plugin.js</div>
+                <div class="sb-sub">изолированный мир · без Node</div>
+              </span>
+              <span class="sb-lock">sandbox: true</span>
+            </div>
+
+            <div class="sb-rows">
+              <div class="sb-row" id="row1">
+                <span class="sb-no">✕</span>
+                <code>require('fs')</code>
+                <span class="why">файлов нет</span>
+              </div>
+              <div class="sb-row" id="row2">
+                <span class="sb-no">✕</span>
+                <code>child_process</code>
+                <span class="why">системы нет</span>
+              </div>
+              <div class="sb-row" id="row3">
+                <span class="sb-no">✕</span>
+                <code>document.cookie</code>
+                <span class="why">cookies нет</span>
+              </div>
+              <div class="sb-row" id="row4">
+                <span class="sb-no">✕</span>
+                <code>fetch('что угодно')</code>
+                <span class="why">только свои хосты</span>
+              </div>
+              <div class="sb-row ok" id="row5">
+                <span class="sb-yes">✓</span>
+                <code>window.octo</code>
+                <span class="why">только разрешённое</span>
+              </div>
+            </div>
+
+            <div class="s4-stamp" id="s4stamp">sandbox</div>
+          </div>
+
+          <div class="s4-foot" id="s4foot">Может перекрасить ленту. <b>Не может украсть cookies.</b></div>
+        </section>
+
+        <!-- ============ 5. Разрешения ============ -->
+        <section id="s5">
+          <div class="s5-head">
+            <div class="m" id="s5a">РАЗРЕШЕНИЯ.</div>
+            <div class="m small" id="s5b">ВИДНО ДО УСТАНОВКИ.</div>
+          </div>
+
+          <div class="perm-cards">
+            <div class="perm-card" id="pc1">
+              <span class="perm-key">page:css</span>
+              <span>
+                <div class="perm-t">Стили страницы</div>
+                <div class="perm-s">перекрасить ленту — можно</div>
+              </span>
+              <span class="perm-risk medium">средний</span>
+            </div>
+            <div class="perm-card" id="pc2">
+              <span class="perm-key">shortcuts</span>
+              <span>
+                <div class="perm-t">Горячие клавиши</div>
+                <div class="perm-s">свои сочетания — можно</div>
+              </span>
+              <span class="perm-risk medium">средний</span>
+            </div>
+            <div class="perm-card" id="pc3">
+              <span class="perm-key">network</span>
+              <span>
+                <div class="perm-t">Сеть</div>
+                <div class="perm-s">только хосты из манифеста</div>
+              </span>
+              <span class="perm-risk high">высокий</span>
+            </div>
+          </div>
+
+          <div class="s5-foot" id="s5foot">Нет разрешения — <b>нет действия.</b><br />Как в Android, только без 40 экранов.</div>
+          <div class="s5-stamp" id="s5stamp">видно до установки</div>
+        </section>
+
+        <!-- ============ 6. Свой плагин ============ -->
+        <section id="s6">
+          <div class="s6-head">
+            <div class="m" id="s6a">СВОЙ ПЛАГИН.</div>
+            <div class="m small" id="s6b">ЗА ОДИН ВЕЧЕР.</div>
+          </div>
+
+          <div class="code" id="code">
+            <div class="code-bar"><i></i><i></i><i></i>my-plugin/index.js</div>
+            <div class="code-body">
+              <div class="code-line" id="cl1"><span class="tok-dim">// index.js</span></div>
+              <div class="code-line" id="cl2"><span class="tok-key">octo</span>.commands.<span class="tok-fn">add</span>({</div>
+              <div class="code-line" id="cl3">  id: <span class="tok-str">'hello'</span>,</div>
+              <div class="code-line" id="cl4">  title: <span class="tok-str">'Поздороваться'</span>,</div>
+              <div class="code-line" id="cl5">  <span class="tok-fn">run</span>() {</div>
+              <div class="code-line" id="cl6">    <span class="tok-key">octo</span>.<span class="tok-fn">notify</span>(<span class="tok-str">'Привет!'</span>);</div>
+              <div class="code-line" id="cl7">  },</div>
+              <div class="code-line" id="cl8">});</div>
+            </div>
+          </div>
+
+          <div class="statuses">
+            <div class="status-row" id="st1">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 10 4 4 8-9" /></svg>
+              AST-аудит до запуска
+              <span>eval, сеть, cookie — блок</span>
+            </div>
+            <div class="status-row" id="st2">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 10 4 4 8-9" /></svg>
+              Hot reload
+              <span>сохранил — работает</span>
+            </div>
+            <div class="status-row" id="st3">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 10 4 4 8-9" /></svg>
+              3 падения подряд
+              <span>плагин выключится сам</span>
+            </div>
+          </div>
+
+          <div class="s6-foot" id="s6foot">20 строк · ноль зависимостей · ноль сборки</div>
+        </section>
+
+        <!-- ============ 7. Каталог ============ -->
+        <section id="s7">
+          <div class="s7-head">
+            <div class="m" id="s7a">ПРИМЕРЫ.</div>
+            <div class="m small" id="s7b">И ТВОЙ БУДЕТ ЗДЕСЬ.</div>
+          </div>
+
+          <div class="cat-cards">
+            <div class="cat-card" id="cat1">
+              <img class="pm-icon" src="assets/tiktok-octo.png" alt="" />
+              <span>
+                <div class="cat-name">Градиентная обводка</div>
+                <div class="cat-desc">Рамка вокруг ролика: палитра, скорость, свечение</div>
+                <div class="cat-chips"><span>оформление</span><span>page:css</span></div>
+              </span>
+              <span class="pm-badge ghost" style="margin-left: auto">без подписи</span>
+            </div>
+            <div class="cat-card" id="cat2">
+              <span class="pm-icon pm-icon--mono" style="width: 104px; height: 104px">П</span>
+              <span>
+                <div class="cat-name">Полка</div>
+                <div class="cat-desc">Закладки на видео и профили, всё локально</div>
+                <div class="cat-chips"><span>закладки</span><span>shortcuts</span></div>
+              </span>
+              <span class="pm-badge ghost" style="margin-left: auto">без подписи</span>
+            </div>
+            <div class="cat-add" id="cat3">
+              <span class="cat-plus">+</span>
+              <span>
+                <div class="cat-name">твой плагин здесь</div>
+                <div class="cat-desc">20 строк, файл .octoplugin и немного смелости</div>
+              </span>
+            </div>
+          </div>
+
+          <div class="s7-foot" id="s7foot">новые плагины — в t.me/octo_plugins</div>
+        </section>
+
+        <!-- ============ 8. CTA ============ -->
+        <section id="s8">
+          <div class="s8-head">
+            <div class="m" id="s8a">СТАВЬ.</div>
+            <div class="m second" id="s8b">ИЛИ ПИШИ <span class="hl">СВОЙ</span>.</div>
+          </div>
+
+          <div class="tg-card" id="tgcard">
+            <div class="tg-sticker">20 строк</div>
+            <div class="tg-label">плагины в Telegram</div>
+            <img class="tg-qr" src="assets/plugins-qr.png" alt="" />
+            <div class="tg-link"><img src="assets/plane.png" alt="" />t.me/octo_plugins</div>
+            <div class="tg-note">linux · windows · macos · mit</div>
+          </div>
+
+          <div class="s8-foot" id="s8foot">TikTok octo · плагины в Telegram</div>
+        </section>
+
+        <div class="vignette"></div>
+        <div class="grain" id="grain"></div>
+        <div class="flash" id="flash"></div>
+      </div>
+
+      <div class="hud">
+        <div class="hud-brand"><i></i>tiktok octo</div>
+        <div class="hud-top"><div class="hud-top-fill" id="prog"></div></div>
+      </div>
+    </div>
+
+    <script>
+      const DUR = 24;
+      const $ = (id) => document.getElementById(id);
+      const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+      function bezier(x1, y1, x2, y2) {
+        const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+        const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+        const sx = (t) => ((ax * t + bx) * t + cx) * t;
+        const sy = (t) => ((ay * t + by) * t + cy) * t;
+        const dx = (t) => (3 * ax * t + 2 * bx) * t + cx;
+        return (x) => {
+          if (x <= 0) return 0;
+          if (x >= 1) return 1;
+          let t = x;
+          for (let i = 0; i < 8; i++) {
+            const err = sx(t) - x;
+            if (Math.abs(err) < 1e-6) break;
+            const d = dx(t);
+            if (Math.abs(d) < 1e-6) break;
+            t -= err / d;
+          }
+          return sy(clamp01(t));
+        };
+      }
+
+      const E = {
+        std: bezier(0.2, 0, 0, 1),
+        decel: bezier(0.05, 0.7, 0.1, 1),
+        accel: bezier(0.3, 0, 0.8, 0.15),
+        spring: bezier(0.34, 1.45, 0.5, 1),
+        pop: bezier(0.25, 1.6, 0.4, 1),
+        soft: bezier(0.4, 0, 0.2, 1),
+      };
+
+      const seg = (t, a, b, f) => f(clamp01((t - a) / Math.max(1e-5, b - a)));
+      const lerp = (a, b, p) => a + (b - a) * p;
+      const show = (el, on) => { el.style.display = on ? 'block' : 'none'; };
+
+      function cursorTo(target, id, ring, t, t0, t1, pressAt) {
+        const cur = $(id);
+        const box = target.getBoundingClientRect();
+        const sec = target.closest('section').getBoundingClientRect();
+        const x = box.left - sec.left + box.width / 2 + 4;
+        const y = box.top - sec.top + box.height / 2 + 6;
+        const cIn = seg(t, t0 - 0.12, t0 + 0.1, E.std);
+        const cOut = seg(t, t1, t1 + 0.22, E.std);
+        cur.style.opacity = String(cIn * (1 - cOut));
+        if (cIn > 0) {
+          const p = seg(t, t0, t0 + 0.34, E.std);
+          const px = lerp(x + 110, x, p);
+          const py = lerp(y + 150, y, p);
+          const press = 1 - 0.14 * Math.exp(-Math.pow((t - pressAt) / 0.09, 2));
+          cur.style.transform = `translate(${px}px, ${py}px) scale(${press})`;
+        }
+        const r = $(ring);
+        const rp = clamp01((t - pressAt) / 0.42);
+        if (t > pressAt && rp < 1) {
+          const rad = lerp(6, 52, E.decel(rp));
+          r.style.width = `${rad * 2}px`;
+          r.style.height = `${rad * 2}px`;
+          r.style.left = `${x + 8}px`;
+          r.style.top = `${y + 4}px`;
+          r.style.opacity = String(0.75 * (1 - rp));
+        } else {
+          r.style.opacity = '0';
+        }
+      }
+
+      // ------------------------- 1. POV -------------------------
+      function s1(t) {
+        const el = $('s1');
+        const on = t < 2.55;
+        show(el, on);
+        if (!on) return;
+
+        const lines = [
+          ['s1a', -0.08],
+          ['s1b', 0.16],
+          ['s1c', 0.36],
+        ];
+        for (const [id, t0] of lines) {
+          const p = seg(t, t0, t0 + 0.44, E.pop);
+          const node = $(id);
+          node.style.opacity = String(seg(t, t0, t0 + 0.18, E.std));
+          node.style.transform = `translateY(${lerp(50, 0, p)}px)`;
+        }
+
+        const d = $('s1d');
+        const pd = seg(t, 0.66, 1.16, E.pop);
+        d.style.opacity = String(seg(t, 0.63, 0.83, E.std));
+        d.style.transform = `translateY(${lerp(64, 0, pd)}px) scale(${lerp(0.84, 1, pd)})`;
+
+        const sp = $('s1e');
+        const ps = seg(t, 1.86, 2.14, E.pop);
+        sp.style.opacity = String(seg(t, 1.82, 1.96, E.std));
+        sp.style.transform = `translateY(${lerp(14, 0, ps)}px)`;
+
+        const mini = $('s1mini');
+        const pm = seg(t, 1.28, 1.88, E.spring);
+        mini.style.opacity = String(seg(t, 1.23, 1.48, E.std));
+        mini.style.transform = `translateY(${lerp(70, 0, pm)}px) rotate(${lerp(7, 2.5, pm)}deg) scale(${lerp(0.84, 1, pm)})`;
+
+        const punch = seg(t, 2.3, 2.55, E.accel);
+        $('world').style.transform = `scale(${1 + 0.02 * (t / 2.55) + 0.1 * punch})`;
+        $('sun').style.opacity = String(0.22 * seg(t, 0, 1.2, E.std));
+      }
+
+      // ------------------------- 2. Установка -------------------------
+      function s2(t) {
+        const el = $('s2');
+        const on = t >= 2.55 && t < 6.2;
+        show(el, on);
+        if (!on) return;
+
+        const a = $('s2a');
+        const pa = seg(t, 2.55, 2.95, E.pop);
+        a.style.opacity = String(seg(t, 2.5, 2.64, E.std));
+        a.style.transform = `translateY(${lerp(38, 0, pa)}px)`;
+
+        const b = $('s2b');
+        const pb = seg(t, 2.74, 3.16, E.pop);
+        b.style.opacity = String(seg(t, 2.7, 2.84, E.std));
+        b.style.transform = `translateY(${lerp(30, 0, pb)}px)`;
+
+        const file = $('file');
+        const pf = seg(t, 2.58, 3.1, E.spring);
+        file.style.opacity = String(seg(t, 2.53, 2.67, E.std));
+        file.style.transform = `translateY(${lerp(180, 0, pf)}px) rotate(${lerp(-3, 0, pf)}deg) scale(${lerp(0.9, 1, pf)})`;
+
+        const dlg = $('dlg');
+        const pd = seg(t, 3.0, 3.44, E.pop);
+        dlg.style.opacity = String(seg(t, 2.96, 3.1, E.std));
+        dlg.style.transform = `translateY(${lerp(150, 0, pd)}px) scale(${lerp(0.9, 1, pd)})`;
+
+        const items = [
+          ['perm1', 3.2],
+          ['check1', 3.45],
+          ['check2', 3.65],
+          ['check3', 3.85],
+        ];
+        for (const [id, t0] of items) {
+          const p = seg(t, t0, t0 + 0.3, E.pop);
+          const node = $(id);
+          node.style.opacity = String(seg(t, t0, t0 + 0.14, E.std));
+          node.style.transform = `translateX(${lerp(-24, 0, p)}px)`;
+        }
+
+        const go = $('installBtn');
+        go.style.background = t > 5.25 ? '#6ee7a0' : '';
+        go.style.color = t > 5.25 ? '#0b2416' : '';
+
+        cursorTo(go, 'cursor2', 'ring2', t, 4.55, 5.27, 5.15);
+
+        const foot = $('s2foot');
+        foot.style.opacity = String(seg(t, 4.3, 4.6, E.std) * 0.9);
+
+        $('world').style.transform = '';
+        $('sun').style.opacity = String(0.18 * seg(t, 2.6, 3.4, E.std));
+        $('flash').style.opacity = String(t > 5.9 ? 0.45 * (1 - clamp01((t - 5.9) / 0.2)) : 0);
+      }
+
+      // ------------------------- 3. Менеджер -------------------------
+      function s3(t) {
+        const el = $('s3');
+        const on = t >= 6.2 && t < 9.0;
+        show(el, on);
+        if (!on) return;
+
+        const a = $('s3a');
+        const pa = seg(t, 6.16, 6.56, E.pop);
+        a.style.opacity = String(seg(t, 6.1, 6.24, E.std));
+        a.style.transform = `translateY(${lerp(44, 0, pa)}px)`;
+
+        const b = $('s3b');
+        const pb = seg(t, 6.36, 6.78, E.pop);
+        b.style.opacity = String(seg(t, 6.32, 6.46, E.std));
+        b.style.transform = `translateY(${lerp(34, 0, pb)}px)`;
+
+        const pm = $('pm');
+        const pp = seg(t, 6.18, 6.72, E.spring);
+        pm.style.opacity = String(seg(t, 6.13, 6.27, E.std));
+        pm.style.transform = `translateY(${lerp(180, 0, pp)}px) scale(${lerp(0.92, 1, pp)})`;
+
+        const cards = [
+          ['pm1', 6.4],
+          ['pm2', 6.56],
+          ['pm3', 6.72],
+        ];
+        for (const [id, t0] of cards) {
+          const p = seg(t, t0, t0 + 0.34, E.pop);
+          const node = $(id);
+          node.style.opacity = String(seg(t, t0, t0 + 0.14, E.std));
+          node.style.transform = `translateY(${lerp(26, 0, p)}px)`;
+        }
+
+        const off = t > 8.14;
+        if (off) $('pm2').style.opacity = '0.55';
+        $('pmToggle2').classList.toggle('is-on', !off);
+        $('pmHint').textContent = off ? 'Полка выключена · нажмите, чтобы включить' : 'Все включены · перезапуск не нужен';
+
+        cursorTo($('pmToggle2'), 'cursor3', 'ring3', t, 7.62, 8.44, 8.14);
+
+        const foot = $('s3foot');
+        foot.style.opacity = String(seg(t, 7.35, 7.7, E.std) * 0.85);
+
+        const out = seg(t, 8.84, 9.0, E.accel);
+        el.style.opacity = String(1 - out);
+
+        $('world').style.transform = '';
+        $('sun').style.opacity = String(0.16 * seg(t, 6.2, 7.0, E.std));
+        $('flash').style.opacity = '0';
+      }
+
+      // ------------------------- 4. Песочница -------------------------
+      function s4(t) {
+        const el = $('s4');
+        const on = t >= 9.0 && t < 12.4;
+        show(el, on);
+        if (!on) return;
+
+        const a = $('s4a');
+        const pa = seg(t, 8.96, 9.36, E.pop);
+        a.style.opacity = String(seg(t, 8.9, 9.04, E.std));
+        a.style.transform = `translateY(${lerp(52, 0, pa)}px)`;
+
+        const b = $('s4b');
+        const pb = seg(t, 9.16, 9.58, E.pop);
+        b.style.opacity = String(seg(t, 9.12, 9.26, E.std));
+        b.style.transform = `translateY(${lerp(36, 0, pb)}px)`;
+
+        const sb = $('sandbox');
+        const ps = seg(t, 8.98, 9.5, E.spring);
+        sb.style.opacity = String(seg(t, 8.93, 9.07, E.std));
+        sb.style.transform = `translateY(${lerp(180, 0, ps)}px) scale(${lerp(0.92, 1, ps)})`;
+
+        const rows = [
+          ['row1', 9.25],
+          ['row2', 9.45],
+          ['row3', 9.65],
+          ['row4', 9.85],
+          ['row5', 10.15],
+        ];
+        rows.forEach(([id, t0], i) => {
+          const p = seg(t, t0, t0 + 0.28, E.pop);
+          const node = $(id);
+          node.style.opacity = String(seg(t, t0, t0 + 0.12, E.std));
+          node.style.transform = `translateX(${lerp(-30, 0, p)}px)`;
+        });
+
+        const stamp = $('s4stamp');
+        const pst = seg(t, 10.6, 10.94, E.pop);
+        stamp.style.opacity = String(seg(t, 10.56, 10.7, E.std));
+        stamp.style.transform = `rotate(${lerp(-22, -7, pst)}deg) scale(${lerp(1.4, 1, pst)})`;
+
+        const foot = $('s4foot');
+        foot.style.opacity = String(seg(t, 10.95, 11.3, E.std));
+        foot.style.transform = `translateY(${lerp(18, 0, seg(t, 10.95, 11.3, E.decel))}px)`;
+
+        const out = seg(t, 12.22, 12.4, E.accel);
+        el.style.opacity = String(1 - out);
+
+        $('world').style.transform = '';
+        $('sun').style.opacity = String(0.14 * seg(t, 9.0, 9.8, E.std));
+        $('flash').style.opacity = String(t < 9.14 ? 0.3 * (1 - clamp01((t - 9.0) / 0.14)) : 0);
+      }
+
+      // ------------------------- 5. Разрешения -------------------------
+      function s5(t) {
+        const el = $('s5');
+        const on = t >= 12.4 && t < 16.05;
+        show(el, on);
+        if (!on) return;
+
+        const a = $('s5a');
+        const pa = seg(t, 12.36, 12.76, E.pop);
+        a.style.opacity = String(seg(t, 12.3, 12.44, E.std));
+        a.style.transform = `translateY(${lerp(48, 0, pa)}px)`;
+
+        const b = $('s5b');
+        const pb = seg(t, 12.56, 12.98, E.pop);
+        b.style.opacity = String(seg(t, 12.52, 12.66, E.std));
+        b.style.transform = `translateY(${lerp(34, 0, pb)}px)`;
+
+        const cards = [
+          ['pc1', 12.72],
+          ['pc2', 13.16],
+          ['pc3', 13.6],
+        ];
+        for (const [id, t0] of cards) {
+          const p = seg(t, t0, t0 + 0.4, E.pop);
+          const node = $(id);
+          node.style.opacity = String(seg(t, t0, t0 + 0.14, E.std));
+          node.style.transform = `translateX(${lerp(160, 0, p)}px) rotate(${lerp(2, 0, p)}deg)`;
+        }
+
+        const foot = $('s5foot');
+        foot.style.opacity = String(seg(t, 14.3, 14.65, E.std));
+        foot.style.transform = `translateY(${lerp(20, 0, seg(t, 14.3, 14.65, E.decel))}px)`;
+
+        const stamp = $('s5stamp');
+        const pst = seg(t, 14.86, 15.2, E.pop);
+        stamp.style.opacity = String(seg(t, 14.82, 14.96, E.std));
+        stamp.style.transform = `rotate(${lerp(-12, -4, pst)}deg) scale(${lerp(1.4, 1, pst)})`;
+
+        const out = seg(t, 15.9, 16.05, E.accel);
+        el.style.opacity = String(1 - out);
+
+        $('world').style.transform = '';
+        $('sun').style.opacity = String(0.12);
+        $('flash').style.opacity = '0';
+      }
+
+      // ------------------------- 6. Свой плагин -------------------------
+      function s6(t) {
+        const el = $('s6');
+        const on = t >= 16.05 && t < 19.15;
+        show(el, on);
+        if (!on) return;
+
+        const a = $('s6a');
+        const pa = seg(t, 16.0, 16.4, E.pop);
+        a.style.opacity = String(seg(t, 15.95, 16.09, E.std));
+        a.style.transform = `translateY(${lerp(46, 0, pa)}px)`;
+
+        const b = $('s6b');
+        const pb = seg(t, 16.2, 16.62, E.pop);
+        b.style.opacity = String(seg(t, 16.16, 16.3, E.std));
+        b.style.transform = `translateY(${lerp(32, 0, pb)}px)`;
+
+        const code = $('code');
+        const pcode = seg(t, 16.12, 16.6, E.spring);
+        code.style.opacity = String(seg(t, 16.07, 16.21, E.std));
+        code.style.transform = `translateY(${lerp(160, 0, pcode)}px) scale(${lerp(0.94, 1, pcode)})`;
+
+        const lines = ['cl1', 'cl2', 'cl3', 'cl4', 'cl5', 'cl6', 'cl7', 'cl8'];
+        lines.forEach((id, i) => {
+          const t0 = 16.5 + i * 0.11;
+          const p = seg(t, t0, t0 + 0.22, E.std);
+          $(id).style.opacity = String(p);
+          $(id).style.transform = `translateX(${lerp(-18, 0, p)}px)`;
+        });
+
+        const sts = [
+          ['st1', 17.42],
+          ['st2', 17.78],
+          ['st3', 18.14],
+        ];
+        for (const [id, t0] of sts) {
+          const p = seg(t, t0, t0 + 0.3, E.pop);
+          const node = $(id);
+          node.style.opacity = String(seg(t, t0, t0 + 0.12, E.std));
+          node.style.transform = `translateY(${lerp(24, 0, p)}px)`;
+        }
+
+        const foot = $('s6foot');
+        foot.style.opacity = String(seg(t, 18.4, 18.72, E.std) * 0.9);
+
+        const out = seg(t, 18.98, 19.15, E.accel);
+        el.style.opacity = String(1 - out);
+
+        $('world').style.transform = '';
+        $('sun').style.opacity = String(0.18 * seg(t, 16.1, 16.9, E.std));
+        $('flash').style.opacity = String(t < 16.15 ? 0.24 * (1 - clamp01((t - 16.05) / 0.1)) : 0);
+      }
+
+      // ------------------------- 7. Каталог -------------------------
+      function s7(t) {
+        const el = $('s7');
+        const on = t >= 19.15 && t < 21.25;
+        show(el, on);
+        if (!on) return;
+
+        const a = $('s7a');
+        const pa = seg(t, 19.1, 19.5, E.pop);
+        a.style.opacity = String(seg(t, 19.05, 19.19, E.std));
+        a.style.transform = `translateY(${lerp(46, 0, pa)}px)`;
+
+        const b = $('s7b');
+        const pb = seg(t, 19.3, 19.72, E.pop);
+        b.style.opacity = String(seg(t, 19.26, 19.4, E.std));
+        b.style.transform = `translateY(${lerp(32, 0, pb)}px)`;
+
+        const cards = [
+          ['cat1', 19.46],
+          ['cat2', 19.74],
+          ['cat3', 20.04],
+        ];
+        for (const [id, t0] of cards) {
+          const p = seg(t, t0, t0 + 0.38, E.pop);
+          const node = $(id);
+          node.style.opacity = String(seg(t, t0, t0 + 0.14, E.std));
+          node.style.transform = `translateX(${lerp(150, 0, p)}px) rotate(${lerp(2, 0, p)}deg)`;
+        }
+
+        const foot = $('s7foot');
+        foot.style.opacity = String(seg(t, 20.52, 20.84, E.std) * 0.9);
+
+        const out = seg(t, 21.08, 21.25, E.accel);
+        el.style.opacity = String(1 - out);
+
+        $('world').style.transform = '';
+        $('sun').style.opacity = String(0.08);
+        $('flash').style.opacity = '0';
+      }
+
+      // ------------------------- 8. CTA -------------------------
+      function s8(t) {
+        const el = $('s8');
+        const on = t >= 21.25;
+        show(el, on);
+        if (!on) return;
+
+        const fade = 1 - seg(t, 23.54, 23.98, E.soft);
+        el.style.opacity = String(fade);
+
+        const a = $('s8a');
+        const pa = seg(t, 21.22, 21.62, E.pop);
+        a.style.opacity = String(seg(t, 21.17, 21.31, E.std));
+        a.style.transform = `translateY(${lerp(56, 0, pa)}px)`;
+
+        const b = $('s8b');
+        const pb = seg(t, 21.42, 21.84, E.pop);
+        b.style.opacity = String(seg(t, 21.38, 21.52, E.std));
+        b.style.transform = `translateY(${lerp(44, 0, pb)}px)`;
+
+        const card = $('tgcard');
+        const pc = seg(t, 21.62, 22.14, E.pop);
+        card.style.opacity = String(seg(t, 21.58, 21.72, E.std));
+        card.style.transform = `translateY(${lerp(120, 0, pc)}px) rotate(${lerp(2.4, 0, pc)}deg) scale(${lerp(0.92, 1, pc)})`;
+
+        const sticker = document.querySelector('.tg-sticker');
+        const pst = seg(t, 22.32, 22.66, E.pop);
+        sticker.style.opacity = String(seg(t, 22.28, 22.42, E.std));
+        sticker.style.transform = `rotate(${lerp(-6, 7, pst)}deg) scale(${lerp(1.3, 1, pst)})`;
+
+        const foot = $('s8foot');
+        foot.style.opacity = String(seg(t, 22.5, 22.82, E.std));
+
+        $('world').style.transform = '';
+        $('sun').style.opacity = String(0.36 * seg(t, 21.25, 22.0, E.std));
+        $('flash').style.opacity = String(t < 21.4 ? 0.24 * (1 - clamp01((t - 21.25) / 0.15)) : 0);
+      }
+
+      // ------------------------- общий рендер -------------------------
+      function render(t) {
+        t = Math.max(0, Math.min(DUR - 1e-4, t));
+        $('prog').style.width = `${(t / DUR) * 1080}px`;
+        $('world').style.transform = '';
+        $('flash').style.opacity = '0';
+
+        for (const fn of [s1, s2, s3, s4, s5, s6, s7, s8]) fn(t);
+
+        const step = Math.floor(t * 12);
+        $('grain').style.backgroundPosition = `${(step * 37) % 160}px ${(step * 61) % 160}px`;
+      }
+
+      window.renderAt = (t) => { render(t); return true; };
+      window.DUR = DUR;
+
+      render(0);
+      document.fonts.ready.then(() => {
+        render(0);
+        document.body.dataset.ready = '1';
+      });
+    </script>
+  </body>
+</html>

@@ -5,15 +5,15 @@
    --------------------------------------------------------------------------- */
 
 :root {
-  /* Material 3, тёмная схема с розовым primary. */
-  --md-primary: #ffb3c1;
-  --md-on-primary: #5e1130;
-  --md-primary-container: #7d2948;
-  --md-on-primary-container: #ffd9e1;
-  --md-secondary: #e3bdc6;
-  --md-on-secondary: #422931;
-  --md-secondary-container: #5b3f47;
-  --md-on-secondary-container: #ffd9e1;
+  /* Material 3, тёмная монохромная схема: акценты — оттенки серого. */
+  --md-primary: #e6e0e9;
+  --md-on-primary: #1b1b1f;
+  --md-primary-container: #3a383f;
+  --md-on-primary-container: #f2edf4;
+  --md-secondary: #cac4d0;
+  --md-on-secondary: #1d1b20;
+  --md-secondary-container: #2b2930;
+  --md-on-secondary-container: #e6e0e9;
   --md-error: #ffb4ab;
   --md-on-error: #690005;
   --md-error-container: #93000a;
@@ -41,7 +41,7 @@
   --line: var(--md-outline-variant);
   --field: var(--md-surface-container);
   --bar-h: 44px;
-  --radius: 12px;
+  --radius: 8px;
 }
 
 * {
@@ -679,12 +679,13 @@ body.is-pip .palette {
   align-items: center;
   justify-content: center;
   width: auto;
-  height: 36px;
-  padding: 0 14px 0 10px;
+  height: 34px;
+  padding: 0 13px 0 10px;
   gap: 8px;
-  border-radius: 18px;
-  background: var(--md-secondary-container);
-  color: var(--md-on-secondary-container);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 8px;
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface);
   font: inherit;
   font-size: 13px;
   font-weight: 600;
@@ -692,22 +693,19 @@ body.is-pip .palette {
 }
 
 .client-menu-btn:hover {
-  background: color-mix(
-    in srgb,
-    var(--md-secondary-container) 86%,
-    var(--md-on-secondary-container)
-  );
-  color: var(--md-on-secondary-container);
+  background: var(--md-surface-container-highest);
+  color: var(--md-on-surface);
 }
 
 .client-menu-btn.is-on {
-  background: var(--md-primary-container);
-  color: var(--md-on-primary-container);
+  border-color: transparent;
+  background: var(--md-on-surface);
+  color: var(--md-surface);
 }
 
 .client-menu-btn.is-on:hover {
-  background: color-mix(in srgb, var(--md-primary-container) 86%, var(--md-on-primary-container));
-  color: var(--md-on-primary-container);
+  background: color-mix(in srgb, var(--md-on-surface) 88%, var(--md-surface));
+  color: var(--md-surface);
 }
 
 .client-menu-btn svg {
@@ -725,11 +723,12 @@ body.is-pip .palette {
 /* На узком окне подпись уступает место адресу страницы. */
 @media (max-width: 860px) {
   .client-menu-btn {
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
     padding: 0;
-    border-radius: 50%;
+    border-color: transparent;
+    border-radius: 8px;
     background: transparent;
     color: var(--muted-strong);
   }
@@ -740,8 +739,9 @@ body.is-pip .palette {
   }
 
   .client-menu-btn.is-on {
-    background: var(--md-secondary-container);
-    color: var(--md-on-secondary-container);
+    border-color: transparent;
+    background: var(--md-on-surface);
+    color: var(--md-surface);
   }
 
   .client-menu-label {
@@ -761,16 +761,16 @@ body.is-pip .palette {
 .page-pill {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
   max-width: 340px;
-  height: 26px;
+  height: 28px;
   margin-left: 6px;
-  padding: 0 11px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--md-surface-container);
-  color: var(--muted);
+  padding: 0 10px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 8px;
+  background: var(--md-surface-container-low);
+  color: var(--muted-strong);
   overflow: hidden;
   -webkit-app-region: drag;
   transition:
@@ -780,9 +780,9 @@ body.is-pip .palette {
 }
 
 .page-pill.is-toast {
-  color: var(--fg);
-  background: color-mix(in srgb, var(--md-error) 10%, transparent);
-  border-color: color-mix(in srgb, var(--md-error) 32%, transparent);
+  color: var(--md-surface);
+  background: var(--md-on-surface);
+  border-color: transparent;
 }
 
 .status-dot {
@@ -800,7 +800,7 @@ body.is-pip .palette {
 }
 
 .page-pill.is-toast .status-dot {
-  background: var(--md-error);
+  background: var(--md-surface);
   animation: none;
 }
 
@@ -811,9 +811,9 @@ body.is-pip .palette {
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  border-radius: 999px;
-  background: var(--md-error);
-  color: var(--md-on-error);
+  border-radius: 6px;
+  background: var(--md-on-surface);
+  color: var(--md-surface);
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
@@ -1060,7 +1060,7 @@ body.is-downloading .progress {
   display: flex;
   flex-direction: column;
   width: var(--panel-w, 300px);
-  background: var(--md-surface);
+  background: var(--md-surface-container-low);
   border-right: 1px solid var(--md-outline-variant);
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.35),
@@ -1085,7 +1085,7 @@ body.is-downloading .progress {
   flex: none;
   align-items: center;
   gap: 4px;
-  padding: 12px 8px 8px 10px;
+  padding: 10px 8px 6px 10px;
 }
 
 .panel-head-text {
@@ -1110,11 +1110,11 @@ body.is-downloading .progress {
   display: grid;
   flex: none;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 8px;
   background: transparent;
   color: var(--md-on-surface-variant);
   cursor: pointer;
@@ -1147,11 +1147,11 @@ body.is-downloading .progress {
   display: grid;
   flex: none;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 8px;
   background: transparent;
   color: var(--md-on-surface-variant);
   cursor: pointer;
@@ -1181,19 +1181,20 @@ body.is-downloading .progress {
   flex: none;
   align-items: center;
   gap: 10px;
-  height: 44px;
+  height: 40px;
   margin: 4px 12px 10px;
-  padding: 0 6px 0 14px;
-  border-radius: 22px;
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 8px;
   background: var(--md-surface-container-high);
   transition:
     background 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color 0.15s ease;
 }
 
 .panel-search:focus-within {
+  border-color: var(--md-outline);
   background: var(--md-surface-container-highest);
-  box-shadow: inset 0 0 0 2px var(--md-primary);
 }
 
 .panel-search-icon {
@@ -1226,15 +1227,22 @@ body.is-downloading .progress {
   display: none;
 }
 
+/* Фокус уже виден рамкой контейнера: второе кольцо вокруг самого поля
+   давало двойную белую обводку. */
+.panel-search-input:focus,
+.panel-search-input:focus-visible {
+  outline: none;
+}
+
 .panel-search-clear {
   display: grid;
   flex: none;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 6px;
   background: transparent;
   color: var(--md-on-surface-variant);
   cursor: pointer;
@@ -1289,7 +1297,7 @@ body.is-downloading .progress {
 }
 
 .panel-body::-webkit-scrollbar-thumb {
-  border-radius: 999px;
+  border-radius: 3px;
   background: var(--md-outline-variant);
 }
 
@@ -1311,7 +1319,7 @@ body.is-downloading .progress {
 
 .panel-cat {
   margin: 0;
-  border-radius: 16px;
+  border-radius: 8px;
   background: transparent;
 }
 
@@ -1320,10 +1328,10 @@ body.is-downloading .progress {
   align-items: center;
   gap: 12px;
   width: 100%;
-  height: 56px;
-  padding: 0 10px;
+  height: 52px;
+  padding: 0 8px;
   border: 0;
-  border-radius: 16px;
+  border-radius: 8px;
   background: transparent;
   color: var(--md-on-surface);
   font: inherit;
@@ -1348,9 +1356,9 @@ body.is-downloading .progress {
   display: grid;
   flex: none;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
   background: var(--md-surface-container-high);
   color: var(--md-on-surface-variant);
   transition:
@@ -1397,7 +1405,7 @@ body.is-downloading .progress {
   gap: 2px;
   margin: 0;
   padding: 0 6px 10px;
-  border-radius: 16px;
+  border-radius: 8px;
 }
 
 .panel-cat-body:not([hidden]) {
@@ -1420,7 +1428,7 @@ body.is-downloading .progress {
 
 .panel[data-view='detail'] .panel-cat-body {
   padding: 8px;
-  background: var(--md-surface-container-low);
+  background: var(--md-surface-container);
 }
 
 [dir='rtl'] .panel-back svg {
@@ -1568,9 +1576,9 @@ body.is-downloading .progress {
   gap: 12px;
   width: 100%;
   height: 40px;
-  padding: 0 12px;
+  padding: 0 10px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 6px;
   background: transparent;
   color: var(--md-on-surface-variant);
   font: inherit;
@@ -1702,7 +1710,7 @@ button.panel-row--danger:hover {
   flex: none;
   padding: 2px 7px;
   border: 1px solid var(--md-outline-variant);
-  border-radius: 6px;
+  border-radius: 4px;
   background: transparent;
   color: var(--md-on-surface-variant);
   font: inherit;
@@ -1751,6 +1759,11 @@ button.panel-row--danger:hover {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* Разрешение, битрейт и «не поддерживается» не помещаются в 96 px. */
+.panel-value--wide {
+  max-width: 170px;
 }
 
 .panel-value.is-error {
@@ -1888,7 +1901,7 @@ body.is-resizing-chat {
   height: 32px;
   padding: 0 14px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--md-surface-container-highest);
   color: var(--md-on-surface-variant);
   font: inherit;
@@ -1902,17 +1915,21 @@ body.is-resizing-chat {
 }
 
 .panel-field-actions .panel-mini:first-child {
-  background: var(--md-primary-container);
-  color: var(--md-on-primary-container);
+  background: var(--md-on-surface);
+  color: var(--md-surface);
 }
 
 .panel-field-actions .panel-mini:last-child {
   background: transparent;
-  color: var(--md-primary);
+  color: var(--md-on-surface);
 }
 
 .panel-mini:hover {
   filter: brightness(1.1);
+}
+
+.panel-field-actions .panel-mini:first-child:hover {
+  background: color-mix(in srgb, var(--md-on-surface) 88%, var(--md-surface));
 }
 
 .panel-field-actions .panel-mini:last-child:hover {
@@ -1940,7 +1957,7 @@ body.is-resizing-chat {
   max-width: 92px;
   overflow: hidden;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: 4px;
   background: var(--md-surface-container-high);
   color: var(--md-on-surface-variant);
   font-size: 10px;
@@ -2029,7 +2046,7 @@ body.is-resizing-chat {
 
 .volume-range::-webkit-slider-runnable-track {
   height: 4px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: linear-gradient(
     to right,
     var(--md-primary) var(--volume, 100%),
@@ -2087,7 +2104,7 @@ body.is-muted .volume-range {
   gap: 1px;
   padding: 2px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--md-surface-container-high);
 }
 
@@ -2098,7 +2115,7 @@ body.is-muted .volume-range {
   height: 26px;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   background: transparent;
   color: var(--md-on-surface-variant);
   font: inherit;
@@ -2247,7 +2264,7 @@ body.is-muted .volume-range {
   flex-direction: column;
   gap: 4px;
   padding: 6px 12px;
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--md-surface-container-high);
 }
 
@@ -2331,7 +2348,7 @@ body.is-muted .volume-range {
   height: 24px;
   padding: 0 8px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--md-surface-container-highest);
   color: var(--md-on-surface-variant);
   font: inherit;
@@ -2360,7 +2377,7 @@ body.is-muted .volume-range {
   flex-direction: column;
   gap: 2px;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--md-surface-container-high);
 }
 
@@ -2614,9 +2631,14 @@ body.is-muted .volume-range {
   color: var(--md-on-secondary-container);
 }
 
+/* У «Функций» при открытой панели заливка светлая — текст должен быть тёмным. */
+.panel-toggle.client-menu-btn.is-on {
+  color: var(--md-surface);
+}
+
 .client-menu-btn {
-  min-width: 36px;
-  height: 36px;
+  min-width: 34px;
+  height: 34px;
 }
 
 /* Иконки звука переключаются классом на body */
@@ -2653,6 +2675,152 @@ body.is-muted .ico-muted {
 [dir='rtl'] .findbar,
 [dir='rtl'] .palette-card {
   direction: rtl;
+}
+
+/* --- Мастер первого запуска ------------------------------------------------ */
+
+.welcome {
+  position: fixed;
+  inset: var(--chrome-h, 44px) 0 0 0;
+  z-index: 60;
+  display: flex;
+  padding: 24px;
+  overflow: auto;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(230, 224, 233, 0.08), transparent 62%),
+    var(--md-surface, #0b0b0f);
+}
+
+.welcome[hidden] {
+  display: none;
+}
+
+.welcome-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin: auto;
+  padding: 24px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 12px;
+  background: var(--md-surface-container-low);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+.welcome-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.welcome-card h2 {
+  margin: 0;
+  color: var(--md-on-surface);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.welcome-note {
+  margin: 0 0 4px;
+  color: var(--md-on-surface-variant);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.welcome-field-label {
+  color: var(--muted-strong);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.welcome-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  padding: 0 2px;
+}
+
+.welcome-toggle-label {
+  color: var(--md-on-surface);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.welcome-toggle {
+  flex: none;
+  width: 48px;
+  height: 32px;
+  padding: 0;
+  justify-content: center;
+  background: transparent;
+}
+
+.welcome-proxy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 12px;
+  background: var(--md-surface-container);
+}
+
+.welcome-proxy .panel-field {
+  padding: 0 4px;
+}
+
+.welcome-proxy .panel-note {
+  padding: 0 4px;
+}
+
+.welcome-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.welcome-btn {
+  height: 36px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--md-on-surface);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.welcome-btn:hover {
+  background: var(--md-state-hover);
+}
+
+/* В styles.css нет общего `.primary`: у экрана ошибки он тоже без оформления. */
+.welcome-btn.primary {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+.welcome-btn.primary:hover {
+  background: var(--md-primary);
+  filter: brightness(1.06);
+}
+
+[dir='rtl'] .welcome-note,
+[dir='rtl'] .welcome-field-label,
+[dir='rtl'] .welcome-card h2 {
+  text-align: right;
 }
 
 /* --- Доступность ---------------------------------------------------------- */

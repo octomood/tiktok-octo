@@ -6,6 +6,7 @@ const { ctx } = require('../app-context');
 const { DOCS_URL, PUBLISHING_URL, DEFAULT_REGISTRY_URL } = require('./constants');
 const state = require('./state');
 const { t } = require('../i18n');
+const { keyFromInput } = require('../key-input');
 
 /**
  * Окно менеджера плагинов.
@@ -126,7 +127,7 @@ function open() {
   win.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return;
     const mod = input.control || input.meta;
-    if (mod && input.key.toLowerCase() === 'w') {
+    if (mod && keyFromInput(input).toLowerCase() === 'w') {
       event.preventDefault();
       win.close();
     }

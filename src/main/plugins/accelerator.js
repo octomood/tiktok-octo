@@ -1,5 +1,7 @@
 'use strict';
 
+const { keyFromInput } = require('../key-input');
+
 /**
  * Разбор сочетаний клавиш для плагинов.
  *
@@ -47,7 +49,7 @@ function normalizeAccelerator(raw) {
 
 function matchesInput(accelerator, input) {
   if (!accelerator || !input || input.type !== 'keyDown') return false;
-  const key = String(input.key || '').toLowerCase();
+  const key = keyFromInput(input).toLowerCase();
   const expected = accelerator.key === 'space' ? ' ' : accelerator.key;
   return (
     Boolean(input.control) === accelerator.control &&

@@ -250,14 +250,19 @@ function installFeedKeys() {
   };
 
   const actionOf = (event) => {
+    // Латиница приходит по key, нелатинская раскладка — только по code.
+    // Сравниваем с обоими: так J/K/L работают и по подписи, и по позиции.
     const key = event.key;
-    if (key === ' ' || key === 'k' || key === 'K') return 'playPause';
-    if (key === 'j' || key === 'J') return 'seekBack';
-    if (key === 'l' || key === 'L') return 'seekForward';
-    if (key === 's' || key === 'S') return 'screenshot';
+    const code = event.code;
+    if (key === ' ' || key === 'k' || key === 'K' || code === 'Space' || code === 'KeyK') {
+      return 'playPause';
+    }
+    if (key === 'j' || key === 'J' || code === 'KeyJ') return 'seekBack';
+    if (key === 'l' || key === 'L' || code === 'KeyL') return 'seekForward';
+    if (key === 's' || key === 'S' || code === 'KeyS') return 'screenshot';
     // «?» зависит от раскладки: на US это Shift+/, на других — свой символ.
-    if (key === '?' || (event.code === 'Slash' && event.shiftKey)) return 'help';
-    if (/^[0-9]$/.test(key)) return 'seekPercent';
+    if (key === '?' || (code === 'Slash' && event.shiftKey)) return 'help';
+    if (/^[0-9]$/.test(key) || /^Digit[0-9]$/.test(code)) return 'seekPercent';
     return null;
   };
 
@@ -279,12 +284,11 @@ function installFeedKeys() {
       if (repeat && action !== 'seekBack' && action !== 'seekForward' && action !== 'seekPercent') {
         return;
       }
-      ipcRenderer.send(
-        'octo:feed-key',
-        action,
-        action === 'seekPercent' ? Number(event.key) : undefined,
-        repeat,
-      );
+      const digit =
+        action === 'seekPercent'
+          ? Number(/^[0-9]$/.test(event.key) ? event.key : event.code.replace('Digit', ''))
+          : undefined;
+      ipcRenderer.send('octo:feed-key', action, digit, repeat);
     },
     true,
   );

@@ -114,12 +114,50 @@ test('клавиатурная лента: перемотка, пауза, пр�
     await expect(page.locator('#panel')).toBeVisible();
     await expect(page.locator('#catKeys')).toBeVisible();
 
+    // На русской раскладке J/K/L приходят кириллицей: лента смотрит на code.
+    const cdp = await site.context().newCDPSession(site);
+    await site.evaluate(() => window.__fakeVideo && (window.__fakeVideo.time = 50));
+    await cdp.send('Input.dispatchKeyEvent', {
+      type: 'rawKeyDown',
+      key: 'д',
+      code: 'KeyL',
+      windowsVirtualKeyCode: 76,
+      nativeVirtualKeyCode: 76,
+    });
+    await expect.poll(() => site.evaluate(() => window.__fakeVideo.time)).toBe(60);
+
     // Выключенная лента не трогает ролик.
     await page.locator('#rowFeedKeys').click();
     await expect(page.locator('#rowFeedKeys')).toHaveAttribute('aria-checked', 'false');
     const before = await site.evaluate(() => window.__fakeVideo.time);
     await site.keyboard.press('l');
     await expect.poll(() => site.evaluate(() => window.__fakeVideo.time)).toBe(before);
+  } finally {
+    if (app) await app.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+test('глобальное сочетание срабатывает на нелатинской раскладке', async () => {
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-e2e-layout-'));
+  let app;
+
+  try {
+    ({ app } = await launch(userData));
+    const page = await waitForWindow(app, (candidate) => candidate.url().startsWith('file://'));
+    const cdp = await page.context().newCDPSession(page);
+
+    await expect(page.locator('#panel')).toBeHidden();
+    // Ctrl+Shift+И: физическая B, но key пришёл с русской раскладки.
+    await cdp.send('Input.dispatchKeyEvent', {
+      type: 'rawKeyDown',
+      key: 'И',
+      code: 'KeyB',
+      modifiers: 2 | 8,
+      windowsVirtualKeyCode: 66,
+      nativeVirtualKeyCode: 66,
+    });
+    await expect(page.locator('#panel')).toBeVisible();
   } finally {
     if (app) await app.close();
     fs.rmSync(userData, { recursive: true, force: true });
@@ -173,6 +211,23 @@ test('редактор горячих клавиш: переназначение
     });
     await expect(forwardRow.locator('.keymap-key')).toHaveText('Ctrl+Alt+F');
     await expect(page.locator('.keymap-row.is-conflict')).toHaveCount(2);
+
+    // На русской раскладке буква приходит кириллицей: сочетание собирается
+    // по физической клавише, иначе переназначить его было бы нельзя.
+    await forwardRow.click();
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new window.KeyboardEvent('keydown', {
+          key: 'Ф',
+          code: 'KeyA',
+          ctrlKey: true,
+          altKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    await expect(forwardRow.locator('.keymap-key')).toHaveText('Ctrl+Alt+A');
 
     // Сброс возвращает стандартный набор.
     await page.locator('[data-cmd="keymapReset"]').click();

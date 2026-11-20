@@ -15,9 +15,16 @@ const { buildName, buildPath, sanitize, transliterate } = require('../src/main/d
  */
 
 const BODY = Buffer.alloc(64 * 1024, 7);
+const CHAT_PAGE =
+  '<!doctype html><html><head><title>Чат с Аней | TikTok</title></head><body>чат</body></html>';
 
 async function startServer() {
   const server = http.createServer((request, response) => {
+    if (request.url.startsWith('/chat')) {
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      response.end(CHAT_PAGE);
+      return;
+    }
     response.writeHead(200, {
       'content-type': 'video/mp4',
       'content-length': BODY.length,
@@ -25,7 +32,8 @@ async function startServer() {
     response.end(BODY);
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  return { server, url: `http://127.0.0.1:${server.address().port}/clip.mp4` };
+  const root = `http://127.0.0.1:${server.address().port}`;
+  return { server, url: `${root}/clip.mp4`, chat: `${root}/chat` };
 }
 
 async function waitForWindow(app, predicate) {
@@ -69,7 +77,7 @@ test('шаблон имени: транслитерация, подстанов�
 test('авто-имя файла при загрузке и счётчик пропущенной рекламы', async () => {
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-e2e-dl-'));
   const downloadsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-e2e-dl-out-'));
-  const { server, url } = await startServer();
+  const { server, url, chat } = await startServer();
   let app;
 
   try {
@@ -80,6 +88,7 @@ test('авто-имя файла при загрузке и счётчик пр�
         OCTO_E2E: '1',
         OCTO_USER_DATA: userData,
         OCTO_HOME_URL: 'about:blank',
+        OCTO_CHAT_URL: chat,
         OCTO_DOWNLOADS_DIR: downloadsDir,
         OCTO_ADS_POLL_MS: '300',
       },
@@ -113,6 +122,41 @@ test('авто-имя файла при загрузке и счётчик пр�
     const state = JSON.parse(fs.readFileSync(path.join(userData, 'octo-state.json'), 'utf8'));
     expect(state.downloadNaming.auto).toBe(true);
     expect(state.downloadNaming.template).toBe('{title}-{date}');
+
+    // Повторная загрузка с тем же именем не затирает первый файл: второй
+    // получает суффикс « (1)», как это делает системный диалог сохранения.
+    await app.evaluate(({ BrowserWindow }, target) => {
+      const win = BrowserWindow.getAllWindows().find((item) =>
+        item.webContents.getURL().startsWith('file://'),
+      );
+      const view = win.contentView.children.find(
+        (child) => child.webContents && child.webContents.getURL().startsWith('about:blank'),
+      );
+      view.webContents.downloadURL(target);
+    }, url);
+    const downloaded = () => fs.readdirSync(downloadsDir).filter((name) => name.endsWith('.mp4'));
+    await expect.poll(downloaded).toHaveLength(2);
+    expect(downloaded().filter((name) => name.includes(' (1).mp4'))).toHaveLength(1);
+
+    // Загрузка из панели чата: имя берётся из страницы чата, а не из ленты.
+    await page.evaluate(() => window.octo.cmd('downloadTemplate', '{title}'));
+    await page.evaluate(() => window.octo.cmd('chat'));
+    const chatPage = await waitForWindow(app, (candidate) => candidate.url() === chat);
+    expect(chatPage).toBeTruthy();
+    await app.evaluate(
+      ({ BrowserWindow }, { chatUrl, fileUrl }) => {
+        const win = BrowserWindow.getAllWindows().find((item) =>
+          item.webContents.getURL().startsWith('file://'),
+        );
+        const view = win.contentView.children.find(
+          (child) => child.webContents && child.webContents.getURL() === chatUrl,
+        );
+        view.webContents.downloadURL(fileUrl);
+      },
+      { chatUrl: chat, fileUrl: url },
+    );
+    await expect.poll(downloaded).toContain('Chat s Aney.mp4');
+    expect(downloaded()).not.toContain('Moy rolik.mp4');
 
     // --- Счётчик рекламы ----------------------------------------------------
     await page.evaluate(() => window.octo.cmd('adsSkip'));

@@ -66,13 +66,19 @@ test('картинка, субтитры и дата публикации', asyn
         right: 320,
         bottom: 180,
       });
+      Object.defineProperty(video, 'videoWidth', { configurable: true, value: 320 });
+      Object.defineProperty(video, 'videoHeight', { configurable: true, value: 180 });
+      Object.defineProperty(video, 'currentSrc', {
+        configurable: true,
+        value: 'https://v16-webapp-prime.tiktok.com/video/tos/demo.mp4?bt=2688',
+      });
       document.body.append(video);
       window.__fakeVideo = video;
     });
 
     // --- Фильтр и кадрирование ---------------------------------------------
     await page.evaluate(() =>
-      window.octo.cmd('picture', { brightness: 120, contrast: 90, warmth: 40 }),
+      window.octo.cmd('picture', { brightness: 120, contrast: 90, warmth: 40, sharpness: 60 }),
     );
     await expect
       .poll(() => site.evaluate(() => window.__fakeVideo.style.getPropertyValue('filter')))
@@ -80,6 +86,23 @@ test('картинка, субтитры и дата публикации', asyn
     const filter = await site.evaluate(() => window.__fakeVideo.style.getPropertyValue('filter'));
     expect(filter).toContain('contrast(0.9)');
     expect(filter).toContain('sepia');
+    expect(filter).toContain('octo-sharpen');
+
+    // Резкость — не «пустой» фильтр: центр ядра свёртки больше единицы.
+    const kernel = await site.evaluate(() => {
+      const node = document.querySelector('#octo-sharpen-svg feConvolveMatrix');
+      return node ? node.getAttribute('kernelMatrix') : '';
+    });
+    expect(Number(kernel.split(' ')[4])).toBeGreaterThan(1);
+
+    // Пресет «Улучшить картинку» поднимает резкость и контраст.
+    await page.evaluate(() => window.octo.cmd('pictureEnhance'));
+    await expect
+      .poll(() => site.evaluate(() => window.__fakeVideo.style.getPropertyValue('filter')))
+      .toContain('contrast(1.08)');
+    expect(
+      await site.evaluate(() => window.__fakeVideo.style.getPropertyValue('filter')),
+    ).toContain('octo-sharpen');
 
     // По умолчанию кадр не трогаем: иначе cover обрезает и «увеличивает»
     // ролики сайта без причины.
@@ -151,9 +174,31 @@ test('картинка, субтитры и дата публикации', asyn
     await page.evaluate(() => window.octo.cmd('captionBackground'));
     await expect.poll(captionStyle).not.toContain('rgba(0, 0, 0, 0.62)');
 
-    // --- Дата публикации видна в панели -------------------------------------
+    // --- Дата публикации и качество видны в панели --------------------------
     await page.locator('#btnPanel').click();
     await expect(page.locator('#videoDateValue')).toHaveText('2024-5-1', { timeout: 8000 });
+    await expect(page.locator('#videoQualityValue')).toContainText('320×180', {
+      timeout: 8000,
+    });
+    await expect(page.locator('#videoQualityValue')).toContainText('2,7');
+    await expect(page.locator('#videoHevcValue')).not.toHaveText('—');
+
+    // --- Аппаратное декодирование: только Linux ------------------------------
+    if (process.platform === 'linux') {
+      await page.click('[data-cat-head="player"]');
+      await expect(page.locator('#catPlayer')).toBeVisible();
+      await page.click('#rowHardwareVideo');
+      await expect(page.locator('#rowHardwareVideo')).toHaveAttribute('aria-checked', 'true');
+      await expect
+        .poll(
+          () =>
+            JSON.parse(fs.readFileSync(path.join(userData, 'octo-state.json'), 'utf8'))
+              .hardwareVideo,
+        )
+        .toBe(true);
+      await page.click('#rowHardwareVideo');
+      await expect(page.locator('#rowHardwareVideo')).toHaveAttribute('aria-checked', 'false');
+    }
 
     // --- Настройки сохранились ----------------------------------------------
     const saved = JSON.parse(fs.readFileSync(path.join(userData, 'octo-state.json'), 'utf8'));
@@ -162,6 +207,8 @@ test('картинка, субтитры и дата публикации', asyn
     expect(saved.subtitles.background).toBe(false);
     expect(saved.player.fit).toBe('auto');
     expect(saved.player.brightness).toBe(100);
+    expect(saved.player.sharpness).toBe(0);
+    if (process.platform === 'linux') expect(saved.hardwareVideo).toBe(false);
   } finally {
     if (app) await app.close();
     fs.rmSync(userData, { recursive: true, force: true });

@@ -10,11 +10,35 @@ if (process.env.OCTO_DOWNLOADS_DIR) app.setPath('downloads', process.env.OCTO_DO
 /**
  * Аппаратный декодер на Linux — частая причина «звук идёт, картинка стоит»:
  * драйвер отдаёт звук, но перестаёт проводить кадры в композитор. Для клиента
- * ленты софт-декода 1080p достаточно, поэтому по умолчанию выключаем
- * аппаратное декодирование на Linux. Вернуть можно OCTO_HW_VIDEO=1.
+ * ленты софт-декода 540p достаточно, поэтому по умолчанию выключаем
+ * аппаратное декодирование на Linux. Вернуть можно OCTO_HW_VIDEO=1 или
+ * переключателем в разделе «Плеер» (см. video-quality.js).
  */
-if (process.platform === 'linux' && process.env.OCTO_HW_VIDEO !== '1') {
-  app.commandLine.appendSwitch('disable-accelerated-video-decode');
+if (process.platform === 'linux') {
+  let hardwareVideo = process.env.OCTO_HW_VIDEO === '1';
+  if (!hardwareVideo) {
+    try {
+      hardwareVideo = require('./store').readState().hardwareVideo === true;
+    } catch {
+      hardwareVideo = false;
+    }
+  }
+  if (hardwareVideo) {
+    // Без этих флагов Chromium на Linux часто не видит VA-API, а HEVC живёт
+    // только в системном декодере. Флаги экспериментальные: включаются вместе
+    // с настройкой и только после явного согласия пользователя.
+    app.commandLine.appendSwitch(
+      'enable-features',
+      [
+        'AcceleratedVideoDecodeLinuxGL',
+        'VaapiVideoDecodeLinuxGL',
+        'VaapiOnNvidiaGPUs',
+        'VaapiIgnoreDriverChecks',
+      ].join(','),
+    );
+  } else {
+    app.commandLine.appendSwitch('disable-accelerated-video-decode');
+  }
 }
 
 const { ctx, pushState, setChromeHeight, toast } = require('./app-context');
@@ -29,6 +53,7 @@ const autostart = require('./autostart');
 const appimage = require('./appimage-install');
 const ads = require('./ads');
 const region = require('./region');
+const welcome = require('./welcome');
 const cosmetics = require('./cosmetics');
 const find = require('./find');
 const plugins = require('./plugins');
@@ -40,6 +65,7 @@ const privacy = require('./privacy');
 const resilience = require('./resilience');
 const deepLinks = require('./deep-links');
 const jumpList = require('./jump-list');
+const videoQuality = require('./video-quality');
 
 // Кастомные схемы (хосты плагинов и превью стикеров) должны быть объявлены
 // до app.whenReady().
@@ -104,7 +130,7 @@ if (!gotLock) {
     deepLinks.queueFrom(argv);
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     if (cliMode) {
       const result = cliInstall ? appimage.install() : appimage.uninstall();
       if (result.ok) {
@@ -127,8 +153,13 @@ if (!gotLock) {
     i18n.sync();
     i18n.installIpc();
     region.sync();
+    videoQuality.sync();
     region.installIpc();
     region.installLoginHandler();
+    welcome.sync();
+    // Локальный обход DPI поднимаем до первой загрузки страницы, иначе
+    // TikTok успеет открыться напрямую и получить блокировку.
+    await region.prepareDpi();
 
     installWebContentsGuards();
     stickers.init();

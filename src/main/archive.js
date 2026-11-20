@@ -7,6 +7,7 @@ const { ctx, toast } = require('./app-context');
 const { readState } = require('./store');
 const { createZip } = require('./plugins/zip');
 const library = require('./library');
+const { stripRegionCredentials } = require('./proxy-url');
 
 /**
  * «Мой архив»: закладки, статистика, настройки и стикеры одним ZIP.
@@ -62,7 +63,9 @@ function dateStamp() {
 function settingsSlice(state) {
   const result = {};
   for (const key of SETTINGS_KEYS) {
-    if (state[key] !== undefined) result[key] = state[key];
+    if (state[key] === undefined) continue;
+    // «Мой архив» тоже не должен содержать пароль прокси.
+    result[key] = key === 'region' ? stripRegionCredentials(state[key]) : state[key];
   }
   return result;
 }

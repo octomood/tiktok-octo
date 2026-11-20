@@ -1,11 +1,10 @@
 'use strict';
 
 const fs = require('node:fs');
-const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const { test, expect, _electron: electron } = require('@playwright/test');
-const { createZip, readZip } = require('../src/main/plugins/zip');
+const { createZip } = require('../src/main/plugins/zip');
 
 /**
  * Плагины в живом Electron:
@@ -131,10 +130,21 @@ test('плагин, команды, панель и менеджер', async () 
       'менеджер плагинов',
     );
 
+    // Каталог заменён ссылкой на Telegram-канал, кнопка уводит в него.
     await expect(manager.locator('[data-page="catalog"]')).toBeVisible();
-    await manager.locator('#btnRefresh').click();
-    await expect(manager.locator('#catalogList')).toContainText('Hello octo');
-    await expect(manager.locator('#catalogList')).toContainText('Установлено');
+    await expect(manager.locator('#telegramPanel')).toContainText('t.me/octo_plugins');
+    await expect(manager.locator('#catalogList')).toHaveCount(0);
+
+    await app.evaluate(({ shell }) => {
+      global.__openedUrls = [];
+      shell.openExternal = async (url) => {
+        global.__openedUrls.push(url);
+      };
+    });
+    await manager.locator('#btnTelegram').click();
+    await expect
+      .poll(() => app.evaluate(() => global.__openedUrls))
+      .toEqual(['https://t.me/octo_plugins']);
 
     await manager.locator('[data-tab="installed"]').click();
     await expect(manager.locator('#installedList')).toContainText('Hello octo');
@@ -145,9 +155,20 @@ test('плагин, команды, панель и менеджер', async () 
     await expect(manager.locator('#installedList')).toContainText('Команды: 1 из 64');
 
     await manager.locator('[data-tab="settings"]').click();
-    await expect(manager.locator('#switchAutoUpdate')).toHaveAttribute('aria-checked', 'true');
-    await manager.locator('#switchAutoUpdate').click();
-    await expect(manager.locator('#switchAutoUpdate')).toHaveAttribute('aria-checked', 'false');
+    await expect(manager.locator('#switchRequireSignatures')).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+    await manager.locator('#switchRequireSignatures').click();
+    await expect(manager.locator('#switchRequireSignatures')).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await manager.locator('#switchRequireSignatures').click();
+    await expect(manager.locator('#switchRequireSignatures')).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
 
     await manager.evaluate(() => {
       window.octoPlugins.action('close').catch(() => {});
@@ -169,223 +190,52 @@ test('плагин, команды, панель и менеджер', async () 
     await docs.locator('.topnav a[href="publishing.html"]').click();
     await expect.poll(() => docs.url()).toContain('/renderer/plugins-docs/publishing.html');
     await expect(docs.locator('h1')).toContainText('Правила публикации плагинов');
+
+    // Плагин под будущую версию приложения не устанавливается: иначе он висел
+    // бы в списке включённым, а host.load() отказывал бы при каждом запуске.
+    const tooNew = createZip(
+      new Map([
+        [
+          'plugin.json',
+          JSON.stringify({
+            id: 'app.octo.too-new',
+            name: 'Слишком новый',
+            version: '1.0.0',
+            apiVersion: 1,
+            minAppVersion: '99.0.0',
+            description: 'Плагин для будущей версии приложения',
+            author: { name: 'octo' },
+            license: 'MIT',
+            main: 'index.js',
+            permissions: ['page:css'],
+          }),
+        ],
+        ['index.js', "octo.page.injectCSS('body { outline: 1px solid red; }');"],
+        ['README.md', '# Too new'],
+      ]),
+    );
+    const tooNewFile = path.join(userData, 'too-new.octoplugin');
+    fs.writeFileSync(tooNewFile, tooNew);
+
+    await app.evaluate(({ dialog }, file) => {
+      global.__octoInstallError = '';
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
+      dialog.showMessageBox = async (parentOrOptions, maybeOptions) => {
+        const options = maybeOptions || parentOrOptions || {};
+        global.__octoInstallError = String(options.message || options.title || '');
+        return { response: 0 };
+      };
+    }, tooNewFile);
+
+    await page.evaluate(() => window.octo.cmd('pluginInstallFile'));
+    await expect.poll(() => app.evaluate(() => global.__octoInstallError)).toContain('99.0.0');
+    const pluginsStateFile = path.join(userData, 'plugins-state.json');
+    const savedPlugins = fs.existsSync(pluginsStateFile)
+      ? fs.readFileSync(pluginsStateFile, 'utf8')
+      : '';
+    expect(savedPlugins).not.toContain('app.octo.too-new');
   } finally {
     if (app) await app.close();
-    fs.rmSync(userData, { recursive: true, force: true });
-  }
-});
-
-test('404 каталога — это нейтральное состояние, а не ошибка', async () => {
-  test.setTimeout(60_000);
-  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-no-catalog-'));
-  const server = http.createServer((_request, response) => {
-    response.writeHead(404, { connection: 'close' });
-    response.end('not found');
-  });
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const port = server.address().port;
-  let app;
-
-  try {
-    app = await electron.launch({
-      args: [path.join(__dirname, '..'), '--no-sandbox'],
-      env: {
-        ...process.env,
-        OCTO_E2E: '1',
-        OCTO_USER_DATA: userData,
-        OCTO_HOME_URL: 'about:blank',
-        OCTO_PLUGIN_REGISTRY: `http://127.0.0.1:${port}/registry.json`,
-      },
-    });
-
-    await app.firstWindow();
-    const page = await waitForWindow(
-      app,
-      (candidate) => candidate.url().startsWith('file://'),
-      'полоса заголовка',
-    );
-    await page.evaluate(() => window.octo.cmd('plugins'));
-    const manager = await waitForWindow(
-      app,
-      (candidate) => candidate.url().endsWith('/renderer/plugins.html'),
-      'менеджер плагинов',
-    );
-
-    await manager.locator('#btnRefresh').click();
-    await expect(manager.locator('#catalogMeta')).toContainText('пока не опубликован');
-    await expect(manager.locator('#catalogEmpty')).toContainText('Локальная установка');
-    await expect(manager.locator('#notice')).toBeHidden();
-  } finally {
-    if (app) await app.close();
-    server.closeAllConnections?.();
-    server.close();
-    fs.rmSync(userData, { recursive: true, force: true });
-  }
-});
-
-test('установка из каталога: скачивание, проверка, хэш и запуск', async () => {
-  test.setTimeout(90_000);
-  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-catalog-'));
-  const packageFile = path.join(
-    __dirname,
-    '..',
-    'plugins',
-    'packages',
-    'app.octo.hello-1.0.0.octoplugin',
-  );
-  const packageBuffer = fs.readFileSync(packageFile);
-  const crypto = require('node:crypto');
-  const sha256 = crypto.createHash('sha256').update(packageBuffer).digest('hex');
-
-  // Версия 1.0.1 для проверки обновления: тот же код, новый манифест.
-  const nextFiles = readZip(packageBuffer);
-  const nextManifest = JSON.parse(nextFiles.get('plugin.json').toString('utf8'));
-  nextManifest.version = '1.0.1';
-  nextManifest.changelog = 'Тестовое обновление';
-  nextFiles.set('plugin.json', Buffer.from(JSON.stringify(nextManifest)));
-  const nextBuffer = createZip(nextFiles);
-  const nextSha = crypto.createHash('sha256').update(nextBuffer).digest('hex');
-
-  const server = http.createServer((request, response) => {
-    const isNext = request.url?.includes('next.octoplugin');
-    if (!request.url?.endsWith('.octoplugin')) {
-      response.writeHead(404);
-      response.end('not found');
-      return;
-    }
-    const body = isNext ? nextBuffer : packageBuffer;
-    response.writeHead(200, {
-      'content-type': 'application/octet-stream',
-      'content-length': body.length,
-      connection: 'close',
-    });
-    response.end(body);
-  });
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const port = server.address().port;
-
-  const registryFile = path.join(userData, 'registry.json');
-  fs.writeFileSync(
-    registryFile,
-    JSON.stringify({
-      schema: 1,
-      updatedAt: new Date().toISOString(),
-      plugins: [
-        {
-          id: 'app.octo.hello',
-          name: 'Hello octo',
-          author: { name: 'octo', url: 'https://github.com/octomood' },
-          description: 'Пример плагина из локального каталога.',
-          license: 'MIT',
-          categories: ['demo'],
-          releases: [
-            {
-              version: '1.0.0',
-              minAppVersion: '0.5.0',
-              download: `http://127.0.0.1:${port}/app.octo.hello-1.0.0.octoplugin`,
-              sha256,
-              size: packageBuffer.length,
-              publishedAt: new Date().toISOString(),
-              changelog: 'Первый выпуск',
-              permissions: ['page:css', 'page:script'],
-              networkHosts: [],
-            },
-          ],
-        },
-      ],
-    }),
-  );
-
-  let app;
-
-  try {
-    app = await electron.launch({
-      args: [path.join(__dirname, '..'), '--no-sandbox'],
-      env: {
-        ...process.env,
-        OCTO_E2E: '1',
-        OCTO_USER_DATA: userData,
-        OCTO_HOME_URL: 'about:blank',
-        OCTO_PLUGIN_REGISTRY_FILE: registryFile,
-      },
-    });
-
-    await app.firstWindow();
-    // В тесте нет человека, который нажмёт «Установить» в нативном диалоге.
-    await app.evaluate(({ dialog }) => {
-      dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false });
-      return true;
-    });
-
-    const page = await waitForWindow(
-      app,
-      (candidate) => candidate.url().startsWith('file://'),
-      'полоса заголовка',
-    );
-    await page.evaluate(() => window.octo.cmd('plugins'));
-    const manager = await waitForWindow(
-      app,
-      (candidate) => candidate.url().endsWith('/renderer/plugins.html'),
-      'менеджер плагинов',
-    );
-
-    await manager.locator('#btnRefresh').click();
-    await expect(manager.locator('#catalogList')).toContainText('Hello octo');
-    await expect(manager.locator('#catalogCategories')).toContainText('demo');
-    await manager.locator('#catalogList .primary').click();
-
-    await expect
-      .poll(() =>
-        app
-          .windows()
-          .some((candidate) => candidate.url().startsWith('octo-plugin://app.octo.hello/')),
-      )
-      .toBe(true);
-
-    await manager.locator('[data-tab="installed"]').click();
-    await expect(manager.locator('#installedList')).toContainText('Hello octo');
-    await expect(manager.locator('#installedList')).toContainText('каталог');
-    await expect(manager.locator('#installedList')).toContainText('Скрипты на странице');
-    await expect(manager.locator('#installedList')).toContainText('замечаний нет');
-
-    // Файлы действительно записаны в профиль, а не только показаны в UI.
-    const installedDir = path.join(userData, 'plugins', 'app.octo.hello');
-    expect(fs.existsSync(path.join(installedDir, 'index.js'))).toBe(true);
-    const stateFile = path.join(userData, 'plugins-state.json');
-    let saved = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-    expect(saved.plugins['app.octo.hello']).toBeTruthy();
-    expect(saved.plugins['app.octo.hello'].sha256).toBe(sha256);
-    expect(saved.plugins['app.octo.hello'].source).toBe('registry');
-
-    // Обновление каталога: 1.0.0 → 1.0.1 с подтверждением и заменой файлов.
-    const registry = JSON.parse(fs.readFileSync(registryFile, 'utf8'));
-    registry.plugins[0].releases.push({
-      version: '1.0.1',
-      minAppVersion: '0.5.0',
-      download: `http://127.0.0.1:${port}/next.octoplugin`,
-      sha256: nextSha,
-      size: nextBuffer.length,
-      publishedAt: new Date().toISOString(),
-      changelog: 'Тестовое обновление',
-      permissions: ['page:css', 'page:script'],
-      networkHosts: [],
-    });
-    fs.writeFileSync(registryFile, JSON.stringify(registry));
-
-    await manager.locator('[data-tab="catalog"]').click();
-    await manager.locator('#btnRefresh').click();
-    await expect(manager.locator('#catalogList')).toContainText('Обновить до 1.0.1');
-    await manager.locator('#catalogList .primary').click();
-
-    await manager.locator('[data-tab="installed"]').click();
-    await expect(manager.locator('#installedList')).toContainText('v1.0.1');
-    saved = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-    expect(saved.plugins['app.octo.hello'].version).toBe('1.0.1');
-    expect(saved.plugins['app.octo.hello'].sha256).toBe(nextSha);
-  } finally {
-    if (app) await app.close();
-    server.closeAllConnections?.();
-    server.close();
     fs.rmSync(userData, { recursive: true, force: true });
   }
 });

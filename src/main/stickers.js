@@ -1424,10 +1424,9 @@ const REGION_ERROR_EXPR = `(() => {
   );
 })()`;
 
-const SEND_TIMEOUT_MS = 25_000;
+const SEND_TIMEOUT_MS = Number(process.env.OCTO_STICKER_SEND_TIMEOUT_MS) || 25_000;
 
 let sending = false;
-let sendStartedAt = 0;
 /** Тикет активной отправки: старый «зависший» вызов не должен мешать новому. */
 let activeSend = 0;
 let sendSeq = 0;
@@ -1640,17 +1639,11 @@ async function sendFile(source) {
 
 async function sendItem(item) {
   if (sending) {
-    // Страховка на случай, если CDP-команда всё-таки зависла: через
-    // SEND_TIMEOUT_MS отправка считается брошенной, а не вечной.
-    if (Date.now() - sendStartedAt < SEND_TIMEOUT_MS) {
-      toast('Подождите: предыдущая картинка ещё отправляется');
-      return { ok: false, error: 'busy' };
-    }
-    if (process.env.OCTO_DEBUG) {
-      console.warn('[octo] sticker send: resetting stuck operation');
-    }
-    sending = false;
-    activeSend = 0;
+    // Вторая отправка не начинается, пока первая держит debugger и поле
+    // страницы: иначе вызовы отцепляют отладчик друг у друга и путают файлы.
+    // Зависший runSend завершается по таймаутам своих шагов.
+    toast('Подождите: предыдущая картинка ещё отправляется');
+    return { ok: false, error: 'busy' };
   }
 
   const wc = targetWebContents();
@@ -1661,7 +1654,6 @@ async function sendItem(item) {
 
   const ticket = ++sendSeq;
   sending = true;
-  sendStartedAt = Date.now();
   activeSend = ticket;
   const report = {
     page: pageLabel(wc),
@@ -1673,8 +1665,10 @@ async function sendItem(item) {
 
   const watchdog = setTimeout(() => {
     if (activeSend !== ticket) return;
-    activeSend = 0;
-    sending = false;
+    // Не сбрасываем activeSend/sending: старый runSend всё ещё держит
+    // debugger и поле страницы. Он завершится по своим таймаутам, и только
+    // тогда новая отправка получит управление — иначе два вызова работают
+    // с одной страницей одновременно и отцепляют отладчик друг у друга.
     if (process.env.OCTO_DEBUG) console.warn('[octo] sticker send watchdog fired');
     writeSendLog({ ...report, stage: 'watchdog' });
     toast('Картинка не отправлена: страница TikTok не ответила. Попробуйте ещё раз');

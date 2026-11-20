@@ -50,11 +50,12 @@ window and a handful of shortcuts that make sense on a desktop.
 | **⏱️&nbsp; Sleep timer**            | 15/30/60 minutes, "until the video ends" or "stop after N videos" with a smooth fade-out. The countdown survives restarts.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | **⌨️&nbsp; Keyboard**               | J / L seek 10 seconds, K and space pause, 0–9 jump to a percentage, S takes a screenshot, ? shows the hint. Every command can be remapped with profiles and conflict highlighting.                                                                                                                                                                                                                                                                                                                                                                                           |
 | **😴&nbsp; Auto-pause**             | No input for N minutes pauses the video; coming back resumes it. "Keep screen awake" holds the display on with `powerSaveBlocker`.                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| **🖼️&nbsp; Picture & captions**     | Brightness, contrast, warm tone and fit/fill for the video. Captions are turned on by the site's own button; size, background and outline change without touching account settings.                                                                                                                                                                                                                                                                                                                                                                                          |
+| **🖼️&nbsp; Picture & captions**     | Brightness, contrast, warm tone, sharpness and fit/fill for the video. Captions are turned on by the site's own button; size, background and outline change without touching account settings.                                                                                                                                                                                                                                                                                                                                                                               |
+| **🎞️&nbsp; Video quality**          | The actual resolution and bitrate of the stream, plus HEVC support. On Linux, hardware decoding is an experimental switch in the «Player» section — after a restart and only if the GPU supports H.265.                                                                                                                                                                                                                                                                                                                                                                      |
 | **🔳&nbsp; QR & mini bar**          | The current video's QR code is built locally, with no external services. "Bar only" mode is a compact remote without the site: title, play/pause, volume and PiP.                                                                                                                                                                                                                                                                                                                                                                                                            |
 | **🗂&nbsp; Tray**                    | Hide the window, mute, pin, PiP, or enable "close to tray" and keep listening.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | **⬇️&nbsp; Downloads**              | Files go through the dialog or a `{author}-{date}-{title}` template with a per-author folder. A separate manager window shows progress, a simultaneous limit, pause, the queue and "show in folder".                                                                                                                                                                                                                                                                                                                                                                         |
-| **✂️&nbsp; Annotated snapshot**     | A snapshot opens an editor with an arrow, rectangle and blur; the PNG is saved to Pictures and copied to the clipboard.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **✂️&nbsp; Annotated snapshot**     | A snapshot opens an editor with an arrow, rectangle and blur; the PNG is saved to Pictures and copied to the clipboard, with a small "tiktok octo" label in the corner.                                                                                                                                                                                                                                                                                                                                                                                                      |
 | **🎞️&nbsp; GIF from video**         | A 3–10 second fragment from the current second: 5–15 fps and 320–640 px wide. Encoded locally, with no external services.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | **🧪&nbsp; Custom code**            | Advanced mode: your own CSS and JavaScript for the page. Off by default, warns when enabled and turns off with one button.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | **🚫&nbsp; Content filters**        | Hide by words, hashtags and authors: a match in the visible DOM advances the feed like ad skipping does.                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -76,7 +77,8 @@ window and a handful of shortcuts that make sense on a desktop.
 | **🗄️&nbsp; My archive**             | A ZIP with bookmarks, statistics, settings and stickers — one file on disk, nothing sent anywhere.                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | **🌙&nbsp; Dark theme everywhere**  | TikTok theme cookies are written for the whole domain, and Chromium auto dark mode covers Business Suite and service pages, so no white TikTok pages remain.                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | **🔤&nbsp; Shell font on the site** | Inter is applied to all site text, including nested frames and web components in shadow DOM. SVG icons are left untouched.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| **🧩&nbsp; Plugins**                | A separate manager with a catalog, permissions, static audit, Ed25519 signatures, tamper checks, logs, rollback and auto-updates. Developers get an SDK with types and a mock, a generator and hot reload. Cosmetic packs are CSS-only plugins with preview and rollback. The catalog sorts by name, date, installs and updates, shows a verified badge, install counts and a permission diff, merges up to three custom registries with the official one, and can show system notifications with the `os:notify` permission. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>. |
+| **💬&nbsp; Comments side panel**    | The video page's “You may like” column no longer takes space: the comment icon opens it, and a second click or <kbd>Esc</kbd> hides it again. Can be turned off in “Tweaks”.                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **🧩&nbsp; Plugins**                | A separate manager with local `.octoplugin` installs, permissions, static audit, Ed25519 signatures, tamper checks, logs and rollback. Plugins are published in the Telegram channel [t.me/octo_plugins](https://t.me/octo_plugins). Developers get an SDK with types and a mock, a generator and hot reload. Cosmetic packs are CSS-only plugins with preview and rollback. Plugins can show system notifications with the `os:notify` permission. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>. Local installs work offline; updates are installed from downloaded files. |
 | **💾&nbsp; Settings and backups**   | Export and import settings as one JSON file, a daily state backup on launch (last 8) and one-click restore. Cookies, chats and passwords never go into the files.                                                                                                                                                                                                                                                                                                                                                                                                            |
 | **🛡️&nbsp; Privacy**                | A privacy panel shows how much local data takes, deletes it item by item, copies diagnostics without paths or tokens, and lists licenses with an honest "not affiliated with TikTok" page.                                                                                                                                                                                                                                                                                                                                                                                   |
 | **🧠&nbsp; It remembers**           | Window geometry, maximised state, zoom, mute, always-on-top and the last page you were on.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -100,11 +102,31 @@ the panel changes what the browser tells the site — `Accept-Language`, the
 language in `navigator`, the `Intl`/`Date` timezone and geolocation coordinates —
 and can route the session through a proxy you provide.
 
+On first launch a **setup wizard** opens: pick the interface language, flip the
+“Use a proxy” switch or enable the experimental DPI bypass. You can skip it and
+reopen it later from the Region section or the command palette.
+
 - Presets: Kazakhstan, Armenia, Georgia, Turkey, Serbia, UAE, Israel, USA,
   Germany, Netherlands, UK, Poland.
 - The proxy field accepts `socks5://host:port`, `http://host:port` and
   `http://user:pass@host:port`. It applies to the whole TikTok session, including
   OAuth windows.
+- The proxy login and password are used only by the live profile: settings
+  export, backups and “my archive” get the address without them. After a move or
+  restore, enter the password again. In the profile the password is encrypted
+  when the system provides a key store; otherwise the file is closed to other
+  users (`0600`).
+- **Find a local proxy** checks the usual ports of already running clients:
+  v2ray/Xray (10808, 10809), Clash/Mihomo (7890, 7891, 7897), Tor (9050), Privoxy
+  (8118) and SOCKS5 (1080). A found address is verified with a real external IP
+  request through that proxy. The app downloads nothing and ships no third-party
+  servers: you need an installed and running VPN client.
+- **DPI bypass (experimental)** — a mode without proxy, VPN or third-party
+  servers: the app sends the TLS handshake in tiny packets, like
+  Zapret/GoodbyeDPI, so a network filter cannot see the whole site name. The
+  connection goes straight to TikTok and turns on by itself on the next launch.
+  It helps only when the site is blocked by name: if TikTok is unreachable by
+  IP, the mode will not help — you need a proxy or VPN then.
 - **Check external IP** sends a request through the same session and proxy, so
   you can see the address and country TikTok is likely to see.
 - **Reset site data** removes TikTok cookies, cache and storage after a
@@ -177,9 +199,10 @@ it squeezes the feed and the video keeps playing. The panel shares the main
 window's session, so sign-in, theme and conversations are already there.
 
 - **Width** — when opened, the panel fits itself to the messages page (up to
-  760 px) so the conversation list, messages and the input are not clipped; when
-  docked, the feed keeps at least 320 px. You can still drag the handle;
-  double-click it to reset to 420 px.
+  980 px) so the conversation list, messages and the input are not clipped; when
+  docked, the feed keeps at least 320 px. Opening a conversation inside the page
+  fits the panel again. You can still drag the handle; double-click it to reset
+  to 420 px.
 - **Dock** — the "Chat squeezes the feed" switch; turning it off brings back the
   old behaviour where the panel floats over the feed.
 
@@ -207,11 +230,12 @@ direct network or cookies; navigation is limited to TikTok pages and needs the
 `navigation` permission.
 
 The **Plugins** manager (also <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>) has
-a catalog, local `.octoplugin` installs, per-plugin permissions, security
-reports, signature status, tamper detection and auto-updates that can be turned
-off globally or per plugin. The puzzle button next to the sticker menu opens a
-quick list of enabled plugins and runs their actions without opening the feature
-panel.
+local `.octoplugin` installs, per-plugin permissions, security reports,
+signature status, tamper detection, logs and rollback. The "All plugins" tab
+links to the Telegram channel [t.me/octo_plugins](https://t.me/octo_plugins):
+download the package there and install it with **Install from file**. The puzzle
+button next to the sticker menu opens a quick list of enabled plugins and runs
+their actions without opening the feature panel.
 
 Before installation the app validates the manifest and ZIP, runs a static audit
 (Node, `eval`, direct network, cookies, native binaries, obfuscation), checks
@@ -447,6 +471,13 @@ Small things that took actual work:
   for videos the site plays from its own origin (`blob:`) or with CORS enabled.
   When a video comes straight from another domain, the app keeps the normal
   volume and says so — otherwise Chromium would output silence.
+- **Video quality** is set by TikTok itself: the web player serves H.264 at no
+  more than 540p, while the HD variants are H.265. On Linux you can try to enable
+  them with the "Hardware decoder" switch in the «Player» section (a restart is
+  required): it needs a GPU and driver with VA-API, and if frames freeze, turn it
+  back off. On Windows and macOS the system decoder works without this setting.
+  Sharpness emphasises the edges of the received frame; it does not raise the
+  resolution.
 - **Captions and the publish date** depend on TikTok's markup: the app looks for
   the caption button and the date by signals the site may change. Without that
   signal captions are not toggled blindly and the date stays empty.
@@ -485,13 +516,18 @@ Small things that took actual work:
 - **Unread badges** appear where the desktop supports them (macOS dock, Unity
   launcher); the count is read from the page title, not from private requests.
 - **Auto-update** works only for packaged builds published through GitHub
-  Releases. Plugin auto-updates can be disabled globally or per plugin.
+  Releases. On launch the app checks for a new release and offers to update; the
+  window can be closed, and after consent the download runs in the background.
+  When the download finishes the app asks to restart. The offer appears again on
+  the next launch until the update is installed. Plugins do not auto-update:
+  download a new version from the Telegram channel and install the file.
 - **Plugins are JavaScript-only.** Native modules, WebAssembly and workers are
   rejected. A plugin with `page:script` shares the DOM with the site and can read
-  visible page content — install only sources you trust. The catalog requires
+  visible page content — install only sources you trust. Publishing requires
   source links and signatures for the verified badge.
-- **The plugin catalog** is a JSON file in this repository; without network access
-  the manager shows the cached version and local installs still work.
+- **Plugins are distributed through the Telegram channel**
+  [t.me/octo_plugins](https://t.me/octo_plugins). There is no built-in catalog or
+  background update check; installing from a file works offline.
 - **Region presets** change browser-side signals only. Without your own proxy or
   a system-wide VPN, TikTok still sees your real IP address; the app bundles no
   proxy list and no VPN.

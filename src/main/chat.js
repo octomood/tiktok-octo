@@ -8,6 +8,7 @@ const { readState, writeState } = require('./store');
 const { openExternal } = require('./links');
 const cosmetics = require('./cosmetics');
 const autoTheme = require('./auto-theme');
+const { evalInPage } = require('./page-eval');
 
 /**
  * Чат в панели слева.
@@ -55,7 +56,7 @@ const attached = new WeakSet();
 
 // Ширина панели: слишком узкая не помещает диалог, слишком широкая съедает ленту.
 const MIN_WIDTH = 300;
-const MAX_WIDTH = 760;
+const MAX_WIDTH = 980;
 
 // Запас, чтобы у правого края диалога не оставалось обрезанной рамки.
 const FIT_MARGIN = 8;
@@ -74,6 +75,9 @@ function syncPrefs() {
 
 function setWidth(value) {
   const width = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(Number(value) || CHAT_W)));
+  // Пользователь выбрал ширину руками — до следующего открытия панели её не
+  // трогаем, даже когда внутри страницы открывается другая переписка.
+  manualWidth = true;
   cancelFit();
   if (width === ctx.chatWidth) return;
   ctx.chatWidth = width;
@@ -127,14 +131,74 @@ const MEASURE_SCRIPT = `(() => {
     need = Math.max(need, rect.left + box.scrollWidth);
   }
 
+  // Кнопки и поля, обрезанные правым краем панели. У страницы сообщений
+  // раскладка может не помещаться и без прокрутки: тогда ни scrollWidth,
+  // ни скроллеры об этом не сообщают, а кнопка отправки остаётся за краем.
+  // Смотрим только элементы у самого края, а не скрытые меню далеко за кадром.
+  for (const item of document.querySelectorAll(
+    'button, input, textarea, [role="button"], [role="textbox"], [contenteditable="true"]',
+  )) {
+    if (item.closest('[aria-hidden="true"]')) continue;
+    const rect = item.getBoundingClientRect();
+    if (rect.width < 12 || rect.height < 12) continue;
+    if (rect.bottom < 0 || rect.top > window.innerHeight) continue;
+    if (rect.right <= view + 1) continue;
+    if (rect.left > view + 320) continue;
+    need = Math.max(need, Math.ceil(rect.right) + 4);
+  }
+
   // Ноль — страница помещается, ширину трогать не нужно.
   return need > view ? Math.ceil(need) : 0;
 })()`;
+
+/**
+ * Страница сообщений пересобирает раскладку по событию resize окна. Панель —
+ * отдельный WebContentsView: её ширина меняется без участия окна, и раскладка
+ * иногда остаётся от прежнего размера — список переписок и диалог уезжают под
+ * горизонтальную прокрутку, пока пользователь не подёргает край окна. Повторяем
+ * это событие изнутри страницы: для сайта это тот же путь, что и ручной resize.
+ */
+const RELAYOUT_SCRIPT = `(() => {
+  window.dispatchEvent(new Event('resize'));
+  if (window.visualViewport) {
+    try {
+      window.visualViewport.dispatchEvent(new Event('resize'));
+    } catch {
+      /* старый движок без visualViewport */
+    }
+  }
+  return window.innerWidth;
+})()`;
+
+// Событие шлём пачкой: layout зовут несколько раз подряд (окно, панель, ручка).
+const RELAYOUT_DELAY = 120;
+const relayoutTimers = new WeakMap();
+
+function relayoutNow(view) {
+  const wc = view && view.webContents;
+  if (!wc || wc.isDestroyed() || !ctx.chatOpen) return;
+  evalInPage(wc, [RELAYOUT_SCRIPT]);
+}
+
+function relayout(view) {
+  if (!view || !ctx.chatOpen || relayoutTimers.has(view)) return;
+  const timer = setTimeout(() => {
+    relayoutTimers.delete(view);
+    relayoutNow(view);
+  }, RELAYOUT_DELAY);
+  relayoutTimers.set(view, timer);
+}
+
+// app-context зовёт это после смены границ панели: размер изменился, а страница
+// об этом может не узнать, если окно не трогали.
+ctx.chatRelayout = relayout;
 
 // Поколение отменяет отложенный замер, если панель закрыли или потянули за
 // полоску: ручная ширина важнее автоматической.
 let fitGeneration = 0;
 let fitTimers = [];
+// Ширину выставили мышью: автоподбор молчит, пока панель не откроют заново.
+let manualWidth = false;
 
 function cancelFit() {
   fitGeneration += 1;
@@ -154,13 +218,19 @@ function measureNeed(wc) {
  * диалог влезает, но не больше MAX_WIDTH и не в ущерб ленте (в доке). Панель
  * только растёт — вручную выставленную широкую ширину замер не откатывает.
  */
-function scheduleFit(view) {
+function scheduleFit(view, { immediate = true } = {}) {
   cancelFit();
+  if (manualWidth) return;
   if (!view || view.webContents.isDestroyed()) return;
   const wc = view.webContents;
   const generation = fitGeneration;
 
   const run = async () => {
+    if (generation !== fitGeneration || wc.isDestroyed() || !ctx.chatOpen) return;
+    // Сначала просим страницу пересобрать раскладку под текущую ширину: иначе
+    // замер увидит старую, слишком широкую раскладку и раздует панель зря.
+    relayoutNow(view);
+    await new Promise((resolve) => setTimeout(resolve, RELAYOUT_DELAY));
     if (generation !== fitGeneration || wc.isDestroyed() || !ctx.chatOpen) return;
     const need = await measureNeed(wc);
     if (!need || generation !== fitGeneration || wc.isDestroyed() || !ctx.chatOpen) return;
@@ -175,7 +245,7 @@ function scheduleFit(view) {
   };
 
   fitTimers = FIT_DELAYS.map((delay) => setTimeout(run, delay));
-  run();
+  if (immediate) run();
 }
 
 function toggleDock() {
@@ -502,6 +572,15 @@ function ensureView() {
   wc.on('did-frame-finish-load', (_event, isMainFrame) => {
     if (!isMainFrame) cosmetics.injectFrameStyles(wc).catch(() => {});
   });
+  // Переписка открывается внутри той же страницы: после перехода раскладка
+  // сообщений может стать шире, чем была у списка. Иначе правый край диалога
+  // остаётся обрезанным до следующего открытия панели.
+  wc.on('did-navigate-in-page', (_event, _url, isMainFrame) => {
+    if (!isMainFrame) return;
+    // Ждём, пока доиграет переход: в момент анимации колонки ещё сдвинуты,
+    // и замер поехавших кнопок расширил бы панель зря.
+    if (ctx.chatView === view && ctx.chatOpen) scheduleFit(view, { immediate: false });
+  });
 
   // Фокус может быть в переписке — Esc всё равно должен закрывать панель.
   wc.on('before-input-event', (event, input) => {
@@ -548,7 +627,11 @@ function open(url) {
 
   const wc = view.webContents;
   const target = addressFor(url);
+  const wasOpen = ctx.chatOpen;
   ctx.chatOpen = true;
+  // Панель открыли заново — снова доверяем автоподбору, даже если ширину
+  // в прошлый раз тянули мышью.
+  if (!wasOpen) manualWidth = false;
 
   if (wc.getURL() !== target) {
     wc.loadURL(target).catch(() => {

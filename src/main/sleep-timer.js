@@ -180,8 +180,11 @@ function toggleFade() {
   pushState();
 }
 
-/** Восстановить таймер после перезапуска приложения. */
+/** Восстановить таймер после перезапуска приложения или импорта настроек. */
 function sync() {
+  // Импорт мог выключить таймер: старый setTimeout иначе доживёт до своего
+  // конца и поставит ленту на паузу уже после «выключено».
+  stopTimers();
   const saved = readSettings();
   ctx.sleepTimerMode = saved.mode;
   ctx.sleepTimerMinutes = saved.minutes;

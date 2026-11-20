@@ -11,6 +11,7 @@ const { APP_LANGUAGES, SITE_LANGUAGES } = require('./language-catalog');
 const { REGION_PRESETS } = require('./region-catalog');
 const { COSMETIC_RULES } = require('./cosmetic-catalog');
 const { PARTITION } = require('./shared');
+const { stripProxyCredentials, stripRegionCredentials } = require('./proxy-url');
 
 /**
  * Экспорт и импорт настроек одним JSON, плюс ежедневные резервные копии.
@@ -112,7 +113,9 @@ function cleanRegion(value) {
   const preset = REGION_PRESETS.find((item) => item.id === value.preset);
   if (preset) result.preset = preset.id;
   if (typeof value.proxy === 'string') {
-    const proxy = value.proxy.trim().slice(0, 300);
+    // Диалог импорта обещает не импортировать пароли: адрес оставляем,
+    // учётные данные из чужого файла отбрасываем.
+    const proxy = stripProxyCredentials(value.proxy).slice(0, 300);
     if (!proxy || /^(https?|socks4|socks5):\/\/\S+$/i.test(proxy)) result.proxy = proxy;
   }
   return result;
@@ -221,7 +224,8 @@ function liveDefaults() {
   return {
     player: ctx.player,
     cosmetics: cosmetic,
-    region: ctx.region,
+    // Логин и пароль прокси остаются в профиле, но не в экспорте.
+    region: stripRegionCredentials(ctx.region),
     language: ctx.language,
     siteLanguage: ctx.siteLanguage,
     keymap: ctx.keymap
@@ -264,6 +268,9 @@ function buildSettings() {
   for (const key of SETTINGS_KEYS) {
     if (state[key] !== undefined) settings[key] = state[key];
     else if (defaults[key] !== undefined) settings[key] = defaults[key];
+  }
+  if (settings.region && typeof settings.region === 'object') {
+    settings.region = stripRegionCredentials(settings.region);
   }
 
   const saved = pluginsState.getSettings();
@@ -362,6 +369,7 @@ function applyPluginSettings(patch) {
 /** Перечитать настройки в живые модули, не требуя перезапуска. */
 function refreshLive() {
   const state = readState();
+  const proxyBefore = ctx.region?.proxy;
   const call = (module, method) => {
     try {
       const loaded = require(module);
@@ -387,6 +395,8 @@ function refreshLive() {
   call('./gif', 'sync');
   call('./filters', 'sync');
   call('./attention', 'sync');
+  call('./replies', 'sync');
+  call('./focus', 'sync');
   call('./ads', 'sync');
 
   setCosmeticsState(state.cosmetics || {});
@@ -412,6 +422,10 @@ function refreshLive() {
   if (ctx.win && !ctx.win.isDestroyed()) {
     ctx.win.setAlwaysOnTop(state.alwaysOnTop === true, state.alwaysOnTop ? 'floating' : 'normal');
   }
+
+  // Импортированный прокси применяем к сессии, иначе панель показывала бы
+  // новый адрес, а запросы шли через старый до перезапуска.
+  if (proxyBefore !== ctx.region?.proxy) call('./region', 'applySavedProxy');
 
   onChange?.();
   pushState();
@@ -533,6 +547,7 @@ function createBackup(reason = 'manual', { silent = false } = {}) {
 
     const createdAt = new Date();
     const saved = pluginsState.read();
+    const state = readState();
     const payload = {
       app: 'TikTok octo',
       kind: BACKUP_KIND,
@@ -540,7 +555,9 @@ function createBackup(reason = 'manual', { silent = false } = {}) {
       appVersion: app.getVersion(),
       createdAt: createdAt.toISOString(),
       reason,
-      state: readState(),
+      // Копию могут переслать или приложить к отчёту об ошибке: пароль
+      // прокси в неё не пишем, адрес остаётся.
+      state: state.region ? { ...state, region: stripRegionCredentials(state.region) } : state,
       plugins: { settings: saved.settings, plugins: saved.plugins },
     };
     const content = `${JSON.stringify(payload, null, 2)}\n`;

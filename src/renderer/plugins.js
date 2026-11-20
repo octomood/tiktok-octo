@@ -11,64 +11,28 @@
 const api = window.octoPlugins;
 const $ = (id) => document.getElementById(id);
 
-const PERMISSION_LABELS = {
-  'page:css': 'Стили страницы',
-  'page:script': 'Скрипты на странице',
-  network: 'Сеть',
-  links: 'Внешние ссылки',
-};
-
 const el = {
   content: $('content'),
-  search: $('search'),
-  catalogSort: $('catalogSort'),
-  catalogSource: $('catalogSource'),
-  inputRegistries: $('inputRegistries'),
-  btnRefresh: $('btnRefresh'),
   version: $('version'),
   pluginDir: $('pluginDir'),
-  notice: $('notice'),
-  noticeText: $('noticeText'),
-  btnNoticeClose: $('btnNoticeClose'),
   toast: $('toast'),
-  catalogList: $('catalogList'),
-  catalogEmpty: $('catalogEmpty'),
-  catalogMeta: $('catalogMeta'),
-  catalogCategories: $('catalogCategories'),
   installedList: $('installedList'),
   installedEmpty: $('installedEmpty'),
   installedMeta: $('installedMeta'),
-  updatesList: $('updatesList'),
-  updatesEmpty: $('updatesEmpty'),
-  updatesMeta: $('updatesMeta'),
-  btnUpdateAll: $('btnUpdateAll'),
-  badgeCatalog: $('badgeCatalog'),
   badgeInstalled: $('badgeInstalled'),
-  badgeUpdates: $('badgeUpdates'),
-  switchAutoUpdate: $('switchAutoUpdate'),
   switchAllowUnsigned: $('switchAllowUnsigned'),
   switchRequireSignatures: $('switchRequireSignatures'),
-  selectInterval: $('selectInterval'),
-  inputRegistry: $('inputRegistry'),
-  registryHint: $('registryHint'),
 };
 
 let state = {
   version: '',
   settings: {},
-  catalog: { status: 'idle', plugins: [], error: '', fetchedAt: 0, updatedAt: '' },
   installed: [],
-  updates: [],
   busy: null,
   info: {},
 };
 let info = {};
 let activeTab = 'catalog';
-let activeCategory = '';
-let query = '';
-let catalogSort = 'name';
-let catalogSource = '';
-let dismissedNotice = '';
 let toastTimer = null;
 let rendered = false;
 
@@ -111,10 +75,6 @@ function formatDate(value) {
   }
 }
 
-function permissionLabel(id) {
-  return PERMISSION_LABELS[id] || id;
-}
-
 function scanLabel(verdict) {
   if (verdict === 'safe') return 'замечаний нет';
   if (verdict === 'blocked') return 'запрещено';
@@ -146,13 +106,6 @@ async function run(action, payload = {}) {
     showToast(err.message, true);
     return { ok: false, error: err.message };
   }
-}
-
-function busyLabel(scope) {
-  if (scope === 'catalog') return 'Обновляю каталог…';
-  if (scope === 'update') return 'Обновляю…';
-  if (scope === 'install') return 'Устанавливаю…';
-  return 'Подождите…';
 }
 
 // --- Общие элементы карточек ------------------------------------------------
@@ -453,266 +406,6 @@ function addAboutDetail(container, record) {
   container.append(block);
 }
 
-// --- Каталог ----------------------------------------------------------------
-
-function permissionIdsText(ids) {
-  return (Array.isArray(ids) ? ids : []).map(permissionLabel).join(', ');
-}
-
-function sortedCatalog(items) {
-  const byName = (left, right) => (left.name || '').localeCompare(right.name || '', 'ru');
-  const list = [...items];
-  if (catalogSort === 'date') {
-    return list.sort(
-      (left, right) =>
-        String(right.publishedAt || '').localeCompare(String(left.publishedAt || '')) ||
-        byName(left, right),
-    );
-  }
-  if (catalogSort === 'installs') {
-    return list.sort(
-      (left, right) =>
-        (Number(right.installs) || 0) - (Number(left.installs) || 0) || byName(left, right),
-    );
-  }
-  if (catalogSort === 'updates') {
-    return list.sort(
-      (left, right) => (left.update ? 0 : 1) - (right.update ? 0 : 1) || byName(left, right),
-    );
-  }
-  return list.sort(byName);
-}
-
-function catalogCard(item) {
-  const card = node('article', 'card');
-  if (item.blocked) card.classList.add('card--error');
-  const head = node('div', 'card-head');
-  head.append(cardIcon(item));
-
-  const titleBlock = node('div', 'card-title-block');
-  const titleRow = node('div', 'card-title-row');
-  titleRow.append(node('h3', 'card-title', item.name));
-  titleRow.append(pill(`v${item.version}`));
-  if (item.verified) titleRow.append(pill('проверено', 'ok'));
-  if (item.registryLabel && item.registryLabel !== 'официальный') {
-    titleRow.append(pill(item.registryLabel, 'info'));
-  } else titleRow.append(signaturePill(item.signature));
-  titleBlock.append(titleRow);
-  titleBlock.append(
-    node('p', 'card-author', `${item.author?.name || 'неизвестный автор'} · ${item.license}`),
-  );
-  head.append(titleBlock);
-  card.append(head);
-
-  card.append(node('p', 'card-description', item.description || 'Без описания.'));
-
-  if (item.screenshots?.length) {
-    const shots = node('div', 'catalog-shots');
-    for (const src of item.screenshots.slice(0, 3)) {
-      const image = document.createElement('img');
-      image.src = src;
-      image.alt = '';
-      image.loading = 'lazy';
-      image.referrerPolicy = 'no-referrer';
-      shots.append(image);
-    }
-    card.append(shots);
-  }
-
-  const chips = node('div', 'chips');
-  permissionChips(item.permissions, chips);
-  card.append(chips);
-
-  card.append(
-    cardMeta([
-      item.categories?.length ? item.categories.join(' · ') : 'без категории',
-      item.size ? formatBytes(item.size) : '',
-      item.publishedAt ? formatDate(item.publishedAt) : '',
-      item.installs ? `установок: ${item.installs}` : '',
-    ]),
-  );
-
-  const changes = item.installedPermissionChanges || item.permissionChanges;
-  if (changes && (changes.added.length || changes.removed.length)) {
-    const block = node('div', 'permission-diff');
-    block.append(
-      node(
-        'span',
-        'permission-diff-title',
-        item.installedPermissionChanges
-          ? 'Изменения разрешений при обновлении'
-          : 'Изменения разрешений к прошлой версии',
-      ),
-    );
-    for (const label of changes.added) block.append(pill(`+ ${label}`, 'warn'));
-    for (const label of changes.removed) block.append(pill(`− ${label}`, 'ok'));
-    card.append(block);
-  }
-
-  if (!item.compatible) {
-    card.append(
-      node(
-        'div',
-        'card-banner card-banner--warn',
-        `Нужен TikTok octo ${item.minAppVersion} или новее.`,
-      ),
-    );
-  }
-  if (item.blocked) {
-    card.append(
-      node('div', 'card-banner', 'Подпись не совпадает с содержимым пакета — установка запрещена.'),
-    );
-  }
-  if (item.update) {
-    const text = item.update.requiresApproval
-      ? `Обновление до ${item.update.version} меняет разрешения и потребует подтверждения.`
-      : `Доступно обновление до ${item.update.version}.`;
-    card.append(
-      node(
-        'div',
-        `card-banner ${item.update.requiresApproval ? 'card-banner--warn' : 'card-banner--info'}`,
-        text,
-      ),
-    );
-  }
-
-  const actions = node('div', 'card-actions');
-  const busy = state.busy && (state.busy.id === item.id || state.busy.scope === 'catalog');
-  if (busy) {
-    actions.append(node('span', 'ghost loading', busyLabel(state.busy.scope)));
-  } else if (item.blocked) {
-    actions.append(makeButton('Подпись неверна', 'ghost', '', {}, { disabled: true }));
-  } else if (!item.compatible) {
-    actions.append(makeButton(`Нужен ${item.minAppVersion}`, 'ghost', '', {}, { disabled: true }));
-  } else if (item.update) {
-    actions.append(
-      makeButton(
-        `Обновить до ${item.update.version}`,
-        'primary',
-        'update',
-        { id: item.id },
-        { disabled: Boolean(state.busy) },
-      ),
-    );
-  } else if (item.installedVersion) {
-    actions.append(
-      makeButton(`Установлено ${item.installedVersion}`, 'ghost', '', {}, { disabled: true }),
-    );
-  } else {
-    actions.append(
-      makeButton(
-        'Установить',
-        'primary',
-        'install',
-        { id: item.id },
-        { disabled: Boolean(state.busy) },
-      ),
-    );
-  }
-
-  if (item.homepage) {
-    actions.append(makeButton('Сайт', 'ghost', 'home', { url: item.homepage }));
-  }
-  if (item.sourceCode) {
-    actions.append(makeButton('Исходники', 'ghost', 'home', { url: item.sourceCode }));
-  }
-  actions.append(node('span', 'spacer'));
-  const releases = item.releases || 1;
-  actions.append(pill(`Выпусков: ${releases}`));
-  card.append(actions);
-
-  return card;
-}
-
-function renderCatalog() {
-  const catalog = state.catalog || {};
-  renderCategories(catalog);
-  const sources = Array.isArray(catalog.sources) ? catalog.sources : [];
-  const labels = sources.map((source) => source.label).filter(Boolean);
-  const sourceSignature = labels.join('|');
-  if (sourceSignature !== el.catalogSource.dataset.signature) {
-    el.catalogSource.dataset.signature = sourceSignature;
-    el.catalogSource.replaceChildren();
-    const all = document.createElement('option');
-    all.value = '';
-    all.textContent = 'Все источники';
-    el.catalogSource.append(all);
-    for (const label of labels) {
-      const option = document.createElement('option');
-      option.value = label;
-      option.textContent = label;
-      el.catalogSource.append(option);
-    }
-  }
-  if (catalogSource && !labels.includes(catalogSource)) catalogSource = '';
-  el.catalogSource.value = catalogSource;
-
-  const items = sortedCatalog(
-    (catalog.plugins || []).filter(
-      (item) =>
-        matches(item) &&
-        (!catalogSource || (item.registryLabel || 'официальный') === catalogSource),
-    ),
-  );
-  el.catalogList.replaceChildren(...items.map(catalogCard));
-  el.catalogEmpty.hidden = items.length > 0 || catalog.status === 'loading';
-  const unpublished = catalog.status === 'empty' && !query;
-  const unavailable = catalog.status === 'error' && !query;
-  el.catalogEmpty.querySelector('h3').textContent = query
-    ? 'Ничего не найдено'
-    : unpublished
-      ? 'Каталог пока не опубликован'
-      : unavailable
-        ? 'Каталог недоступен'
-        : 'Каталог пуст';
-  el.catalogEmpty.querySelector('p').textContent = query
-    ? 'Попробуйте другой запрос или очистите поиск.'
-    : unpublished
-      ? 'Локальная установка работает без каталога: выберите файл .octoplugin или укажите свой registry.json в настройках.'
-      : 'Проверьте соединение или укажите другой адрес каталога в настройках.';
-
-  el.badgeCatalog.hidden = !catalog.plugins?.length;
-  el.badgeCatalog.textContent = String(catalog.plugins?.length || 0);
-
-  if (state.busy?.scope === 'catalog') {
-    el.catalogMeta.textContent = 'Обновляю каталог…';
-  } else if (catalog.status === 'empty' && !catalog.plugins?.length) {
-    el.catalogMeta.textContent = 'Каталог пока не опубликован · локальная установка доступна';
-  } else if (catalog.status === 'error' && !catalog.plugins?.length) {
-    el.catalogMeta.textContent = catalog.error || 'Каталог недоступен';
-  } else if (catalog.plugins?.length) {
-    const warnings = Array.isArray(catalog.warnings) ? catalog.warnings.length : 0;
-    el.catalogMeta.textContent = `Плагинов в каталоге: ${catalog.plugins.length}${
-      warnings ? ` · предупреждений: ${warnings}` : ''
-    }`;
-  } else {
-    el.catalogMeta.textContent = 'Каталог ещё не загружен';
-  }
-}
-
-function renderCategories(catalog) {
-  const categories = [
-    ...new Set((catalog.plugins || []).flatMap((item) => item.categories || [])),
-  ].sort();
-  if (activeCategory && !categories.includes(activeCategory)) activeCategory = '';
-  el.catalogCategories.replaceChildren();
-  el.catalogCategories.hidden = !categories.length;
-  if (!categories.length) return;
-
-  const add = (value, label) => {
-    const button = node(
-      'button',
-      `category-chip${activeCategory === value ? ' is-active' : ''}`,
-      label,
-    );
-    button.type = 'button';
-    button.dataset.category = value;
-    el.catalogCategories.append(button);
-  };
-  add('', 'Все');
-  for (const category of categories) add(category, category);
-}
-
 // --- Установленные ----------------------------------------------------------
 
 function installedCard(record) {
@@ -728,9 +421,7 @@ function installedCard(record) {
   titleRow.append(pill(`v${record.version}`));
   titleRow.append(sourcePill(record));
   titleRow.append(signaturePill(record.signature));
-  if (record.update) titleRow.append(pill(`есть ${record.update.version}`, 'update'));
   if (record.cosmetic) titleRow.append(pill('косметика', 'ok'));
-  if (record.pendingUpdate) titleRow.append(pill('ждёт подтверждения', 'warn'));
   titleBlock.append(titleRow);
   titleBlock.append(
     node(
@@ -742,17 +433,6 @@ function installedCard(record) {
   head.append(titleBlock);
 
   const actions = node('div', 'card-actions');
-  if (record.update) {
-    actions.append(
-      makeButton(
-        `Обновить до ${record.update.version}`,
-        'primary',
-        'update',
-        { id: record.id },
-        { disabled: Boolean(state.busy) },
-      ),
-    );
-  }
   if (record.cosmetic && !record.enabled) {
     actions.append(
       makeButton(
@@ -800,18 +480,6 @@ function installedCard(record) {
   if (record.tampered) enableSwitch.setAttribute('aria-disabled', 'true');
   enable.append(enableSwitch, node('span', '', record.enabled ? 'Включён' : 'Выключен'));
   switches.append(enable);
-
-  if (!record.dev) {
-    const auto = node('label', 'inline-switch');
-    const autoSwitch = node('span', 'switch');
-    autoSwitch.setAttribute('role', 'switch');
-    autoSwitch.setAttribute('tabindex', '0');
-    autoSwitch.setAttribute('aria-checked', String(record.autoUpdate === true));
-    autoSwitch.dataset.act = 'auto';
-    autoSwitch.dataset.id = record.id;
-    auto.append(autoSwitch, node('span', '', 'Автообновление'));
-    switches.append(auto);
-  }
 
   if (record.active) switches.append(node('span', 'chip chip--low', 'работает'));
   else if (record.enabled) switches.append(node('span', 'chip chip--medium', 'остановлен'));
@@ -873,15 +541,12 @@ function installedCard(record) {
 }
 
 function renderInstalled() {
-  const records = (state.installed || []).filter((record) => matches(record));
+  const records = state.installed || [];
   el.installedList.replaceChildren(...records.map(installedCard));
   el.installedEmpty.hidden = records.length > 0;
-  el.installedEmpty.querySelector('h3').textContent = query
-    ? 'Ничего не найдено'
-    : 'Плагинов пока нет';
-  el.installedEmpty.querySelector('p').textContent = query
-    ? 'Попробуйте другой запрос.'
-    : 'Выберите что-нибудь в каталоге или установите файл .octoplugin.';
+  el.installedEmpty.querySelector('h3').textContent = 'Плагинов пока нет';
+  el.installedEmpty.querySelector('p').textContent =
+    'Скачайте плагин из Telegram-канала t.me/octo_plugins и установите файл .octoplugin.';
 
   const total = state.installed?.length || 0;
   const enabled = state.installed?.filter((record) => record.enabled).length || 0;
@@ -892,100 +557,6 @@ function renderInstalled() {
   el.badgeInstalled.textContent = String(total);
 }
 
-// --- Обновления -------------------------------------------------------------
-
-function updateCard(record) {
-  const update = record.update;
-  const card = node('article', 'card card--wide');
-  const head = node('div', 'card-head');
-  head.append(cardIcon(record));
-
-  const titleBlock = node('div', 'card-title-block');
-  const titleRow = node('div', 'card-title-row');
-  titleRow.append(node('h3', 'card-title', record.name));
-  titleRow.append(signaturePill(update.signature));
-  titleBlock.append(titleRow);
-  titleBlock.append(node('p', 'card-author', record.author?.name || 'неизвестный автор'));
-  head.append(titleBlock);
-  card.append(head);
-
-  const arrow = node('div', 'update-arrow');
-  arrow.append(node('span', '', `v${record.version}`));
-  arrow.append(node('span', '', '→'));
-  arrow.append(node('strong', '', `v${update.version}`));
-  card.append(arrow);
-
-  if (update.changelog) {
-    const changelog = node('p', 'card-description changelog', update.changelog);
-    card.append(changelog);
-  }
-
-  if (update.requiresApproval) {
-    const parts = [];
-    if (update.addedPermissions?.length) {
-      parts.push(`новые разрешения: ${permissionIdsText(update.addedPermissions)}`);
-    }
-    if (update.changedHosts) parts.push('изменены сетевые хосты');
-    if (update.signatureDowngrade) parts.push('подпись больше не проверена');
-    card.append(
-      node(
-        'div',
-        'card-banner card-banner--warn',
-        `Обновление потребует подтверждения: ${parts.join('; ')}.`,
-      ),
-    );
-  }
-  if (record.pendingUpdate === update.version) {
-    card.append(
-      node(
-        'div',
-        'card-banner card-banner--warn',
-        'Автоматическое обновление приостановлено: проверьте предупреждения и подтвердите вручную.',
-      ),
-    );
-  }
-  if (update.incompatible) {
-    card.append(
-      node(
-        'div',
-        'card-banner card-banner--warn',
-        `Нужен TikTok octo ${update.minAppVersion || ''} или новее.`,
-      ),
-    );
-  }
-  if (update.blocked) {
-    card.append(
-      node('div', 'card-banner', 'Подпись обновления недействительна — установка запрещена.'),
-    );
-  }
-
-  const actions = node('div', 'card-actions');
-  actions.append(
-    makeButton(
-      'Обновить',
-      'primary',
-      'update',
-      { id: record.id },
-      { disabled: Boolean(state.busy) || update.blocked || update.incompatible },
-    ),
-  );
-  actions.append(node('span', 'spacer'));
-  actions.append(pill(record.autoUpdate ? 'авто' : 'вручную'));
-  card.append(actions);
-  return card;
-}
-
-function renderUpdates() {
-  const updates = state.updates || [];
-  el.updatesList.replaceChildren(...updates.map(updateCard));
-  el.updatesEmpty.hidden = updates.length > 0;
-  el.updatesMeta.textContent = updates.length ? `Обновлений: ${updates.length}` : 'Всё актуально';
-  el.badgeUpdates.hidden = updates.length === 0;
-  el.badgeUpdates.textContent = String(updates.length);
-  el.btnUpdateAll.hidden = updates.length === 0;
-  el.btnUpdateAll.disabled = Boolean(state.busy);
-}
-
 // --- Настройки --------------------------------------------------------------
 
 function setSwitch(element, value) {
@@ -994,66 +565,11 @@ function setSwitch(element, value) {
 
 function renderSettings() {
   const settings = state.settings || {};
-  setSwitch(el.switchAutoUpdate, settings.autoUpdate === true);
   setSwitch(el.switchAllowUnsigned, settings.allowUnsigned !== false);
   setSwitch(el.switchRequireSignatures, settings.requireSignatures === true);
-  el.selectInterval.value = String(settings.updateIntervalHours ?? 6);
-
-  if (document.activeElement !== el.inputRegistry) {
-    el.inputRegistry.value = settings.registryUrl || '';
-  }
-  if (document.activeElement !== el.inputRegistries) {
-    el.inputRegistries.value = (settings.registryUrls || []).join('\n');
-  }
-
-  const catalog = state.catalog || {};
-  const note = catalog.fetchedAt
-    ? `Последняя удачная загрузка: ${formatDate(catalog.fetchedAt)}.`
-    : 'Каталог ещё не загружался.';
-  el.registryHint.textContent =
-    settings.registryUrl === info.defaultRegistryUrl
-      ? `${note} Это стандартный каталог проекта.`
-      : `${note} Используется пользовательский адрес.`;
 }
 
 // --- Общая отрисовка --------------------------------------------------------
-
-function matches(item) {
-  if (
-    activeCategory &&
-    Array.isArray(item.categories) &&
-    !item.categories.includes(activeCategory)
-  ) {
-    return false;
-  }
-  if (!query) return true;
-  const haystack = [
-    item.name,
-    item.id,
-    item.description,
-    item.author?.name,
-    ...(item.categories || []),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-  return haystack.includes(query);
-}
-
-function renderNotice() {
-  const catalog = state.catalog || {};
-  let text = '';
-  if (catalog.status === 'error') text = `Каталог недоступен: ${catalog.error || 'нет соединения'}`;
-  else if (catalog.status === 'stale' && catalog.error) {
-    text = `Не удалось обновить каталог, показан кеш: ${catalog.error}`;
-  }
-  if (!text || text === dismissedNotice) {
-    el.notice.hidden = true;
-    return;
-  }
-  el.noticeText.textContent = text;
-  el.notice.hidden = false;
-}
 
 function renderTabs() {
   for (const item of document.querySelectorAll('[data-tab]')) {
@@ -1070,20 +586,8 @@ function render() {
   el.version.textContent = `v${state.version || '—'} · менеджер плагинов`;
   el.pluginDir.textContent = state.info?.pluginDir || info.pluginDir || '';
   renderTabs();
-  renderNotice();
-  renderCatalog();
   renderInstalled();
-  renderUpdates();
   renderSettings();
-
-  const empty = state.installed?.length === 0 && state.catalog?.plugins?.length === 0;
-  if (activeTab === 'catalog' && empty && !state.busy) {
-    // Первый запуск: подсказка вместо пустого экрана.
-    el.catalogEmpty.hidden = Boolean(query);
-  }
-
-  if (state.busy) el.btnRefresh.disabled = true;
-  else el.btnRefresh.disabled = false;
 }
 
 // --- События ----------------------------------------------------------------
@@ -1094,9 +598,7 @@ el.content.addEventListener('click', async (event) => {
   const id = action.dataset.id || '';
   const kind = action.dataset.act;
 
-  if (kind === 'install') run('install', { id });
-  else if (kind === 'update') run('update', { id });
-  else if (kind === 'remove') run('remove', { id });
+  if (kind === 'remove') run('remove', { id });
   else if (kind === 'reload') run('reload', { id });
   else if (kind === 'preview') run('preview', { id });
   else if (kind === 'rollback') {
@@ -1107,8 +609,6 @@ el.content.addEventListener('click', async (event) => {
   } else if (kind === 'home') run('openHomepage', { url: action.dataset.url || '' });
   else if (kind === 'enable') {
     run('toggle', { id, enabled: action.getAttribute('aria-checked') !== 'true' });
-  } else if (kind === 'auto') {
-    run('autoUpdate', { id, value: action.getAttribute('aria-checked') !== 'true' });
   }
 });
 
@@ -1152,33 +652,9 @@ for (const item of document.querySelectorAll('[data-tab]')) {
   });
 }
 
-el.catalogCategories.addEventListener('click', (event) => {
-  const button = event.target.closest('[data-category]');
-  if (!button) return;
-  activeCategory = button.dataset.category || '';
-  render();
-});
-
-el.catalogSort.addEventListener('change', () => {
-  catalogSort = el.catalogSort.value;
-  renderCatalog();
-});
-
-el.catalogSource.addEventListener('change', () => {
-  catalogSource = el.catalogSource.value;
-  renderCatalog();
-});
-
-el.search.addEventListener('input', () => {
-  query = el.search.value.trim().toLowerCase();
-  render();
-});
-
-el.btnRefresh.addEventListener('click', () => run('refreshCatalog'));
-$('btnCatalogRefresh').addEventListener('click', () => run('refreshCatalog'));
+$('btnTelegram').addEventListener('click', () => run('openTelegram'));
 $('btnInstallFile').addEventListener('click', () => run('installFile'));
-$('btnUpdateAll').addEventListener('click', () => run('updateAll'));
-$('btnCheckUpdates').addEventListener('click', () => run('checkUpdates'));
+$('btnInstallFileInline').addEventListener('click', () => run('installFile'));
 $('btnDocs').addEventListener('click', () => run('openDocs'));
 $('btnRules').addEventListener('click', () => run('openRules'));
 $('btnFolder').addEventListener('click', () => run('openFolder'));
@@ -1186,15 +662,7 @@ $('btnSettingsDocs').addEventListener('click', () => run('openDocs'));
 $('btnSettingsRules').addEventListener('click', () => run('openRules'));
 $('btnOpenFolder').addEventListener('click', () => run('openFolder'));
 $('btnReloadDev').addEventListener('click', () => run('reloadDev'));
-el.btnNoticeClose.addEventListener('click', () => {
-  dismissedNotice = el.noticeText.textContent;
-  el.notice.hidden = true;
-});
 
-el.switchAutoUpdate.addEventListener('click', () => {
-  const value = el.switchAutoUpdate.getAttribute('aria-checked') !== 'true';
-  run('setSettings', { patch: { autoUpdate: value } });
-});
 el.switchAllowUnsigned.addEventListener('click', () => {
   const value = el.switchAllowUnsigned.getAttribute('aria-checked') !== 'true';
   run('setSettings', { patch: { allowUnsigned: value } });
@@ -1202,46 +670,6 @@ el.switchAllowUnsigned.addEventListener('click', () => {
 el.switchRequireSignatures.addEventListener('click', () => {
   const value = el.switchRequireSignatures.getAttribute('aria-checked') !== 'true';
   run('setSettings', { patch: { requireSignatures: value } });
-});
-el.selectInterval.addEventListener('change', () => {
-  run('setSettings', { patch: { updateIntervalHours: Number(el.selectInterval.value) } });
-});
-
-$('btnRegistrySave').addEventListener('click', async () => {
-  const value = el.inputRegistry.value.trim();
-  if (!value) {
-    showToast('Укажите адрес registry.json', true);
-    return;
-  }
-  const result = await run('setSettings', { patch: { registryUrl: value } });
-  if (result.ok) {
-    showToast('Адрес каталога сохранён');
-    run('refreshCatalog');
-  }
-});
-
-$('btnRegistriesSave').addEventListener('click', async () => {
-  const urls = el.inputRegistries.value
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const result = await run('setSettings', { patch: { registryUrls: urls } });
-  if (!result.ok) {
-    showToast(result.error || 'Не удалось сохранить каталоги', true);
-    return;
-  }
-  showToast('Дополнительные каталоги сохранены');
-  run('refreshCatalog');
-});
-
-$('btnRegistryReset').addEventListener('click', async () => {
-  const value = info.defaultRegistryUrl;
-  if (!value) return;
-  const result = await run('setSettings', { patch: { registryUrl: value } });
-  if (result.ok) {
-    showToast('Стандартный каталог восстановлен');
-    run('refreshCatalog');
-  }
 });
 
 for (const button of document.querySelectorAll('[data-window]')) {
@@ -1251,16 +679,6 @@ for (const button of document.querySelectorAll('[data-window]')) {
 }
 
 document.addEventListener('keydown', (event) => {
-  const mod = event.ctrlKey || event.metaKey;
-  if (mod && event.key.toLowerCase() === 'f') {
-    event.preventDefault();
-    el.search.focus();
-    el.search.select();
-  }
-  if (mod && event.key.toLowerCase() === 'r') {
-    event.preventDefault();
-    run('refreshCatalog');
-  }
   if (event.key === 'Enter' || event.key === ' ') {
     const toggle = event.target.closest?.('.switch[role="switch"]');
     if (toggle) {

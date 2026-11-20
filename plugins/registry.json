@@ -1,7 +1,33 @@
 {
   "schema": 1,
-  "updatedAt": "2026-11-17T16:12:24.690Z",
+  "updatedAt": "2026-11-19T09:53:05.075Z",
   "plugins": [
+    {
+      "id": "app.octo.gradient-frame",
+      "name": "Градиентная обводка",
+      "author": {
+        "name": "octo",
+        "url": "https://github.com/octomood"
+      },
+      "description": "Переливающаяся градиентная рамка вокруг ролика или края окна. Настройте палитру, свои цвета, толщину, скругление, скорость, свечение и прозрачность — всё в карточке плагина.",
+      "homepage": "https://github.com/octomood/tiktok-octo/tree/main/plugins/gradient-frame",
+      "source": "https://github.com/octomood/tiktok-octo/tree/main/plugins/gradient-frame",
+      "license": "MIT",
+      "categories": ["cosmetics", "appearance", "video"],
+      "releases": [
+        {
+          "version": "1.0.0",
+          "minAppVersion": "1.0.0",
+          "download": "https://raw.githubusercontent.com/octomood/tiktok-octo/main/plugins/packages/app.octo.gradient-frame-1.0.0.octoplugin",
+          "sha256": "7394c009a45f80d3335fa430a1180b5a580a55d02d70213c0b1697792c41cedf",
+          "size": 8508,
+          "publishedAt": "2026-11-19T09:53:05.075Z",
+          "changelog": "Первый выпуск: градиентная рамка вокруг ролика и края окна, шесть палитр, свои цвета, толщина, скругление, отступ, скорость, свечение, прозрачность и учёт уменьшения движения.",
+          "permissions": ["page:css"],
+          "networkHosts": []
+        }
+      ]
+    },
     {
       "id": "app.octo.shelf",
       "name": "Полка",

@@ -30,6 +30,28 @@ let settings = { ...DEFAULTS };
 const items = new Map();
 /** Загрузки, приостановленные лимитом (не пользователем). */
 const queued = [];
+/** Целевые пути текущей сессии: файла может ещё не быть, а имя уже занято. */
+const usedPaths = new Set();
+
+/**
+ * Свободный путь: `clip.mp4` → `clip (1).mp4`. Без этого два ролика с
+ * одинаковым шаблонным именем (например, `{author}-{date}`) молча затирали
+ * друг друга: setSavePath открывает файл поверх существующего.
+ */
+function uniquePath(target) {
+  const ext = path.extname(target);
+  const base = ext ? target.slice(0, -ext.length) : target;
+  let candidate = target;
+  for (
+    let index = 1;
+    index < 1000 && (usedPaths.has(candidate) || fs.existsSync(candidate));
+    index += 1
+  ) {
+    candidate = `${base} (${index})${ext}`;
+  }
+  usedPaths.add(candidate);
+  return candidate;
+}
 
 function cleanTitle(raw) {
   return String(raw || '')
@@ -148,8 +170,10 @@ function releaseQueue() {
 }
 
 /** Путь по шаблону: без диалога, с папкой автора и расширением оригинала. */
-function autoPath(item, entry, original) {
-  const wc = ctx.view?.webContents;
+function autoPath(item, entry, original, source) {
+  // Загрузку мог открыть и чат сбоку: берём название/адрес того webContents,
+  // который её начал, иначе имя получит заголовок ленты и пустого автора.
+  const wc = source && !source.isDestroyed() ? source : ctx.view?.webContents;
   const url = wc && !wc.isDestroyed() ? wc.getURL() : '';
   const ext = path.extname(original).slice(1);
   const { directory, file } = buildPath({
@@ -166,15 +190,16 @@ function autoPath(item, entry, original) {
 
   try {
     fs.mkdirSync(directory, { recursive: true });
-    item.setSavePath(path.join(directory, file));
-    entry.name = file;
+    const target = uniquePath(path.join(directory, file));
+    item.setSavePath(target);
+    entry.name = path.basename(target);
     return true;
   } catch {
     return false;
   }
 }
 
-function handle(item) {
+function handle(item, source) {
   const id = `dl-${(sequence += 1)}`;
   const original = item.getFilename();
   items.set(id, item);
@@ -194,7 +219,7 @@ function handle(item) {
   const overLimit = activeCount > settings.limit;
 
   if (settings.auto) {
-    autoPath(item, entry, original);
+    autoPath(item, entry, original, source);
   }
   if (!settings.auto) {
     item.setSaveDialogOptions({

@@ -20,6 +20,8 @@ const PUBLISHING_URL =
   process.env.OCTO_PLUGIN_RULES_URL ||
   'https://github.com/octomood/tiktok-octo/blob/main/docs/plugins/PUBLISHING.md';
 
+const TELEGRAM_URL = process.env.OCTO_PLUGIN_TELEGRAM_URL || 'https://t.me/octo_plugins';
+
 /** Плагин — это ZIP с JSON-манифестом и JavaScript, без нативных бинарников. */
 const LIMITS = {
   packageBytes: 8 * 1024 * 1024,
@@ -49,6 +51,7 @@ module.exports = {
   DEFAULT_REGISTRY_URL,
   DOCS_URL,
   PUBLISHING_URL,
+  TELEGRAM_URL,
   LIMITS,
   API_VERSION,
   PACKAGE_EXTENSIONS,

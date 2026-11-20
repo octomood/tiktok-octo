@@ -20,7 +20,7 @@ const {
   highestRisk,
   riskLabel,
 } = require('./permissions');
-const { DOCS_URL, PUBLISHING_URL, LIMITS } = require('./constants');
+const { DOCS_URL, PUBLISHING_URL, TELEGRAM_URL, LIMITS } = require('./constants');
 
 /**
  * Система плагинов целиком.
@@ -33,8 +33,6 @@ const { DOCS_URL, PUBLISHING_URL, LIMITS } = require('./constants');
 let initialized = false;
 let safeMode = false;
 let onChange = null;
-let autoStartTimer = null;
-let autoInterval = null;
 let catalog = {
   status: 'idle',
   updatedAt: '',
@@ -496,6 +494,15 @@ async function loadRecord(record, { silent = false } = {}) {
 }
 
 function applyInspection(inspection) {
+  // host.load() всё равно откажет, но установка не должна оставлять в списке
+  // заведомо неработающий плагин с зелёной галочкой.
+  if (!isCompatible(inspection.manifest, app.getVersion())) {
+    return {
+      ok: false,
+      error: `Нужен TikTok octo ${inspection.manifest.minAppVersion} или новее`,
+    };
+  }
+
   const current = getRecord(inspection.manifest.id);
   const decision = installDecision({
     report: inspection.report,
@@ -874,28 +881,6 @@ async function refreshCatalog({ silent = false, force = true } = {}) {
   }
 }
 
-function scheduleAutoCheck() {
-  clearTimeout(autoStartTimer);
-  clearInterval(autoInterval);
-  autoStartTimer = null;
-  autoInterval = null;
-
-  const current = settings();
-  if (process.env.OCTO_E2E) return;
-  if (!current.autoUpdate || current.updateIntervalHours === 0) return;
-
-  const hours = Math.max(1, Number(current.updateIntervalHours) || 6);
-  autoStartTimer = setTimeout(() => {
-    checkForUpdates({ auto: true, silent: true }).catch(() => {});
-  }, 8000);
-  autoInterval = setInterval(
-    () => {
-      checkForUpdates({ auto: true, silent: true }).catch(() => {});
-    },
-    hours * 60 * 60 * 1000,
-  );
-}
-
 async function loadInstalled() {
   for (const record of state.list()) {
     if (record.dev || record.source === 'dev') {
@@ -1221,11 +1206,7 @@ function saveSettings(patch) {
   ) {
     registry.reset();
     catalog = { status: 'idle', updatedAt: '', fetchedAt: 0, error: '', plugins: [] };
-    if (current.autoUpdate) {
-      setTimeout(() => refreshCatalog({ silent: true }).catch(() => {}), 1000);
-    }
   }
-  scheduleAutoCheck();
   publishSummary();
   return { ok: true };
 }
@@ -1320,6 +1301,9 @@ async function dispatchAction(action, payload) {
     case 'openRules':
       openRules();
       return {};
+    case 'openTelegram':
+      openExternal(TELEGRAM_URL);
+      return {};
     case 'openHomepage': {
       const url = String(payload.url || '');
       if (/^https:\/\//i.test(url)) openExternal(url);
@@ -1340,16 +1324,6 @@ function init(options = {}) {
   onChange = typeof options.onChange === 'function' ? options.onChange : null;
 
   state.ensureDirs();
-  const cached = registry.getCache();
-  if (cached) {
-    catalog = {
-      status: cached.status || 'stale',
-      updatedAt: cached.updatedAt || '',
-      fetchedAt: cached.fetchedAt || 0,
-      error: cached.error || '',
-      plugins: cached.plugins || [],
-    };
-  }
 
   host.init({
     onChange: () => safePublish(),
@@ -1383,7 +1357,6 @@ function init(options = {}) {
 
   if (safeMode) {
     publishSummary();
-    scheduleAutoCheck();
     return;
   }
 
@@ -1392,13 +1365,10 @@ function init(options = {}) {
     .finally(() => {
       loadDevPlugins();
       publishSummary();
-      scheduleAutoCheck();
     });
 }
 
 function dispose() {
-  clearTimeout(autoStartTimer);
-  clearInterval(autoInterval);
   clearTimeout(devWatchTimer);
   if (devWatcher) {
     try {

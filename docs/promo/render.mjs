@@ -2,7 +2,8 @@
 // Кадры детерминированы: window.renderAt(t) — чистая функция, порядок неважен.
 //
 //   node docs/promo/render.mjs [--fps 30] [--dsf 2] [--out docs/promo/build]
-//   node docs/promo/render.mjs --still 13.4   # один кадр (постер)
+//   node docs/promo/render.mjs --start 6 --end 9   # только диапазон, в секундах
+//   node docs/promo/render.mjs --still 13.4        # один кадр (постер)
 
 import { chromium } from '@playwright/test';
 import fs from 'node:fs';
@@ -21,6 +22,8 @@ const dsf = Number(arg('dsf', 2));
 const width = Number(arg('width', 1080));
 const height = Number(arg('height', 1920));
 const still = arg('still', null);
+const start = Number(arg('start', 0));
+const end = Number(arg('end', 0));
 const scene = arg('scene', 'scene.html');
 const outDir = path.resolve(here, arg('out', 'build'));
 const framesDir = path.join(outDir, 'frames');
@@ -88,10 +91,12 @@ if (still != null) {
 }
 
 const total = Math.round(DUR * fps);
-console.log(`rendering ${total} frames at ${fps} fps, dsf ${dsf} …`);
+const firstFrame = Math.max(0, Math.round(start * fps));
+const lastFrame = end > 0 ? Math.min(total - 1, Math.round(end * fps) - 1) : total - 1;
+console.log(`rendering frames ${firstFrame}…${lastFrame} of ${total} at ${fps} fps, dsf ${dsf} …`);
 
 const started = Date.now();
-for (let i = 0; i < total; i++) {
+for (let i = firstFrame; i <= lastFrame; i++) {
   const t = i / fps;
   await page.evaluate((x) => window.renderAt(x), t);
   await page.screenshot({
@@ -100,9 +105,9 @@ for (let i = 0; i < total; i++) {
     caret: 'hide',
     scale: 'css',
   });
-  if (i % 45 === 0 || i === total - 1) {
+  if (i % 45 === 0 || i === lastFrame) {
     const el = (Date.now() - started) / 1000;
-    console.log(`  ${i + 1}/${total}  ${el.toFixed(1)}s  (${(el / (i + 1)).toFixed(2)}s/frame)`);
+    console.log(`  ${i + 1}/${lastFrame + 1}  ${el.toFixed(1)}s  (${(el / (i - firstFrame + 1)).toFixed(2)}s/frame)`);
   }
 }
 

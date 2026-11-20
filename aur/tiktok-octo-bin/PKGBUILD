@@ -2,7 +2,7 @@
 
 pkgname=tiktok-octo-bin
 _name=tiktok-octo
-pkgver=1.0.0
+pkgver=1.1.0
 pkgrel=1
 pkgdesc='Неофициальный десктоп-клиент TikTok: официальный сайт в нативной оболочке Electron'
 arch=('x86_64')

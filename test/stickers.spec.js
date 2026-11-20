@@ -842,3 +842,54 @@ test('стикеры: ошибка региона после отправки', 
     fs.rmSync(userData, { recursive: true, force: true });
   }
 });
+
+/** Повторная отправка после таймаута не должна стартовать параллельно. */
+test('стикеры: после watchdog вторая отправка ждёт первую', async () => {
+  const { userData } = seedProfile();
+  const { server, url } = await startServer(COMMENT_HTML, { '/messages': CHAT_HTML });
+  const chatUrl = new URL('messages', url).href;
+  let app;
+
+  try {
+    const launched = await launchRaw(userData, url, {
+      OCTO_CHAT_URL: chatUrl,
+      // 25 секунд в тесте не ждём: watchdog должен сработать во время отправки.
+      OCTO_STICKER_SEND_TIMEOUT_MS: '50',
+    });
+    app = launched.instance;
+    const { page } = launched;
+
+    await page.click('#btnChat');
+    await expect(page.locator('#btnChat')).toHaveAttribute('aria-pressed', 'true');
+    await expect
+      .poll(async () => (await contentViews(app)).some((view) => view.url.startsWith(chatUrl)))
+      .toBe(true);
+
+    await openStickers(page);
+    await page.evaluate(() => {
+      window.__toasts = [];
+      window.octo.onState((state) => {
+        if (state?.toast?.text) window.__toasts.push(state.toast.text);
+      });
+      window.octo.cmd('stickerSend', 'test');
+    });
+
+    // Watchdog уже счёл первую отправку зависшей, жмём ещё раз.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await page.evaluate(() => window.octo.cmd('stickerSend', 'test'));
+    await expect
+      .poll(() => page.evaluate(() => window.__toasts.join('\n')))
+      .toContain('Подождите: предыдущая картинка ещё отправляется');
+
+    // Первая доходит до кнопки один раз; вторая не подключается к той же странице.
+    await expect
+      .poll(() => evaluateInView(app, chatUrl, 'window.__events?.sent ?? 0'), { timeout: 10_000 })
+      .toBe(1);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    expect(await evaluateInView(app, chatUrl, 'window.__events?.sent ?? 0')).toBe(1);
+  } finally {
+    if (app) await app.close();
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});

@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, ipcMain, session } = require('electron');
+const { app, ipcMain, session, safeStorage } = require('electron');
 const { ctx, pushState, toast } = require('./app-context');
 const { readState, writeState } = require('./store');
 const { HOME_URL, PARTITION } = require('./shared');
@@ -9,6 +9,10 @@ const { SITE_LANGUAGES, findSiteLanguage, findAppLanguage } = require('./languag
 const { showMessageBox } = require('./dialogs');
 const { t } = require('./i18n');
 const cosmetics = require('./cosmetics');
+const { lookupExternalIp } = require('./ip-lookup');
+const proxyDiscovery = require('./proxy-discovery');
+const dpiBypass = require('./dpi-bypass');
+const { stripProxyCredentials } = require('./proxy-url');
 
 /**
  * Подмена региона.
@@ -26,31 +30,10 @@ const cosmetics = require('./cosmetics');
 
 const PROXY_SCHEMES = new Set(['http:', 'https:', 'socks4:', 'socks5:']);
 
-/**
- * Сервисы, которые возвращают внешний IP. Проверка идёт через сессию TikTok,
- * то есть через тот же прокси, что и сам сайт.
- */
-const IP_SERVICES = [
-  {
-    url: 'https://ipinfo.io/json',
-    parse: (json) => ({ ip: json.ip, country: json.country, city: json.city }),
-  },
-  {
-    url: 'https://api.myip.com',
-    parse: (json) => ({ ip: json.ip, country: json.cc || json.country, city: '' }),
-  },
-  {
-    url: 'https://ifconfig.co/json',
-    parse: (json) => ({
-      ip: json.ip,
-      country: json.country_iso || json.country,
-      city: json.city,
-    }),
-  },
-];
-
 let onChange = null;
 let checkToken = 0;
+/** Прокси текущей сессии: первую загрузку ждём до её применения. */
+let proxyReady = Promise.resolve();
 
 function activePreset() {
   return findPreset(ctx.region.preset);
@@ -60,10 +43,16 @@ function sync() {
   const state = readState();
   const saved = state.region;
   const preset = findPreset(saved?.preset);
+  const proxy = decryptProxy(saved?.proxy, saved?.proxySecret);
   ctx.region = {
     preset: preset.id,
-    proxy: typeof saved?.proxy === 'string' ? saved.proxy.trim() : '',
+    proxy,
   };
+  // Старое состояние хранило адрес с паролем открытым текстом. Если система
+  // умеет шифровать — переводим на «адрес + секрет» без участия пользователя.
+  if (!saved?.proxySecret && proxy && stripProxyCredentials(proxy) !== proxy && canEncryptProxy()) {
+    persistProxy(proxy);
+  }
   ctx.siteLanguage = findSiteLanguage(state.siteLanguage)?.id || 'auto';
   ctx.regionCheck = { state: 'idle', text: 'Проверить' };
 }
@@ -146,38 +135,46 @@ async function checkIp() {
   ctx.regionCheck = { state: 'loading', text: 'Проверяю…' };
   pushState();
 
-  for (const service of IP_SERVICES) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
+  const info = await lookupExternalIp(ses);
+  if (token !== checkToken) return;
 
-    try {
-      const response = await ses.fetch(service.url, {
-        signal: controller.signal,
-        cache: 'no-store',
-        headers: { Accept: 'application/json' },
-      });
-      if (!response.ok) continue;
-
-      const info = service.parse(await response.json());
-      if (!info.ip) continue;
-
-      const text = [info.ip, countryName(info.country), info.city].filter(Boolean).join(' · ');
-      if (token !== checkToken) return;
-      ctx.regionCheck = { state: 'done', text };
-      pushState();
-      toast(`Внешний IP: ${text}`);
-      return;
-    } catch {
-      /* сервис недоступен — пробуем следующий */
-    } finally {
-      clearTimeout(timer);
-    }
+  if (info) {
+    const text = [info.ip, countryName(info.country), info.city].filter(Boolean).join(' · ');
+    ctx.regionCheck = { state: 'done', text };
+    pushState();
+    toast(`Внешний IP: ${text}`);
+    return;
   }
 
-  if (token !== checkToken) return;
   ctx.regionCheck = { state: 'error', text: t('Не удалось проверить') };
   pushState();
   toast('Не удалось узнать внешний IP — проверьте прокси и сеть');
+}
+
+let scanToken = 0;
+
+/**
+ * Поиск запущенного локального прокси для мастера первого запуска.
+ * Результат кладём в состояние: интерфейс покажет список и сам подставит
+ * выбранный адрес в поле.
+ */
+async function discoverProxies() {
+  const token = ++scanToken;
+  ctx.proxyScan = { state: 'loading', items: [] };
+  pushState();
+
+  let items = [];
+  try {
+    // В тестах сеть не трогаем: проверяем только открытые порты.
+    items = await proxyDiscovery.discover({ verify: process.env.OCTO_E2E !== '1' });
+  } catch (err) {
+    if (process.env.OCTO_DEBUG) console.warn('[octo] proxy discovery failed:', err.message);
+  }
+
+  if (token !== scanToken) return [];
+  ctx.proxyScan = { state: 'done', items };
+  pushState();
+  return items;
 }
 
 /**
@@ -239,6 +236,77 @@ function persist(patch) {
   });
 }
 
+/** Есть ли настоящий системный keyring: basic_text на Linux — не защита. */
+function canEncryptProxy() {
+  try {
+    if (!safeStorage.isEncryptionAvailable()) return false;
+    if (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text') {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Секрет — base64 от зашифрованного полного адреса (с логином и паролем). */
+function encryptProxy(full) {
+  if (!canEncryptProxy()) return '';
+  try {
+    return safeStorage.encryptString(full).toString('base64');
+  } catch {
+    return '';
+  }
+}
+
+function decryptProxy(proxy, secret) {
+  const address = typeof proxy === 'string' ? proxy.trim() : '';
+  if (!secret) return address;
+  try {
+    return safeStorage.decryptString(Buffer.from(secret, 'base64')) || address;
+  } catch {
+    return address;
+  }
+}
+
+/**
+ * Сохранить прокси: адрес без учётных данных плюс зашифрованный секрет.
+ * Без keyring оставляем полный адрес как раньше — прокси должен работать
+ * после перезапуска, а файл и так закрыт 0600.
+ */
+function persistProxy(full) {
+  const text = String(full || '').trim();
+  const clean = stripProxyCredentials(text);
+  const saved = readState().region;
+  const next = { ...(saved && typeof saved === 'object' ? saved : {}), proxy: text };
+  delete next.proxySecret;
+
+  if (clean !== text) {
+    const secret = encryptProxy(text);
+    if (secret) {
+      next.proxy = clean;
+      next.proxySecret = secret;
+    }
+  }
+
+  writeState({ region: next });
+}
+
+/**
+ * Логин и пароль из адреса прокси. Проценты, введённые как есть (частый
+ * символ в паролях), не должны ронять разбор: `decodeURIComponent` бросает
+ * URIError на «%», за которым не идёт hex-пара. Такой адрес оставляем как
+ * написан, а корректные `%40`/`%25` раскодируем.
+ */
+function decodeCredential(value) {
+  const text = String(value || '');
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    return text;
+  }
+}
+
 /**
  * Разбирает адрес прокси. Без схемы считаем, что это SOCKS5:
  * локальные VPN-клиенты чаще всего отдают именно его.
@@ -263,8 +331,8 @@ function parseProxy(raw) {
 
   const auth = url.username
     ? {
-        username: decodeURIComponent(url.username),
-        password: decodeURIComponent(url.password),
+        username: decodeCredential(url.username),
+        password: decodeCredential(url.password),
       }
     : null;
 
@@ -272,6 +340,11 @@ function parseProxy(raw) {
 }
 
 function proxyConfig(raw) {
+  // Обход DPI важнее сохранённого адреса: включённый режим означает, что
+  // пользователь отказался от прокси в его пользу.
+  const dpiRules = ctx.dpi.enabled && ctx.dpi.active ? dpiBypass.activeRules() : '';
+  if (dpiRules) return { proxyRules: dpiRules, proxyBypassRules: '<local>' };
+
   const parsed = parseProxy(raw);
   if (!parsed.ok || !parsed.rules) return { mode: 'system' };
   return { proxyRules: parsed.rules, proxyBypassRules: '<local>' };
@@ -279,6 +352,7 @@ function proxyConfig(raw) {
 
 /** Подпись для меню — без логина и пароля, которые могут быть в адресе. */
 function proxyLabel() {
+  if (ctx.dpi.enabled) return 'Обход DPI включён';
   const parsed = parseProxy(ctx.region.proxy);
   if (!parsed.rules) return 'Прокси не задан';
   return `Прокси: ${parsed.rules}`;
@@ -292,10 +366,31 @@ function reloadView(ignoreCache = false) {
 }
 
 function applyProxy(ses) {
-  if (!ses) return;
-  ses.setProxy(proxyConfig(ctx.region.proxy)).catch((err) => {
+  if (!ses) return Promise.resolve();
+  return ses.setProxy(proxyConfig(ctx.region.proxy)).catch((err) => {
     if (process.env.OCTO_DEBUG) console.warn('[octo] proxy failed:', err.message);
   });
+}
+
+/** Применить текущий способ смены IP и перезагрузить ленту. */
+function refreshProxy() {
+  const ses = appSession();
+  if (!ses) return;
+  // Перезагрузку ждём до применения прокси: иначе первый запрос страницы
+  // уйдёт напрямую, а новый адрес заработает только со второго раза.
+  applyProxy(ses).finally(() => {
+    try {
+      ses.closeAllConnections();
+    } catch {
+      /* старые соединения закроются сами */
+    }
+    reloadView();
+  });
+}
+
+/** После импорта настроек: применить сохранённый адрес без перезапуска. */
+function applySavedProxy() {
+  refreshProxy();
 }
 
 /**
@@ -303,7 +398,7 @@ function applyProxy(ses) {
  * только у TikTok и восстанавливает сохранённый прокси при старте.
  */
 function installSessionHooks(ses) {
-  applyProxy(ses);
+  proxyReady = applyProxy(ses);
   applySiteLanguageCookie(ses).catch(() => {});
 
   ses.webRequest.onBeforeSendHeaders(
@@ -386,24 +481,87 @@ function setProxy(raw) {
     return false;
   }
 
+  // Свой прокси и обход DPI — взаимоисключающие способы: адрес важнее.
+  if (text && ctx.dpi.enabled) {
+    dpiBypass.stop();
+    ctx.dpi = { enabled: false, active: false, port: 0 };
+    writeState({ dpiBypass: false });
+  }
+
   ctx.region.proxy = text;
-  persist({ proxy: text });
+  persistProxy(text);
   checkToken += 1;
   ctx.regionCheck = { state: 'idle', text: 'Проверить' };
 
-  const ses = appSession();
-  applyProxy(ses);
-  try {
-    ses.closeAllConnections();
-  } catch {
-    /* старые соединения закроются сами */
-  }
-
-  reloadView();
+  refreshProxy();
   toast(text ? 'Прокси применён — проверьте внешний IP' : 'Прокси отключён');
   pushState();
   onChange?.();
   return true;
+}
+
+let dpiTask = Promise.resolve();
+
+/**
+ * Обход DPI фрагментацией TLS. Сервер слушает 127.0.0.1, наружу не открыт;
+ * прокси и VPN не используются. Успех не гарантирован: если сайт блокируют
+ * по IP, фрагментация не поможет.
+ */
+async function applyDpi(enabled) {
+  const next = Boolean(enabled);
+  if (next === ctx.dpi.enabled) return next;
+
+  if (next) {
+    let targetPort = 0;
+    try {
+      targetPort = await dpiBypass.start();
+    } catch (err) {
+      ctx.dpi = { enabled: false, active: false, port: 0 };
+      if (process.env.OCTO_DEBUG) console.warn('[octo] dpi bypass failed:', err.message);
+      toast('Не удалось включить обход DPI');
+      pushState();
+      return false;
+    }
+
+    ctx.dpi = { enabled: true, active: true, port: targetPort };
+    writeState({ dpiBypass: true });
+
+    // Адрес прокси уступает: одновременно два способа не нужны.
+    if (ctx.region.proxy) {
+      ctx.region.proxy = '';
+      persistProxy('');
+    }
+  } else {
+    dpiBypass.stop();
+    ctx.dpi = { enabled: false, active: false, port: 0 };
+    writeState({ dpiBypass: false });
+  }
+
+  checkToken += 1;
+  ctx.regionCheck = { state: 'idle', text: 'Проверить' };
+  refreshProxy();
+  toast(next ? 'Обход DPI включён' : 'Обход DPI выключен');
+  pushState();
+  onChange?.();
+  return next;
+}
+
+/** Переключения подряд выполняются по очереди: старт/стоп не гоняются. */
+function setDpiBypass(enabled) {
+  dpiTask = dpiTask.then(() => applyDpi(enabled)).catch(() => false);
+  return dpiTask;
+}
+
+/** Восстановить включённый обход при старте — до первой загрузки страницы. */
+async function prepareDpi() {
+  if (readState().dpiBypass !== true) return;
+  try {
+    const targetPort = await dpiBypass.start();
+    ctx.dpi = { enabled: true, active: true, port: targetPort };
+  } catch (err) {
+    ctx.dpi = { enabled: false, active: false, port: 0 };
+    if (process.env.OCTO_DEBUG) console.warn('[octo] dpi bypass failed:', err.message);
+  }
 }
 
 function menuItems() {
@@ -415,6 +573,12 @@ function menuItems() {
       click: () => setPreset(preset.id),
     })),
     { type: 'separator' },
+    {
+      label: 'Обход DPI (экспериментально)',
+      type: 'checkbox',
+      checked: ctx.dpi.enabled,
+      click: () => setDpiBypass(!ctx.dpi.enabled),
+    },
     { label: proxyLabel(), enabled: false },
     { label: 'Проверить внешний IP', click: () => checkIp() },
     {
@@ -466,12 +630,17 @@ module.exports = {
   setSiteLanguage,
   siteLanguageMenuItems,
   setProxy,
+  setDpiBypass,
+  prepareDpi,
+  applySavedProxy,
   checkIp,
+  discoverProxies,
   resetSiteData,
   installSessionHooks,
   installIpc,
   installLoginHandler,
   applySiteLanguageCookie,
+  whenProxyReady: () => proxyReady,
   menuItems,
   setOnChange,
 };

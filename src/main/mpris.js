@@ -2,6 +2,7 @@
 
 const { app } = require('electron');
 const { ctx } = require('./app-context');
+const playerApi = require('./player');
 
 /**
  * MPRIS для Linux: «сейчас играет» и кнопки в GNOME/KDE/playerctl.
@@ -13,6 +14,8 @@ const { ctx } = require('./app-context');
 let player = null;
 let metadataTimer = null;
 let metadataPending = false;
+let positionTimer = null;
+let positionPending = false;
 let lastMeta = { title: '', artist: '', art: '', duration: 0 };
 let lastPosition = 0;
 
@@ -297,6 +300,24 @@ function initMpris() {
   player.canSeek = true;
   player.playbackStatus = 'Paused';
   player.getPosition = () => Math.round(lastPosition * 1e6);
+
+  // MPRIS читает Position по запросу, а metadata обновляется только по
+  // событиям. Без опроса виджет показывает 0:00 до следующего ролика.
+  positionTimer = setInterval(() => {
+    if (positionPending || !ctx.playing) return;
+    positionPending = true;
+    playerApi
+      .status()
+      .then((info) => {
+        const time = Number(info?.time);
+        if (Number.isFinite(time)) lastPosition = Math.max(0, time);
+      })
+      .catch(() => {})
+      .finally(() => {
+        positionPending = false;
+      });
+  }, 1000);
+  if (typeof positionTimer.unref === 'function') positionTimer.unref();
 
   // Метаданные должны существовать сразу, даже если DOM ещё грузится:
   // иначе клиенты (playerctl, GNOME) считают плеер «без трека».

@@ -72,7 +72,7 @@ function prepareSession() {
   });
 
   // Загрузки: системный диалог сохранения + очередь и прогресс в панели.
-  ses.on('will-download', (_event, item) => downloads.handle(item));
+  ses.on('will-download', (_event, item, webContents) => downloads.handle(item, webContents));
 
   return ses;
 }

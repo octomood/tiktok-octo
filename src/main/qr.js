@@ -38,8 +38,9 @@ function show() {
 
 /** Страница сменилась — старый QR показывает чужую ссылку. */
 function clear() {
-  if (!ctx.qr) return;
+  if (!ctx.qr) return false;
   ctx.qr = null;
+  return true;
 }
 
 module.exports = { show, clear };

@@ -23,12 +23,14 @@ const cosmetics = require('./cosmetics');
 const downloads = require('./downloads');
 const sleepTimer = require('./sleep-timer');
 const player = require('./player');
+const videoQuality = require('./video-quality');
 const pip = require('./pip');
 const { captureFrame, captureForAnnotation } = require('./screenshot');
 const autostart = require('./autostart');
 const appimage = require('./appimage-install');
 const ads = require('./ads');
 const region = require('./region');
+const welcome = require('./welcome');
 const find = require('./find');
 const plugins = require('./plugins');
 const stickers = require('./stickers');
@@ -193,6 +195,9 @@ function handleCommand(command, payload) {
     case 'mute': {
       const next = !wc.isAudioMuted();
       wc.setAudioMuted(next);
+      // Пользователь сам распорядился звуком под мастером — на закрытии не
+      // возвращаем прежнее состояние.
+      if (ctx.welcome.open) ctx.welcome.muteTouched = true;
       toast(next ? 'Звук выключен' : 'Звук включён');
       refreshTrayMenu();
       break;
@@ -291,6 +296,12 @@ function handleCommand(command, payload) {
       break;
     case 'pictureFit':
       player.setFit(payload);
+      break;
+    case 'pictureEnhance':
+      player.enhancePicture();
+      break;
+    case 'hardwareVideo':
+      videoQuality.toggle();
       break;
     case 'pictureReset':
       player.resetPicture();
@@ -650,6 +661,9 @@ function handleCommand(command, payload) {
     case 'regionProxyClear':
       region.setProxy('');
       break;
+    case 'dpiToggle':
+      region.setDpiBypass(!ctx.dpi.enabled);
+      break;
     case 'regionCheckIp':
       region.checkIp();
       break;
@@ -663,6 +677,20 @@ function handleCommand(command, payload) {
     case 'languagePanel':
       setPanelOpen(true);
       sendToWindow('octo:panel-category', 'language');
+      break;
+    case 'welcomeFinish':
+      welcome.finish(payload);
+      break;
+    case 'welcomeSkip':
+      welcome.skip();
+      break;
+    case 'welcomeDiscover':
+      welcome.discover();
+      break;
+    case 'welcomeOpen':
+      // Открывается из панели и палитры: панель уступает место мастеру.
+      setPanelOpen(false);
+      welcome.open();
       break;
     case 'stickerPanel':
       if (!ctx.htmlFullscreen && !ctx.pipActive && !ctx.barOnly) setPopover('stickers');

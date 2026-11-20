@@ -26,6 +26,12 @@ const ctx = {
   chatView: null,
   /** Открыта ли панель чата. */
   chatOpen: false,
+  /**
+   * Попросить страницу чата пересобрать раскладку: подставляет chat.js, чтобы
+   * app-context не зависел от него напрямую.
+   * @type {((view: import('electron').WebContentsView) => void) | null}
+   */
+  chatRelayout: null,
   /** Ширина панели чата: тянется за полоску между чатом и лентой. */
   chatWidth: CHAT_W,
   /** Чат поджимает ленту (иначе лежит поверх неё). */
@@ -83,6 +89,12 @@ const ctx = {
   popover: null,
   /** Открыта ли палитра команд (view на время скрывается). */
   paletteOpen: false,
+  /** Мастер первого запуска: язык и прокси поверх скрытой ленты. */
+  welcome: { open: false, done: false, mutedByUs: false, muteTouched: false },
+  /** Результат поиска локального прокси для мастера. */
+  proxyScan: { state: 'idle', items: [] },
+  /** Локальный обход DPI: фрагментация TLS без прокси и VPN (см. dpi-bypass.js). */
+  dpi: { enabled: false, active: false, port: 0 },
   /** Настройки плеера, которых нет у сайта. */
   player: {
     speed: 1,
@@ -173,6 +185,10 @@ const ctx = {
   subtitles: { enabled: false, size: 100, background: true, outline: true },
   /** Дата публикации текущего ролика, если сайт её показывает. */
   videoDate: '',
+  /** Разрешение, битрейт и поддержка HEVC у текущего потока. */
+  videoQuality: { width: 0, height: 0, bitrate: 0, hevc: false },
+  /** Аппаратное декодирование на Linux: настройка и доступность переключателя. */
+  hardwareVideo: { enabled: false, supported: process.platform === 'linux' },
   /** QR текущей страницы: матрица модулей, которую renderer рисует на canvas. */
   qr: null,
   /** Режим «только полоса»: сайт скрыт, остаётся компактный пульт. */
@@ -275,7 +291,7 @@ function syncViewVisibility() {
   if (!ctx.view || typeof ctx.view.setVisible !== 'function') return;
   if (ctx.view.webContents && ctx.view.webContents.isDestroyed()) return;
   try {
-    ctx.view.setVisible(!ctx.offline && !ctx.paletteOpen && !ctx.barOnly);
+    ctx.view.setVisible(!ctx.offline && !ctx.paletteOpen && !ctx.barOnly && !ctx.welcome.open);
   } catch {
     /* view уже закрывается */
   }
@@ -302,7 +318,8 @@ function layout() {
       !ctx.htmlFullscreen &&
       !ctx.pipActive &&
       !ctx.paletteOpen &&
-      !ctx.barOnly;
+      !ctx.barOnly &&
+      !ctx.welcome.open;
     const chatWidth = Math.min(ctx.chatWidth, chatWidthLimit(available));
     // «Док» поджимает ленту; иначе панель лежит поверх неё, как раньше.
     const docked = chatVisible && ctx.chatDock !== false;
@@ -319,12 +336,22 @@ function layout() {
     if (chat && !chat.webContents.isDestroyed()) {
       chat.setVisible(chatVisible);
       if (chatVisible) {
-        chat.setBounds({
+        const next = {
           x: left,
           y: top,
           width: chatWidth,
           height: Math.max(0, height - top),
-        });
+        };
+        const previous = chat.getBounds();
+        chat.setBounds(next);
+        // Размер поменялся без участия окна: страница сообщений может остаться
+        // в старой раскладке, пока не дёрнуть край окна. Пусть пересоберёт сама.
+        if (
+          ctx.chatRelayout &&
+          (previous.width !== next.width || previous.height !== next.height)
+        ) {
+          ctx.chatRelayout(chat);
+        }
       }
     }
   } catch {
@@ -450,6 +477,48 @@ function setPaletteOpen(open) {
   }
 
   pushState();
+}
+
+/**
+ * Мастер первого запуска — модальный экран нашего интерфейса. Он тоже прячет
+ * WebContentsView, иначе лента TikTok перекроет карточку.
+ */
+function setWelcomeOpen(open) {
+  const next = Boolean(open);
+  if (next === ctx.welcome.open) return;
+  ctx.welcome.open = next;
+  applyWelcomeAudio(next);
+
+  layoutSoon();
+
+  if (ctx.win && !ctx.win.isDestroyed()) {
+    const wc = ctx.win.webContents;
+    if (wc && !wc.isDestroyed()) wc.focus();
+  }
+
+  pushState();
+}
+
+/**
+ * Звук ленты под мастером: view скрыт, но видео продолжает играть, а Electron
+ * по умолчанию разрешает автозапуск со звуком. Глушим на время мастера и
+ * возвращаем звук, только если пользователь не трогал его сам.
+ */
+function applyWelcomeAudio(open, wc = ctx.view?.webContents) {
+  if (!wc || wc.isDestroyed()) return;
+  try {
+    if (open) {
+      ctx.welcome.mutedByUs = !wc.isAudioMuted();
+      if (ctx.welcome.mutedByUs) wc.setAudioMuted(true);
+      ctx.welcome.muteTouched = false;
+      return;
+    }
+    if (ctx.welcome.mutedByUs && !ctx.welcome.muteTouched) wc.setAudioMuted(false);
+    ctx.welcome.mutedByUs = false;
+    ctx.welcome.muteTouched = false;
+  } catch {
+    /* view уже закрывается */
+  }
 }
 
 /** Настройка «закрывать в трей» меняется из панели и трея. */
@@ -600,6 +669,12 @@ function currentState() {
     focus: { ...ctx.focus },
     ambient: ctx.ambient,
     palette: ctx.paletteOpen,
+    welcome: { open: ctx.welcome.open, done: ctx.welcome.done },
+    dpi: { ...ctx.dpi },
+    proxyScan: {
+      state: ctx.proxyScan.state,
+      items: ctx.proxyScan.items.map((item) => ({ ...item })),
+    },
     player: { ...ctx.player },
     cosmetics: ctx.cosmetics,
     closeToTray: ctx.closeToTray,
@@ -634,6 +709,8 @@ function currentState() {
     },
     subtitles: { ...ctx.subtitles },
     videoDate: ctx.videoDate,
+    videoQuality: { ...ctx.videoQuality },
+    hardwareVideo: { ...ctx.hardwareVideo },
     qr: ctx.qr ? { url: ctx.qr.url, count: ctx.qr.count, rows: ctx.qr.rows.slice() } : null,
     barOnly: ctx.barOnly,
     audioDevices: ctx.audioDevices.map((device) => ({ ...device })),
@@ -710,6 +787,8 @@ module.exports = {
   setPanelOpen,
   setPopover,
   setPaletteOpen,
+  setWelcomeOpen,
+  applyWelcomeAudio,
   setCosmeticsState,
   setPluginsState,
   setCloseToTray,

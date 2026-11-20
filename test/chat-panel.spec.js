@@ -155,8 +155,8 @@ test('чат: панель подстраивается под ширину ст
   const wide = `<!doctype html>
 <html><body style="margin:0;background:#111">
   <div id="inbox" style="width:100%;height:100vh;overflow-x:auto;overflow-y:hidden">
-    <div style="width:620px;height:100vh">
-      <div role="textbox" contenteditable="true" style="width:560px;height:40px"></div>
+    <div style="width:900px;height:100vh">
+      <div role="textbox" contenteditable="true" style="width:840px;height:40px"></div>
     </div>
   </div>
 </body></html>`;
@@ -194,9 +194,9 @@ test('чат: панель подстраивается под ширину ст
         const bounds = await chatBounds();
         return bounds ? bounds.width : -1;
       })
-      .toBeGreaterThanOrEqual(620);
+      .toBeGreaterThanOrEqual(900);
     const grown = await chatBounds();
-    expect(grown.width).toBeLessThanOrEqual(760);
+    expect(grown.width).toBeLessThanOrEqual(980);
 
     const views = await viewLayout(app);
     const feed = views.find((item) => item.url === 'about:blank');
@@ -212,6 +212,175 @@ test('чат: панель подстраивается под ширину ст
       .toBe(500);
     await new Promise((resolve) => setTimeout(resolve, 2000));
     expect((await chatBounds()).width).toBe(500);
+  } finally {
+    if (app) await app.close();
+    server.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+test('чат: кнопка за правым краем тоже расширяет панель', async () => {
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-e2e-chatclip-'));
+  // Страница не прокручивается: раскладка обрезана контейнером, а кнопка
+  // отправки уехала за правый край. Так выглядит сжатый диалог сообщений.
+  const clipped = `<!doctype html>
+<html><body style="margin:0;background:#111">
+  <div style="position:relative;width:100%;height:100vh;overflow:hidden">
+    <div role="textbox" contenteditable="true" style="width:280px;height:40px"></div>
+    <button id="send" style="position:absolute;left:405px;bottom:8px;width:36px;height:36px">
+      Send
+    </button>
+  </div>
+</body></html>`;
+  const { server, url } = await startServer(clipped);
+  let app;
+
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: {
+        ...process.env,
+        OCTO_E2E: '1',
+        OCTO_USER_DATA: userData,
+        OCTO_HOME_URL: 'about:blank',
+        OCTO_CHAT_URL: url,
+      },
+    });
+
+    await app.firstWindow();
+    const page = await waitForWindow(app, (candidate) => candidate.url().startsWith('file://'));
+    await waitForWindow(app, (candidate) => candidate.url() === 'about:blank');
+
+    await page.evaluate(() => window.octo.cmd('chat'));
+    await waitForWindow(app, (candidate) => candidate.url().startsWith('http://127.0.0.1'));
+
+    await expect
+      .poll(async () => {
+        const views = await viewLayout(app);
+        const chat = views.find((item) => item.url.startsWith('http://127.0.0.1'));
+        return chat ? chat.bounds.width : -1;
+      })
+      .toBeGreaterThan(420);
+  } finally {
+    if (app) await app.close();
+    server.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+test('чат: открытие переписки внутри страницы заново подгоняет панель', async () => {
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-e2e-chatnav-'));
+  // Сначала список переписок помещается в 420 px, а открытый диалог — нет.
+  const late = `<!doctype html>
+<html><body style="margin:0;background:#111">
+  <div id="inbox" style="width:100%;height:100vh;overflow-x:auto;overflow-y:hidden">
+    <div id="pane" style="width:320px;height:100vh">
+      <div role="textbox" contenteditable="true" style="width:260px;height:40px"></div>
+    </div>
+  </div>
+</body></html>`;
+  const { server, url } = await startServer(late);
+  let app;
+
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: {
+        ...process.env,
+        OCTO_E2E: '1',
+        OCTO_USER_DATA: userData,
+        OCTO_HOME_URL: 'about:blank',
+        OCTO_CHAT_URL: url,
+      },
+    });
+
+    await app.firstWindow();
+    const page = await waitForWindow(app, (candidate) => candidate.url().startsWith('file://'));
+    await waitForWindow(app, (candidate) => candidate.url() === 'about:blank');
+
+    await page.evaluate(() => window.octo.cmd('chat'));
+    const chat = await waitForWindow(app, (candidate) =>
+      candidate.url().startsWith('http://127.0.0.1'),
+    );
+
+    const width = async () => {
+      const views = await viewLayout(app);
+      const view = views.find((item) => item.url.startsWith('http://127.0.0.1'));
+      return view ? view.bounds.width : -1;
+    };
+
+    // Список переписок помещается: панель остаётся стартовой.
+    await new Promise((resolve) => setTimeout(resolve, 2200));
+    expect(await width()).toBe(420);
+
+    // Переход внутри страницы открывает широкий диалог — панель дорастает.
+    await chat.evaluate(() => {
+      document.getElementById('pane').style.width = '900px';
+      window.history.pushState({}, '', '/messages/1');
+    });
+    await expect.poll(width).toBeGreaterThanOrEqual(900);
+    expect(await width()).toBeLessThanOrEqual(980);
+  } finally {
+    if (app) await app.close();
+    server.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+test('чат: панель просит страницу пересобрать раскладку', async () => {
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-e2e-chatreflow-'));
+  // Страница сообщений пересобирает раскладку по resize окна. Панель меняет
+  // ширину без окна, поэтому без нашего события раскладка остаётся прежней:
+  // список и диалог уезжают под горизонтальную прокрутку до тех пор, пока
+  // пользователь не подёргает край окна.
+  const stale = `<!doctype html>
+<html><body style="margin:0;background:#111">
+  <div id="pane" style="width:100%;height:100vh">wide</div>
+  <script>
+    window.__layout = { mode: 'wide', relayouts: 0 };
+    const pane = document.getElementById('pane');
+    window.addEventListener('resize', () => {
+      window.__layout.relayouts += 1;
+      window.__layout.mode = window.innerWidth < 700 ? 'narrow' : 'wide';
+      pane.textContent = window.__layout.mode;
+    });
+  </script>
+</body></html>`;
+  const { server, url } = await startServer(stale);
+  let app;
+
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: {
+        ...process.env,
+        OCTO_E2E: '1',
+        OCTO_USER_DATA: userData,
+        OCTO_HOME_URL: 'about:blank',
+        OCTO_CHAT_URL: url,
+      },
+    });
+
+    await app.firstWindow();
+    const page = await waitForWindow(app, (candidate) => candidate.url().startsWith('file://'));
+    await waitForWindow(app, (candidate) => candidate.url() === 'about:blank');
+
+    await page.evaluate(() => window.octo.cmd('chat'));
+    const chat = await waitForWindow(app, (candidate) =>
+      candidate.url().startsWith('http://127.0.0.1'),
+    );
+
+    // Панель 420 px: страница должна получить событие и уйти в узкую раскладку.
+    await expect
+      .poll(() => chat.evaluate(() => window.__layout))
+      .toEqual({ mode: 'narrow', relayouts: expect.any(Number) });
+    const narrow = await chat.evaluate(() => window.__layout.relayouts);
+    expect(narrow).toBeGreaterThanOrEqual(1);
+
+    // Ширина меняется — снова событие, раскладка следует за панелью.
+    await page.evaluate(() => window.octo.cmd('chatResize', 800));
+    await expect.poll(() => chat.evaluate(() => window.__layout.mode)).toBe('wide');
+    expect(await chat.evaluate(() => window.__layout.relayouts)).toBeGreaterThan(narrow);
   } finally {
     if (app) await app.close();
     server.close();

@@ -35,6 +35,27 @@ function feedItem(description) {
   })()`;
 }
 
+/** Ролик с ссылкой на автора: фильтр по @nick смотрит на href. */
+function feedItemWithLink(description, href) {
+  return `(() => {
+    const item = document.createElement('div');
+    item.setAttribute('data-e2e', 'recommend-list-item-container');
+    item.style.cssText = 'position: relative; width: 360px; height: 300px;';
+    const video = document.createElement('video');
+    video.style.cssText = 'width: 320px; height: 280px;';
+    const caption = document.createElement('span');
+    caption.textContent = ${JSON.stringify(description)};
+    caption.style.cssText = 'position: absolute; top: 6px; left: 6px; width: 200px; height: 18px;';
+    const link = document.createElement('a');
+    link.href = ${JSON.stringify(href)};
+    link.textContent = 'author';
+    link.style.cssText = 'position: absolute; top: 30px; left: 6px;';
+    item.append(video, caption, link);
+    document.body.append(item);
+    return item;
+  })()`;
+}
+
 test('фильтры: слово в ролике перелистывает ленту, обычный — нет', async () => {
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-e2e-filters-'));
   let app;
@@ -95,6 +116,27 @@ test('фильтры: слово в ролике перелистывает ле
     await site.evaluate(feedItem('Обычный ролик про кота'));
     await new Promise((resolve) => setTimeout(resolve, 2200));
     expect(await site.evaluate(() => window.__filterClicks)).toBe(1);
+
+    // Границы: #кот не режет #котики, @bob — @bobby.
+    await site.evaluate(() => {
+      document.querySelectorAll('[data-e2e="recommend-list-item-container"]').forEach((node) => {
+        node.remove();
+      });
+    });
+    await page.evaluate(() =>
+      window.octo.cmd('filtersSet', { keywords: '', hashtags: '#кот', authors: '@bob' }),
+    );
+    await site.evaluate(feedItemWithLink('#котики', 'https://www.tiktok.com/@bobby/video/1'));
+    await new Promise((resolve) => setTimeout(resolve, 2200));
+    expect(await site.evaluate(() => window.__filterClicks)).toBe(1);
+
+    await site.evaluate(() => {
+      document.querySelectorAll('[data-e2e="recommend-list-item-container"]').forEach((node) => {
+        node.remove();
+      });
+    });
+    await site.evaluate(feedItemWithLink('#кот', 'https://www.tiktok.com/@bob/video/1'));
+    await expect.poll(() => site.evaluate(() => window.__filterClicks), { timeout: 6000 }).toBe(2);
 
     await page.evaluate(() => window.octo.cmd('filtersToggle'));
     await expect(page.locator('#rowFilters')).toHaveAttribute('aria-checked', 'false');

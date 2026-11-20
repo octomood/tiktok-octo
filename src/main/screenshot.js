@@ -4,13 +4,15 @@ const { app, clipboard } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { ctx, toast } = require('./app-context');
+const watermark = require('./watermark');
 
 /**
  * Снимок текущего кадра.
  *
  * capturePage у WebContentsView снимает отрендеренную страницу вместе с
  * видео. Файл кладём в «Изображения» (в тестах путь можно переопределить),
- * картинку дублируем в буфер обмена.
+ * картинку дублируем в буфер обмена. В правом нижнем углу — подпись
+ * «tiktok octo», чтобы снимок было видно в чужой ленте.
  */
 
 function timestamp() {
@@ -55,11 +57,12 @@ async function captureFrame() {
   if (!wc || wc.isDestroyed()) return;
 
   try {
-    const image = await grabFrame(wc);
-    if (!image) {
+    const frame = await grabFrame(wc);
+    if (!frame) {
       toast('Не удалось сделать снимок');
       return;
     }
+    const image = await watermark.apply(frame);
 
     const dir = outputDir();
     fs.mkdirSync(dir, { recursive: true });
@@ -87,11 +90,12 @@ async function captureForAnnotation() {
   if (!wc || wc.isDestroyed()) return null;
 
   try {
-    const image = await grabFrame(wc);
-    if (!image) {
+    const frame = await grabFrame(wc);
+    if (!frame) {
       toast('Не удалось сделать снимок');
       return null;
     }
+    const image = await watermark.apply(frame);
 
     const dataUrl = `data:image/png;base64,${image.toPNG().toString('base64')}`;
     const name = `tiktok-octo-${timestamp()}-annotated.png`;

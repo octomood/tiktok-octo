@@ -67,7 +67,17 @@ function removeCss(wc) {
 }
 
 /** Применить код к текущей странице (или снять, если режим выключен). */
-async function apply() {
+let applyQueue = Promise.resolve();
+
+function apply() {
+  // insertCSS асинхронный: два вызова (переключение + dom-ready) иначе
+  // перезаписывают cssKey и оставляют старый стиль без ручки.
+  const next = applyQueue.then(() => applyNow()).catch(() => {});
+  applyQueue = next;
+  return next;
+}
+
+async function applyNow() {
   const wc = ctx.view?.webContents;
   if (!wc || wc.isDestroyed()) return;
   const settings = readSettings();

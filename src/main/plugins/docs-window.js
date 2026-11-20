@@ -7,6 +7,7 @@ const { fileURLToPath } = require('node:url');
 const { ctx } = require('../app-context');
 const { openExternal } = require('../links');
 const { t } = require('../i18n');
+const { keyFromInput } = require('../key-input');
 
 /**
  * Встроенная документация.
@@ -80,7 +81,7 @@ function openPage(page = 'index.html') {
   win.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return;
     const mod = input.control || input.meta;
-    if (mod && input.key.toLowerCase() === 'w') {
+    if (mod && keyFromInput(input).toLowerCase() === 'w') {
       event.preventDefault();
       win.close();
     }

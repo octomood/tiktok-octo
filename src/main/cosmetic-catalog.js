@@ -15,6 +15,11 @@ const COSMETIC_RULES = [
   { id: 'dark-scrollbars', label: 'Тёмные скроллбары', default: true },
   { id: 'hide-live-nav', label: 'Скрыть «Трансляция»', default: false },
   { id: 'hide-drama-nav', label: 'Скрыть «Мини-сериалы»', default: false },
+  {
+    id: 'comments-panel',
+    label: 'Скрыть панель справа до комментариев',
+    default: true,
+  },
 ];
 
 module.exports = { COSMETIC_RULES };

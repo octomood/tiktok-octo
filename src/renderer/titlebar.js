@@ -180,15 +180,22 @@ const el = {
   brightnessValue: $('brightnessValue'),
   contrastRange: $('contrastRange'),
   contrastValue: $('contrastValue'),
+  sharpnessRange: $('sharpnessRange'),
+  sharpnessValue: $('sharpnessValue'),
   warmthRange: $('warmthRange'),
   warmthValue: $('warmthValue'),
   videoDateValue: $('videoDateValue'),
+  videoQualityValue: $('videoQualityValue'),
+  videoHevcValue: $('videoHevcValue'),
+  rowHardwareVideo: $('rowHardwareVideo'),
+  hardwareVideoNote: $('hardwareVideoNote'),
   qrCard: $('qrCard'),
   qrCanvas: $('qrCanvas'),
   qrUrl: $('qrUrl'),
   regionSelect: $('regionSelect'),
   regionProxy: $('regionProxy'),
   regionProxyState: $('regionProxyState'),
+  rowDpiBypass: $('rowDpiBypass'),
   regionIpValue: $('regionIpValue'),
   regionIpResult: $('regionIpResult'),
   appLanguageSelect: $('appLanguageSelect'),
@@ -234,6 +241,7 @@ const state = {
     brightness: 100,
     contrast: 100,
     warmth: 0,
+    sharpness: 0,
     fit: 'auto',
   },
   cosmetics: [],
@@ -266,6 +274,8 @@ const state = {
   keymap: { profile: 'default', profiles: [], rows: [] },
   subtitles: { enabled: false, size: 100, background: true, outline: true },
   videoDate: '',
+  videoQuality: { width: 0, height: 0, bitrate: 0, hevc: false },
+  hardwareVideo: { enabled: false, supported: false },
   qr: null,
   barOnly: false,
   chat: { open: false, width: 420, dock: true },
@@ -542,9 +552,9 @@ el.barVolume.addEventListener('input', () => {
   }, 40);
 });
 
-// Картинка: яркость, контраст, тёплый оттенок и размер субтитров.
+// Картинка: яркость, контраст, резкость, тёплый оттенок и размер субтитров.
 const pictureTimers = {};
-for (const key of ['brightness', 'contrast', 'warmth']) {
+for (const key of ['brightness', 'contrast', 'sharpness', 'warmth']) {
   const range = el[`${key}Range`];
   const value = el[`${key}Value`];
   range.addEventListener('input', () => {
@@ -639,7 +649,7 @@ function chatLeftOffset() {
 }
 
 function clampChatWidth(value) {
-  return Math.min(760, Math.max(300, Math.round(Number(value) || 420)));
+  return Math.min(980, Math.max(300, Math.round(Number(value) || 420)));
 }
 
 el.chatResize.addEventListener('pointerdown', (event) => {
@@ -690,6 +700,31 @@ el.keymapRows.addEventListener('click', (event) => {
   renderKeymap();
 });
 
+// Раскладка: на русской event.key кириллический, поэтому для нелатинских
+// символов берём физический code. Латинскую букву оставляем по key — на
+// AZERTY и Dvorak пользователь назначает символ, а не позицию клавиши.
+const KEY_BY_CODE = {
+  Minus: '-',
+  Equal: '=',
+  BracketLeft: '[',
+  BracketRight: ']',
+  Backslash: '\\',
+  Semicolon: ';',
+  Quote: "'",
+  Comma: ',',
+  Period: '.',
+  Slash: '/',
+  Backquote: '`',
+};
+
+function keyFromCode(code) {
+  if (typeof code !== 'string' || !code) return '';
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+  if (/^F(?:[1-9]|1[0-9]|2[0-4])$/.test(code)) return code;
+  return KEY_BY_CODE[code] || '';
+}
+
 function shortcutFromEvent(event) {
   if (['Control', 'Shift', 'Alt', 'Meta'].includes(event.key)) return null;
   const named = {
@@ -698,9 +733,17 @@ function shortcutFromEvent(event) {
     ArrowUp: 'Up',
     ArrowDown: 'Down',
     ' ': 'Space',
+    Spacebar: 'Space',
     Escape: 'Esc',
+    Home: 'Home',
+    End: 'End',
+    PageUp: 'PageUp',
+    PageDown: 'PageDown',
+    Tab: 'Tab',
+    Enter: 'Enter',
   };
-  let key = named[event.key] || event.key;
+  let key = named[event.key];
+  if (!key) key = /^[\x20-\x7e]$/.test(event.key) ? event.key : keyFromCode(event.code);
   if (key === '+') key = '=';
   if (key.length === 1) key = key.toUpperCase();
   if (!key || key.length > 10) return null;
@@ -1513,6 +1556,8 @@ function paletteItems() {
     { label: 'Правила публикации плагинов', cmd: 'pluginRules' },
     { label: 'Папка плагинов', cmd: 'pluginFolder' },
     { label: 'Регион и прокси', cmd: 'regionPanel' },
+    { label: 'Обход DPI (экспериментально)', cmd: 'dpiToggle' },
+    { label: 'Мастер настройки', cmd: 'welcomeOpen' },
     { label: 'Язык', cmd: 'languagePanel' },
     { label: 'Снимок кадра', cmd: 'screenshot', hint: 'Ctrl Shift S' },
     { label: 'Снимок с аннотацией', cmd: 'screenshotAnnotate' },
@@ -1534,6 +1579,7 @@ function paletteItems() {
     { label: 'Кадр как на сайте', cmd: 'pictureFit', payload: 'auto' },
     { label: 'Вписать кадр', cmd: 'pictureFit', payload: 'contain' },
     { label: 'Заполнить окно', cmd: 'pictureFit', payload: 'cover' },
+    { label: 'Улучшить картинку', cmd: 'pictureEnhance' },
     { label: 'Сбросить картинку', cmd: 'pictureReset' },
     {
       label: tr(
@@ -1766,6 +1812,25 @@ function renderPlayer() {
   setSwitch(el.rowKeepAwake, state.keepAwake);
   el.idlePauseSelect.value = String(Number(state.idlePause) || 0);
   renderAudioSinks(player);
+
+  const hardware = state.hardwareVideo || { enabled: false, supported: false };
+  el.rowHardwareVideo.hidden = !hardware.supported;
+  el.hardwareVideoNote.hidden = !hardware.supported;
+  setSwitch(el.rowHardwareVideo, hardware.enabled);
+
+  const quality = state.videoQuality || {};
+  const width = Math.max(0, Number(quality.width) || 0);
+  const height = Math.max(0, Number(quality.height) || 0);
+  const bitrate = Math.max(0, Number(quality.bitrate) || 0);
+  if (!width || !height) {
+    el.videoQualityValue.textContent = '—';
+  } else if (bitrate > 0) {
+    const mbps = (bitrate / 1000).toFixed(1).replace('.', ',');
+    el.videoQualityValue.textContent = `${width}×${height} · ~${mbps} ${tr('Мбит/с')}`;
+  } else {
+    el.videoQualityValue.textContent = `${width}×${height}`;
+  }
+  el.videoHevcValue.textContent = quality.hevc ? tr('поддерживается') : tr('не поддерживается');
 }
 
 let sinkSignature = '';
@@ -1873,6 +1938,11 @@ function renderPicture() {
     el.contrastRange.value = String(Math.round(player.contrast ?? 100));
   }
   paintRange(el.contrastRange, el.contrastValue, Number(el.contrastRange.value));
+
+  if (document.activeElement !== el.sharpnessRange) {
+    el.sharpnessRange.value = String(Math.round(player.sharpness ?? 0));
+  }
+  paintRange(el.sharpnessRange, el.sharpnessValue, Number(el.sharpnessRange.value));
 
   if (document.activeElement !== el.warmthRange) {
     el.warmthRange.value = String(Math.round(player.warmth ?? 0));
@@ -2318,9 +2388,13 @@ function renderRegion() {
     el.regionProxy.value = region.proxy;
   }
 
-  el.regionProxyState.textContent = region.proxy
-    ? 'Прокси включён — сайт видит IP прокси.'
-    : 'Прокси не задан — сайт видит ваш IP.';
+  const dpiOn = Boolean(state.dpi && state.dpi.enabled);
+  setSwitch(el.rowDpiBypass, dpiOn);
+  el.regionProxyState.textContent = dpiOn
+    ? 'Обход DPI включён — прокси не используется.'
+    : region.proxy
+      ? 'Прокси включён — сайт видит IP прокси.'
+      : 'Прокси не задан — сайт видит ваш IP.';
 
   const check = state.regionCheck || { state: 'idle', text: 'Проверить' };
   const checkLabel =

@@ -24,6 +24,9 @@ let pendingSeek = null;
 let currentId = null;
 let pollTimer = null;
 let lastEnded = null;
+/** После openItem() ждём коммита адреса, а не сравниваем его сразу. */
+let awaitingUrl = null;
+let checking = false;
 
 function cleanTitle(raw) {
   return String(raw || '')
@@ -162,8 +165,20 @@ function clearQueue() {
 function stopAuto() {
   currentId = null;
   lastEnded = null;
+  awaitingUrl = null;
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = null;
+}
+
+/** TikTok добавляет к адресу query/hash — сравниваем саму страницу. */
+function samePage(current, saved) {
+  try {
+    const left = new URL(current);
+    const right = new URL(saved);
+    return left.origin === right.origin && left.pathname === right.pathname;
+  } catch {
+    return current === saved;
+  }
 }
 
 function advanceQueue() {
@@ -182,23 +197,40 @@ function advanceQueue() {
 }
 
 async function checkQueue() {
-  if (!auto || !currentId) return;
-  const wc = ctx.view?.webContents;
-  const item = items.find((entry) => entry.id === currentId);
-  if (!wc || wc.isDestroyed() || !item || wc.getURL() !== item.url) {
-    stopAuto();
-    return;
-  }
+  if (checking) return;
+  checking = true;
+  try {
+    if (!auto || !currentId) return;
+    const wc = ctx.view?.webContents;
+    const item = items.find((entry) => entry.id === currentId);
+    if (!wc || wc.isDestroyed() || !item) {
+      stopAuto();
+      return;
+    }
 
-  const info = await player.status();
-  if (!info) return;
-  if (lastEnded === null) {
-    lastEnded = Number(info.ended) || 0;
-    return;
-  }
-  if (Number(info.ended) > lastEnded) {
-    lastEnded = Number(info.ended);
-    advanceQueue();
+    if (!samePage(wc.getURL(), item.url)) {
+      // Страница ещё грузится после openItem(): адрес коммитится позже тика,
+      // а TikTok может добавить query. В это время старую страницу не читаем,
+      // иначе счётчик ended старого ролика станет базой для нового.
+      if (awaitingUrl && Date.now() < awaitingUrl.until) return;
+      stopAuto();
+      return;
+    }
+    awaitingUrl = null;
+
+    const info = await player.status();
+    if (currentId !== item.id) return;
+    if (!info) return;
+    if (lastEnded === null) {
+      lastEnded = Number(info.ended) || 0;
+      return;
+    }
+    if (Number(info.ended) > lastEnded) {
+      lastEnded = Number(info.ended);
+      advanceQueue();
+    }
+  } finally {
+    checking = false;
   }
 }
 
@@ -223,7 +255,7 @@ function toggleAuto() {
   const url = wc && !wc.isDestroyed() ? wc.getURL() : '';
   const current = queue
     .map((id) => items.find((item) => item.id === id))
-    .find((item) => item && item.url === url);
+    .find((item) => item && samePage(item.url, url));
   currentId = current ? current.id : null;
   startAuto();
   toast('Автопереход по очереди включён');
@@ -238,6 +270,7 @@ function openItem(id) {
   pendingSeek = { url: item.url, time: item.time };
   currentId = item.id;
   lastEnded = null;
+  awaitingUrl = { url: item.url, until: Date.now() + 20_000 };
   startAuto();
   wc.loadURL(item.url)
     .then(() => {

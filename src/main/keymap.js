@@ -2,6 +2,7 @@
 
 const { ctx, pushState, toast } = require('./app-context');
 const { readState, writeState } = require('./store');
+const { keyFromInput } = require('./key-input');
 
 /**
  * Горячие клавиши.
@@ -130,8 +131,7 @@ function canonical(accelerator) {
 
 /** Сочетание из события before-input-event. */
 function acceleratorOf(input) {
-  if (!input || typeof input.key !== 'string') return '';
-  const key = normalizeKey(input.key);
+  const key = normalizeKey(keyFromInput(input));
   if (!key) return '';
   const mods = [];
   if (input.control || input.meta) mods.push('Ctrl');

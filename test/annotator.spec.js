@@ -42,11 +42,17 @@ test('снимок с аннотацией: окно, стрелка и сохр
     await waitForWindow(app, (candidate) => candidate.url() === 'about:blank');
 
     await page.evaluate(() => window.octo.cmd('screenshotAnnotate'));
-    const editor = await waitForWindow(
+    let editor = await waitForWindow(
       app,
       (candidate) => candidate.url().endsWith('/annotator.html'),
       'окно аннотаций',
     );
+
+    // Второй снимок при открытом редакторе: старое окно закрывается, новое
+    // должно работать. Раньше closed старого обнулял ссылку на новое окно.
+    const nextEditor = app.waitForEvent('window');
+    await page.evaluate(() => window.octo.cmd('screenshotAnnotate'));
+    editor = await nextEditor;
 
     const canvas = editor.locator('#annotateCanvas');
     await expect(canvas).toBeVisible();

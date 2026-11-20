@@ -42,7 +42,8 @@ let initialized = false;
 let onChange = null;
 let onError = null;
 let nextEventToken = 1;
-let nextWorldId = 1000;
+/** Изолированные миры, уже занятые плагинами в этом запуске. */
+const usedWorldIds = new Set();
 let networkSession = null;
 
 const LOCAL_ID_RE = /^[a-zA-Z0-9._-]{1,48}$/;
@@ -192,13 +193,19 @@ function createSession(id, manifest, entry) {
 }
 
 function worldIdFor(id) {
-  // Стабильный, но не совпадающий с нашими служебными мирами id.
+  // id стабилен для плагина, уникален в пределах запущенных и не пересекается
+  // с WORLD_ID = 4242 из custom-code.js (там живёт «свой JS» пользователя).
   let hash = 0;
   for (let index = 0; index < id.length; index += 1) {
     hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
   }
-  nextWorldId = 1000 + ((nextWorldId + hash) % 9000);
-  return nextWorldId;
+  let candidate = 20000 + (hash % 60000);
+  while (usedWorldIds.has(candidate)) {
+    candidate += 1;
+    if (candidate >= 80000) candidate = 20000;
+  }
+  usedWorldIds.add(candidate);
+  return candidate;
 }
 
 function findBySender(sender) {

@@ -176,7 +176,10 @@ window.addEventListener('keydown', (event) => {
     api.close();
     return;
   }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+  // ctrl+z: на нелатинской раскладке key приходит кириллицей, берём code.
+  let undoKey = event.key.toLowerCase();
+  if (!/^[\x20-\x7e]$/.test(event.key) && event.code === 'KeyZ') undoKey = 'z';
+  if ((event.ctrlKey || event.metaKey) && undoKey === 'z') {
     event.preventDefault();
     shapes.pop();
     redraw();

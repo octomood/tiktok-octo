@@ -94,6 +94,33 @@ function pageScript(config) {
       return video.closest(ITEM_SELECTOR) || video.parentElement;
     };
 
+    const isWordChar = (char) => Boolean(char) && /[\\p{L}\\p{N}_]/u.test(char);
+
+    const hasTag = (text, tag) => {
+      const needle = '#' + tag;
+      let from = 0;
+      for (;;) {
+        const index = text.indexOf(needle, from);
+        if (index < 0) return false;
+        // #кот не должен совпадать с #котики.
+        if (!isWordChar(text.charAt(index + needle.length))) return true;
+        from = index + 1;
+      }
+    };
+
+    const hasAuthor = (links, author) => {
+      const needle = '/@' + author;
+      let from = 0;
+      for (;;) {
+        const index = links.indexOf(needle, from);
+        if (index < 0) return false;
+        const after = links.charAt(index + needle.length);
+        // @bob не должен совпадать с @bobby или @bob_martin.
+        if (!after || !/[\\p{L}\\p{N}_.-]/u.test(after)) return true;
+        from = index + 1;
+      }
+    };
+
     const matches = (item) => {
       if (!item) return null;
       const text = (item.innerText || '').toLowerCase().slice(0, 3000);
@@ -101,14 +128,14 @@ function pageScript(config) {
         if (keyword && text.includes(keyword)) return keyword;
       }
       for (const tag of current.hashtags) {
-        if (tag && text.includes('#' + tag)) return '#' + tag;
+        if (tag && hasTag(text, tag)) return '#' + tag;
       }
       if (current.authors.length) {
         const links = [...item.querySelectorAll('a[href]')]
           .map((link) => (link.getAttribute('href') || '').toLowerCase())
           .join(' ');
         for (const author of current.authors) {
-          if (author && links.includes('/@' + author)) return '@' + author;
+          if (author && hasAuthor(links, author)) return '@' + author;
         }
       }
       return null;

@@ -1,0 +1,162 @@
+{
+  "id": "app.octo.gradient-frame",
+  "name": "Градиентная обводка",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "minAppVersion": "1.0.0",
+  "description": "Переливающаяся градиентная рамка вокруг ролика или края окна. Настройте палитру, свои цвета, толщину, скругление, скорость, свечение и прозрачность — всё в карточке плагина.",
+  "author": {
+    "name": "octo",
+    "url": "https://github.com/octomood"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/octomood/tiktok-octo/tree/main/plugins/gradient-frame",
+  "source": "https://github.com/octomood/tiktok-octo/tree/main/plugins/gradient-frame",
+  "main": "index.js",
+  "icon": "icon.svg",
+  "cosmetic": true,
+  "permissions": ["page:css"],
+  "settings": [
+    {
+      "key": "enabled",
+      "type": "boolean",
+      "title": "Показывать обводку",
+      "description": "Главный выключатель эффекта. Пока плагин включён, обводку можно быстро убрать и вернуть здесь.",
+      "default": true
+    },
+    {
+      "key": "scope",
+      "type": "select",
+      "title": "Где рисовать",
+      "description": "Ролик в ленте, край всего окна приложения или и то и другое.",
+      "options": [
+        { "value": "feed", "label": "Вокруг ролика в ленте" },
+        { "value": "window", "label": "По краю окна" },
+        { "value": "both", "label": "Ролик и край окна" }
+      ],
+      "default": "feed"
+    },
+    {
+      "key": "palette",
+      "type": "select",
+      "title": "Палитра",
+      "description": "Готовый набор цветов. «Свои цвета» берёт три цвета ниже.",
+      "options": [
+        { "value": "tiktok", "label": "TikTok: бирюза и розовый" },
+        { "value": "neon", "label": "Неон" },
+        { "value": "sunset", "label": "Закат" },
+        { "value": "ocean", "label": "Океан" },
+        { "value": "aurora", "label": "Северное сияние" },
+        { "value": "mono", "label": "Белый металл" },
+        { "value": "custom", "label": "Свои цвета" }
+      ],
+      "default": "tiktok"
+    },
+    {
+      "key": "color_one",
+      "type": "string",
+      "title": "Свой цвет 1",
+      "description": "HEX-цвет для палитры «Свои цвета», например #25F4EE.",
+      "default": "#25F4EE",
+      "maxLength": 9
+    },
+    {
+      "key": "color_two",
+      "type": "string",
+      "title": "Свой цвет 2",
+      "description": "Второй HEX-цвет. Неверное значение заменится на стандартное.",
+      "default": "#FE2C55",
+      "maxLength": 9
+    },
+    {
+      "key": "color_three",
+      "type": "string",
+      "title": "Свой цвет 3",
+      "description": "Третий HEX-цвет. Неверное значение заменится на стандартное.",
+      "default": "#8A2BE2",
+      "maxLength": 9
+    },
+    {
+      "key": "mode",
+      "type": "select",
+      "title": "Анимация",
+      "description": "Как движется градиент: вращается, переливается вдоль рамки, пульсирует или стоит на месте.",
+      "options": [
+        { "value": "spin", "label": "Вращение градиента" },
+        { "value": "flow", "label": "Перелив вдоль рамки" },
+        { "value": "pulse", "label": "Пульсация" },
+        { "value": "none", "label": "Без анимации" }
+      ],
+      "default": "spin"
+    },
+    {
+      "key": "thickness",
+      "type": "number",
+      "title": "Толщина, px",
+      "description": "Ширина самой рамки.",
+      "default": 4,
+      "min": 1,
+      "max": 24,
+      "step": 1
+    },
+    {
+      "key": "radius",
+      "type": "number",
+      "title": "Скругление, px",
+      "description": "Радиус углов рамки. 0 — прямые углы.",
+      "default": 18,
+      "min": 0,
+      "max": 80,
+      "step": 1
+    },
+    {
+      "key": "offset",
+      "type": "number",
+      "title": "Отступ внутрь, px",
+      "description": "Сдвигает рамку от края ролика или окна к центру.",
+      "default": 0,
+      "min": 0,
+      "max": 24,
+      "step": 1
+    },
+    {
+      "key": "speed",
+      "type": "number",
+      "title": "Период анимации, с",
+      "description": "Сколько длится один круг или один перелив. Меньше — быстрее.",
+      "default": 4,
+      "min": 0.5,
+      "max": 20,
+      "step": 0.5
+    },
+    {
+      "key": "glow",
+      "type": "number",
+      "title": "Свечение, px",
+      "description": "Цветной ореол вокруг рамки. 0 — без свечения.",
+      "default": 12,
+      "min": 0,
+      "max": 60,
+      "step": 1
+    },
+    {
+      "key": "opacity",
+      "type": "number",
+      "title": "Прозрачность",
+      "description": "От 0,05 до 1. Чем меньше, тем деликатнее рамка.",
+      "default": 0.9,
+      "min": 0.05,
+      "max": 1,
+      "step": 0.05
+    },
+    {
+      "key": "reduce_motion",
+      "type": "boolean",
+      "title": "Уважать уменьшение движения",
+      "description": "Не анимировать рамку, если в системе включено уменьшение движения.",
+      "default": true
+    }
+  ],
+  "changelog": "Первый выпуск: градиентная рамка вокруг ролика и края окна, шесть палитр, свои цвета, толщина, скругление, отступ, скорость, свечение, прозрачность и учёт уменьшения движения.",
+  "categories": ["cosmetics", "appearance", "video"]
+}

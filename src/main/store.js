@@ -21,8 +21,15 @@ function readState() {
 function writeState(patch) {
   try {
     const next = { ...readState(), ...patch };
-    fs.mkdirSync(path.dirname(statePath()), { recursive: true });
-    fs.writeFileSync(statePath(), JSON.stringify(next, null, 2));
+    const file = statePath();
+    fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+    // В состоянии лежит адрес прокси с паролем: файл — только для владельца.
+    fs.writeFileSync(file, JSON.stringify(next, null, 2), { encoding: 'utf8', mode: 0o600 });
+    try {
+      fs.chmodSync(file, 0o600);
+    } catch {
+      /* Windows и файловые системы без прав доступа */
+    }
   } catch {
     /* состояние — не критично, молча игнорируем */
   }
@@ -31,10 +38,16 @@ function writeState(patch) {
 /** Полная замена состояния: нужна восстановлению резервной копии. */
 function replaceState(value) {
   const next = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-  fs.mkdirSync(path.dirname(statePath()), { recursive: true });
-  const tmp = `${statePath()}.${process.pid}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(next, null, 2));
-  fs.renameSync(tmp, statePath());
+  const file = statePath();
+  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  const tmp = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(next, null, 2), { encoding: 'utf8', mode: 0o600 });
+  fs.renameSync(tmp, file);
+  try {
+    fs.chmodSync(file, 0o600);
+  } catch {
+    /* Windows и файловые системы без прав доступа */
+  }
 }
 
 module.exports = { readState, writeState, replaceState, statePath };

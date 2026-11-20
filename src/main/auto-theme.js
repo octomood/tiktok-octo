@@ -18,6 +18,10 @@
 let target = null;
 let desired = false;
 let owned = false;
+// Переключения и sync после перезагрузки идут через одну очередь: быстрые
+// «выключить → включить» иначе выполняются наперегонки, и отложенный detach
+// старого вызова снимает режим уже после того, как новый его включил.
+let queue = Promise.resolve();
 
 function alive(wc) {
   return Boolean(wc && !wc.isDestroyed?.() && wc.debugger);
@@ -38,7 +42,7 @@ function detachOwned(wc) {
  * @param {Electron.WebContents} [wc]
  * @param {boolean} [on]
  */
-async function apply(wc = target, on = desired) {
+function applyNow(wc, on) {
   if (!alive(wc)) {
     detachOwned(target);
     target = null;
@@ -53,14 +57,29 @@ async function apply(wc = target, on = desired) {
       wc.debugger.attach('1.3');
       owned = true;
     }
-    await wc.debugger.sendCommand('Emulation.setAutoDarkModeOverride', { enabled: Boolean(on) });
-    if (!on) detachOwned(wc);
-    return true;
+    return wc.debugger
+      .sendCommand('Emulation.setAutoDarkModeOverride', { enabled: Boolean(on) })
+      .then(() => {
+        if (!on) detachOwned(wc);
+        return true;
+      })
+      .catch((err) => {
+        if (process.env.OCTO_DEBUG) console.warn('[octo] auto dark:', err.message);
+        if (owned) detachOwned(wc);
+        return false;
+      });
   } catch (err) {
     if (process.env.OCTO_DEBUG) console.warn('[octo] auto dark:', err.message);
     if (owned) detachOwned(wc);
     return false;
   }
+}
+
+/** Ставит применение в очередь: последний вызов задаёт итоговое состояние. */
+function apply(wc = target, on = desired) {
+  const next = queue.then(() => applyNow(wc, on)).catch(() => false);
+  queue = next;
+  return next;
 }
 
 /** Повторить текущее состояние после навигации или закрытия DevTools. */

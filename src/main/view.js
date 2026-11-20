@@ -19,6 +19,7 @@ const {
   setUnread,
   setPanelOpen,
   syncViewVisibility,
+  applyWelcomeAudio,
 } = require('./app-context');
 const { prepareSession } = require('./session');
 const { readState, writeState } = require('./store');
@@ -96,6 +97,8 @@ function createView() {
   ctx.win.contentView.addChildView(view);
 
   const wc = view.webContents;
+  // Окно пересоздали, пока открыт мастер: новый view тоже должен молчать.
+  if (ctx.welcome.open) applyWelcomeAudio(true, wc);
   const setOffline = (next) => {
     const value = Boolean(next);
     if (ctx.offline === value) return;
@@ -190,6 +193,8 @@ function createView() {
     const previousUrl = lastUrl;
     const currentUrl = wc.getURL();
     lastUrl = currentUrl;
+    // SPA сменила ролик: старый QR показывал бы чужую ссылку.
+    if (qr.clear()) pushState();
     rememberUrl(currentUrl);
     stats.noteVideo(currentUrl);
     mpris.scheduleMetadata();
@@ -379,8 +384,12 @@ function createView() {
   autoTheme.setEnabled(wc, cosmetics.isEnabled('dark-theme')).catch(() => {});
   // Тема сайта ставится cookie до первой загрузки: чат и другие разделы
   // читают её при монтировании и иначе останутся светлыми до перезагрузки.
-  cosmetics
-    .prepareTheme(ses)
+  // Прокси (в том числе сохранённый обход DPI) применяем до первой загрузки:
+  // иначе стартовый запрос уйдёт напрямую и получит блокировку.
+  region
+    .whenProxyReady()
+    .catch(() => {})
+    .then(() => cosmetics.prepareTheme(ses))
     .catch(() => {})
     .then(() => region.applySiteLanguageCookie(ses).catch(() => {}))
     .finally(() => {

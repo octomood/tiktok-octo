@@ -95,6 +95,17 @@ test('окно, команды, поиск и панель функций', asyn
 
     // Поиск раскрывает подходящую категорию и прячет остальные.
     await page.locator('#panelSearch').fill('таймер');
+    // Фокус не рисует второе кольцо вокруг поля: остаётся только рамка
+    // контейнера, у самого input outline выключен.
+    const searchFocus = await page.evaluate(() => {
+      const input = document.getElementById('panelSearch');
+      const bar = document.getElementById('panelSearchBar');
+      return {
+        outline: getComputedStyle(input).outlineStyle,
+        shadow: getComputedStyle(bar).boxShadow,
+      };
+    });
+    expect(searchFocus).toEqual({ outline: 'none', shadow: 'none' });
     await expect(page.locator('#catPlayback')).toBeVisible();
     await expect(page.locator('#sleepLabel')).toBeVisible();
     await expect(page.locator('#catPage')).toBeHidden();
@@ -215,6 +226,33 @@ test('окно, команды, поиск и панель функций', asyn
     await expect
       .poll(() => (fs.existsSync(screenshots) ? fs.readdirSync(screenshots).length : 0))
       .toBe(1);
+
+    // В правом нижнем углу есть тёмная плашка с подписью «tiktok octo».
+    const shot = fs.readFileSync(path.join(screenshots, fs.readdirSync(screenshots)[0]));
+    const cornerPixels = await page.evaluate(async (base64) => {
+      const image = new window.Image();
+      image.src = `data:image/png;base64,${base64}`;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.drawImage(image, 0, 0);
+      const width = Math.max(1, Math.round(image.naturalWidth * 0.3));
+      const height = Math.max(1, Math.round(image.naturalHeight * 0.15));
+      const data = context.getImageData(
+        image.naturalWidth - width,
+        image.naturalHeight - height,
+        width,
+        height,
+      ).data;
+      let dark = 0;
+      for (let index = 0; index < data.length; index += 4) {
+        if (data[index + 3] > 0 && data[index] < 160) dark += 1;
+      }
+      return dark;
+    }, shot.toString('base64'));
+    expect(cornerPixels).toBeGreaterThan(100);
   } finally {
     if (app) await app.close();
     fs.rmSync(userData, { recursive: true, force: true });

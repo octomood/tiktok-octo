@@ -27,6 +27,7 @@ const DEFAULTS = {
   brightness: 100,
   contrast: 100,
   warmth: 0,
+  sharpness: 0,
   fit: 'auto',
 };
 
@@ -344,18 +345,84 @@ function pageScript(config) {
     };
 
     // --- Картинка: фильтр и кадрирование -----------------------------------
+    // Резкость — свёртка по SVG-фильтру: она подчёркивает контуры уже
+    // отрисованного кадра и не требует доступа к пикселям чужого видео.
+    // Фильтр живёт в документе один и обновляется при смене ползунка.
+    const sharpenFilter = (fraction) => {
+      try {
+        let svg = document.getElementById('octo-sharpen-svg');
+        if (!svg) {
+          const ns = 'http://www.w3.org/2000/svg';
+          svg = document.createElementNS(ns, 'svg');
+          svg.id = 'octo-sharpen-svg';
+          svg.setAttribute('width', '0');
+          svg.setAttribute('height', '0');
+          svg.setAttribute('aria-hidden', 'true');
+          svg.style.setProperty('position', 'absolute');
+          svg.style.setProperty('width', '0');
+          svg.style.setProperty('height', '0');
+          svg.style.setProperty('overflow', 'hidden');
+          svg.style.setProperty('pointer-events', 'none');
+
+          const defs = document.createElementNS(ns, 'defs');
+          const filter = document.createElementNS(ns, 'filter');
+          filter.id = 'octo-sharpen';
+          filter.setAttribute('color-interpolation-filters', 'sRGB');
+          filter.setAttribute('x', '-5%');
+          filter.setAttribute('y', '-5%');
+          filter.setAttribute('width', '110%');
+          filter.setAttribute('height', '110%');
+
+          const convolve = document.createElementNS(ns, 'feConvolveMatrix');
+          convolve.setAttribute('order', '3');
+          convolve.setAttribute('preserveAlpha', 'true');
+          convolve.setAttribute('edgeMode', 'duplicate');
+          convolve.setAttribute('divisor', '1');
+
+          filter.appendChild(convolve);
+          defs.appendChild(filter);
+          svg.appendChild(defs);
+          (document.body || document.documentElement).appendChild(svg);
+        }
+
+        const convolve = svg.querySelector('feConvolveMatrix');
+        if (!convolve) return false;
+        // Сумма ядра равна 1, поэтому яркость кадра не меняется.
+        const amount = Math.max(0, Math.min(0.5, fraction * 0.5));
+        const kernel = [
+          0,
+          -amount,
+          0,
+          -amount,
+          1 + 4 * amount,
+          -amount,
+          0,
+          -amount,
+          0,
+        ].join(' ');
+        convolve.setAttribute('kernelMatrix', kernel);
+        return true;
+      } catch (err) {
+        return false;
+      }
+    };
+
     // Ставим только своё: при настройках по умолчанию ничего не трогаем,
     // чтобы не сбрасывать фильтры сайта.
     const applyPicture = (video) => {
       const brightness = Math.min(150, Math.max(50, Number(current.brightness) || 100));
       const contrast = Math.min(150, Math.max(50, Number(current.contrast) || 100));
       const warmth = Math.min(100, Math.max(0, Number(current.warmth) || 0));
+      const sharpness = Math.min(100, Math.max(0, Number(current.sharpness) || 0));
       const parts = [];
       if (brightness !== 100) parts.push('brightness(' + brightness / 100 + ')');
       if (contrast !== 100) parts.push('contrast(' + contrast / 100 + ')');
       if (warmth > 0) {
         parts.push('sepia(' + (warmth / 100) * 0.35 + ')');
         parts.push('saturate(' + (1 + (warmth / 100) * 0.25) + ')');
+      }
+      if (sharpness > 0 && sharpenFilter(sharpness / 100)) {
+        parts.push('url("#octo-sharpen")');
       }
       try {
         if (parts.length) video.style.setProperty('filter', parts.join(' '), 'important');
@@ -499,6 +566,52 @@ function pageScript(config) {
         }
       }
       return '';
+    };
+
+    // --- Диагностика качества ----------------------------------------------
+    // Битрейт TikTok пишет в query как bt в кбит/с. Кодек отдельно не отдаёт,
+    // зато Chromium честно сообщает, доступен ли системный декодер HEVC.
+    const bitrateOf = (video) => {
+      try {
+        const source = video.currentSrc || video.src || '';
+        if (source) {
+          const bt = Number(new URL(source, location.href).searchParams.get('bt'));
+          if (Number.isFinite(bt) && bt > 0) return bt;
+        }
+      } catch (err) {
+        /* источник может быть blob: или уже выгружен */
+      }
+
+      // TikTok часто играет через MSE: у <video> тогда blob:, а настоящий
+      // адрес сегмента виден в записях performance. Берём самый свежий.
+      try {
+        const entries = performance.getEntriesByType('resource');
+        for (let index = entries.length - 1; index >= 0; index -= 1) {
+          const name = entries[index] && entries[index].name;
+          if (!name || name.indexOf('/video/tos/') === -1) continue;
+          const bt = Number(new URL(name).searchParams.get('bt'));
+          if (Number.isFinite(bt) && bt > 0) return bt;
+        }
+      } catch (err) {
+        /* performance может быть ограничен политикой страницы */
+      }
+      return 0;
+    };
+
+    let hevcSupported = null;
+    const hevcAvailable = () => {
+      if (hevcSupported !== null) return hevcSupported;
+      try {
+        const probe = document.createElement('video');
+        const type = 'video/mp4; codecs="hvc1.1.6.L93.B0"';
+        hevcSupported = Boolean(
+          probe.canPlayType(type) ||
+            (window.MediaSource && window.MediaSource.isTypeSupported(type)),
+        );
+      } catch (err) {
+        hevcSupported = false;
+      }
+      return hevcSupported;
     };
 
     const onEnded = (event) => {
@@ -649,6 +762,10 @@ function pageScript(config) {
           duration: video && Number.isFinite(video.duration) ? video.duration : 0,
           volume: video ? video.volume : 0,
           date: publishDate(),
+          width: video ? Number(video.videoWidth) || 0 : 0,
+          height: video ? Number(video.videoHeight) || 0 : 0,
+          bitrate: video ? bitrateOf(video) : 0,
+          hevc: hevcAvailable(),
         };
       },
     };
@@ -711,7 +828,7 @@ function setEqualizer(value) {
   if (name !== 'off') probeBlocked();
 }
 
-/** Картинка: яркость, контраст и тёплый оттенок. */
+/** Картинка: яркость, контраст, тёплый оттенок и резкость. */
 function setPicture(patch) {
   if (!patch || typeof patch !== 'object') return;
   const next = { ...readSettings() };
@@ -724,6 +841,9 @@ function setPicture(patch) {
   }
   if ('warmth' in patch) {
     next.warmth = Math.min(100, Math.max(0, Math.round(Number(patch.warmth) || 0)));
+  }
+  if ('sharpness' in patch) {
+    next.sharpness = Math.min(100, Math.max(0, Math.round(Number(patch.sharpness) || 0)));
   }
 
   writeState({ player: next });
@@ -740,8 +860,19 @@ function setFit(value) {
   pushState();
 }
 
+/**
+ * Быстрый пресет: чуть больше контраста и заметная резкость. Разрешение
+ * ролика это не поднимает, но размытый 540p-поток TikTok выглядит чётче.
+ */
+function enhancePicture() {
+  save({ sharpness: 45, contrast: 108 });
+  apply();
+  pushState();
+  toast('Картинка стала чётче');
+}
+
 function resetPicture() {
-  save({ brightness: 100, contrast: 100, warmth: 0, fit: 'auto', fitChosen: true });
+  save({ brightness: 100, contrast: 100, warmth: 0, sharpness: 0, fit: 'auto', fitChosen: true });
   apply();
   pushState();
   toast('Картинка сброшена');
@@ -761,15 +892,42 @@ function watchPanel(active) {
   }
   if (panelTimer) return;
 
-  panelTimer = setInterval(async () => {
+  const refresh = async () => {
     const info = await status();
     if (!info) return;
+    let changed = false;
+
     const date = typeof info.date === 'string' ? info.date : '';
     if (date !== ctx.videoDate) {
       ctx.videoDate = date;
-      pushState();
+      changed = true;
     }
-  }, 2000);
+
+    // Панель показывает, что реально играет: разрешение, битрейт и доступен
+    // ли системный HEVC. Это помогает проверить аппаратное декодирование.
+    const quality = {
+      width: Number(info.width) || 0,
+      height: Number(info.height) || 0,
+      bitrate: Number(info.bitrate) || 0,
+      hevc: info.hevc === true,
+    };
+    const previous = ctx.videoQuality || {};
+    if (
+      quality.width !== previous.width ||
+      quality.height !== previous.height ||
+      quality.bitrate !== previous.bitrate ||
+      quality.hevc !== previous.hevc
+    ) {
+      ctx.videoQuality = quality;
+      changed = true;
+    }
+
+    if (changed) pushState();
+  };
+
+  // Не ждём первого тика: при открытии панели значения должны быть сразу.
+  refresh();
+  panelTimer = setInterval(refresh, 2000);
   if (typeof panelTimer.unref === 'function') panelTimer.unref();
 }
 
@@ -901,6 +1059,7 @@ module.exports = {
   setSink,
   setPicture,
   setFit,
+  enhancePicture,
   resetPicture,
   watchPanel,
   refreshDevices,

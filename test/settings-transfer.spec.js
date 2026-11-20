@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { test, expect, _electron: electron } = require('@playwright/test');
+const { readZip } = require('../src/main/plugins/zip');
 
 /**
  * Настройки одним JSON и резервные копии состояния.
@@ -48,6 +49,7 @@ test('настройки: экспорт, импорт, ежедневная к�
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-settings-'));
   const exportDir = path.join(userData, 'export');
   const backupDir = path.join(userData, 'backups');
+  const archiveDir = path.join(userData, 'archive');
   const stateFile = path.join(userData, 'octo-state.json');
   const pluginsFile = path.join(userData, 'plugins-state.json');
 
@@ -61,6 +63,7 @@ test('настройки: экспорт, импорт, ежедневная к�
         OCTO_HOME_URL: 'about:blank',
         OCTO_EXPORT_DIR: exportDir,
         OCTO_BACKUP_DIR: backupDir,
+        OCTO_ARCHIVE_DIR: archiveDir,
       },
     });
 
@@ -82,6 +85,23 @@ test('настройки: экспорт, импорт, ежедневная к�
       (value) => value > 1,
       'масштаб записан',
     );
+    if (process.platform !== 'win32') {
+      // В octo-state.json может лежать пароль прокси: только владелец.
+      expect((fs.statSync(stateFile).mode & 0o777).toString(8)).toBe('600');
+    }
+
+    // Прокси с паролем: в живом состоянии он нужен целиком, в файлы — нет.
+    const proxySecret = 'pa55word-not-exported';
+    await page.evaluate(
+      (address) => window.octo.cmd('regionProxyApply', address),
+      `http://user:${proxySecret}@127.0.0.1:8080`,
+    );
+    await waitForValue(
+      () => (fs.existsSync(stateFile) ? readJson(stateFile).region?.proxy : ''),
+      (value) =>
+        value === `http://user:${proxySecret}@127.0.0.1:8080` || value === 'http://127.0.0.1:8080',
+      'прокси записан',
+    );
 
     // Экспорт: файл появляется в OCTO_EXPORT_DIR без диалога.
     await page.evaluate(() => window.octo.cmd('settingsExport'));
@@ -98,6 +118,8 @@ test('настройки: экспорт, импорт, ежедневная к�
     expect(exported.settings.keymap.profile).toBeTruthy();
     expect(exported.plugins).toHaveProperty('autoUpdate');
     expect(exported.plugins).toHaveProperty('registryUrl');
+    expect(exported.settings.region.proxy).toBe('http://127.0.0.1:8080');
+    expect(JSON.stringify(exported)).not.toContain(proxySecret);
     // В экспорт не попадают данные, которых там быть не должно.
     expect(exported.settings).not.toHaveProperty('library');
     expect(exported.settings).not.toHaveProperty('stats');
@@ -105,12 +127,34 @@ test('настройки: экспорт, импорт, ежедневная к�
 
     // Копия создаётся по кнопке и видна в панели.
     await page.evaluate(() => window.octo.cmd('backupNow'));
-    await waitForValue(
-      () => (fs.existsSync(backupDir) ? fs.readdirSync(backupDir).length : 0),
-      (value) => value >= 1,
+    const backupFile = await waitForValue(
+      () => {
+        if (!fs.existsSync(backupDir)) return '';
+        const name = fs.readdirSync(backupDir).find((item) => item.endsWith('.json'));
+        return name ? path.join(backupDir, name) : '';
+      },
+      (value) => Boolean(value),
       'резервная копия',
     );
     await expect(page.locator('#backupLatest')).not.toHaveText('—');
+    expect(readJson(backupFile).state.region.proxy).toBe('http://127.0.0.1:8080');
+    expect(fs.readFileSync(backupFile, 'utf8')).not.toContain(proxySecret);
+
+    // «Мой архив» собирается через наш ZIP-ридер: пароля в settings.json нет.
+    await page.evaluate(() => window.octo.cmd('archiveExport'));
+    const archiveFile = await waitForValue(
+      () => {
+        if (!fs.existsSync(archiveDir)) return '';
+        const name = fs.readdirSync(archiveDir).find((item) => item.endsWith('.zip'));
+        return name ? path.join(archiveDir, name) : '';
+      },
+      (value) => Boolean(value),
+      'архив',
+    );
+    const archive = readZip(fs.readFileSync(archiveFile));
+    const archivedSettings = JSON.parse(archive.get('settings.json').toString('utf8'));
+    expect(archivedSettings.region.proxy).toBe('http://127.0.0.1:8080');
+    expect(archive.get('settings.json').toString('utf8')).not.toContain(proxySecret);
 
     // Импорт возвращает масштаб из файла и применяет его без перезапуска.
     await page.evaluate(() => window.octo.cmd('zoomReset'));
@@ -189,7 +233,14 @@ test('настройки: экспорт, импорт, ежедневная к�
         app: 'TikTok octo',
         kind: 'tiktok-octo-settings',
         schema: 1,
-        settings: { zoomFactor: 1.25, feedKeys: false },
+        settings: {
+          zoomFactor: 1.25,
+          feedKeys: false,
+          region: { preset: 'off', proxy: 'http://user:pa55word-import@127.0.0.1:9090' },
+          replies: ['Привет', 'Куда пропал?'],
+          focus: { enabled: false, minutes: 50, breakMinutes: 10 },
+          sleep: { mode: 'off', endsAt: 0, videos: 3, minutes: 0, videosLeft: 0, fade: false },
+        },
         plugins: {
           autoUpdate: false,
           updateIntervalHours: 24,
@@ -211,6 +262,20 @@ test('настройки: экспорт, импорт, ежедневная к�
     expect(pluginSettings.updateIntervalHours).toBe(24);
     expect(pluginSettings.registryUrls).toEqual([]);
     expect(readJson(stateFile).feedKeys).toBe(false);
+
+    // Импорт применяет быстрые ответы и лимиты Focus без перезапуска.
+    await expect(page2.locator('#repliesInput')).toHaveValue('Привет\nКуда пропал?');
+    await expect(page2.locator('#focusMinutes')).toHaveValue('50');
+    // И новый прокси сразу уходит в сессию, а не ждёт перезапуска.
+    // Пароль из файла отброшен: диалог импорта обещает их не импортировать.
+    expect(readJson(stateFile).region.proxy).toBe('http://127.0.0.1:9090');
+    await expect
+      .poll(() =>
+        app.evaluate(({ session }) =>
+          session.fromPartition('persist:octo-tiktok').resolveProxy('https://www.tiktok.com/'),
+        ),
+      )
+      .toBe('PROXY 127.0.0.1:9090');
   } finally {
     if (app) await app.close();
     fs.rmSync(userData, { recursive: true, force: true });
