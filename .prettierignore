@@ -5,5 +5,6 @@ flatpak/npm-sources.json
 test-results/
 playwright-report/
 docs/promo/
+site/
 src/renderer/plugins-docs/
 src/renderer/vendor/
