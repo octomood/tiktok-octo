@@ -1,7 +1,7 @@
 {
   "name": "tiktok-octo",
   "productName": "TikTok octo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Неофициальный десктоп-клиент TikTok: официальный веб-сайт в нативной оболочке Electron",
   "main": "src/main/main.js",
   "desktopName": "tiktok-octo.desktop",
