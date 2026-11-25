@@ -65,10 +65,15 @@ ipcMain.on('octo:annotate-save', (event, payload) => {
   }
 
   const buffer = Buffer.from(match[1], 'base64');
-  const name =
+  const rawName =
     payload && typeof payload.name === 'string' && payload.name
-      ? payload.name.replace(/[\\/:*?"<>|]/g, ' ')
-      : `tiktok-octo-${Date.now()}-annotated.png`;
+      ? payload.name
+          .replace(/[\\/:*?"<>|]/g, ' ')
+          .replace(/^\.+/, '')
+          .trim()
+      : '';
+  const baseName = rawName || `tiktok-octo-${Date.now()}-annotated.png`;
+  const name = baseName.toLowerCase().endsWith('.png') ? baseName : `${baseName}.png`;
 
   try {
     const dir = outputDir();
@@ -80,11 +85,10 @@ ipcMain.on('octo:annotate-save', (event, payload) => {
       /* буфер обмена может быть недоступен — файл уже сохранён */
     }
     toast(`Снимок с аннотацией сохранён: ${name}`);
+    if (win && !win.isDestroyed()) win.close();
   } catch (err) {
     toast(`Не удалось сохранить снимок: ${err.message}`);
   }
-
-  if (win && !win.isDestroyed()) win.close();
 });
 
 ipcMain.on('octo:annotate-close', (event) => {

@@ -13,7 +13,7 @@ const path = require('node:path');
 const HOME_URL = process.env.OCTO_HOME_URL || 'https://www.tiktok.com/';
 
 // Высота нашей собственной полосы заголовка (px).
-const TITLEBAR_H = 44;
+const TITLEBAR_H = 50;
 
 // Верхняя граница «хрома»: полоса заголовка, панель поиска и меню стикеров.
 const MAX_CHROME_H = 480;
@@ -85,13 +85,13 @@ function parseUrl(rawUrl) {
 
 function isTikTokUrl(rawUrl) {
   const url = parseUrl(rawUrl);
-  if (!url) return false;
+  if (!url || url.protocol !== 'https:') return false;
   return url.hostname === 'tiktok.com' || url.hostname.endsWith('.tiktok.com');
 }
 
 function isAuthUrl(rawUrl) {
   const url = parseUrl(rawUrl);
-  if (!url) return false;
+  if (!url || url.protocol !== 'https:') return false;
   return AUTH_RULES.some((rule) => {
     const hostOk =
       typeof rule.host === 'string' ? url.hostname === rule.host : rule.host.test(url.hostname);
@@ -102,7 +102,7 @@ function isAuthUrl(rawUrl) {
 /** Хост из списка OAuth-провайдеров, без проверки пути (для popup-окон). */
 function isAuthHost(rawUrl) {
   const url = parseUrl(rawUrl);
-  if (!url) return false;
+  if (!url || url.protocol !== 'https:') return false;
   return AUTH_RULES.some((rule) =>
     typeof rule.host === 'string' ? url.hostname === rule.host : rule.host.test(url.hostname),
   );

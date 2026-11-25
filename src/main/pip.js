@@ -121,7 +121,9 @@ function aspectOf(info) {
  */
 async function pollStatus() {
   if (!ctx.pipActive) return;
-  const info = await videoInfo(contents());
+  const wc = contents();
+  if (!wc || wc.isLoading()) return;
+  const info = await videoInfo(wc);
   if (!ctx.pipActive || !info) return;
 
   const time = Number(info.currentTime) || 0;
@@ -684,7 +686,7 @@ function reapply() {
 }
 
 async function enter() {
-  if (!ctx.win || ctx.win.isDestroyed() || ctx.pipActive || entering) return;
+  if (!ctx.win || ctx.win.isDestroyed() || ctx.pipActive || ctx.ambient || entering) return;
 
   const wc = contents();
   if (!wc || wc.isDestroyed()) return;
@@ -698,7 +700,7 @@ async function enter() {
   }
 
   const win = ctx.win;
-  if (!win || win.isDestroyed()) {
+  if (!win || win.isDestroyed() || !entering || ctx.ambient || ctx.barOnly) {
     entering = false;
     return;
   }

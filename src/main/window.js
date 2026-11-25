@@ -16,6 +16,7 @@ const ambient = require('./ambient');
 const plugins = require('./plugins');
 const chat = require('./chat');
 const windowsMedia = require('./windows-media');
+const uiFont = require('./ui-font');
 
 function saveGeometry(win) {
   // В PiP и в «только полоса» окно маленькое — сохраняем геометрию до режима.
@@ -36,7 +37,7 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     show: false,
-    backgroundColor: '#0b0b0f',
+    backgroundColor: '#131218',
     title: 'TikTok octo',
     icon: path.join(__dirname, '../../build/icon.png'),
     autoHideMenuBar: true,
@@ -56,10 +57,11 @@ function createWindow() {
 
   ctx.win = win;
   ctx.uiScale = uiScale;
+  ctx.uiFont = uiFont.normalizeUiFont(saved.uiFont);
   ctx.chromeHeightCss = TITLEBAR_H;
   ctx.chromeHeight = Math.round(TITLEBAR_H * uiScale);
   win.webContents.setZoomFactor(uiScale);
-  ctx.panelOpen = saved.panelOpen === true;
+  ctx.panelOpen = false;
   ctx.paletteOpen = false;
   ctx.startInTray = saved.startInTray === true;
   setCloseToTray(saved.closeToTray === true);

@@ -394,7 +394,7 @@ function withTimeout(promise, ms) {
 async function poll() {
   if (!isEnabled()) return;
   const wc = ctx.view?.webContents;
-  if (!wc || wc.isDestroyed()) return;
+  if (!wc || wc.isDestroyed() || wc.isLoading()) return;
 
   try {
     const stats = await withTimeout(
@@ -406,7 +406,7 @@ async function poll() {
     );
     if (!stats || typeof stats.skipped !== 'number') return;
 
-    if (stats.skipped < lastPageCount) lastPageCount = stats.skipped;
+    if (stats.skipped < lastPageCount) lastPageCount = 0;
     const delta = stats.skipped - lastPageCount;
     if (delta <= 0) return;
 

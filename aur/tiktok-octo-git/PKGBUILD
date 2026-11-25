@@ -35,6 +35,7 @@ pkgver() {
 build() {
   cd "$pkgname"
   npm ci --no-audit --no-fund
+  npm run docs:build
   npx electron-builder --linux dir
 }
 

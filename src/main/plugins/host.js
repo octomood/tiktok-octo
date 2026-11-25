@@ -602,17 +602,45 @@ async function handleNetwork(entry, payload) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const response = await getNetworkSession().fetch(url.toString(), {
-      method,
-      headers,
-      body: method === 'GET' ? undefined : body,
-      signal: controller.signal,
-      cache: 'no-store',
-      credentials: 'omit',
-      redirect: 'follow',
-    });
+    let currentUrl = url;
+    let response = null;
+    for (let hop = 0; hop <= 5; hop += 1) {
+      response = await getNetworkSession().fetch(currentUrl.toString(), {
+        method: hop === 0 ? method : 'GET',
+        headers,
+        body: hop === 0 && method !== 'GET' ? body : undefined,
+        signal: controller.signal,
+        cache: 'no-store',
+        credentials: 'omit',
+        redirect: 'manual',
+      });
+      if (response.status >= 300 && response.status < 400) {
+        const loc = response.headers.get('location');
+        if (!loc || hop === 5) {
+          return hostForbidden('Слишком много редиректов');
+        }
+        let nextUrl;
+        try {
+          nextUrl = new URL(loc, currentUrl);
+        } catch {
+          return hostForbidden('Некорректный URL редиректа');
+        }
+        const nextLocal =
+          nextUrl.protocol === 'http:' &&
+          (nextUrl.hostname === '127.0.0.1' || nextUrl.hostname === 'localhost');
+        if (nextUrl.protocol !== 'https:' && !nextLocal) {
+          return hostForbidden('Редирект увёл на небезопасный протокол');
+        }
+        if (!hostAllowed(nextUrl.hostname, entry.manifest.networkHosts)) {
+          return hostForbidden('Редирект увёл на неразрешённый хост');
+        }
+        currentUrl = nextUrl;
+        continue;
+      }
+      break;
+    }
 
-    const finalUrl = new URL(response.url || url.toString());
+    const finalUrl = new URL(response.url || currentUrl.toString());
     if (!hostAllowed(finalUrl.hostname, entry.manifest.networkHosts)) {
       return hostForbidden('Редирект увёл на неразрешённый хост');
     }

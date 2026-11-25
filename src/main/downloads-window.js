@@ -96,6 +96,11 @@ ipcMain.on('octo:downloads-show', (event, id) => {
   downloads.showInFolder(id);
 });
 
+ipcMain.on('octo:downloads-audio', (event, id) => {
+  if (!fromManager(event) || typeof id !== 'string') return;
+  downloads.extractAudio(id);
+});
+
 ipcMain.on('octo:downloads-clear', (event) => {
   if (!fromManager(event)) return;
   downloads.clearFinished();

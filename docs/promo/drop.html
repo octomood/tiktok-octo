@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>TikTok octo — color drop 10s</title>
+    <style>
+      /* ----------------------------------------------------------------
+         «Color drop»: 10 с, 1080×1920. Плакатный стиль — розовый #ED2161
+         на тёмном #101409, тяжёлый Bowlby One, фон из повторяющихся слов
+         и звёздочка. Всё состояние считается из t, CSS-анимаций нет.
+         ---------------------------------------------------------------- */
+
+      @font-face {
+        font-family: 'Bowlby One';
+        font-style: normal;
+        font-weight: 400;
+        font-display: block;
+        src: url('assets/fonts/bowlby-one.ttf') format('truetype');
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg: #101409;
+        --pink: #ed2161;
+        --pink-ink: #c2154b;
+        --white: #ffffff;
+        --display: 'Bowlby One', 'Inter', sans-serif;
+        --sans: 'Inter', system-ui, sans-serif;
+      }
+
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        margin: 0;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--white);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+      }
+
+      #scene {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+
+      /* ---------------------------------------------------------------
+         Фон: те же буквы крупно, повёрнутые, чуть светлее подложки
+         --------------------------------------------------------------- */
+
+      #words {
+        position: absolute;
+        left: -220px;
+        top: -180px;
+        width: 1520px;
+        height: 2300px;
+        pointer-events: none;
+      }
+
+      #words span {
+        position: absolute;
+        display: block;
+        font-family: var(--display);
+        line-height: 0.8;
+        letter-spacing: -0.06em;
+        white-space: nowrap;
+        transform-origin: 50% 50%;
+      }
+
+      #shade {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(112% 92% at 50% 44%, transparent 38%, rgba(8, 10, 4, 0.55) 100%),
+          linear-gradient(to bottom, rgba(16, 20, 9, 0.55) 0, transparent 22%, transparent 76%, rgba(9, 11, 5, 0.7) 100%);
+      }
+
+      .grain {
+        position: absolute;
+        inset: -6%;
+        pointer-events: none;
+        opacity: 0.06;
+        mix-blend-mode: soft-light;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+        background-size: 180px 180px;
+      }
+
+      /* ---------------------------------------------------------------
+         Верхняя подпись и плашка версии
+         --------------------------------------------------------------- */
+
+      #kicker {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 168px;
+        text-align: center;
+        font-size: 31px;
+        font-weight: 700;
+        letter-spacing: 0.34em;
+        text-indent: 0.34em;
+        color: rgba(255, 255, 255, 0.58);
+      }
+
+      #sticker {
+        position: absolute;
+        left: 50%;
+        top: 300px;
+        width: 620px;
+        margin-left: -310px;
+        height: 230px;
+        transform-origin: 50% 60%;
+        filter: drop-shadow(6px 18px 20px rgba(0, 0, 0, 0.6));
+      }
+
+      #sticker span {
+        position: absolute;
+        inset: 0;
+        display: block;
+        text-align: center;
+        font-family: var(--display);
+        font-size: 178px;
+        line-height: 224px;
+        letter-spacing: -0.035em;
+      }
+
+      #sticker .edge {
+        color: var(--pink);
+        -webkit-text-stroke: 26px var(--pink);
+      }
+
+      #sticker .face {
+        color: var(--white);
+      }
+
+      /* ---------------------------------------------------------------
+         Главное слово
+         --------------------------------------------------------------- */
+
+      #word {
+        position: absolute;
+        z-index: 7;
+        left: 0;
+        right: 0;
+        top: 596px;
+        text-align: center;
+        font-family: var(--display);
+        font-size: 332px;
+        line-height: 0.8;
+        letter-spacing: -0.055em;
+        text-indent: -0.02em;
+        color: var(--pink);
+        transform-origin: 50% 46%;
+        filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.45));
+        will-change: transform;
+      }
+
+      /* ---------------------------------------------------------------
+         Плашки цветов
+         --------------------------------------------------------------- */
+
+      #colors {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 962px;
+        height: 170px;
+      }
+
+      .swatch {
+        position: absolute;
+        top: 0;
+        width: 420px;
+        height: 150px;
+      }
+
+      .swatch.fill {
+        left: 118px;
+      }
+
+      .swatch.ring {
+        left: 548px;
+      }
+
+      .swatch .dot {
+        position: absolute;
+        left: 0;
+        top: 14px;
+        width: 122px;
+        height: 122px;
+        border-radius: 50%;
+      }
+
+      .swatch.fill .dot {
+        background: var(--pink);
+        box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.18);
+      }
+
+      .swatch.ring .dot {
+        border: 13px solid var(--pink);
+      }
+
+      .swatch .hex {
+        position: absolute;
+        left: 158px;
+        top: 8px;
+      }
+
+      .swatch .hex b {
+        display: block;
+        font-size: 37px;
+        font-weight: 500;
+        line-height: 1.24;
+        color: rgba(255, 255, 255, 0.88);
+      }
+
+      .swatch .hex em {
+        display: block;
+        font-style: normal;
+        font-size: 46px;
+        font-weight: 700;
+        letter-spacing: 0.005em;
+        line-height: 1.22;
+        font-variant-numeric: tabular-nums;
+        color: var(--white);
+      }
+
+      /* ---------------------------------------------------------------
+         Звезда с орбитой
+         --------------------------------------------------------------- */
+
+      #star {
+        position: absolute;
+        left: 216px;
+        top: 1112px;
+        width: 648px;
+        height: 648px;
+      }
+
+      .spark {
+        position: absolute;
+        transform-origin: 50% 50%;
+      }
+
+      /* ---------------------------------------------------------------
+         Финал: QR и ссылка
+         --------------------------------------------------------------- */
+
+      #scrim {
+        position: absolute;
+        z-index: 5;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0;
+        background: radial-gradient(
+          82% 66% at 50% 46%,
+          rgba(8, 10, 4, 0.78) 0%,
+          rgba(8, 10, 4, 0.52) 56%,
+          rgba(8, 10, 4, 0) 100%
+        );
+      }
+
+      #cta {
+        position: absolute;
+        inset: 0;
+        z-index: 6;
+        opacity: 0;
+      }
+
+      #claim {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 636px;
+        text-align: center;
+        font-size: 116px;
+        font-weight: 900;
+        letter-spacing: -0.045em;
+        line-height: 0.99;
+        color: var(--pink);
+      }
+
+      #claim span {
+        display: block;
+      }
+
+      #qr-card {
+        position: absolute;
+        left: 352px;
+        top: 1032px;
+        width: 376px;
+        height: 376px;
+        padding: 13px;
+        border-radius: 46px;
+        background: var(--pink);
+        transform-origin: 50% 50%;
+        box-shadow: 0 28px 64px rgba(0, 0, 0, 0.55);
+      }
+
+      #qr-card .paper {
+        width: 100%;
+        height: 100%;
+        padding: 22px;
+        border-radius: 34px;
+        background: var(--white);
+      }
+
+      #qr-card img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
+      }
+
+      #link {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 1490px;
+        text-align: center;
+        font-size: 58px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: var(--white);
+      }
+
+      #note {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 1582px;
+        text-align: center;
+        font-size: 31px;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        color: rgba(255, 255, 255, 0.56);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="scene">
+      <div id="words"></div>
+      <div id="shade"></div>
+
+      <div id="kicker">TIKTOK ДЛЯ КОМПЬЮТЕРА</div>
+      <div id="sticker"><span class="edge">V1.1</span><span class="face">V1.1</span></div>
+      <div id="word">octo</div>
+
+      <div id="colors">
+        <div class="swatch fill">
+          <div class="dot"></div>
+          <div class="hex"><b>Hex</b><em>#ED2161</em></div>
+        </div>
+        <div class="swatch ring">
+          <div class="dot"></div>
+          <div class="hex"><b>Hex</b><em>#101409</em></div>
+        </div>
+      </div>
+
+      <svg id="star" viewBox="-360 -360 720 720" aria-hidden="true">
+        <g id="orbit">
+          <ellipse
+            cx="0"
+            cy="0"
+            rx="198"
+            ry="84"
+            fill="none"
+            stroke="#ed2161"
+            stroke-width="13"
+          />
+        </g>
+        <path
+          id="star-shape"
+          d="M0 -206 C24 -74 74 -24 206 0 C74 24 24 74 0 206 C-24 74 -74 24 -206 0 C-74 -24 -24 -74 0 -206 Z"
+          fill="#ed2161"
+        />
+        <g id="orbit-front">
+          <ellipse
+            cx="0"
+            cy="0"
+            rx="198"
+            ry="84"
+            fill="none"
+            stroke="#ed2161"
+            stroke-width="13"
+            pathLength="100"
+            stroke-dasharray="16 84"
+            stroke-dashoffset="-2"
+          />
+        </g>
+      </svg>
+
+      <svg class="spark" id="sp1" viewBox="-100 -100 200 200" width="118" height="118">
+        <path
+          d="M0 -96 C12 -34 34 -12 96 0 C34 12 12 34 0 96 C-12 34 -34 12 -96 0 C-34 -12 -12 -34 0 -96 Z"
+          fill="#ed2161"
+        />
+      </svg>
+      <svg class="spark" id="sp2" viewBox="-100 -100 200 200" width="70" height="70">
+        <path
+          d="M0 -96 C12 -34 34 -12 96 0 C34 12 12 34 0 96 C-12 34 -34 12 -96 0 C-34 -12 -12 -34 0 -96 Z"
+          fill="#ed2161"
+        />
+      </svg>
+      <svg class="spark" id="sp3" viewBox="-100 -100 200 200" width="54" height="54">
+        <path
+          d="M0 -96 C12 -34 34 -12 96 0 C34 12 12 34 0 96 C-12 34 -34 12 -96 0 C-34 -12 -12 -34 0 -96 Z"
+          fill="#ed2161"
+        />
+      </svg>
+
+      <div id="scrim"></div>
+      <div id="cta">
+        <div id="claim"><span>Скачивай</span><span>в Telegram</span></div>
+        <div id="qr-card">
+          <div class="paper"><img src="assets/telegram-qr.png" alt="" /></div>
+        </div>
+        <div id="link">t.me/tiktok_octo</div>
+        <div id="note">Windows · macOS · Linux</div>
+      </div>
+
+      <div class="grain"></div>
+    </div>
+
+    <script>
+      'use strict';
+
+      const DUR = 10.0;
+
+      const $ = (id) => document.getElementById(id);
+      const words = $('words');
+      const kicker = $('kicker');
+      const sticker = $('sticker');
+      const word = $('word');
+      const swatches = [...document.querySelectorAll('.swatch')];
+      const star = $('star');
+      const orbit = $('orbit');
+      const orbitFront = $('orbit-front');
+      const starShape = $('star-shape');
+      const sparks = [$('sp1'), $('sp2'), $('sp3')];
+      const scrim = $('scrim');
+      const cta = $('cta');
+      const claim = $('claim');
+      const qrCard = $('qr-card');
+      const link = $('link');
+      const note = $('note');
+
+      const clamp01 = (x) => Math.max(0, Math.min(1, x));
+      const ramp = (t, a, b) => clamp01((t - a) / (b - a));
+      const ease = (x) => x * x * (3 - 2 * x);
+      const out = (t, a, b) => 1 - ramp(t, a, b);
+      const easeOut = (x) => 1 - (1 - x) ** 3;
+      const backOut = (x, k = 1.9) => 1 + (k + 1) * (x - 1) ** 3 + k * (x - 1) ** 2;
+
+      // ------------------------------------------------------------------
+      // Фон: те же слова крупно, повёрнутые, обрезанные краями кадра.
+      // Сетка строится один раз детерминированным ГПСЧ.
+      // ------------------------------------------------------------------
+
+      let seed = 20261121;
+      const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 3; col++) {
+          const el = document.createElement('span');
+          el.innerHTML = rnd() > 0.58 ? 'TikTok<br>octo' : 'octo';
+          const size = 234 + rnd() * 138;
+          const x = col * 500 - 40 + (rnd() - 0.5) * 200;
+          const y = row * 294 - 190 + (rnd() - 0.5) * 140;
+          el.style.fontSize = `${size.toFixed(0)}px`;
+          el.style.left = `${x.toFixed(0)}px`;
+          el.style.top = `${y.toFixed(0)}px`;
+          el.style.lineHeight = '0.78';
+          el.style.transform = `rotate(${((rnd() - 0.5) * 60).toFixed(1)}deg)`;
+          el.style.color = rnd() > 0.7 ? '#1e2117' : '#181b11';
+          el.style.opacity = (0.55 + rnd() * 0.45).toFixed(2);
+          words.appendChild(el);
+        }
+      }
+
+      function render(t) {
+        t = Math.max(0, Math.min(DUR - 1e-4, t));
+
+        // фон дышит и медленно наезжает; буквы плывут вразнобой
+        const drift = ease(ramp(t, 0, DUR));
+        words.style.transform = `translate(${(-10 + drift * 18).toFixed(1)}px, ${(-6 + drift * 12).toFixed(1)}px) scale(${(1.035 - drift * 0.02).toFixed(4)})`;
+        // первый кадр уже с фоном: чёрного стыка в начале нет
+        words.style.opacity = String(0.55 + 0.45 * ease(ramp(t, 0, 0.7)));
+
+        // верхняя подпись
+        kicker.style.opacity = String(ease(ramp(t, 0.18, 0.55)) * out(t, 5.36, 5.72));
+        kicker.style.transform = `translateY(${((1 - ease(ramp(t, 0.18, 0.55))) * 16).toFixed(1)}px)`;
+
+        // плашка версии: выпрыгивает с пружиной
+        const sk = ramp(t, 0.32, 0.86);
+        const sb = backOut(clamp01(sk), 2.4);
+        sticker.style.opacity = String(clamp01(ramp(t, 0.32, 0.46)) * out(t, 5.34, 5.7));
+        sticker.style.transform = `rotate(${(-16 + 11 * sb).toFixed(2)}deg) scale(${(0.55 + 0.45 * sb).toFixed(3)}) translateY(${(14 * (1 - sb)).toFixed(1)}px)`;
+
+        // главное слово бьёт сверху и оседает
+        const wk = ramp(t, 0.94, 1.46);
+        const wb = backOut(clamp01(wk), 1.6);
+        const heroOut = ease(ramp(t, 5.5, 6.16));
+        const heroScale = 1 + 0.012 * ease(ramp(t, 3.2, 4.6)) * out(t, 4.6, 5.5);
+        const settle = 0.4 + 0.6 * wb;
+        word.style.opacity = String(clamp01(ramp(t, 0.94, 1.08)));
+        word.style.transform =
+          `translateY(${(heroOut * -262).toFixed(1)}px) ` +
+          `scale(${(settle * heroScale * (1 - heroOut * 0.615)).toFixed(4)}) ` +
+          `rotate(${(-6 * (1 - wb)).toFixed(2)}deg)`;
+
+        // плашки цветов выезжают по очереди
+        swatches.forEach((el, i) => {
+          const a = 1.62 + i * 0.26;
+          const k = easeOut(ramp(t, a, a + 0.42));
+          el.style.opacity = String(clamp01(ramp(t, a, a + 0.3)) * out(t, 5.3, 5.66));
+          el.style.transform = `translateY(${((1 - k) * 46).toFixed(1)}px)`;
+        });
+
+        // звезда: пружина, орбита раскручивается
+        const sk2 = backOut(clamp01(ramp(t, 2.4, 2.95)), 2.1);
+        const starOut = ease(ramp(t, 5.42, 6.0));
+        star.style.opacity = String(clamp01(ramp(t, 2.4, 2.6)) * (1 - starOut));
+        const spin = 5.4 * Math.sin((t - 2.4) * 0.55) + (t - 2.4) * 7.5;
+        star.style.transform = `translateY(${(starOut * 90).toFixed(1)}px) rotate(${(spin * 0.12).toFixed(2)}deg) scale(${(0.5 + 0.5 * sk2).toFixed(3)})`;
+        orbit.setAttribute('transform', `rotate(${(spin - 24).toFixed(2)})`);
+        orbitFront.setAttribute('transform', `rotate(${(spin - 24).toFixed(2)})`);
+        const breathe = 1 + 0.035 * Math.sin((t - 2.4) * 3.4);
+        starShape.setAttribute(
+          'transform',
+          `rotate(-9) scale(${(0.74 * breathe).toFixed(4)} ${breathe.toFixed(4)})`,
+        );
+
+        // мелкие искры вокруг звезды
+        sparks.forEach((el, i) => {
+          const a = 2.5 + i * 0.17;
+          const k = backOut(clamp01(ramp(t, a, a + 0.4)), 2.2);
+          const bob = Math.sin((t - a) * 1.7 + i) * 7;
+          el.style.opacity = String(clamp01(ramp(t, a, a + 0.25)) * (0.55 + 0.3 * Math.sin((t - a) * 2.1 + i)) * (1 - starOut));
+          el.style.left = ['104px', '822px', '312px'][i];
+          el.style.top = [String(1032 + bob), String(1360 - bob), String(1592 + bob)][i];
+          el.style.transform = `rotate(${(i * 24 + t * 9).toFixed(1)}deg) scale(${(0.3 + 0.7 * k).toFixed(3)})`;
+        });
+
+        // финал
+        const cin = ease(ramp(t, 5.86, 6.42));
+        scrim.style.opacity = String(ease(ramp(t, 5.7, 6.4)));
+        cta.style.opacity = String(cin);
+        claim.style.opacity = String(ease(ramp(t, 5.96, 6.34)));
+        claim.style.transform = `translateY(${((1 - easeOut(ramp(t, 5.96, 6.4))) * 52).toFixed(1)}px) scale(${(0.96 + 0.04 * easeOut(ramp(t, 5.96, 6.4))).toFixed(3)})`;
+        const qk = backOut(clamp01(ramp(t, 6.12, 6.62)), 1.8);
+        qrCard.style.opacity = String(clamp01(ramp(t, 6.12, 6.3)));
+        qrCard.style.transform = `rotate(${(-7 + 4.6 * qk).toFixed(2)}deg) scale(${(0.82 + 0.18 * qk).toFixed(3)})`;
+        link.style.opacity = String(ease(ramp(t, 6.34, 6.7)));
+        link.style.transform = `translateY(${((1 - easeOut(ramp(t, 6.34, 6.74))) * 26).toFixed(1)}px)`;
+        note.style.opacity = String(ease(ramp(t, 6.5, 6.86)));
+      }
+
+      window.renderAt = render;
+      window.DUR = DUR;
+
+      async function boot() {
+        try {
+          await document.fonts.load('400 100px "Bowlby One"');
+          await document.fonts.ready;
+        } catch (err) {
+          /* шрифт уже в кэше — кадр всё равно надо отдать */
+        }
+        render(0);
+        document.body.dataset.ready = '1';
+      }
+
+      boot();
+    </script>
+  </body>
+</html>

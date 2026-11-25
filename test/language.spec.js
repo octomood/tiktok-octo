@@ -59,8 +59,11 @@ test('язык интерфейса и сайта переключается и 
     await expect(page.locator('html')).toHaveAttribute('lang', 'de');
     await expect(page.locator('[data-cat="page"] .panel-cat-title')).toHaveText('Seite');
     await expect(page.locator('[data-cat="language"] .panel-cat-title')).toHaveText('Sprache');
-    await expect(page.locator('#panelHeadTitle')).toHaveText('Funktionen');
-    await expect(page.locator('#panelDetailTitle')).toHaveText('Sprache');
+    await expect(page.locator('#panelHeadTitle')).toHaveText('Einstellungen');
+    await expect(page.locator('[data-cat-head="language"]')).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
     await expect(page.locator('.panel-group').first()).toHaveText('Anzeige');
 
     const menu = await app.evaluate(({ Menu }) =>

@@ -17,6 +17,7 @@ const { evalInPage } = require('./page-eval');
 
 const DEFAULTS = {
   speed: 1,
+  stickySpeed: true,
   volume: 1,
   startMuted: false,
   loop: false,
@@ -37,7 +38,9 @@ const MIN_SPEED = 0.5;
 const MAX_SPEED = 3;
 const MAX_VOLUME = 2;
 const EQUALIZERS = ['off', 'speech', 'music'];
-const BOOLEAN_KEYS = ['startMuted', 'loop', 'pauseOnBlur', 'mono'];
+const BOOLEAN_KEYS = ['startMuted', 'loop', 'pauseOnBlur', 'mono', 'stickySpeed'];
+
+let abLoop = { a: null, b: null, enabled: false };
 
 const EQ_LABELS = {
   off: 'Эквалайзер выключен',
@@ -64,6 +67,7 @@ function readSettings() {
 
 function sync() {
   ctx.player = readSettings();
+  ctx.abLoop = { ...abLoop };
 }
 
 function save(patch) {
@@ -86,6 +90,7 @@ function pageConfig() {
     captionSize: Number(captions.size) || 100,
     captionBackground: captions.background !== false,
     captionOutline: captions.outline !== false,
+    abLoop: { ...abLoop },
     // В PiP кадр всегда вписан: там важна целиком картинка, а не «заполнить».
     fit: ctx.pipActive ? 'contain' : FIT_MODES.includes(ctx.player.fit) ? ctx.player.fit : 'auto',
   };
@@ -117,6 +122,10 @@ function pageScript(config) {
     // сайте» снимаем только своё, не трогая инлайн-стиль самого сайта.
     const fitted = new WeakSet();
     const graphs = new WeakMap();
+    // Последняя громкость, которую выставили мы: по ней отличаем свою запись
+    // от того, что сайт вернул сам.
+    const appliedVolume = new WeakMap();
+    const appliedRate = new WeakMap();
     const state = {
       blocked: false,
       graphs: 0,
@@ -306,6 +315,7 @@ function pageScript(config) {
       // замирают на первой секунде.
       if (Math.abs(video.playbackRate - current.speed) > 0.001) {
         try {
+          appliedRate.set(video, current.speed);
           video.playbackRate = current.speed;
         } catch (err) {
           /* некоторые видео запрещают смену скорости */
@@ -326,7 +336,10 @@ function pageScript(config) {
         applyEq(entry, current.equalizer);
         const target = volume * factor;
         if (Math.abs(entry.gain.gain.value - target) > 0.001) entry.gain.gain.value = target;
-        if (Math.abs(video.volume - 1) > 0.001) video.volume = 1;
+        if (Math.abs(video.volume - 1) > 0.001) {
+          video.volume = 1;
+          appliedVolume.set(video, 1);
+        }
         if (entry.context.state === 'suspended') {
           const resumed = entry.context.resume();
           if (resumed && typeof resumed.catch === 'function') resumed.catch(() => {});
@@ -335,7 +348,10 @@ function pageScript(config) {
       } else {
         if (needsGraph) state.blocked = true;
         const target = Math.min(1, volume) * factor;
-        if (Math.abs(video.volume - target) > 0.001) video.volume = target;
+        if (Math.abs(video.volume - target) > 0.001) {
+          video.volume = target;
+          appliedVolume.set(video, target);
+        }
         applySink(video, null);
       }
 
@@ -670,8 +686,48 @@ function pageScript(config) {
       setTimeout(() => apply(video), 600);
     };
 
+    /**
+     * TikTok возвращает свою громкость у нового ролика уже после play — обычно
+     * когда снимает mute с автозапуска. Свою запись отличаем по appliedVolume,
+     * поэтому «записали → volumechange → записали» не зацикливается.
+     */
+    const handleVolume = (event) => {
+      const video = event.target;
+      if (!(video instanceof HTMLVideoElement)) return;
+      const own = appliedVolume.get(video);
+      if (own !== undefined && Math.abs(video.volume - own) <= 0.01) return;
+      apply(video);
+    };
+
+    const handleRate = (event) => {
+      if (!current.stickySpeed) return;
+      const video = event.target;
+      if (!(video instanceof HTMLVideoElement)) return;
+      const own = appliedRate.get(video);
+      if (own !== undefined && Math.abs(video.playbackRate - own) <= 0.001) return;
+      if (Math.abs(video.playbackRate - current.speed) > 0.001) apply(video);
+    };
+
+    const onTimeUpdate = (event) => {
+      const ab = current.abLoop;
+      if (!ab || !ab.enabled || ab.a === null || ab.b === null || !(ab.b > ab.a)) return;
+      const video = event.target;
+      if (!(video instanceof HTMLVideoElement) || video !== activeVideo()) return;
+      const now = Number(video.currentTime) || 0;
+      if (now >= ab.b || now < ab.a - 0.15) {
+        try {
+          video.currentTime = ab.a;
+        } catch {
+          /* перемотка недоступна */
+        }
+      }
+    };
+
     document.addEventListener('play', handle, true);
     document.addEventListener('loadedmetadata', handle, true);
+    document.addEventListener('volumechange', handleVolume, true);
+    document.addEventListener('ratechange', handleRate, true);
+    document.addEventListener('timeupdate', onTimeUpdate, true);
     document.addEventListener('ended', onEnded, true);
 
     window.__octoPlayer = {
@@ -693,8 +749,7 @@ function pageScript(config) {
 
         document.querySelectorAll('video').forEach((video) => {
           seen.add(video);
-          const mute = Boolean(current.startMuted);
-          if (video.muted !== mute) video.muted = mute;
+          if (current.startMuted && !video.muted) video.muted = true;
           apply(video);
         });
         syncTicker();
@@ -706,6 +761,9 @@ function pageScript(config) {
         state.ticker = null;
         document.removeEventListener('play', handle, true);
         document.removeEventListener('loadedmetadata', handle, true);
+        document.removeEventListener('volumechange', handleVolume, true);
+        document.removeEventListener('ratechange', handleRate, true);
+        document.removeEventListener('timeupdate', onTimeUpdate, true);
         document.removeEventListener('ended', onEnded, true);
         document.querySelectorAll('video').forEach((video) => {
           video.playbackRate = 1;
@@ -719,6 +777,21 @@ function pageScript(config) {
         const duration = Number.isFinite(video.duration) ? video.duration : 0;
         const target = Math.max(0, (Number(video.currentTime) || 0) + (Number(seconds) || 0));
         try {
+          video.currentTime = duration > 0 ? Math.min(duration, target) : target;
+        } catch (err) {
+          return false;
+        }
+        return true;
+      },
+      stepFrame(direction) {
+        const video = activeVideo();
+        if (!video) return false;
+        const dir = Number(direction) < 0 ? -1 : 1;
+        try {
+          if (!video.paused) video.pause();
+          const duration = Number.isFinite(video.duration) ? video.duration : 0;
+          const step = 1 / 30;
+          const target = Math.max(0, (Number(video.currentTime) || 0) + dir * step);
           video.currentTime = duration > 0 ? Math.min(duration, target) : target;
         } catch (err) {
           return false;
@@ -801,7 +874,8 @@ function withTimeout(promise, ms) {
 }
 
 function setSpeed(value) {
-  const speed = Math.min(MAX_SPEED, Math.max(MIN_SPEED, Math.round(Number(value) * 4) / 4));
+  const raw = Number(value) || 1;
+  const speed = Math.min(MAX_SPEED, Math.max(MIN_SPEED, Math.round(raw * 4) / 4));
   save({ speed });
   apply();
   pushState();
@@ -893,6 +967,8 @@ function watchPanel(active) {
   if (panelTimer) return;
 
   const refresh = async () => {
+    const wc = contents();
+    if (!wc || wc.isLoading()) return;
     const info = await status();
     if (!info) return;
     let changed = false;
@@ -988,12 +1064,65 @@ async function status() {
   }
 }
 
-/** Перемотка клавиатурной лентой: ±секунды и доля ролика. */
+/** Перемотка клавиатурной лентой: ±секунды, кадры и доля ролика. */
 function nudge(seconds) {
   const wc = contents();
   if (!wc) return;
   const step = Number(seconds) || 0;
   evalInPage(wc, [`window.__octoPlayer && window.__octoPlayer.nudge(${step})`]);
+}
+
+function stepFrame(direction) {
+  const wc = contents();
+  if (!wc) return;
+  const dir = Number(direction) < 0 ? -1 : 1;
+  evalInPage(wc, [`window.__octoPlayer && window.__octoPlayer.stepFrame(${dir})`]);
+}
+
+function formatSec(sec) {
+  const s = Math.max(0, Math.round(Number(sec) || 0));
+  const m = Math.floor(s / 60);
+  const rem = String(s % 60).padStart(2, '0');
+  return `${m}:${rem}`;
+}
+
+async function setAbPoint(which) {
+  const info = await status();
+  if (!info || !(info.duration > 0)) {
+    toast('Откройте видео для настройки цикла A–B');
+    return false;
+  }
+  const time = Math.max(0, Math.round((Number(info.time) || 0) * 10) / 10);
+  if (which === 'a') {
+    abLoop.a = time;
+    if (abLoop.b !== null && abLoop.b <= abLoop.a) abLoop.b = null;
+  } else if (which === 'b') {
+    if (abLoop.a !== null && time <= abLoop.a) {
+      abLoop.b = abLoop.a;
+      abLoop.a = time;
+    } else {
+      abLoop.b = time;
+    }
+  }
+  abLoop.enabled = abLoop.a !== null && abLoop.b !== null && abLoop.b > abLoop.a;
+  ctx.abLoop = { ...abLoop };
+  apply();
+  pushState();
+  if (abLoop.enabled) {
+    toast(`Цикл A–B: ${formatSec(abLoop.a)} – ${formatSec(abLoop.b)}`);
+  } else {
+    toast(which === 'a' ? `Точка A: ${formatSec(abLoop.a)}` : `Точка B: ${formatSec(abLoop.b)}`);
+  }
+  return true;
+}
+
+function clearAbLoop({ silent = false } = {}) {
+  if (abLoop.a === null && abLoop.b === null && !abLoop.enabled) return;
+  abLoop = { a: null, b: null, enabled: false };
+  ctx.abLoop = { ...abLoop };
+  apply();
+  pushState();
+  if (!silent) toast('Цикл A–B сброшен');
 }
 
 function seekPercent(fraction) {
@@ -1065,6 +1194,9 @@ module.exports = {
   refreshDevices,
   status,
   nudge,
+  stepFrame,
+  setAbPoint,
+  clearAbLoop,
   seekPercent,
   seekTo,
   toggle,

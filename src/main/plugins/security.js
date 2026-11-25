@@ -401,15 +401,25 @@ function scanText(text, fileName, rules, findings) {
   }
 }
 
+function staticString(node, depth = 0) {
+  if (!node || depth > 20) return null;
+  if (node.type === 'Literal' && typeof node.value === 'string') return node.value;
+  if (node.type === 'BinaryExpression' && node.operator === '+') {
+    const left = staticString(node.left, depth + 1);
+    const right = staticString(node.right, depth + 1);
+    if (left !== null && right !== null) return left + right;
+  }
+  return null;
+}
+
 function pathOf(node) {
   const parts = [];
   let current = node;
   while (current && current.type === 'MemberExpression') {
     if (current.computed) {
-      if (current.property.type !== 'Literal' || typeof current.property.value !== 'string') {
-        return null;
-      }
-      parts.unshift(current.property.value);
+      const prop = staticString(current.property);
+      if (prop === null) return null;
+      parts.unshift(prop);
     } else if (current.property.type === 'Identifier') {
       parts.unshift(current.property.name);
     } else {
@@ -449,13 +459,14 @@ function startOf(path, prefix) {
  * innerHTML, Worker, WebSocket и т.п. Если код не парсится, установка
  * блокируется: непроверенный JavaScript мы не запускаем.
  */
-function scanAst(code, fileName, manifest, findings) {
+function scanAst(code, fileName, manifest, findings, { allowReturnOutsideFunction = false } = {}) {
   let ast;
   try {
     ast = acorn.parse(code, {
       ecmaVersion: 'latest',
       sourceType: 'script',
       allowHashBang: true,
+      allowReturnOutsideFunction,
       locations: true,
     });
   } catch (err) {
@@ -900,6 +911,15 @@ function scanPageScript(code) {
 
   const findings = [];
   scanText(text, 'page', PAGE_RULES, findings);
+  // Проверяем ещё и AST, чтобы обфускация вроде window['fe'+'tch'] или
+  // document['coo'+'kie'] не проходила в octo.page.run().
+  scanAst(
+    text,
+    'page',
+    { permissions: ['page:script', 'page:css', 'network', 'navigation', 'shortcuts', 'links'] },
+    findings,
+    { allowReturnOutsideFunction: true },
+  );
   return { ok: !findings.some((item) => item.severity === 'block'), findings };
 }
 

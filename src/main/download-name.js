@@ -77,6 +77,12 @@ function formatDate(value = new Date()) {
 
 const PLACEHOLDERS = ['author', 'date', 'title', 'ext'];
 
+const WINDOWS_RESERVED = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+
+function guardReserved(name) {
+  return WINDOWS_RESERVED.test(name) ? `${name}_` : name;
+}
+
 /**
  * @param {string} template
  * @param {{ author?: string, title?: string, date?: string, ext?: string, fallback?: string }} info
@@ -94,19 +100,21 @@ function buildName(template, info = {}) {
 
   let name = String(template || '');
   for (const placeholder of PLACEHOLDERS) {
-    name = name.replace(new RegExp(`\\{${placeholder}\\}`, 'gi'), values[placeholder]);
+    name = name.replace(new RegExp(`\\{${placeholder}\\}`, 'gi'), () => values[placeholder]);
   }
 
   let clean = sanitize(name);
   if (!clean) clean = sanitize(info.fallback || `video-${formatDate()}`, 90);
   if (!clean) clean = 'video';
+  clean = guardReserved(clean);
 
   if (ext && !clean.toLowerCase().endsWith(`.${ext}`)) clean = `${clean}.${ext}`;
   return clean;
 }
 
 function buildPath({ template, folderPerAuthor = false, baseDir, info = {} } = {}) {
-  const author = sanitize(info.author || '', 60);
+  const rawAuthor = sanitize(info.author || '', 60);
+  const author = rawAuthor ? guardReserved(rawAuthor) : '';
   const directory = folderPerAuthor && author ? path.join(baseDir, author) : baseDir;
   return { directory, file: buildName(template, info) };
 }

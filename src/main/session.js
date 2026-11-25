@@ -33,22 +33,24 @@ function isTrustedOrigin(url) {
 }
 
 /** Языки проверки орфографии: язык оболочки, русский и английский. */
-function applySpellChecker(ses = session.fromPartition(PARTITION)) {
+function applySpellChecker(ses) {
+  const target = ses || session.fromPartition(require('./profiles').activePartition());
   try {
-    const available = ses.availableSpellCheckerLanguages;
+    const available = target.availableSpellCheckerLanguages;
     const app = findAppLanguage(readState().language);
     const wanted = [app.spellcheck, 'ru', 'en-US']
       .filter(Boolean)
       .filter((lang, index, list) => list.indexOf(lang) === index)
       .filter((lang) => available.includes(lang));
-    if (wanted.length > 0) ses.setSpellCheckerLanguages(wanted);
+    if (wanted.length > 0) target.setSpellCheckerLanguages(wanted);
   } catch {
     /* раскладка может быть недоступна в урезанной сборке */
   }
 }
 
-function prepareSession() {
-  const ses = session.fromPartition(PARTITION);
+function prepareSession(partition) {
+  const part = partition || require('./profiles').activePartition() || PARTITION;
+  const ses = session.fromPartition(part);
 
   // Окно могут пересоздать (macOS activate) — обработчики ставим один раз.
   if (preparedSessions.has(ses)) return ses;

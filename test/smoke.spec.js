@@ -74,26 +74,34 @@ test('окно, команды, поиск и панель функций', asyn
     await page.evaluate(() => window.octo.find('close'));
     await expect(page.locator('#findbar')).toBeHidden();
 
-    // Панель функций: разделы настроек, подстраницы, поиск, косметика и реклама.
+    // Настройки: оверлей поверх экрана, разделы слева, поиск, косметика и реклама.
     await page.click('#btnPanel');
     await expect(page.locator('#panel')).toBeVisible();
+    await expect(page.locator('#panelDialog')).toBeVisible();
     await expect(page.locator('#btnPanel')).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('#btnPanel')).toContainText('Функции');
+    await expect(page.locator('#btnPanel')).toContainText('Настройки');
+    await expect(page.locator('#panelHeadTitle')).toHaveText('Настройки');
     await expect(page.locator('[data-cat-head="page"]')).toBeVisible();
-    await expect(page.locator('#catPage')).toBeHidden();
+    await expect(page.locator('[data-cat-head="page"]')).toHaveAttribute('aria-current', 'true');
+    await expect(page.locator('#catPage')).toBeVisible();
     await expect(page.locator('.panel-group').first()).toBeVisible();
 
-    // Раздел открывается как подстраница, «Назад» возвращает список.
-    await page.locator('[data-cat-head="page"]').click();
-    await expect(page.locator('#catPage')).toBeVisible();
-    await expect(page.locator('#btnPanelBack')).toBeVisible();
-    await expect(page.locator('#panelHeadTitle')).toBeHidden();
-    await expect(page.locator('#panelDetailTitle')).toHaveText('Страница');
-    await page.locator('#btnPanelBack').click();
-    await expect(page.locator('#catPage')).toBeHidden();
-    await expect(page.locator('#btnPanelBack')).toBeHidden();
+    // Оверлей действительно по центру поверх экрана, а не узкая боковая панель.
+    const dialogBox = await page.locator('#panelDialog').boundingBox();
+    const viewSize = await page.evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }));
+    expect(dialogBox.x).toBeGreaterThan(20);
+    expect(dialogBox.x + dialogBox.width).toBeLessThan(viewSize.w - 20);
 
-    // Поиск раскрывает подходящую категорию и прячет остальные.
+    // Переключение разделов в один клик без «Назад».
+    await page.locator('[data-cat-head="playback"]').click();
+    await expect(page.locator('#catPlayback')).toBeVisible();
+    await expect(page.locator('#catPage')).toBeHidden();
+    await expect(page.locator('[data-cat-head="playback"]')).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+
+    // Поиск раскрывает подходящие разделы в правой колонке и прячет остальные.
     await page.locator('#panelSearch').fill('таймер');
     // Фокус не рисует второе кольцо вокруг поля: остаётся только рамка
     // контейнера, у самого input outline выключен.
@@ -114,7 +122,7 @@ test('окно, команды, поиск и панель функций', asyn
     await page.locator('#btnPanelSearchClear').click();
     await expect(page.locator('#panelNoResults')).toBeHidden();
     await expect(page.locator('[data-cat-head="page"]')).toBeVisible();
-    await expect(page.locator('#catPage')).toBeHidden();
+    await expect(page.locator('#catPlayback')).toBeVisible();
 
     // Поиск не блокирует переход: клик по найденному заголовку сбрасывает фильтр.
     await page.locator('#panelSearch').fill('тё');
@@ -122,10 +130,8 @@ test('окно, команды, поиск и панель функций', asyn
     await page.locator('[data-cat-head="cosmetics"]').click();
     await expect(page.locator('#panelSearch')).toHaveValue('');
     await expect(page.locator('#catCosmetics')).toBeVisible();
-    await page.locator('#btnPanelBack').click();
-    await expect(page.locator('#catCosmetics')).toBeHidden();
 
-    // Быстрое меню стикеров открывается из полосы заголовка и закрывает панель.
+    // Быстрое меню стикеров открывается из полосы заголовка и закрывает настройки.
     await page.click('#btnStickers');
     await expect(page.locator('#stickerPopover')).toBeVisible();
     await expect(page.locator('#panel')).toBeHidden();
@@ -141,7 +147,8 @@ test('окно, команды, поиск и панель функций', asyn
     await page.click('#btnPluginsActive');
     await expect(page.locator('#popover')).toBeHidden();
 
-    await page.click('#btnPanel');
+    // Команда settings открывает тот же оверлей настроек.
+    await page.evaluate(() => window.octo.cmd('settings'));
     await expect(page.locator('#panel')).toBeVisible();
 
     // Косметика: раздел открывается по клику.
@@ -152,7 +159,6 @@ test('окно, команды, поиск и панель функций', asyn
     await expect(cosmetic).toHaveAttribute('aria-checked', 'false');
     await cosmetic.click();
     await expect(cosmetic).toHaveAttribute('aria-checked', 'true');
-    await page.locator('#btnPanelBack').click();
 
     // Пропуск рекламы по умолчанию выключен.
     await page.locator('[data-cat-head="ads"]').click();
@@ -162,7 +168,6 @@ test('окно, команды, поиск и панель функций', asyn
     await expect(adSkip).toHaveAttribute('aria-checked', 'true');
     await adSkip.click();
     await expect(adSkip).toHaveAttribute('aria-checked', 'false');
-    await page.locator('#btnPanelBack').click();
 
     // Регион: пресет применяется, переживает pushState и выключается обратно.
     await page.locator('[data-cat-head="region"]').click();
@@ -174,32 +179,30 @@ test('окно, команды, поиск и панель функций', asyn
     await expect(page.locator('[data-cmd="regionResetData"]')).toBeVisible();
     await page.selectOption('#regionSelect', 'off');
     await expect(page.locator('#regionSelect')).toHaveValue('off');
-    await page.locator('#btnPanelBack').click();
 
     // Загрузки: пустое состояние и таймер сна.
     await page.locator('[data-cat-head="downloads"]').click();
     await expect(page.locator('#downloadsEmpty')).toBeVisible();
-    await page.locator('#btnPanelBack').click();
     await page.locator('[data-cat-head="playback"]').click();
     await page.locator('[data-sleep="15"]').click();
     await expect(page.locator('[data-sleep="15"]')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#sleepLabel')).toContainText('·');
     await page.locator('[data-sleep="0"]').click();
     await expect(page.locator('#sleepLabel')).toHaveText('Таймер сна');
-    await page.locator('#btnPanelBack').click();
 
     await page.locator('#panelSearch').fill('язык');
     await page.click('#btnPanelClose');
     await expect(page.locator('#panel')).toBeHidden();
     await expect(page.locator('#btnPanel')).toHaveAttribute('aria-pressed', 'false');
 
-    // Поиск не переживает закрытие панели: при открытии видны все разделы.
+    // Поиск не переживает закрытие: при следующем открытии снова первый раздел.
     await page.click('#btnPanel');
     await expect(page.locator('#panelSearch')).toHaveValue('');
     await expect(page.locator('[data-cat-head="page"]')).toBeVisible();
-    await expect(page.locator('#catPage')).toBeHidden();
-    await expect(page.locator('#btnPanelBack')).toBeHidden();
-    await page.click('#btnPanelClose');
+    await expect(page.locator('#catPage')).toBeVisible();
+
+    // Клик по затемнённому фону вокруг карточки закрывает настройки.
+    await page.locator('#panel').click({ position: { x: 8, y: 8 } });
     await expect(page.locator('#panel')).toBeHidden();
 
     // Палитра команд: открывается, фильтрует и выполняет команду.

@@ -140,6 +140,8 @@ test('мастер: обход DPI включается без прокси', as
     expect(page, 'окно с полосой заголовка не появилось').toBeTruthy();
 
     await expect(page.locator('#welcome')).toBeVisible();
+    await expect(page.locator('#welcomeDpiSub')).toBeVisible();
+    await expect(page.locator('#welcomeDpiSub')).toContainText('РФ');
     await expect(page.locator('#welcomeDpiNote')).toBeHidden();
 
     // Способы взаимоисключающие: прокси и обход DPI не включаются вместе.

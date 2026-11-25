@@ -76,7 +76,7 @@ async function siteInfo() {
   let cache = 0;
   let cookies = 0;
   try {
-    const ses = session.fromPartition(PARTITION);
+    const ses = session.fromPartition(require('./profiles').activePartition() || PARTITION);
     cache = await ses.getCacheSize();
     cookies = (await ses.cookies.get({})).length;
   } catch {

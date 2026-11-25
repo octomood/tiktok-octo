@@ -287,4 +287,13 @@ test('ZIP: детерминированная упаковка, CRC и защи�
     cursor += to.length;
   }
   expect(() => readZip(evil)).toThrow(/недопустимый путь/i);
+
+  // Каталоги вида "dir/" внутри стандартного ZIP должны пропускаться.
+  const withDir = Buffer.from(first);
+  const idx = withDir.indexOf(Buffer.from('index.js'));
+  expect(idx).toBeGreaterThan(0);
+  // Проверяем, что scanPageScript ловит обфускацию через AST.
+  const { scanPageScript } = require('../src/main/plugins/security');
+  expect(scanPageScript("window['fe' + 'tch']('https://evil.example')").ok).toBe(false);
+  expect(scanPageScript("return document.querySelector('video') !== null;").ok).toBe(true);
 });

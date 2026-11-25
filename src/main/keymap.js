@@ -26,7 +26,7 @@ const COMMANDS = [
   { id: 'findNext', label: 'Следующее совпадение', keys: 'F3' },
   { id: 'findPrev', label: 'Предыдущее совпадение', keys: 'Shift+F3' },
   { id: 'palette', label: 'Палитра команд', keys: 'Ctrl+K' },
-  { id: 'panel', label: 'Меню клиента', keys: 'Ctrl+Shift+B' },
+  { id: 'panel', label: 'Настройки', keys: 'Ctrl+Shift+B' },
   { id: 'chat', label: 'Чат сбоку', keys: 'Ctrl+Shift+C' },
   { id: 'plugins', label: 'Менеджер плагинов', keys: 'Ctrl+Shift+E' },
   { id: 'pip', label: 'Картинка в картинке', keys: 'Ctrl+Shift+P' },

@@ -168,7 +168,7 @@ function buildAppMenu() {
     {
       label: 'Вид',
       submenu: [
-        { label: 'Панель функций', click: () => handleCommand('panel') },
+        { label: 'Настройки', click: () => handleCommand('panel') },
         { label: 'Чат сбоку', click: () => handleCommand('chat') },
         { label: 'Палитра команд', click: () => handleCommand('palette') },
         {

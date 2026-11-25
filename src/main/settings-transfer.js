@@ -3,7 +3,14 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { app } = require('electron');
-const { ctx, pushState, toast, setCosmeticsState, setCloseToTray } = require('./app-context');
+const {
+  ctx,
+  pushState,
+  toast,
+  setCosmeticsState,
+  setCloseToTray,
+  clampUiScale,
+} = require('./app-context');
 const { readState, writeState, replaceState, statePath } = require('./store');
 const pluginsState = require('./plugins/state');
 const { showOpenDialog, showSaveDialog, showMessageBox } = require('./dialogs');
@@ -47,6 +54,7 @@ const SETTINGS_KEYS = [
   'feedKeys',
   'zoomFactor',
   'uiScale',
+  'uiFont',
   'alwaysOnTop',
   'closeToTray',
   'startInTray',
@@ -180,8 +188,16 @@ function cleanSettings(raw) {
       continue;
     }
     if (key === 'zoomFactor') {
-      const zoom = clampNumber(value, 0.5, 2);
+      const zoom = clampNumber(value, 0.5, 3);
       if (zoom !== null) result.zoomFactor = zoom;
+      continue;
+    }
+    if (key === 'uiScale') {
+      if (Number.isFinite(Number(value))) result.uiScale = clampUiScale(value);
+      continue;
+    }
+    if (key === 'uiFont') {
+      result.uiFont = require('./ui-font').normalizeUiFont(value);
       continue;
     }
     if (key === 'language') {
@@ -190,8 +206,12 @@ function cleanSettings(raw) {
       continue;
     }
     if (key === 'siteLanguage') {
-      const language = SITE_LANGUAGES.find((item) => item.id === value);
-      if (language) result.siteLanguage = language.id;
+      if (value === 'auto') {
+        result.siteLanguage = 'auto';
+      } else {
+        const language = SITE_LANGUAGES.find((item) => item.id === value);
+        if (language) result.siteLanguage = language.id;
+      }
       continue;
     }
     if (key === 'cosmetics') {
@@ -243,6 +263,7 @@ function liveDefaults() {
     feedKeys: ctx.feedKeys !== false,
     zoomFactor: 1,
     uiScale: ctx.uiScale || 1,
+    uiFont: ctx.uiFont || { preset: 'google-sans-medium', family: '', fileName: '' },
     alwaysOnTop: false,
     closeToTray: ctx.closeToTray,
     startInTray: ctx.startInTray,
@@ -380,6 +401,9 @@ function refreshLive() {
   };
 
   if (state.uiScale !== undefined) require('./app-context').setUiScale(state.uiScale);
+  if (state.uiFont !== undefined) {
+    require('./app-context').ctx.uiFont = require('./ui-font').normalizeUiFont(state.uiFont);
+  }
   call('./i18n', 'sync');
   call('./i18n', 'broadcast');
   call('./region', 'sync');
@@ -402,7 +426,9 @@ function refreshLive() {
   setCosmeticsState(state.cosmetics || {});
   call('./cosmetics', 'schedule');
   try {
-    const ses = require('electron').session.fromPartition(PARTITION);
+    const ses = require('electron').session.fromPartition(
+      require('./profiles').activePartition() || PARTITION,
+    );
     require('./cosmetics').prepareTheme(ses);
     require('./region').applySiteLanguageCookie(ses);
   } catch {

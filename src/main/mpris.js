@@ -137,7 +137,8 @@ function publishMetadata(title, artist, url, art = '', duration = 0) {
 /** Перемотка по запросу MPRIS: секунды, не микросекунды. */
 function seekTo(seconds) {
   const wc = contents();
-  const target = Math.max(0, Number(seconds) || 0);
+  const num = Number(seconds);
+  const target = Number.isFinite(num) ? Math.max(0, num) : 0;
   if (!wc || wc.isDestroyed()) return;
   lastPosition = target;
   runInPage(
@@ -149,8 +150,12 @@ function seekTo(seconds) {
           return rect.width > 120 && rect.height > 120;
         }) || videos[0];
       if (!video) return;
-      const limit = Number.isFinite(video.duration) ? video.duration : ${target};
-      video.currentTime = Math.min(limit, ${target});
+      try {
+        const limit = Number.isFinite(video.duration) ? video.duration : ${target};
+        video.currentTime = Math.min(limit, ${target});
+      } catch (err) {
+        /* видео не допускает перемотку */
+      }
     })()`,
     true,
   );
@@ -305,6 +310,8 @@ function initMpris() {
   // событиям. Без опроса виджет показывает 0:00 до следующего ролика.
   positionTimer = setInterval(() => {
     if (positionPending || !ctx.playing) return;
+    const currentWc = contents();
+    if (!currentWc || currentWc.isLoading()) return;
     positionPending = true;
     playerApi
       .status()

@@ -115,10 +115,8 @@ const el = {
   pluginsPopoverCount: $('pluginsPopoverCount'),
   btnPluginsManager: $('btnPluginsManager'),
   btnPluginsPopoverClose: $('btnPluginsPopoverClose'),
-  btnPanelBack: $('btnPanelBack'),
   btnPanelClose: $('btnPanelClose'),
   panelHeadTitle: $('panelHeadTitle'),
-  panelDetailTitle: $('panelDetailTitle'),
   panelVersion: $('panelVersion'),
   panelSearchBar: $('panelSearchBar'),
   panelSearch: $('panelSearch'),
@@ -136,6 +134,13 @@ const el = {
   rowEco: $('rowEco'),
   ecoNote: $('ecoNote'),
   uiScaleSelect: $('uiScaleSelect'),
+  uiFontSelect: $('uiFontSelect'),
+  uiFontCustomNameRow: $('uiFontCustomNameRow'),
+  uiFontNameInput: $('uiFontNameInput'),
+  uiFontNameApply: $('uiFontNameApply'),
+  uiFontCustomFileRow: $('uiFontCustomFileRow'),
+  uiFontFileName: $('uiFontFileName'),
+  uiFontPickFile: $('uiFontPickFile'),
   rowBackupRestore: $('rowBackupRestore'),
   panelCosmetics: $('panelCosmetics'),
   panelDownloads: $('panelDownloads'),
@@ -163,6 +168,8 @@ const el = {
   rowAutostart: $('rowAutostart'),
   rowStartTray: $('rowStartTray'),
   rowStartMuted: $('rowStartMuted'),
+  rowStickySpeed: $('rowStickySpeed'),
+  abLoopValue: $('abLoopValue'),
   rowLoop: $('rowLoop'),
   rowPauseBlur: $('rowPauseBlur'),
   rowAdSkip: $('rowAdSkip'),
@@ -198,6 +205,21 @@ const el = {
   rowDpiBypass: $('rowDpiBypass'),
   regionIpValue: $('regionIpValue'),
   regionIpResult: $('regionIpResult'),
+  regionPingValue: $('regionPingValue'),
+  regionPingResult: $('regionPingResult'),
+  themeModeSelect: $('themeModeSelect'),
+  profileSelect: $('profileSelect'),
+  profileNewName: $('profileNewName'),
+  btnProfileAdd: $('btnProfileAdd'),
+  btnProfileDelete: $('btnProfileDelete'),
+  historySearch: $('historySearch'),
+  historyList: $('historyList'),
+  historyEmpty: $('historyEmpty'),
+  creatorAuthor: $('creatorAuthor'),
+  creatorTags: $('creatorTags'),
+  creatorNote: $('creatorNote'),
+  btnCreatorSave: $('btnCreatorSave'),
+  creatorNotesList: $('creatorNotesList'),
   appLanguageSelect: $('appLanguageSelect'),
   siteLanguageSelect: $('siteLanguageSelect'),
   rowInstallApp: $('rowInstallApp'),
@@ -335,11 +357,15 @@ const PANEL_GROUPS = [
   { title: 'Система', cats: ['region', 'language', 'plugins', 'data', 'privacy', 'app'] },
 ];
 const panelGroupNodes = [];
-let panelCategory = null;
+let panelCategory = 'page';
 let panelQuery = '';
-let panelListScroll = 0;
+/** Тела разделов перенесены из списка навигации в правую колонку. */
+const settingsBodies = new Map();
+let settingsContent = null;
+let panelWasOpen = false;
 
 buildPanelNav();
+buildSettingsLayout();
 
 if (api.ui.platform === 'darwin') document.body.classList.add('mac');
 
@@ -390,7 +416,6 @@ el.btnPanel.addEventListener('click', (event) => {
   api.cmd('panel');
 });
 el.btnPanelClose.addEventListener('click', () => api.cmd('panel'));
-el.btnPanelBack.addEventListener('click', closePanelCategory);
 
 el.panelSearch.addEventListener('input', applyPanelFilter);
 el.panelSearch.addEventListener('keydown', (event) => {
@@ -405,8 +430,13 @@ el.panelSearchClear.addEventListener('click', () => {
   el.panelSearch.focus();
 });
 
-// Строки панели: действия и переключатели косметики.
+// Строки панели: действия, переключатели и закрытие по клику на фон-подложку.
 el.panel.addEventListener('click', (event) => {
+  if (event.target === el.panel) {
+    api.cmd('panel');
+    return;
+  }
+
   const catHead = event.target.closest('[data-cat-head]');
   if (catHead) {
     openPanelCategory(catHead.dataset.catHead);
@@ -641,11 +671,57 @@ el.libraryList.addEventListener('change', (event) => {
   api.cmd('libraryNote', { id: item.dataset.id, note: note.value });
 });
 
+el.historySearch.addEventListener('input', () => renderHistory());
+
+el.historyList.addEventListener('click', (event) => {
+  const item = event.target.closest('.library-item');
+  if (!item) return;
+  const id = item.dataset.id;
+  if (event.target.closest('[data-history-open]')) api.cmd('historyOpen', id);
+  else if (event.target.closest('[data-history-remove]')) api.cmd('historyRemove', id);
+});
+
+el.btnCreatorSave.addEventListener('click', () => {
+  api.cmd('creatorNoteSet', {
+    author: el.creatorAuthor.value,
+    tags: el.creatorTags.value,
+    note: el.creatorNote.value,
+  });
+  el.creatorNote.value = '';
+  el.creatorTags.value = '';
+});
+
+el.creatorNotesList.addEventListener('click', (event) => {
+  const item = event.target.closest('.library-item');
+  if (!item) return;
+  const author = item.dataset.author;
+  if (event.target.closest('[data-creator-open]')) api.cmd('creatorNoteOpen', author);
+  else if (event.target.closest('[data-creator-remove]')) api.cmd('creatorNoteRemove', author);
+});
+
+el.themeModeSelect.addEventListener('change', () => {
+  api.cmd('themeMode', el.themeModeSelect.value);
+});
+
+el.profileSelect.addEventListener('change', () => {
+  api.cmd('profileSwitch', el.profileSelect.value);
+});
+
+el.btnProfileAdd.addEventListener('click', () => {
+  api.cmd('profileCreate', el.profileNewName.value);
+  el.profileNewName.value = '';
+});
+
+el.btnProfileDelete.addEventListener('click', () => {
+  const active = state.profiles?.active;
+  if (active && active !== 'default') api.cmd('profileDelete', active);
+});
+
 // Ширина чата: тянем полоску между чатом и лентой, двойной клик — сброс.
 let chatDrag = null;
 
 function chatLeftOffset() {
-  return Number(state.panel) ? Number(state.panelWidth) || 300 : 0;
+  return 0;
 }
 
 function clampChatWidth(value) {
@@ -824,6 +900,39 @@ el.siteLanguageSelect.addEventListener('change', () =>
 // Масштаб меняет только нашу полосу и панель, не страницу TikTok.
 el.uiScaleSelect.addEventListener('change', () => {
   api.cmd('uiScale', Number(el.uiScaleSelect.value));
+});
+
+let pendingFontPreset = '';
+
+function applyCustomFontName() {
+  const family = (el.uiFontNameInput.value || '').trim();
+  if (!family) return;
+  pendingFontPreset = '';
+  api.cmd('uiFont', { preset: 'custom-name', family });
+}
+
+el.uiFontSelect.addEventListener('change', () => {
+  const preset = el.uiFontSelect.value;
+  if (preset === 'custom-name' || preset === 'custom-file') {
+    pendingFontPreset = preset;
+    renderUiFont();
+    if (preset === 'custom-name') el.uiFontNameInput.focus();
+    return;
+  }
+  pendingFontPreset = '';
+  api.cmd('uiFont', { preset });
+});
+
+el.uiFontNameApply.addEventListener('click', applyCustomFontName);
+el.uiFontNameInput.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  applyCustomFontName();
+});
+
+el.uiFontPickFile.addEventListener('click', () => {
+  pendingFontPreset = '';
+  api.cmd('uiFontPick');
 });
 
 // Регион: выбор страны применяется сразу, прокси — по кнопке или Enter.
@@ -1349,10 +1458,43 @@ function buildPanelNav() {
   }
 }
 
-/** Русский исходник названия раздела: перевод подставляется отдельно. */
-function panelCategorySource(cat) {
-  const title = cat?.querySelector('.panel-cat-title');
-  return window.octoI18n?.source?.(title) || title?.textContent || '';
+/**
+ * Двухколоночная раскладка настроек: слева — список разделов, справа — тело
+ * выбранного раздела (или все подходящие при поиске).
+ */
+function buildSettingsLayout() {
+  if (!el.panelBody) return;
+
+  const nav = document.createElement('nav');
+  nav.className = 'settings-nav';
+  nav.id = 'settingsNav';
+  nav.setAttribute('aria-label', tr('Настройки'));
+
+  const content = document.createElement('div');
+  content.className = 'settings-content';
+  content.id = 'settingsContent';
+
+  for (const node of [...el.panelBody.children]) {
+    if (node.classList.contains('panel-group') || node.classList.contains('panel-cat')) {
+      nav.append(node);
+    }
+  }
+
+  el.panelBody.append(nav, content);
+  if (el.panelNoResults) content.append(el.panelNoResults);
+
+  for (const cat of nav.querySelectorAll('.panel-cat')) {
+    const body = cat.querySelector('.panel-cat-body');
+    if (!body) continue;
+    const title = cat.querySelector('.panel-cat-title')?.textContent || '';
+    body.dataset.settingsTitle = title;
+    body.hidden = true;
+    settingsBodies.set(cat.dataset.cat, body);
+    content.append(body);
+  }
+
+  settingsContent = content;
+  panelCategory = nav.querySelector('.panel-cat')?.dataset.cat || 'page';
 }
 
 function normalizeSearch(text) {
@@ -1368,111 +1510,91 @@ function clearPanelSearch() {
 }
 
 /**
- * Показывает либо список разделов, либо открытый раздел, либо результаты
- * поиска. В поиске подходят и названия, и подсказки, и строки настроек.
+ * Показывает выбранный раздел в правой колонке, а при поиске — все подходящие
+ * категории и строки. В поиске участвуют названия, подсказки и строки настроек.
  */
 function applyPanelFilter() {
   const query = normalizeSearch(el.panelSearch.value);
   panelQuery = query;
   el.panelSearchClear.hidden = !query;
 
-  const mode = query ? 'search' : panelCategory ? 'detail' : 'list';
-  el.panel.dataset.view = mode;
+  const settingsNav = $('settingsNav');
+  if (settingsNav) settingsNav.setAttribute('aria-label', tr('Настройки'));
 
-  const currentCat = panelCategory
-    ? el.panel.querySelector(`.panel-cat[data-cat="${panelCategory}"]`)
-    : null;
-  el.btnPanelBack.hidden = mode !== 'detail';
-  el.panelHeadTitle.hidden = mode === 'detail';
-  el.panelDetailTitle.hidden = mode !== 'detail';
-  el.panelVersion.hidden = mode === 'detail';
-  el.panelSearchBar.hidden = mode === 'detail';
+  el.panel.dataset.view = query ? 'search' : 'settings';
 
-  if (mode === 'detail' && currentCat) {
-    const title = tr(panelCategorySource(currentCat));
-    if (el.panelDetailTitle.textContent !== title) el.panelDetailTitle.textContent = title;
+  const cats = [...el.panel.querySelectorAll('.settings-nav .panel-cat')];
+  if (!query && !settingsBodies.has(panelCategory)) {
+    panelCategory = cats[0]?.dataset.cat || null;
   }
 
-  const visible = new Set();
-  let visibleCategories = 0;
-
-  for (const cat of el.panel.querySelectorAll('.panel-cat')) {
-    const title = normalizeSearch(cat.querySelector('.panel-cat-title')?.textContent || '');
+  let visible = 0;
+  for (const cat of cats) {
+    const id = cat.dataset.cat;
+    const body = settingsBodies.get(id);
+    const titleText = cat.querySelector('.panel-cat-title')?.textContent || '';
+    const title = normalizeSearch(titleText);
     const titleMatch = Boolean(query) && title.includes(query);
-    const body = cat.querySelector('.panel-cat-body');
-    let rowMatch = false;
-
-    // Текст подсказок тоже участвует в поиске: например, «прокси» находится
-    // по пояснению под полем, а не только по названию категории.
     const noteText = normalizeSearch(
-      [...cat.querySelectorAll('.panel-note, .panel-empty')]
+      [...(body?.querySelectorAll('.panel-note, .panel-empty') || [])]
         .filter((hint) => !hint.hasAttribute('hidden'))
         .map((hint) => hint.textContent)
         .join(' '),
     );
     const noteMatch = Boolean(query) && noteText.includes(query);
+    let rowMatch = false;
 
-    for (const row of cat.querySelectorAll('.panel-row, .download-row, .panel-field')) {
-      const label = normalizeSearch(row.textContent);
-      const hiddenRow = row.hasAttribute('hidden');
-      const match = !query || titleMatch || noteMatch || (!hiddenRow && label.includes(query));
-      row.classList.toggle('is-filtered', !match);
-      if (match && !hiddenRow) rowMatch = true;
+    if (body) {
+      body.dataset.settingsTitle = titleText;
+      for (const row of body.querySelectorAll('.panel-row, .download-row, .panel-field')) {
+        const hiddenRow = row.hasAttribute('hidden');
+        const label = normalizeSearch(row.textContent);
+        const match = !query || titleMatch || noteMatch || (!hiddenRow && label.includes(query));
+        row.classList.toggle('is-filtered', !match);
+        if (match && !hiddenRow) rowMatch = true;
+      }
+
+      for (const hint of body.querySelectorAll('.panel-note, .panel-empty')) {
+        hint.classList.toggle('is-filtered', Boolean(query) && !titleMatch && !noteMatch);
+        if (!query) hint.classList.remove('is-filtered');
+      }
     }
 
-    for (const hint of cat.querySelectorAll('.panel-note, .panel-empty')) {
-      hint.classList.toggle('is-filtered', Boolean(query) && !titleMatch && !noteMatch);
+    const catMatch = !query || titleMatch || noteMatch || rowMatch;
+    const active = !query && id === panelCategory;
+    const expanded = query ? catMatch : active;
+    cat.classList.toggle('is-filtered', Boolean(query) && !catMatch);
+    cat.classList.toggle('is-current', active);
+    const head = cat.querySelector('[data-cat-head]');
+    if (head) {
+      if (active) head.setAttribute('aria-current', 'true');
+      else head.removeAttribute('aria-current');
+      head.setAttribute('aria-expanded', String(expanded));
     }
 
-    let categoryMatch = true;
-    if (mode === 'detail') categoryMatch = cat === currentCat;
-    else if (query) categoryMatch = titleMatch || noteMatch || rowMatch;
-
-    const expanded =
-      mode === 'detail' ? cat === currentCat : mode === 'search' ? categoryMatch : false;
-    cat.classList.toggle('is-filtered', !categoryMatch);
-    cat.classList.toggle('is-current', mode === 'detail' && cat === currentCat);
-    body.hidden = !expanded;
-    cat.dataset.open = String(expanded);
-    cat.querySelector('[data-cat-head]')?.setAttribute('aria-expanded', String(expanded));
-
-    if (categoryMatch) {
-      visibleCategories += 1;
-      visible.add(cat);
+    if (body) {
+      body.hidden = !expanded;
+      if (catMatch && query) visible += 1;
     }
   }
 
   for (const group of panelGroupNodes) {
-    group.label.hidden = mode === 'detail' || !group.cats.some((cat) => visible.has(cat));
+    group.label.hidden = !group.cats.some((cat) => !cat.classList.contains('is-filtered'));
   }
 
-  el.panelNoResults.hidden = !(mode === 'search' && visibleCategories === 0);
+  el.panelNoResults.hidden = !(query && visible === 0);
 }
 
-/** Открывает раздел как отдельную страницу настроек. */
+/** Переключает правую колонку на выбранный раздел настроек. */
 function openPanelCategory(id) {
   if (!id) return;
   const cat = el.panel.querySelector(`.panel-cat[data-cat="${id}"]`);
   if (!cat) return;
 
-  if (!panelCategory) panelListScroll = el.panelBody.scrollTop;
   panelCategory = id;
   clearPanelSearch();
   applyPanelFilter();
-  el.panelBody.scrollTop = 0;
-  if (!el.panel.hidden) el.btnPanelBack.focus({ preventScroll: true });
-}
-
-/** Возвращает из раздела к списку и на прежнее место прокрутки. */
-function closePanelCategory() {
-  if (!panelCategory) return;
-  const id = panelCategory;
-  panelCategory = null;
-  applyPanelFilter();
-  el.panelBody.scrollTop = panelListScroll;
-
-  const head = el.panel.querySelector(`[data-cat-head="${id}"]`);
-  if (head) head.focus({ preventScroll: true });
+  if (settingsContent) settingsContent.scrollTop = 0;
 }
 
 function formatRemaining(ms) {
@@ -1543,7 +1665,7 @@ function paletteItems() {
     { label: 'Обновить', cmd: 'reload', hint: 'Ctrl R' },
     { label: 'Обновить без кэша', cmd: 'hardReload', hint: 'Ctrl Shift R' },
     { label: 'Поиск по странице', cmd: 'find', hint: 'Ctrl F' },
-    { label: 'Панель функций', cmd: 'panel', hint: 'Ctrl Shift B' },
+    { label: 'Настройки', cmd: 'panel', hint: 'Ctrl ,' },
     { label: 'Чат сбоку', cmd: 'chat', hint: 'Ctrl Shift C' },
     { label: 'Картинки в чат', cmd: 'stickerPanel' },
     { label: 'Добавить картинки…', cmd: 'stickerAdd' },
@@ -1670,9 +1792,27 @@ function paletteItems() {
   }
 
   items.push(
+    { label: 'Покадрово: −1 кадр', cmd: 'framePrev' },
+    { label: 'Покадрово: +1 кадр', cmd: 'frameNext' },
+    { label: 'Цикл A–B: поставить точку A', cmd: 'abLoopA' },
+    { label: 'Цикл A–B: поставить точку B', cmd: 'abLoopB' },
+    { label: 'Цикл A–B: сбросить', cmd: 'abLoopClear' },
     { label: 'Проверить внешний IP', cmd: 'regionCheckIp' },
+    { label: 'Проверить связь с TikTok', cmd: 'regionTestProxy' },
+    { label: 'Тема: как в системе', cmd: 'themeMode', payload: 'system' },
+    { label: 'Тема: тёмная', cmd: 'themeMode', payload: 'dark' },
+    { label: 'Тема: светлая', cmd: 'themeMode', payload: 'light' },
     { label: 'Сбросить данные сайта…', cmd: 'regionResetData' },
   );
+
+  for (const profile of state.profiles?.list || []) {
+    if (profile.id === state.profiles?.active) continue;
+    items.push({
+      label: tr(`Переключить профиль: ${profile.name}`),
+      cmd: 'profileSwitch',
+      payload: profile.id,
+    });
+  }
 
   if (state.appimage && state.appimage.available) {
     items.push({
@@ -1806,7 +1946,18 @@ function renderPlayer() {
   }
 
   setSwitch(el.rowStartMuted, player.startMuted);
+  setSwitch(el.rowStickySpeed, player.stickySpeed !== false);
   setSwitch(el.rowLoop, player.loop);
+  const ab = state.abLoop || {};
+  if (ab.enabled && ab.a !== null && ab.b !== null) {
+    el.abLoopValue.textContent = `${formatTime(ab.a)} – ${formatTime(ab.b)}`;
+  } else if (ab.a !== null) {
+    el.abLoopValue.textContent = `A: ${formatTime(ab.a)}`;
+  } else if (ab.b !== null) {
+    el.abLoopValue.textContent = `B: ${formatTime(ab.b)}`;
+  } else {
+    el.abLoopValue.textContent = 'Выкл';
+  }
   setSwitch(el.rowPauseBlur, player.pauseOnBlur);
   setSwitch(el.rowMono, player.mono);
   setSwitch(el.rowKeepAwake, state.keepAwake);
@@ -2143,6 +2294,140 @@ function renderLibrary() {
   );
 }
 
+let historySignature = '';
+let creatorNotesSignature = '';
+let profilesSignature = '';
+
+function renderProfiles() {
+  const profiles = state.profiles || { active: 'default', list: [] };
+  const list = Array.isArray(profiles.list) ? profiles.list : [];
+  const signature = `${profiles.active}#${list.map((p) => `${p.id}:${p.name}`).join('|')}`;
+  el.btnProfileDelete.disabled = !profiles.active || profiles.active === 'default';
+  if (signature === profilesSignature) return;
+  profilesSignature = signature;
+
+  el.profileSelect.replaceChildren(
+    ...list.map((item) => {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = item.name;
+      opt.selected = item.id === profiles.active;
+      return opt;
+    }),
+  );
+  el.profileSelect.value = profiles.active || 'default';
+}
+
+function renderHistory() {
+  const list = Array.isArray(state.history) ? state.history : [];
+  const query = el.historySearch.value.trim().toLowerCase();
+  const visible = list
+    .filter((item) => {
+      if (!query) return true;
+      return `${item.title} ${item.author}`.toLowerCase().includes(query);
+    })
+    .slice(0, 60);
+
+  el.historyEmpty.hidden = visible.length > 0;
+  el.historyEmpty.textContent = list.length
+    ? 'Ничего не найдено'
+    : 'История просмотров пока пуста.';
+
+  const signature = `${query}#${visible.map((item) => `${item.id}:${item.title}`).join('|')}`;
+  if (signature === historySignature) return;
+  historySignature = signature;
+
+  el.historyList.replaceChildren(
+    ...visible.map((item) => {
+      const row = document.createElement('div');
+      row.className = 'library-item';
+      row.dataset.id = item.id;
+
+      const head = document.createElement('div');
+      head.className = 'library-head';
+
+      const openBtn = document.createElement('button');
+      openBtn.type = 'button';
+      openBtn.className = 'library-open';
+      openBtn.dataset.historyOpen = '1';
+      openBtn.dataset.i18nSkip = '1';
+      openBtn.textContent = item.title || item.author || item.url;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'library-del';
+      removeBtn.dataset.historyRemove = '1';
+      removeBtn.setAttribute('aria-label', tr('Удалить'));
+      removeBtn.textContent = '×';
+
+      head.append(openBtn, removeBtn);
+
+      if (item.author) {
+        const meta = document.createElement('div');
+        meta.className = 'library-meta';
+        meta.dataset.i18nSkip = '1';
+        meta.textContent = `@${item.author}`;
+        row.append(head, meta);
+      } else {
+        row.append(head);
+      }
+      return row;
+    }),
+  );
+}
+
+function renderCreatorNotes() {
+  const list = Array.isArray(state.creatorNotes) ? state.creatorNotes : [];
+  const signature = list
+    .map((item) => `${item.author}:${item.note}:${(item.tags || []).join(',')}`)
+    .join('|');
+  if (signature === creatorNotesSignature) return;
+  creatorNotesSignature = signature;
+
+  el.creatorNotesList.replaceChildren(
+    ...list.map((item) => {
+      const row = document.createElement('div');
+      row.className = 'library-item';
+      row.dataset.author = item.author;
+
+      const head = document.createElement('div');
+      head.className = 'library-head';
+
+      const openBtn = document.createElement('button');
+      openBtn.type = 'button';
+      openBtn.className = 'library-open';
+      openBtn.dataset.creatorOpen = '1';
+      openBtn.dataset.i18nSkip = '1';
+      openBtn.textContent = item.author;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'library-del';
+      removeBtn.dataset.creatorRemove = '1';
+      removeBtn.setAttribute('aria-label', tr('Удалить'));
+      removeBtn.textContent = '×';
+
+      head.append(openBtn, removeBtn);
+      row.append(head);
+
+      const details = [
+        ...(Array.isArray(item.tags) && item.tags.length
+          ? [item.tags.map((t) => `#${t}`).join(' ')]
+          : []),
+        ...(item.note ? [item.note] : []),
+      ].join(' · ');
+      if (details) {
+        const meta = document.createElement('div');
+        meta.className = 'library-meta';
+        meta.dataset.i18nSkip = '1';
+        meta.textContent = details;
+        row.append(meta);
+      }
+      return row;
+    }),
+  );
+}
+
 function renderStats() {
   const stats = state.stats || {};
   const today = stats.today || { minutes: 0, videos: 0 };
@@ -2282,6 +2567,83 @@ function renderLanguages() {
   }
 }
 
+let loadedFontKey = '';
+let loadedFontFace = null;
+
+function applyUiFontCss(font) {
+  const preset = (font && font.preset) || 'google-sans-medium';
+  const root = document.documentElement.style;
+
+  if (preset === 'inter') {
+    root.setProperty('--ui-font', 'var(--ui-font-fallback)');
+    return;
+  }
+  if (preset === 'system') {
+    root.setProperty(
+      '--ui-font',
+      "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+    );
+    return;
+  }
+  if (preset === 'custom-name' && font.family) {
+    root.setProperty('--ui-font', `'${font.family}', var(--ui-font-fallback)`);
+    return;
+  }
+  if (preset === 'custom-file' && font.dataBase64) {
+    const key = `${font.fileName || ''}:${font.dataBase64.length}:${font.dataBase64.slice(0, 32)}`;
+    if (key === loadedFontKey) {
+      root.setProperty('--ui-font', "'OctoCustomFont', var(--ui-font-fallback)");
+      return;
+    }
+    try {
+      const bin = window.atob(font.dataBase64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+      const face = new window.FontFace('OctoCustomFont', bytes);
+      face
+        .load()
+        .then((ready) => {
+          if (loadedFontFace) document.fonts.delete(loadedFontFace);
+          document.fonts.add(ready);
+          loadedFontFace = ready;
+          loadedFontKey = key;
+          root.setProperty('--ui-font', "'OctoCustomFont', var(--ui-font-fallback)");
+        })
+        .catch(() => {
+          root.setProperty(
+            '--ui-font',
+            "'Google Sans Medium', 'Google Sans', 'Google Sans Flex', var(--ui-font-fallback)",
+          );
+        });
+    } catch {
+      /* некорректные данные шрифта — остаётся шрифт по умолчанию */
+    }
+    return;
+  }
+
+  root.setProperty(
+    '--ui-font',
+    "'Google Sans Medium', 'Google Sans', 'Google Sans Flex', var(--ui-font-fallback)",
+  );
+}
+
+function renderUiFont() {
+  const font = state.uiFont || { preset: 'google-sans-medium', family: '', fileName: '' };
+  applyUiFontCss(font);
+  const effectivePreset = pendingFontPreset || font.preset || 'google-sans-medium';
+
+  if (document.activeElement !== el.uiFontSelect) {
+    el.uiFontSelect.value = effectivePreset;
+  }
+  el.uiFontCustomNameRow.hidden = effectivePreset !== 'custom-name';
+  el.uiFontCustomFileRow.hidden = effectivePreset !== 'custom-file';
+
+  if (document.activeElement !== el.uiFontNameInput && font.family) {
+    el.uiFontNameInput.value = font.family;
+  }
+  el.uiFontFileName.textContent = font.fileName || tr('Файл не выбран');
+}
+
 function renderResilience() {
   el.offlineScreen.hidden = state.offline !== true;
   const safeMode = state.safeMode === true;
@@ -2293,6 +2655,7 @@ function renderResilience() {
   if (document.activeElement !== el.uiScaleSelect) {
     el.uiScaleSelect.value = String(state.uiScale || 1);
   }
+  renderUiFont();
 
   const parts = [];
   parts.push(state.onBattery === true ? 'Питание: батарея' : 'Питание: сеть');
@@ -2413,6 +2776,23 @@ function renderRegion() {
   el.regionIpResult.hidden = !hasResult;
   el.regionIpResult.textContent = hasResult ? check.text : '';
   el.regionIpResult.classList.toggle('is-error', check.state === 'error');
+
+  const ping = state.proxyTest || { state: 'idle', text: 'Проверить' };
+  const pingLabel =
+    ping.state === 'loading'
+      ? 'Проверяю…'
+      : ping.state === 'done'
+        ? `${ping.ms} мс`
+        : ping.state === 'error'
+          ? 'Ошибка'
+          : 'Проверить';
+  el.regionPingValue.textContent = pingLabel;
+  el.regionPingValue.classList.toggle('is-error', ping.state === 'error');
+  el.regionPingValue.classList.toggle('is-loading', ping.state === 'loading');
+  const hasPingResult = ping.state === 'done' || ping.state === 'error';
+  el.regionPingResult.hidden = !hasPingResult;
+  el.regionPingResult.textContent = hasPingResult ? ping.text : '';
+  el.regionPingResult.classList.toggle('is-error', ping.state === 'error');
 }
 
 function renderPopovers() {
@@ -2430,28 +2810,33 @@ function renderPopovers() {
 }
 
 function renderPanel() {
-  el.panel.hidden = !state.panel;
-  el.btnPanel.classList.toggle('is-on', Boolean(state.panel));
-  el.btnPanel.setAttribute('aria-pressed', String(Boolean(state.panel)));
+  const open = Boolean(state.panel);
+  el.panel.hidden = !open;
+  el.btnPanel.classList.toggle('is-on', open);
+  el.btnPanel.setAttribute('aria-pressed', String(open));
 
-  // Закрытая панель не должна хранить поиск и открытую подстраницу: при
-  // следующем открытии пользователь ожидает список разделов.
-  if (!state.panel) {
+  // Закрытые настройки не хранят прошлый поиск и прокрутку: при следующем
+  // открытии пользователь видит чистый первый раздел.
+  if (!open) {
     clearPanelSearch();
-    panelCategory = null;
-    if (el.panelBody) el.panelBody.scrollTop = 0;
+    panelCategory = $('settingsNav')?.querySelector('.panel-cat')?.dataset.cat || 'page';
+    if (settingsContent) settingsContent.scrollTop = 0;
+    const nav = $('settingsNav');
+    if (nav) nav.scrollTop = 0;
   }
 
-  // Панель закрыли во время захвата сочетания — отпускаем Esc обратно.
-  if (!state.panel && capturing) {
+  // Настройки закрыли во время захвата сочетания — отпускаем Esc обратно.
+  if (!open && capturing) {
     capturing = null;
     api.cmd('keymapCapturing', false);
   }
 
-  const width = Number(state.panelWidth) || 300;
-  document.documentElement.style.setProperty('--panel-w', `${width}px`);
-
   applyPanelFilter();
+
+  if (open && !panelWasOpen && !el.panel.contains(document.activeElement)) {
+    el.panelSearch.focus({ preventScroll: true });
+  }
+  panelWasOpen = open;
 
   el.panelVersion.textContent = `v${state.version || '—'} · Electron ${api.ui.electron}`;
   el.panelZoom.textContent = `${state.zoom || 100} %`;
@@ -2489,6 +2874,10 @@ function renderPanel() {
     : 'Установить в приложения';
 
   renderCosmetics(state.cosmetics);
+  if (document.activeElement !== el.themeModeSelect && state.themeMode) {
+    el.themeModeSelect.value = state.themeMode;
+  }
+  renderProfiles();
   renderPlugins(state.plugins);
   renderDownloads(state.downloads);
   renderSleep();
@@ -2499,6 +2888,8 @@ function renderPanel() {
   renderNotifications();
   renderReplies();
   renderLibrary();
+  renderHistory();
+  renderCreatorNotes();
   renderStats();
   renderFiltersSettings();
   renderRegion();
@@ -2590,6 +2981,7 @@ if (storedCustomCode) {
 }
 
 api.onState(apply);
+api.onI18n?.(() => applyPanelFilter());
 api.ready();
 render();
 syncChromeHeight();

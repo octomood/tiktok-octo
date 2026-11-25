@@ -36,6 +36,9 @@ contextBridge.exposeInMainWorld('octoManager', {
   show(id) {
     ipcRenderer.send('octo:downloads-show', id);
   },
+  extractAudio(id) {
+    ipcRenderer.send('octo:downloads-audio', id);
+  },
   clear() {
     ipcRenderer.send('octo:downloads-clear');
   },

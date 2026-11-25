@@ -72,6 +72,10 @@ test('шаблон имени: транслитерация, подстанов�
   });
   expect(pathInfo.directory).toBe('/tmp/downloads/@octo');
   expect(pathInfo.file).toBe('@octo Klip.webm');
+
+  // Спецсимволы $& в названии и зарезервированные имена Windows не ломают шаблон.
+  expect(buildName('{title}', { title: 'Test $& clip', ext: 'mp4' })).toBe('Test $& clip.mp4');
+  expect(buildName('{title}', { title: 'CON', ext: 'mp4' })).toBe('CON_.mp4');
 });
 
 test('авто-имя файла при загрузке и счётчик пропущенной рекламы', async () => {

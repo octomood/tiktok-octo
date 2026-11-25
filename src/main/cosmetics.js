@@ -16,7 +16,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { ctx, setCosmeticsState } = require('./app-context');
+const { nativeTheme } = require('electron');
+const { ctx, setCosmeticsState, pushState } = require('./app-context');
 const { readState, writeState } = require('./store');
 const { COSMETIC_RULES } = require('./cosmetic-catalog');
 const { evalInPage } = require('./page-eval');
@@ -76,6 +77,10 @@ const PROMO_JS = `(() => {
 
     for (const node of nodes) {
       if (node.hasAttribute(MARK)) continue;
+      // Сначала проверяем textContent (не вызывает reflow), и только короткие
+      // кандидаты перепроверяем через innerText.
+      const tc = norm(node.textContent);
+      if (!tc || tc.length > 120) continue;
       const text = norm(node.innerText);
       if (!text || text.length > 40 || !LABELS.has(text)) continue;
       if (node.closest('[role="dialog"], [aria-modal="true"]')) continue;
@@ -713,9 +718,11 @@ const COMMENTS_PANEL_JS = `(() => {
   // SPA меняет ролик без перезагрузки: новая страница снова начинается
   // со скрытой панелью, иначе она оставалась бы открытой с прошлого раза.
   const closeOnNavigate = () => close();
+  const originalHistory = {};
   const wrapHistory = (name) => {
     const original = history[name];
     if (typeof original !== 'function') return;
+    originalHistory[name] = original;
     history[name] = function wrappedHistory(...args) {
       const before = location.href;
       const result = original.apply(this, args);
@@ -735,6 +742,9 @@ const COMMENTS_PANEL_JS = `(() => {
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKeyDown, true);
       window.removeEventListener('popstate', closeOnNavigate);
+      for (const [name, original] of Object.entries(originalHistory)) {
+        if (typeof original === 'function') history[name] = original;
+      }
       close();
       delete window.__octoCommentsPanel;
     },
@@ -813,9 +823,26 @@ function settings() {
   return value && typeof value === 'object' ? value : {};
 }
 
+function getThemeMode() {
+  const saved = readState().themeMode;
+  if (saved === 'system' || saved === 'dark' || saved === 'light') return saved;
+  return settings()['dark-theme'] === false ? 'light' : 'dark';
+}
+
+function effectiveSettings() {
+  const base = settings();
+  const mode = getThemeMode();
+  const dark = mode === 'system' ? Boolean(nativeTheme.shouldUseDarkColors) : mode === 'dark';
+  return { ...base, 'dark-theme': dark };
+}
+
 function isEnabled(id) {
   const rule = RULES.find((candidate) => candidate.id === id);
   if (!rule) return false;
+  if (id === 'dark-theme') {
+    const mode = getThemeMode();
+    return mode === 'system' ? Boolean(nativeTheme.shouldUseDarkColors) : mode === 'dark';
+  }
   const saved = settings()[id];
   return saved === undefined ? rule.default : saved === true;
 }
@@ -860,7 +887,7 @@ async function applyNow(wc) {
   }
   if (currentGeneration !== state.generation) return;
 
-  runScripts(wc);
+  await runScripts(wc);
   injectFrameStyles(wc).catch(() => {});
 }
 
@@ -909,38 +936,80 @@ function setEco(value) {
   }
 }
 
-/** SPA-переходы и поздние баннеры: пересканировать DOM с небольшой задержкой. */
+/** SPA-переходы и поздние баннеры: пересканировать DOM без перевставки CSS ленты. */
 function schedule(delay = 300) {
   clearTimeout(timer);
   timer = setTimeout(() => {
-    apply();
+    if (!eco) runScripts();
+    injectFrameStyles().catch(() => {});
   }, delay);
+}
+
+function applyThemeMode(mode, { reload = true } = {}) {
+  const nextMode = mode === 'system' || mode === 'light' || mode === 'dark' ? mode : 'dark';
+  const prevDark = isEnabled('dark-theme');
+  try {
+    nativeTheme.themeSource = nextMode;
+  } catch {
+    /* в раннем тесте nativeTheme может быть недоступен */
+  }
+  const nextDark =
+    nextMode === 'system' ? Boolean(nativeTheme.shouldUseDarkColors) : nextMode === 'dark';
+
+  ctx.themeMode = nextMode;
+  writeState({
+    themeMode: nextMode,
+    cosmetics: { ...settings(), 'dark-theme': nextDark },
+  });
+  setCosmeticsState(effectiveSettings());
+  apply();
+  const chatWc = ctx.chatView?.webContents;
+  if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
+
+  if (reload && nextDark !== prevDark) {
+    const views = [ctx.view?.webContents, chatWc].filter((wc) => wc && !wc.isDestroyed());
+    for (const wc of views) autoTheme.setEnabled(wc, nextDark).catch(() => {});
+    const ses = ctx.view?.webContents?.session || ctx.chatView?.webContents?.session;
+    syncThemeCookies(ses, nextDark).finally(() => {
+      for (const wc of views) {
+        if (!wc.isDestroyed()) wc.reload();
+      }
+    });
+  } else {
+    pushState();
+  }
+  if (onChange) onChange();
+  return nextMode;
+}
+
+function initThemeListener() {
+  try {
+    nativeTheme.themeSource = getThemeMode();
+    nativeTheme.on('updated', () => {
+      if (getThemeMode() !== 'system') return;
+      applyThemeMode('system', { reload: true });
+    });
+  } catch {
+    /* тестовая среда */
+  }
 }
 
 function toggle(id) {
   const rule = RULES.find((candidate) => candidate.id === id);
   if (!rule) return false;
 
+  if (id === 'dark-theme') {
+    const nextDark = !isEnabled('dark-theme');
+    applyThemeMode(nextDark ? 'dark' : 'light', { reload: true });
+    return nextDark;
+  }
+
   const next = !isEnabled(id);
   writeState({ cosmetics: { ...settings(), [id]: next } });
-  setCosmeticsState(settings());
+  setCosmeticsState(effectiveSettings());
   apply();
   const chatWc = ctx.chatView?.webContents;
   if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
-
-  // Тема сайта живёт в cookie и читается React-провайдером при монтировании,
-  // поэтому после переключения перезагружаем страницу, а не ждём перехода.
-  // Панель чата — отдельный webContents, её перезагружаем тоже.
-  if (id === 'dark-theme') {
-    const views = [ctx.view?.webContents, chatWc].filter((wc) => wc && !wc.isDestroyed());
-    for (const wc of views) autoTheme.setEnabled(wc, next).catch(() => {});
-    const ses = ctx.view?.webContents?.session || ctx.chatView?.webContents?.session;
-    syncThemeCookies(ses, next).finally(() => {
-      for (const wc of views) {
-        if (!wc.isDestroyed()) wc.reload();
-      }
-    });
-  }
 
   if (onChange) onChange();
   return next;
@@ -956,7 +1025,8 @@ function menuItems() {
 }
 
 // Интерфейс получает актуальные галочки сразу при старте.
-setCosmeticsState(settings());
+ctx.themeMode = getThemeMode();
+setCosmeticsState(effectiveSettings());
 
 module.exports = {
   RULES,
@@ -965,6 +1035,8 @@ module.exports = {
   scheduleScripts,
   injectFrameStyles,
   prepareTheme,
+  applyThemeMode,
+  initThemeListener,
   toggle,
   isEnabled,
   setEco,

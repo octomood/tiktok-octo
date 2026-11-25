@@ -17,6 +17,7 @@ const keymap = require('./keymap');
 /** Старые сочетания в запасе: не занимают список команд, но работают. */
 const ALIASES = {
   F5: 'reload',
+  'Ctrl+,': 'panel',
   'Ctrl+G': 'findNext',
   'Ctrl+Shift+G': 'findPrev',
   // Ctrl и «+» даёт Shift+= на большинстве раскладок.
@@ -57,8 +58,8 @@ function handleShortcut(event, input) {
     if (ctx.paletteOpen) return run(() => handleCommand('palette'));
     if (ctx.find.open) return run(() => handleCommand('findClose'));
     if (ctx.popover) return run(() => setPopover(null));
-    if (ctx.chatOpen) return run(() => handleCommand('chat'));
     if (ctx.panelOpen) return run(() => handleCommand('panel'));
+    if (ctx.chatOpen) return run(() => handleCommand('chat'));
     if (ctx.barOnly) return run(() => handleCommand('barExit'));
     if (ctx.pipActive) return run(() => handleCommand('pipClose'));
     if (ctx.win?.isFullScreen()) return run(() => handleCommand('fullscreen'));

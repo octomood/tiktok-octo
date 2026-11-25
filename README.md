@@ -85,9 +85,10 @@ window and a handful of shortcuts that make sense on a desktop.
 | **🧯&nbsp; It survives**            | Failed loads retry with backoff, a crashed renderer is brought back, a hung page says so instead of dying silently. Two crashes bring safe mode, the white screen becomes "No connection", and battery power enables saver mode.                                                                                                                                                                                                                                                                                                                                             |
 | **⛶&nbsp; Real fullscreen**         | Fullscreen video takes the whole window and the title bar gets out of the way.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
-The **Functions** panel opens from the labelled title-bar button or
-<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>: sections are grouped by topic,
-open as a subpage with a Back button, and search covers every setting at once.
+The **Settings** overlay opens from the title-bar button or with
+<kbd>Ctrl</kbd>+<kbd>,</kbd> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>)
+over the feed: sections stay in the left rail for one-click switching, setting
+rows live on the right, and header search covers every section at once.
 
 <div align="center">
   <img src="docs/findbar.png" width="820" alt="Find in page bar with a match counter under the title bar" />
@@ -393,7 +394,7 @@ src/
     plugins/       plugin engine: manifest, ZIP, audit, installer, registry,
                    sandboxed hosts, manager window and auto-updates
   renderer/
-    index.html     title bar + find bar markup
+    index.html     title bar, find bar and settings page markup
     styles.css     their styling
     titlebar.js    state, toasts, keyboard plumbing
     plugins.html / plugins.css / plugins.js

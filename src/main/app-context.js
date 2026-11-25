@@ -12,7 +12,6 @@ const { TITLEBAR_H, MAX_CHROME_H, PANEL_W, CHAT_W, CHAT_HANDLE_W } = require('./
 const { COSMETIC_RULES } = require('./cosmetic-catalog');
 const { REGION_PRESETS } = require('./region-catalog');
 const { APP_LANGUAGES, SITE_LANGUAGES } = require('./language-catalog');
-const { writeState } = require('./store');
 
 const ctx = {
   /** @type {import('electron').BrowserWindow | null} */
@@ -83,6 +82,8 @@ const ctx = {
   chromeHeightCss: TITLEBAR_H,
   /** Масштаб собственного интерфейса; сайт масштабируется отдельно. */
   uiScale: 1,
+  /** Шрифт собственного интерфейса (Google Sans Medium по умолчанию). */
+  uiFont: { preset: 'google-sans-medium', family: '', fileName: '' },
   /** Открыта ли боковая панель функций. */
   panelOpen: false,
   /** Какое быстрое меню открыто под полосой: стикеры или активные плагины. */
@@ -95,6 +96,18 @@ const ctx = {
   proxyScan: { state: 'idle', items: [] },
   /** Локальный обход DPI: фрагментация TLS без прокси и VPN (см. dpi-bypass.js). */
   dpi: { enabled: false, active: false, port: 0 },
+  /** Проверка соединения через прокси/DPI. */
+  proxyTest: { state: 'idle', ms: 0, text: '' },
+  /** Профили аккаунтов (изолированные сессии TikTok). */
+  profiles: { active: 'default', list: [{ id: 'default', name: 'Основной' }] },
+  /** Локальная история просмотров. */
+  history: [],
+  /** Заметки и теги к авторам. */
+  creatorNotes: [],
+  /** Цикл отрезка A–B текущего видео. */
+  abLoop: { a: null, b: null, enabled: false },
+  /** Режим темы: 'system' | 'dark' | 'light'. */
+  themeMode: 'dark',
   /** Настройки плеера, которых нет у сайта. */
   player: {
     speed: 1,
@@ -269,12 +282,11 @@ function toast(text) {
 // должна поджимать ленту до нечитаемой полоски.
 const CHAT_FEED_MIN = 320;
 
-/** Ширина, доступная сайту: окно минус открытая панель функций. */
+/** Ширина, доступная сайту и док-панели чата. */
 function contentWidth() {
   if (!ctx.win || ctx.win.isDestroyed()) return 0;
   const [width] = ctx.win.getContentSize();
-  const panelWidth = Math.round(PANEL_W * (ctx.uiScale || 1));
-  return Math.max(0, width - (ctx.htmlFullscreen ? 0 : ctx.panelOpen ? panelWidth : 0));
+  return Math.max(0, width);
 }
 
 /**
@@ -286,18 +298,20 @@ function chatWidthLimit(available = contentWidth()) {
   return Math.max(200, available - spare);
 }
 
-/** Показать view только когда нет палитры, «только полосы» и экрана ошибки. */
+/** Показать view только когда нет оверлеев (настройки, палитра, мастер, экран ошибки). */
 function syncViewVisibility() {
   if (!ctx.view || typeof ctx.view.setVisible !== 'function') return;
   if (ctx.view.webContents && ctx.view.webContents.isDestroyed()) return;
   try {
-    ctx.view.setVisible(!ctx.offline && !ctx.paletteOpen && !ctx.barOnly && !ctx.welcome.open);
+    ctx.view.setVisible(
+      !ctx.offline && !ctx.paletteOpen && !ctx.panelOpen && !ctx.barOnly && !ctx.welcome.open,
+    );
   } catch {
     /* view уже закрывается */
   }
 }
 
-/** Контент сайта занимает всё окно, кроме нашей полосы (и панелей). */
+/** Контент сайта занимает всё окно, кроме верхней полосы (и панели чата). */
 function layout() {
   if (!ctx.win || ctx.win.isDestroyed() || !ctx.view) return;
   const wc = ctx.view.webContents;
@@ -305,19 +319,19 @@ function layout() {
   try {
     const [width, height] = ctx.win.getContentSize();
     const top = ctx.htmlFullscreen || ctx.ambient ? 0 : ctx.chromeHeight;
-    const panelWidth = Math.round(PANEL_W * (ctx.uiScale || 1));
-    const left = ctx.htmlFullscreen ? 0 : ctx.panelOpen ? panelWidth : 0;
-    const available = Math.max(0, width - left);
+    const available = Math.max(0, width);
 
-    // Чат виден только в обычном окне; в PiP, полном экране и палитре он спрятан.
+    // Чат виден только в обычном окне; в PiP, полном экране и оверлеях он спрятан.
     const chat = ctx.chatView;
     const chatAlive = Boolean(chat && !chat.webContents.isDestroyed());
     const chatVisible =
       chatAlive &&
       ctx.chatOpen &&
       !ctx.htmlFullscreen &&
+      !ctx.ambient &&
       !ctx.pipActive &&
       !ctx.paletteOpen &&
+      !ctx.panelOpen &&
       !ctx.barOnly &&
       !ctx.welcome.open;
     const chatWidth = Math.min(ctx.chatWidth, chatWidthLimit(available));
@@ -325,7 +339,7 @@ function layout() {
     const docked = chatVisible && ctx.chatDock !== false;
 
     ctx.view.setBounds({
-      x: left + (docked ? chatWidth + CHAT_HANDLE_W : 0),
+      x: docked ? chatWidth + CHAT_HANDLE_W : 0,
       y: top,
       width: Math.max(0, available - (docked ? chatWidth + CHAT_HANDLE_W : 0)),
       height: Math.max(0, height - top),
@@ -337,7 +351,7 @@ function layout() {
       chat.setVisible(chatVisible);
       if (chatVisible) {
         const next = {
-          x: left,
+          x: 0,
           y: top,
           width: chatWidth,
           height: Math.max(0, height - top),
@@ -384,22 +398,36 @@ function layoutSoon() {
   }, 40);
 }
 
-/** Открыть/закрыть панель функций. */
-function setPanelOpen(open, { persist = true } = {}) {
+/** Открыть/закрыть оверлей настроек поверх главного окна. */
+function setPanelOpen(open) {
   const next = Boolean(open);
   if (next === ctx.panelOpen) return;
   ctx.panelOpen = next;
-  // Панель и быстрое меню занимают одно и то же место под полосой.
   if (next) ctx.popover = null;
-  if (persist) writeState({ panelOpen: next });
   layoutSoon();
+
+  if (ctx.win && !ctx.win.isDestroyed()) {
+    const wc = ctx.win.webContents;
+    if (next && wc && !wc.isDestroyed()) wc.focus();
+    else if (
+      !next &&
+      !ctx.paletteOpen &&
+      !ctx.welcome.open &&
+      !ctx.find.open &&
+      ctx.view &&
+      !ctx.view.webContents.isDestroyed()
+    ) {
+      ctx.view.webContents.focus();
+    }
+  }
+
   pushState();
 }
 
 /**
  * Открыть быстрое меню под полосой заголовка: «stickers» или «plugins».
  * Меню живёт в renderer, но состояние хранится здесь, чтобы Esc и команды
- * из меню/трея закрывали его так же, как боковую панель.
+ * из меню/трея закрывали его так же, как настройки.
  */
 function setPopover(id, { toggle = true } = {}) {
   let next = id === 'stickers' || id === 'plugins' ? id : null;
@@ -411,7 +439,6 @@ function setPopover(id, { toggle = true } = {}) {
 
   if (next && ctx.panelOpen) {
     ctx.panelOpen = false;
-    writeState({ panelOpen: false });
     layoutSoon();
   }
 
@@ -615,6 +642,16 @@ function stepHistory(delta) {
   }
 }
 
+const STATIC_REGIONS = REGION_PRESETS.map((preset) => ({ id: preset.id, label: preset.label }));
+const STATIC_LANGUAGES = APP_LANGUAGES.map((language) => ({
+  id: language.id,
+  label: language.label,
+}));
+const STATIC_SITE_LANGUAGES = [
+  { id: 'auto', label: 'Авто (как у сайта)' },
+  ...SITE_LANGUAGES.map((language) => ({ id: language.id, label: language.label })),
+];
+
 function currentState() {
   const wc = ctx.view?.webContents;
   const alive = Boolean(wc && !wc.isDestroyed());
@@ -639,6 +676,7 @@ function currentState() {
     popover: ctx.popover,
     panelWidth: PANEL_W,
     uiScale: ctx.uiScale,
+    uiFont: require('./ui-font').toRendererPayload(ctx.uiFont),
     // Ширина для полоски-ручки: фактическая, а не желаемая — в узком окне
     // чат упирается в предел и ручка должна стоять на его краю.
     chat: {
@@ -671,6 +709,18 @@ function currentState() {
     palette: ctx.paletteOpen,
     welcome: { open: ctx.welcome.open, done: ctx.welcome.done },
     dpi: { ...ctx.dpi },
+    proxyTest: { ...ctx.proxyTest },
+    profiles: {
+      active: ctx.profiles.active,
+      list: ctx.profiles.list.map((item) => ({ ...item })),
+    },
+    history: ctx.history.map((item) => ({ ...item })),
+    creatorNotes: ctx.creatorNotes.map((item) => ({
+      ...item,
+      tags: Array.isArray(item.tags) ? item.tags.slice() : [],
+    })),
+    abLoop: { ...ctx.abLoop },
+    themeMode: ctx.themeMode,
     proxyScan: {
       state: ctx.proxyScan.state,
       items: ctx.proxyScan.items.map((item) => ({ ...item })),
@@ -728,14 +778,11 @@ function currentState() {
     },
     region: { ...ctx.region },
     regionCheck: { ...ctx.regionCheck },
-    regions: REGION_PRESETS.map((preset) => ({ id: preset.id, label: preset.label })),
+    regions: STATIC_REGIONS,
     language: ctx.language,
     siteLanguage: ctx.siteLanguage,
-    languages: APP_LANGUAGES.map((language) => ({ id: language.id, label: language.label })),
-    siteLanguages: [
-      { id: 'auto', label: 'Авто (как у сайта)' },
-      ...SITE_LANGUAGES.map((language) => ({ id: language.id, label: language.label })),
-    ],
+    languages: STATIC_LANGUAGES,
+    siteLanguages: STATIC_SITE_LANGUAGES,
     plugins: {
       ...ctx.plugins,
       items: ctx.plugins.items.map((item) => ({ ...item })),

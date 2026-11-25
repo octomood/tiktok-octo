@@ -71,6 +71,7 @@ modules:
       # в Flatpak сессионная шина — обычный unix-сокет).
       - cd /app/main && npm ci --offline --omit=dev --ignore-scripts --no-audit --no-fund
         --cache "$FLATPAK_BUILDER_BUILDDIR/flatpak-node/npm-cache"
+      - cd /app/main && node /app/main/scripts/build-plugin-docs.js
       - install -Dm644 io.github.octomood.TikTokOcto.metainfo.xml -t /app/share/metainfo/
       - install -Dm644 io.github.octomood.TikTokOcto.desktop -t /app/share/applications/
       - install -Dm644 build/icon.png /app/share/icons/hicolor/512x512/apps/io.github.octomood.TikTokOcto.png

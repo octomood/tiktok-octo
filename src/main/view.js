@@ -45,6 +45,8 @@ const autoTheme = require('./auto-theme');
 const chat = require('./chat');
 const resilience = require('./resilience');
 const windowsMedia = require('./windows-media');
+const profiles = require('./profiles');
+const history = require('./history');
 
 /** Окно OAuth: то же persistent-хранилище, но без Node и preload. */
 function authWindowOptions() {
@@ -55,7 +57,7 @@ function authWindowOptions() {
     autoHideMenuBar: true,
     backgroundColor: '#0b0b0f',
     webPreferences: {
-      session: session.fromPartition(PARTITION),
+      session: session.fromPartition(profiles.activePartition() || PARTITION),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -72,10 +74,10 @@ function startUrl() {
   return isTikTokUrl(saved.lastUrl) ? saved.lastUrl : HOME_URL;
 }
 
-function createView() {
+function createView(urlOverride) {
   if (!ctx.win) return;
 
-  const ses = prepareSession();
+  const ses = prepareSession(profiles.activePartition());
   const view = new WebContentsView({
     webPreferences: {
       session: ses,
@@ -176,9 +178,11 @@ function createView() {
     ctx.playing = false;
     // Ссылка сменилась — старый QR-код показывал бы чужую страницу.
     qr.clear();
+    player.clearAbLoop({ silent: true });
     find.resetOnNavigate();
     rememberUrl(wc.getURL());
     stats.noteVideo(wc.getURL());
+    history.noteVideo(wc.getURL(), wc.getTitle());
     mpris.setPlaying(false);
     mpris.scheduleMetadata(1200);
     pushState();
@@ -195,8 +199,10 @@ function createView() {
     lastUrl = currentUrl;
     // SPA сменила ролик: старый QR показывал бы чужую ссылку.
     if (qr.clear()) pushState();
+    player.clearAbLoop({ silent: true });
     rememberUrl(currentUrl);
     stats.noteVideo(currentUrl);
+    history.noteVideo(currentUrl, wc.getTitle());
     mpris.scheduleMetadata();
     // SPA-роутер мог успеть уйти на страницу сообщений. Возвращаем ленту:
     // переписка уже открыта панелью слева.
@@ -231,6 +237,7 @@ function createView() {
   wc.on('page-title-updated', (_event, title) => {
     setUnread(parseUnreadCount(title));
     mpris.setTitle(title);
+    history.updateTitle(wc.getURL(), title);
   });
 
   // --- Ошибки загрузки: повтор с backoff, без бесконечного цикла -----------
@@ -293,7 +300,12 @@ function createView() {
             return;
           }
           loadFailed = false;
+          loadFailures = 0;
+          crashCount = 0;
           setOffline(false);
+          autoTheme.sync(wc).catch(() => {});
+          cosmetics.injectFrameStyles().catch(() => {});
+          pushState();
         })
         .catch(() => setOffline(true));
       return;
@@ -393,8 +405,29 @@ function createView() {
     .catch(() => {})
     .then(() => region.applySiteLanguageCookie(ses).catch(() => {}))
     .finally(() => {
-      if (!wc.isDestroyed()) wc.loadURL(startUrl());
+      if (!wc.isDestroyed()) wc.loadURL(urlOverride || startUrl());
     });
 }
 
-module.exports = { createView, authWindowOptions };
+function recreateView() {
+  if (!ctx.win || ctx.win.isDestroyed()) return;
+  chat.resetView();
+  const old = ctx.view;
+  ctx.view = null;
+  ctx.playing = false;
+  setUnread(0);
+  if (old) {
+    try {
+      ctx.win.contentView.removeChildView(old);
+      if (!old.webContents.isDestroyed()) old.webContents.close();
+    } catch {
+      /* уже уничтожено */
+    }
+  }
+  createView(HOME_URL);
+  pushState();
+}
+
+profiles.setSwitcher(() => recreateView());
+
+module.exports = { createView, recreateView, authWindowOptions };

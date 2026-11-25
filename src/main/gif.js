@@ -24,6 +24,7 @@ const SETTINGS = {
 let settings = { ...DEFAULTS };
 let worker = null;
 let pending = null;
+let busy = false;
 
 function readSettings() {
   const saved = readState().gif;
@@ -152,6 +153,7 @@ function ensureWorker() {
     show: false,
     width: 360,
     height: 240,
+    parent: ctx.win && !ctx.win.isDestroyed() ? ctx.win : undefined,
     webPreferences: {
       preload: path.join(__dirname, 'gif-worker-preload.js'),
       contextIsolation: true,
@@ -163,7 +165,9 @@ function ensureWorker() {
   worker.loadFile(path.join(__dirname, '../renderer/gif-worker.html'));
   worker.on('closed', () => {
     worker = null;
+    const finish = pending;
     pending = null;
+    if (typeof finish === 'function') finish({ ok: false, error: 'closed' });
   });
   return worker;
 }
@@ -198,63 +202,72 @@ function saveGif(buffer) {
 }
 
 async function exportGif() {
+  if (busy) {
+    toast('GIF уже собирается…');
+    return null;
+  }
   const wc = ctx.view?.webContents;
   if (!wc || wc.isDestroyed()) return null;
 
-  toast('Снимаю кадры для GIF…');
-  let captured;
+  busy = true;
   try {
-    captured = await Promise.race([
-      wc.executeJavaScript(captureScript(settings), false),
-      new Promise((resolve) => {
-        setTimeout(() => resolve({ error: 'timeout' }), 30000);
-      }),
-    ]);
-  } catch {
-    captured = { error: 'failed' };
-  }
-
-  if (!captured || captured.error) {
-    if (captured && captured.error === 'tainted') {
-      toast('Кадры ролика недоступны для GIF');
-    } else if (captured && captured.error === 'no-video') {
-      toast('Нет видео для GIF');
-    } else {
-      toast('Не удалось снять кадры для GIF');
+    toast('Снимаю кадры для GIF…');
+    let captured;
+    try {
+      captured = await Promise.race([
+        wc.executeJavaScript(captureScript(settings), false),
+        new Promise((resolve) => {
+          setTimeout(() => resolve({ error: 'timeout' }), 30000);
+        }),
+      ]);
+    } catch {
+      captured = { error: 'failed' };
     }
-    return null;
-  }
 
-  const encoded = await new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      if (pending) {
-        pending = null;
-        resolve({ ok: false, error: 'timeout' });
+    if (!captured || captured.error) {
+      if (captured && captured.error === 'tainted') {
+        toast('Кадры ролика недоступны для GIF');
+      } else if (captured && captured.error === 'no-video') {
+        toast('Нет видео для GIF');
+      } else {
+        toast('Не удалось снять кадры для GIF');
       }
-    }, 60000);
+      return null;
+    }
 
-    pending = (result) => {
-      clearTimeout(timeout);
-      pending = null;
-      resolve(result);
-    };
+    const encoded = await new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        if (pending) {
+          pending = null;
+          resolve({ ok: false, error: 'timeout' });
+        }
+      }, 60000);
 
-    const view = ensureWorker();
-    const send = () => view.webContents.send('octo:gif-job', captured);
-    if (view.webContents.isLoading()) view.webContents.once('did-finish-load', send);
-    else send();
-  });
+      pending = (result) => {
+        clearTimeout(timeout);
+        pending = null;
+        resolve(result);
+      };
 
-  if (!encoded || !encoded.ok) {
-    toast(`Не удалось создать GIF: ${encoded && encoded.error ? encoded.error : 'ошибка'}`);
-    return null;
-  }
+      const view = ensureWorker();
+      const send = () => view.webContents.send('octo:gif-job', captured);
+      if (view.webContents.isLoading()) view.webContents.once('did-finish-load', send);
+      else send();
+    });
 
-  try {
-    return await saveGif(Buffer.from(encoded.base64, 'base64'));
-  } catch (err) {
-    toast(`Не удалось сохранить GIF: ${err.message}`);
-    return null;
+    if (!encoded || !encoded.ok) {
+      toast(`Не удалось создать GIF: ${encoded && encoded.error ? encoded.error : 'ошибка'}`);
+      return null;
+    }
+
+    try {
+      return await saveGif(Buffer.from(encoded.base64, 'base64'));
+    } catch (err) {
+      toast(`Не удалось сохранить GIF: ${err.message}`);
+      return null;
+    }
+  } finally {
+    busy = false;
   }
 }
 

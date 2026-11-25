@@ -1,7 +1,7 @@
 'use strict';
 
 const { ipcMain } = require('electron');
-const { ctx, pushState, setPanelOpen, sendToWindow, toast } = require('./app-context');
+const { ctx, pushState, toast } = require('./app-context');
 const { readState, writeState } = require('./store');
 const player = require('./player');
 
@@ -14,7 +14,7 @@ const player = require('./player');
  */
 
 const SEEK_STEP = 10;
-const REPEATABLE = new Set(['seekBack', 'seekForward', 'seekPercent']);
+const REPEATABLE = new Set(['seekBack', 'seekForward', 'seekPercent', 'framePrev', 'frameNext']);
 
 /** Ленивый require: commands.js сам ссылается на этот модуль. */
 function run(command) {
@@ -35,6 +35,12 @@ function handle(action, payload, repeat) {
     case 'seekForward':
       player.nudge(SEEK_STEP);
       break;
+    case 'framePrev':
+      player.stepFrame(-1);
+      break;
+    case 'frameNext':
+      player.stepFrame(1);
+      break;
     case 'seekPercent': {
       const step = Math.min(9, Math.max(0, Math.round(Number(payload) || 0)));
       player.seekPercent(step / 10);
@@ -44,9 +50,7 @@ function handle(action, payload, repeat) {
       run('screenshot');
       break;
     case 'help':
-      if (ctx.barOnly) require('./bar-only').exit({ silent: true });
-      setPanelOpen(true);
-      sendToWindow('octo:panel-category', 'keys');
+      run('keysPanel');
       break;
     default:
       break;

@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, ipcMain, globalShortcut, nativeTheme } = require('electron');
+const { app, ipcMain, globalShortcut } = require('electron');
 
 // Тесты подменяют каталог профиля, чтобы не трогать реальную сессию и логин.
 if (process.env.OCTO_USER_DATA) app.setPath('userData', process.env.OCTO_USER_DATA);
@@ -146,7 +146,7 @@ if (!gotLock) {
     }
 
     resilience.init();
-    nativeTheme.themeSource = 'dark';
+    cosmetics.initThemeListener();
     app.setAppUserModelId('app.octo.tiktok');
     ctx.appimageInstalled = appimage.isInstalled();
     ads.sync();

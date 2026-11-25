@@ -33,6 +33,8 @@ const region = require('./region');
 const welcome = require('./welcome');
 const find = require('./find');
 const plugins = require('./plugins');
+const dialogs = require('./dialogs');
+const uiFont = require('./ui-font');
 const stickers = require('./stickers');
 const i18n = require('./i18n');
 const autoTheme = require('./auto-theme');
@@ -57,6 +59,9 @@ const filters = require('./filters');
 const gif = require('./gif');
 const customCode = require('./custom-code');
 const downloadsWindow = require('./downloads-window');
+const profiles = require('./profiles');
+const history = require('./history');
+const creatorNotes = require('./creator-notes');
 const { showMessageBox } = require('./dialogs');
 // Ступени масштаба как в браузерах.
 const ZOOM_STEPS = [0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
@@ -122,6 +127,15 @@ async function togglePlayback() {
   } catch {
     /* нет видео на странице */
   }
+}
+
+function openSettingsCategory(category) {
+  if (ctx.barOnly) barOnly.exit({ silent: true });
+  if (ctx.htmlFullscreen || ctx.pipActive) return;
+  setPanelOpen(true);
+  player.watchPanel(true);
+  player.refreshDevices();
+  sendToWindow('octo:panel-category', category);
 }
 
 function handleCommand(command, payload) {
@@ -217,6 +231,53 @@ function handleCommand(command, payload) {
       toast(`Масштаб интерфейса: ${Math.round(scale * 100)} %`);
       break;
     }
+    case 'uiFont': {
+      const next = uiFont.normalizeUiFont(payload);
+      ctx.uiFont = next;
+      writeState({ uiFont: next });
+      pushState();
+      if (next.preset === 'custom-name' && next.family) {
+        toast(`Шрифт интерфейса: ${next.family}`);
+      } else if (next.preset === 'inter') {
+        toast('Шрифт интерфейса: Inter');
+      } else if (next.preset === 'system') {
+        toast('Шрифт интерфейса: системный');
+      } else if (next.preset === 'google-sans-medium') {
+        toast('Шрифт интерфейса: Google Sans Medium');
+      }
+      break;
+    }
+    case 'uiFontPick': {
+      const applyFile = (filePath) => {
+        const installed = uiFont.installFontFile(filePath);
+        if (!installed.ok) {
+          toast(installed.error);
+          return;
+        }
+        ctx.uiFont = installed.uiFont;
+        writeState({ uiFont: installed.uiFont });
+        pushState();
+        toast(`Шрифт интерфейса: ${installed.uiFont.fileName}`);
+      };
+
+      if (typeof payload === 'string' && payload.trim()) {
+        applyFile(payload);
+        break;
+      }
+
+      dialogs
+        .showOpenDialog(ctx.win, {
+          title: 'Выберите файл шрифта',
+          properties: ['openFile'],
+          filters: [{ name: 'Шрифты', extensions: ['ttf', 'otf', 'woff', 'woff2'] }],
+        })
+        .then((res) => {
+          if (!res.canceled && res.filePaths && res.filePaths[0]) {
+            applyFile(res.filePaths[0]);
+          }
+        });
+      break;
+    }
     case 'zoomIn':
       zoomBy(1);
       break;
@@ -246,17 +307,25 @@ function handleCommand(command, payload) {
     case 'findClose':
       find.close();
       break;
-    case 'panel': {
+    case 'panel':
+    case 'settings': {
       if (!ctx.htmlFullscreen && !ctx.pipActive && !ctx.barOnly) {
         const opening = !ctx.panelOpen;
         setPanelOpen(opening);
-        // Список аудиовыходов и дата ролика нужны только открытой панели.
+        // Список аудиовыходов и дата ролика нужны только открытым настройкам.
         player.watchPanel(opening);
         if (opening) player.refreshDevices();
       }
       refreshTrayMenu();
       break;
     }
+    case 'settingsClose':
+      if (ctx.panelOpen) {
+        setPanelOpen(false);
+        player.watchPanel(false);
+      }
+      refreshTrayMenu();
+      break;
     case 'chat':
       if (!ctx.htmlFullscreen && !ctx.pipActive && !ctx.barOnly) chat.toggle();
       refreshTrayMenu();
@@ -281,6 +350,21 @@ function handleCommand(command, payload) {
       break;
     case 'playerSpeed':
       player.setSpeed(payload);
+      break;
+    case 'framePrev':
+      player.stepFrame(-1);
+      break;
+    case 'frameNext':
+      player.stepFrame(1);
+      break;
+    case 'abLoopA':
+      player.setAbPoint('a');
+      break;
+    case 'abLoopB':
+      player.setAbPoint('b');
+      break;
+    case 'abLoopClear':
+      player.clearAbLoop();
       break;
     case 'playerVolume':
       player.setVolume(payload);
@@ -369,19 +453,13 @@ function handleCommand(command, payload) {
       keymap.resetProfile();
       break;
     case 'keysPanel':
-      if (ctx.barOnly) barOnly.exit({ silent: true });
-      setPanelOpen(true);
-      sendToWindow('octo:panel-category', 'keys');
+      openSettingsCategory('keys');
       break;
     case 'libraryPanel':
-      if (ctx.barOnly) barOnly.exit({ silent: true });
-      setPanelOpen(true);
-      sendToWindow('octo:panel-category', 'library');
+      openSettingsCategory('library');
       break;
     case 'statsPanel':
-      if (ctx.barOnly) barOnly.exit({ silent: true });
-      setPanelOpen(true);
-      sendToWindow('octo:panel-category', 'stats');
+      openSettingsCategory('stats');
       break;
     case 'feedKeys':
       feedKeys.toggle();
@@ -667,16 +745,50 @@ function handleCommand(command, payload) {
     case 'regionCheckIp':
       region.checkIp();
       break;
+    case 'regionTestProxy':
+      region.testConnection();
+      break;
+    case 'themeMode':
+      if (typeof payload === 'string') cosmetics.applyThemeMode(payload);
+      break;
+    case 'profileSwitch':
+      if (typeof payload === 'string') profiles.switchTo(payload);
+      break;
+    case 'profileCreate':
+      profiles.create(typeof payload === 'string' ? payload : '');
+      break;
+    case 'profileRename':
+      if (payload && typeof payload === 'object') profiles.rename(payload.id, payload.name);
+      break;
+    case 'profileDelete':
+      if (typeof payload === 'string') profiles.remove(payload);
+      break;
+    case 'historyOpen':
+      if (typeof payload === 'string') history.open(payload);
+      break;
+    case 'historyRemove':
+      if (typeof payload === 'string') history.remove(payload);
+      break;
+    case 'historyClear':
+      history.clear();
+      break;
+    case 'creatorNoteSet':
+      if (payload && typeof payload === 'object') creatorNotes.set(payload.author, payload);
+      break;
+    case 'creatorNoteRemove':
+      if (typeof payload === 'string') creatorNotes.remove(payload);
+      break;
+    case 'creatorNoteOpen':
+      if (typeof payload === 'string') creatorNotes.openAuthor(payload);
+      break;
     case 'regionResetData':
       region.resetSiteData();
       break;
     case 'regionPanel':
-      setPanelOpen(true);
-      sendToWindow('octo:panel-category', 'region');
+      openSettingsCategory('region');
       break;
     case 'languagePanel':
-      setPanelOpen(true);
-      sendToWindow('octo:panel-category', 'language');
+      openSettingsCategory('language');
       break;
     case 'welcomeFinish':
       welcome.finish(payload);

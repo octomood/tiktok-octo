@@ -75,6 +75,9 @@ function rowFor(entry) {
     actions.append(actionButton('Отменить', 'cancel', entry.id));
   }
   if (entry.state === 'completed') {
+    if (/\.(mp4|mov|webm|mkv)$/i.test(entry.name || '')) {
+      actions.append(actionButton('Аудио', 'extractAudio', entry.id));
+    }
     actions.append(actionButton('Показать в папке', 'show', entry.id));
   }
 

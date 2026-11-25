@@ -20,7 +20,9 @@ function stripProxyCredentials(raw) {
   try {
     url = new URL(hasScheme ? text : `socks5://${text}`);
   } catch {
-    return text;
+    // Даже если URL не разобрался (например, неэкранированный символ в пароле),
+    // всё равно убираем user:pass@ перед хостом, чтобы секрет не утёк в файл.
+    return text.replace(/^([a-z][a-z0-9+.-]*:\/\/)?[^/@\s]+@/i, '$1');
   }
 
   // Без логина и пароля адрес возвращаем как написан: не меняем регистр,

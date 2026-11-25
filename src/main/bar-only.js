@@ -24,7 +24,7 @@ const MARGIN = 16;
 let normal = null;
 
 function enter() {
-  if (!ctx.win || ctx.win.isDestroyed() || ctx.barOnly || ctx.pipActive) return;
+  if (!ctx.win || ctx.win.isDestroyed() || ctx.barOnly || ctx.pipActive || ctx.ambient) return;
 
   const win = ctx.win;
   normal = {

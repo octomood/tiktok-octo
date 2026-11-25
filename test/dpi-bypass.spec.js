@@ -290,3 +290,84 @@ test('сохранённый обход DPI применяется до перв
     fs.rmSync(userData, { recursive: true, force: true });
   }
 });
+
+function buildFakeClientHello(hostname) {
+  const hostBytes = Buffer.from(hostname, 'ascii');
+  const sniEntry = Buffer.alloc(3 + hostBytes.length);
+  sniEntry[0] = 0x00;
+  sniEntry.writeUInt16BE(hostBytes.length, 1);
+  hostBytes.copy(sniEntry, 3);
+
+  const sniList = Buffer.alloc(2 + sniEntry.length);
+  sniList.writeUInt16BE(sniEntry.length, 0);
+  sniEntry.copy(sniList, 2);
+
+  const sniExt = Buffer.alloc(4 + sniList.length);
+  sniExt.writeUInt16BE(0x0000, 0);
+  sniExt.writeUInt16BE(sniList.length, 2);
+  sniList.copy(sniExt, 4);
+
+  const otherExt = Buffer.from([0x00, 0x17, 0x00, 0x00]);
+  const exts = Buffer.concat([otherExt, sniExt]);
+  const extBlock = Buffer.alloc(2 + exts.length);
+  extBlock.writeUInt16BE(exts.length, 0);
+  exts.copy(extBlock, 2);
+
+  const body = Buffer.concat([
+    Buffer.from([0x03, 0x03]),
+    Buffer.alloc(32, 0xaa),
+    Buffer.from([0x00]),
+    Buffer.from([0x00, 0x02, 0x13, 0x01]),
+    Buffer.from([0x01, 0x00]),
+    extBlock,
+  ]);
+
+  const hs = Buffer.alloc(4 + body.length);
+  hs[0] = 0x01;
+  hs[1] = (body.length >> 16) & 0xff;
+  hs[2] = (body.length >> 8) & 0xff;
+  hs[3] = body.length & 0xff;
+  body.copy(hs, 4);
+
+  const rec = Buffer.alloc(5 + hs.length);
+  rec[0] = 0x16;
+  rec[1] = 0x03;
+  rec[2] = 0x01;
+  rec.writeUInt16BE(hs.length, 3);
+  hs.copy(rec, 5);
+  return rec;
+}
+
+test('разбиение TLS ClientHello режет запись внутри SNI', () => {
+  const { findClientHelloSni, buildTlsPieces } = require('../src/main/dpi-bypass');
+
+  const hello = buildFakeClientHello('www.tiktok.com');
+  const sni = findClientHelloSni(hello);
+  expect(sni).not.toBeNull();
+  expect(hello.subarray(sni.start, sni.end).toString('ascii')).toBe('www.tiktok.com');
+
+  const pieces = buildTlsPieces(hello);
+  expect(pieces.length).toBeGreaterThan(2);
+
+  let reassembledPayload = Buffer.alloc(0);
+  for (const piece of pieces) {
+    expect(piece[0]).toBe(0x16);
+    expect(piece.subarray(1, 3)).toEqual(Buffer.from([0x03, 0x01]));
+    const len = piece.readUInt16BE(3);
+    expect(piece.length).toBe(5 + len);
+    expect(piece.toString('ascii')).not.toContain('tiktok.com');
+    reassembledPayload = Buffer.concat([reassembledPayload, piece.subarray(5)]);
+  }
+  expect(reassembledPayload).toEqual(hello.subarray(5));
+});
+
+test('разбиение TLS без SNI сохраняет целостность данных', () => {
+  const { findClientHelloSni, buildTlsPieces } = require('../src/main/dpi-bypass');
+
+  const raw = Buffer.concat([Buffer.from([0x16, 0x03, 0x01, 0x00, 0x40]), Buffer.alloc(64, 0x55)]);
+  expect(findClientHelloSni(raw)).toBeNull();
+
+  const pieces = buildTlsPieces(raw);
+  expect(pieces.length).toBeGreaterThan(1);
+  expect(Buffer.concat(pieces)).toEqual(raw);
+});

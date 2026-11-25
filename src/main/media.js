@@ -127,16 +127,26 @@ const PAGE_SCRIPT = `(() => {
     video.readyState === 0 ||
     video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE;
 
+  const kicked = new WeakMap();
+
   /**
    * Сдвиг слоя заставляет композитор собрать кадр заново. Лечит «застывший»
    * кадр, когда звук играет, а картинка не обновляется, без перезагрузки.
    */
   const kick = (video) => {
     try {
-      const previous = video.style.transform;
+      const existing = kicked.get(video);
+      if (existing) {
+        clearTimeout(existing.timer);
+      } else {
+        kicked.set(video, { previous: video.style.transform, timer: null });
+      }
+      const entry = kicked.get(video);
       video.style.transform = 'translateZ(0.01px)';
-      setTimeout(() => {
-        video.style.transform = previous;
+      entry.timer = setTimeout(() => {
+        const saved = kicked.get(video);
+        kicked.delete(video);
+        if (saved) video.style.transform = saved.previous;
       }, 150);
     } catch (err) {
       /* видео ушло со страницы */
@@ -174,7 +184,7 @@ const PAGE_SCRIPT = `(() => {
   /** Перезагрузка источника с возвратом на ту же секунду. */
   const reload = (video) => {
     const source = video.currentSrc || video.getAttribute('src');
-    if (!source) return false;
+    if (!source || /^blob:/i.test(source)) return false;
 
     const position = video.currentTime;
     const resume = () => {

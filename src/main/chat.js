@@ -2,7 +2,15 @@
 
 const crypto = require('node:crypto');
 const { ipcMain, WebContentsView } = require('electron');
-const { ctx, layout, layoutSoon, pushState, toast, chatWidthLimit } = require('./app-context');
+const {
+  ctx,
+  layout,
+  layoutSoon,
+  pushState,
+  setPanelOpen,
+  toast,
+  chatWidthLimit,
+} = require('./app-context');
 const { CHROME_UA, REGION_PRELOAD, CHAT_W, isTikTokUrl } = require('./shared');
 const { readState, writeState } = require('./store');
 const { openExternal } = require('./links');
@@ -516,12 +524,20 @@ function attach(wc) {
  * же косметический слой (тёмная тема, Inter, скроллбары, скрытие промо), что и
  * к ленте, плюс собственные правила компактной раскладки.
  */
+const panelCssKeys = new WeakMap();
+
 function applyChatStyles(wc) {
   if (!wc || wc.isDestroyed()) return;
 
-  wc.insertCSS(PANEL_CSS, { cssOrigin: 'user' }).catch(() => {
-    /* документ сменился между вызовом и вставкой */
-  });
+  const prev = panelCssKeys.get(wc);
+  if (prev) wc.removeInsertedCSS(prev).catch(() => {});
+  wc.insertCSS(PANEL_CSS, { cssOrigin: 'user' })
+    .then((key) => {
+      if (!wc.isDestroyed()) panelCssKeys.set(wc, key);
+    })
+    .catch(() => {
+      /* документ сменился между вызовом и вставкой */
+    });
   cosmetics.apply(wc);
   autoTheme.sync(wc).catch(() => {});
 }
@@ -593,7 +609,17 @@ function ensureView() {
   // Ссылки из переписки не должны уводить панель в ленту: внешние открываем
   // в браузере, внутренние TikTok — в основном окне, панель остаётся чатом.
   wc.on('will-navigate', (event, url) => {
-    if (isTikTokUrl(url)) return;
+    if (isTikTokUrl(url)) {
+      try {
+        if (MESSAGES_PATH.test(new URL(url).pathname)) return;
+      } catch {
+        /* некорректный URL */
+      }
+      event.preventDefault();
+      const target = ctx.view && ctx.view.webContents;
+      if (target && !target.isDestroyed()) target.loadURL(url).catch(() => {});
+      return;
+    }
     event.preventDefault();
     openExternal(url);
   });
@@ -621,6 +647,7 @@ function ensureView() {
 function open(url) {
   if (!ctx.win || ctx.win.isDestroyed() || !ctx.view) return false;
   if (ctx.htmlFullscreen || ctx.pipActive) return false;
+  if (ctx.panelOpen) setPanelOpen(false);
 
   const view = ensureView();
   if (!view) return false;
@@ -702,6 +729,19 @@ function dispose() {
   close({ focus: false });
 }
 
+function resetView() {
+  close({ focus: false });
+  if (ctx.chatView) {
+    try {
+      if (ctx.win && !ctx.win.isDestroyed()) ctx.win.contentView.removeChildView(ctx.chatView);
+      if (!ctx.chatView.webContents.isDestroyed()) ctx.chatView.webContents.close();
+    } catch {
+      /* уже уничтожено */
+    }
+    ctx.chatView = null;
+  }
+}
+
 // Основной путь: preload страницы присылает адрес «Сообщений» синхронно со
 // своего изолированного слушателя. Второй путь — console-сигнал страничного
 // fallback-скрипта (см. attach); оба проверяют адрес.
@@ -734,6 +774,7 @@ module.exports = {
   close,
   toggle,
   dispose,
+  resetView,
   interceptNavigation,
   setWidth,
   toggleDock,

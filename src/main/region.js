@@ -110,7 +110,10 @@ async function applySiteLanguageCookie(ses, { clear = false } = {}) {
 }
 
 function appSession() {
-  return ctx.view?.webContents.session || session.fromPartition(PARTITION);
+  return (
+    ctx.view?.webContents.session ||
+    session.fromPartition(require('./profiles').activePartition() || PARTITION)
+  );
 }
 
 /** Код страны → название на языке интерфейса (US → США / USA). */
@@ -149,6 +152,44 @@ async function checkIp() {
   ctx.regionCheck = { state: 'error', text: t('Не удалось проверить') };
   pushState();
   toast('Не удалось узнать внешний IP — проверьте прокси и сеть');
+}
+
+let pingToken = 0;
+
+/** Проверка доступности и задержки до TikTok через активную сессию (прокси/DPI). */
+async function testConnection() {
+  const ses = appSession();
+  if (!ses) return;
+
+  const token = ++pingToken;
+  ctx.proxyTest = { state: 'loading', ms: 0, text: 'Проверяю…' };
+  pushState();
+
+  const started = Date.now();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await ses.fetch(HOME_URL, {
+      method: 'HEAD',
+      redirect: 'manual',
+      signal: controller.signal,
+    });
+    if (token !== pingToken) return;
+    const ms = Math.max(1, Date.now() - started);
+    const via = ctx.dpi?.active ? 'DPI' : ctx.region.proxy ? 'Прокси' : 'Прямо';
+    const text = `${via} · ${ms} мс (HTTP ${response.status})`;
+    ctx.proxyTest = { state: 'done', ms, text };
+    pushState();
+    toast(`Соединение: ${text}`);
+  } catch (err) {
+    if (token !== pingToken) return;
+    const text = err?.name === 'AbortError' ? 'Таймаут (>8 с)' : 'Нет ответа от TikTok';
+    ctx.proxyTest = { state: 'error', ms: 0, text };
+    pushState();
+    toast(`Проверка связи: ${text}`);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 let scanToken = 0;
@@ -329,14 +370,21 @@ function parseProxy(raw) {
     return { ok: false, rules: '', auth: null };
   }
 
-  const auth = url.username
-    ? {
-        username: decodeCredential(url.username),
-        password: decodeCredential(url.password),
-      }
-    : null;
+  const auth =
+    url.username || url.password
+      ? {
+          username: decodeCredential(url.username),
+          password: decodeCredential(url.password),
+        }
+      : null;
 
-  return { ok: true, rules: `${url.protocol}//${url.host}`, auth };
+  return {
+    ok: true,
+    rules: `${url.protocol}//${url.host}`,
+    hostname: url.hostname,
+    port: Number(url.port) || (url.protocol === 'https:' ? 443 : 80),
+    auth,
+  };
 }
 
 function proxyConfig(raw) {
@@ -611,10 +659,26 @@ function installIpc() {
 
 /** Прокси с логином/паролем: Electron спрашивает их через app.on('login'). */
 function installLoginHandler() {
+  const attempts = new Map();
   app.on('login', (event, _webContents, _details, authInfo, callback) => {
     if (!authInfo.isProxy) return;
     const parsed = parseProxy(ctx.region.proxy);
     if (!parsed.auth) return;
+    if (
+      authInfo.host &&
+      parsed.hostname &&
+      authInfo.host.toLowerCase() !== parsed.hostname.toLowerCase()
+    ) {
+      return;
+    }
+    if (authInfo.port && parsed.port && Number(authInfo.port) !== parsed.port) return;
+
+    const key = `${parsed.hostname}:${parsed.port}:${parsed.auth.username}`;
+    const count = (attempts.get(key) || 0) + 1;
+    attempts.set(key, count);
+    if (count > 3) return;
+    setTimeout(() => attempts.delete(key), 15_000).unref?.();
+
     event.preventDefault();
     callback(parsed.auth.username, parsed.auth.password);
   });
@@ -634,6 +698,7 @@ module.exports = {
   prepareDpi,
   applySavedProxy,
   checkIp,
+  testConnection,
   discoverProxies,
   resetSiteData,
   installSessionHooks,

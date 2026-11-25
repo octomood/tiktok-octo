@@ -78,7 +78,7 @@ await page.goto(pathToFileURL(path.join(here, scene)).href, { waitUntil: 'load' 
 await page.evaluate(() => document.fonts.ready);
 await page.waitForFunction(() => document.body.dataset.ready === '1');
 
-const DUR = await page.evaluate(() => window.DUR || DEFAULT_DUR);
+const DUR = await page.evaluate((fallback) => window.DUR || fallback, DEFAULT_DUR);
 
 if (still != null) {
   const t = Number(still);

@@ -63,6 +63,8 @@ function installRegion(config) {
       });
 
       Date.prototype.getTimezoneOffset = function () {
+        const time = this.getTime();
+        if (Number.isNaN(time)) return NaN;
         const parts = formatter.formatToParts(this);
         const map = {};
         for (const part of parts) map[part.type] = part.value;
@@ -74,7 +76,7 @@ function installRegion(config) {
           Number(map.minute),
           Number(map.second),
         );
-        const wholeSeconds = Math.floor(this.getTime() / 1000) * 1000;
+        const wholeSeconds = Math.floor(time / 1000) * 1000;
         return -(asUTC - wholeSeconds) / 60000;
       };
     } catch {
@@ -259,6 +261,8 @@ function installFeedKeys() {
     }
     if (key === 'j' || key === 'J' || code === 'KeyJ') return 'seekBack';
     if (key === 'l' || key === 'L' || code === 'KeyL') return 'seekForward';
+    if (!event.shiftKey && (key === ',' || code === 'Comma')) return 'framePrev';
+    if (!event.shiftKey && (key === '.' || code === 'Period')) return 'frameNext';
     if (key === 's' || key === 'S' || code === 'KeyS') return 'screenshot';
     // «?» зависит от раскладки: на US это Shift+/, на других — свой символ.
     if (key === '?' || (code === 'Slash' && event.shiftKey)) return 'help';
@@ -271,7 +275,10 @@ function installFeedKeys() {
     (event) => {
       if (!feedKeysEnabled || !event.isTrusted || event.defaultPrevented) return;
       if (event.ctrlKey || event.metaKey || event.altKey) return;
-      if (isEditable(event.target) || isEditable(document.activeElement)) return;
+      const origin = typeof event.composedPath === 'function' ? event.composedPath()[0] : null;
+      if (isEditable(origin) || isEditable(event.target) || isEditable(document.activeElement)) {
+        return;
+      }
 
       const action = actionOf(event);
       if (!action) return;
@@ -281,7 +288,14 @@ function installFeedKeys() {
       event.stopImmediatePropagation();
 
       const repeat = event.repeat === true;
-      if (repeat && action !== 'seekBack' && action !== 'seekForward' && action !== 'seekPercent') {
+      if (
+        repeat &&
+        action !== 'seekBack' &&
+        action !== 'seekForward' &&
+        action !== 'seekPercent' &&
+        action !== 'framePrev' &&
+        action !== 'frameNext'
+      ) {
         return;
       }
       const digit =

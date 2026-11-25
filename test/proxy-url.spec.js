@@ -14,6 +14,7 @@ test('адрес прокси без логина и пароля', () => {
   expect(stripProxyCredentials('socks5://user@host:1080')).toBe('socks5://host:1080');
   expect(stripProxyCredentials('user:pass@host:1080')).toBe('host:1080');
   expect(stripProxyCredentials('http://user:p%40ss@host:8080')).toBe('http://host:8080');
+  expect(stripProxyCredentials('http://user:[bad@host:8080')).toBe('http://host:8080');
 
   // Без учётных данных строку не переписываем: сохраняем вид адреса.
   expect(stripProxyCredentials('http://host:8080')).toBe('http://host:8080');

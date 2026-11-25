@@ -1,0 +1,1781 @@
+<!doctype html>
+<html lang="ru" data-type="software" data-radius="soft" data-buttons="tonal" data-motion>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>TikTok octo: десктопный клиент TikTok</title>
+    <meta
+      name="description"
+      content="Официальный сайт TikTok в отдельном окне на Electron: полоса 44 пикселя, мини-плеер поверх всех окон, таймер сна и плагины. Без API и парсинга."
+    />
+    <meta name="site-kind" content="software" />
+    <meta name="page-type" content="software" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="TikTok octo: десктопный клиент TikTok" />
+    <meta
+      property="og:description"
+      content="Официальный сайт TikTok в отдельном окне: мини-плеер, таймер сна и плагины. Без API и парсинга."
+    />
+    <meta property="og:image" content="share.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#f3f1ea" />
+    <!-- канонический адрес появится вместе с доменом клиента.
+<link rel="canonical" href="https://tiktok-octo.example/"> -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Handjet:ELGR,ELSH,wght@1,2,400..700&family=JetBrains+Mono:wght@400..500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/system.css" />
+    <link rel="stylesheet" href="assets/ui/cards.css" />
+    <link rel="stylesheet" href="assets/motion/motion.css" />
+    <link rel="stylesheet" href="assets/backgrounds/backgrounds.css" />
+    <link rel="stylesheet" href="assets/layout/layout.css" />
+    <link rel="stylesheet" href="assets/icons/icon.css" />
+    <link rel="stylesheet" href="assets/ui/base.css" />
+    <link rel="stylesheet" href="assets/ui/window/fragment.css" />
+    <link rel="stylesheet" href="assets/ui/toggles/fragment.css" />
+    <link rel="stylesheet" href="assets/moments/word-highlight/moment.css" />
+    <style>
+      :root {
+        --p-bg: #f3f1ea;
+        --p-surface: #e9e6dc;
+        --p-ink: #15141c;
+        --p-muted: #5b5954;
+        --p-accent: #15141c;
+        --p-accent-ink: #f3f1ea;
+        --p-action: #15141c;
+        --p-action-ink: #f3f1ea;
+        --p-inv-bg: #15141c;
+        --p-inv-surface: #22212a;
+        --p-inv-ink: #f3f1ea;
+        --p-inv-muted: #a3a099;
+        --p-inv-accent: #f3f1ea;
+        --p-inv-accent-ink: #15141c;
+        --p-inv-action: #f3f1ea;
+        --p-inv-action-ink: #15141c;
+        --font-display: 'Handjet', ui-monospace, monospace;
+        --font-text: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+        --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+        --display-weight: 500;
+        --display-tracking: -0.02em;
+        --display-tracking-xl: -0.025em;
+        --ly-scale: 0.95;
+        --ui-font: var(--font-text);
+        --ui-mono: var(--font-mono);
+        --ui-radius: 8px;
+        --fx-accent: var(--p-ink);
+        --fx-accent-ink: var(--p-bg);
+      }
+      /* Handjet is a dot-matrix face: round elements, one grid. Headlines and the mark carry the dots. */
+      :is(h1, h2, .close__word, .nav__logo, .footer__word, .t-stat, .mark) {
+        font-variation-settings:
+          'ELGR' 1,
+          'ELSH' 2;
+      }
+      h1,
+      h2,
+      h3,
+      .card > h3 {
+        font-weight: var(--display-weight);
+      }
+      /* the dot grid that signs the page: a 6px field, used only where it is a picture, never behind a list */
+      .u-dots {
+        background-image: radial-gradient(currentColor 1px, transparent 1.15px);
+        background-size: 6px 6px;
+        background-position: 0 0;
+      }
+
+      /* ---- hero: the octo window, drawn as live HTML (the client's own chrome, 44px) ---- */
+      .octo {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+        background: var(--ink);
+        color: var(--bg);
+        overflow: hidden;
+      }
+      .octo__bar {
+        display: flex;
+        align-items: center;
+        gap: var(--s-3);
+        height: 44px;
+        flex: none;
+        padding: 0 var(--s-3);
+        background: color-mix(in oklab, var(--ink) 92%, #fff);
+        border-bottom: 1px solid color-mix(in oklab, var(--bg) 16%, transparent);
+      }
+      .octo__mark {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        flex: none;
+      }
+      .octo__nav {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        font-size: 13px;
+        letter-spacing: -0.1em;
+        color: color-mix(in oklab, var(--bg) 62%, var(--ink));
+      }
+      .octo__nav span {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+      }
+      .octo__chip {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+        min-width: 0;
+        margin-inline: auto;
+        padding: 0 var(--s-3);
+        height: 24px;
+        border-radius: 999px;
+        background: color-mix(in oklab, var(--bg) 10%, transparent);
+        font-size: 12px;
+        color: color-mix(in oklab, var(--bg) 88%, var(--ink));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .octo__badge {
+        display: grid;
+        place-items: center;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: var(--bg);
+        color: var(--ink);
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .octo__win {
+        display: flex;
+        gap: var(--s-2);
+        font-size: 12px;
+        color: color-mix(in oklab, var(--bg) 62%, var(--ink));
+      }
+      .octo__body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 96px;
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+      .octo__stage {
+        position: relative;
+        min-height: 0;
+        overflow: hidden;
+        border-right: 1px solid color-mix(in oklab, var(--bg) 16%, transparent);
+        background: color-mix(in oklab, var(--ink) 82%, #fff);
+      }
+      .octo__still {
+        position: absolute;
+        inset: 0;
+        color: color-mix(in oklab, var(--bg) 34%, var(--ink));
+      }
+      .octo__still::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          120% 90% at 50% 20%,
+          transparent 30%,
+          color-mix(in oklab, var(--ink) 86%, #000) 100%
+        );
+      }
+      .octo__play {
+        position: absolute;
+        left: 50%;
+        top: 48%;
+        width: 44px;
+        height: 44px;
+        margin: -22px 0 0 -22px;
+        border: 1.5px solid color-mix(in oklab, var(--bg) 80%, var(--ink));
+        border-radius: 50%;
+      }
+      .octo__play::after {
+        content: '';
+        position: absolute;
+        left: 17px;
+        top: 12px;
+        width: 0;
+        height: 0;
+        border-left: 12px solid color-mix(in oklab, var(--bg) 80%, var(--ink));
+        border-top: 9px solid transparent;
+        border-bottom: 9px solid transparent;
+      }
+      .octo__cat {
+        position: absolute;
+        left: 50%;
+        top: 44%;
+        width: min(66%, 380px);
+        height: auto;
+        transform: translate(-50%, -50%);
+        color: color-mix(in oklab, var(--bg) 72%, var(--ink));
+      }
+      .octo__cap {
+        position: absolute;
+        right: var(--s-4);
+        bottom: var(--s-4);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--s-3);
+        font-size: 12px;
+        color: color-mix(in oklab, var(--bg) 84%, var(--ink));
+      }
+      .octo__cap b {
+        font-weight: 500;
+      }
+      .octo__cap span {
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: var(--ink);
+      }
+      .octo__rail {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 6px;
+      }
+      .octo__thumb {
+        flex: 1 1 0;
+        min-height: 0;
+        border-radius: 4px;
+        background: color-mix(in oklab, var(--bg) 12%, transparent);
+        position: relative;
+        overflow: hidden;
+      }
+      .octo__thumb::after {
+        content: '';
+        position: absolute;
+        left: 6px;
+        right: 6px;
+        bottom: 6px;
+        height: 2px;
+        border-radius: 2px;
+        background: color-mix(in oklab, var(--bg) 40%, transparent);
+      }
+      .octo__thumb.is-on::after {
+        background: var(--bg);
+      }
+      .octo__pip {
+        position: absolute;
+        left: var(--s-5);
+        bottom: var(--s-5);
+        width: min(280px, calc(100% - 32px));
+        padding: var(--s-4);
+        border-radius: var(--r-md);
+        background: var(--bg);
+        color: var(--ink);
+        border: 1px solid var(--line-strong);
+        display: grid;
+        gap: 6px;
+      }
+      .octo__pip-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--s-3);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .octo__pip-title {
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .octo__pause {
+        width: 10px;
+        height: 12px;
+        border-left: 3px solid var(--ink);
+        border-right: 3px solid var(--ink);
+      }
+
+      /* ---- app frame: the "Функции" panel, kit fragments rewritten to octo's settings ---- */
+      .app.ui {
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        margin-top: var(--s-7);
+        background: var(--u-bg);
+        border: 1px solid var(--u-border);
+        border-radius: var(--u-r);
+        box-shadow: var(--u-shadow);
+      }
+      .app > .app__pane {
+        position: relative;
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+      }
+      .app > .app__pane + .app__pane {
+        border-left: 1px solid var(--u-line);
+      }
+      .app > .app__pane > .ui-panel {
+        width: 100%;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      .app > .app__pane::after {
+        content: '';
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 64px;
+        background: linear-gradient(transparent, var(--u-bg));
+        pointer-events: none;
+      }
+      @media (min-width: 1024px) and (max-width: 1279px) {
+        .app.ui {
+          grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+        }
+      }
+      @media (max-width: 1023px) {
+        .app.ui {
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-rows: auto minmax(0, 1fr);
+        }
+        .app > .app__pane--list {
+          max-height: 252px;
+        }
+        .app > .app__pane--list::after {
+          display: none;
+        }
+        .app .ui-win__side {
+          display: none;
+        }
+        .app .ui-win__body {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .app > .app__pane + .app__pane {
+          border-left: 0;
+          border-top: 1px solid var(--u-line);
+        }
+      }
+      @media (max-width: 639px) {
+        .app.ui {
+          grid-template-rows: minmax(0, 1fr);
+        }
+        .app > .app__pane--list {
+          display: none;
+        }
+        .app > .app__pane + .app__pane {
+          border-top: 0;
+        }
+      }
+
+      /* ---- card panels: octo's own small screens, monochrome, drawn in the page's dots ---- */
+      #parts .panel {
+        --p-h: 372px;
+      }
+      #parts .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+      }
+      #parts .panel > .shot {
+        position: absolute;
+        inset: 24px 24px 0;
+      }
+      @media (max-width: 639px) {
+        #parts .panel {
+          --p-h: 152px;
+        }
+        #parts .panel > .shot {
+          inset: 16px 16px 0;
+        }
+        .shot [data-phone-hide],
+        #parts .mini__ctl,
+        #parts .shot__foot,
+        #parts .shot__note {
+          display: none;
+        }
+        #parts .mini__screen {
+          height: 72px;
+        }
+        #parts .section-head {
+          margin-bottom: var(--s-3);
+        }
+        #faq .section-head {
+          margin-bottom: var(--s-5);
+        }
+      }
+      .shot {
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--ink);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .shot__bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .shot__bar b {
+        font-weight: 500;
+        color: var(--ink);
+      }
+      .shot__bar .u-dots {
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+        color: var(--ink);
+        flex: none;
+      }
+      .shot__body {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        gap: 8px;
+        align-content: start;
+      }
+      .shot__row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--line);
+      }
+      .shot__row:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+      .shot__row .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .shot__name {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .shot__sub {
+        display: block;
+        font-size: 11px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .shot__chip {
+        font-size: 11px;
+        padding: 1px 6px;
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .shot__num {
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+      }
+      .shot__prog {
+        display: block;
+        height: 3px;
+        margin-top: 5px;
+        border-radius: 2px;
+        background: color-mix(in oklab, var(--ink) 16%, transparent);
+        overflow: hidden;
+      }
+      .shot__prog i {
+        display: block;
+        height: 100%;
+        background: color-mix(in oklab, var(--ink) 78%, transparent);
+      }
+      .shot__list {
+        display: grid;
+        gap: 0;
+      }
+      .shot__row:has(.shot__prog) {
+        border-bottom: 0;
+        padding-bottom: 2px;
+      }
+      .shot__row:has(.shot__prog) .shot__prog i[style*='100%'] {
+        background: color-mix(in oklab, var(--ink) 30%, transparent);
+      }
+      .shot__note {
+        display: grid;
+        gap: 2px;
+        padding: 10px 12px;
+        border-radius: 6px;
+        background: color-mix(in oklab, var(--ink) 4%, transparent);
+        border: 1px solid var(--line);
+      }
+      .shot__foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: auto;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .shot__bar,
+      .mini__screen,
+      .mini__ctl,
+      .shot__note,
+      .shot__foot {
+        flex: none;
+      }
+      .shot kbd {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1;
+        padding: 4px 5px;
+        border: 1px solid var(--line-strong);
+        border-bottom-width: 2px;
+        border-radius: 4px;
+        background: var(--bg);
+      }
+      /* the mini player: a dot screen, controls and a timecode */
+      .mini__screen {
+        position: relative;
+        height: 96px;
+        border-radius: 6px;
+        overflow: hidden;
+        background: var(--ink);
+        color: color-mix(in oklab, var(--bg) 40%, var(--ink));
+      }
+      .mini__screen .u-dots {
+        position: absolute;
+        inset: 0;
+      }
+      .mini__screen::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(90% 80% at 50% 30%, transparent 20%, var(--ink) 100%);
+      }
+      .mini__play {
+        position: absolute;
+        left: 12px;
+        bottom: 10px;
+        z-index: 1;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 1px solid color-mix(in oklab, var(--bg) 70%, var(--ink));
+        display: grid;
+        place-items: center;
+      }
+      .mini__play::after {
+        content: '';
+        width: 0;
+        height: 0;
+        margin-left: 2px;
+        border-left: 7px solid color-mix(in oklab, var(--bg) 80%, var(--ink));
+        border-top: 5px solid transparent;
+        border-bottom: 5px solid transparent;
+      }
+      .mini__time {
+        padding: 2px 5px;
+        border-radius: 3px;
+        background: var(--ink);
+        position: absolute;
+        right: 12px;
+        bottom: 8px;
+        z-index: 1;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        color: color-mix(in oklab, var(--bg) 84%, var(--ink));
+      }
+      .mini__ctl {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .mini__ctl .shot__chip {
+        border-color: var(--line);
+      }
+      .mini__ctl .vol {
+        margin-left: auto;
+        font-variant-numeric: tabular-nums;
+        color: var(--ink);
+      }
+
+      /* ---- dark band: focus timer and the sleeping octopus ---- */
+      #quiet .rows {
+        --row-pad: 14px;
+      }
+      #quiet .rows li {
+        border-color: color-mix(in oklab, var(--ink) 22%, transparent);
+      }
+      .focus {
+        position: relative;
+        display: grid;
+        justify-items: center;
+        align-content: center;
+        gap: var(--s-5);
+        height: min(560px, calc(100svh - 260px));
+        border-radius: var(--r-lg);
+        background: var(--surface);
+        overflow: hidden;
+      }
+      .focus__ring {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: min(320px, 70%);
+        aspect-ratio: 1;
+      }
+      .focus__ring svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .focus__time {
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-variation-settings:
+          'ELGR' 1,
+          'ELSH' 2;
+        font-size: clamp(48px, 7vw, 76px);
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+      .focus__note {
+        position: relative;
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.02em;
+      }
+      .focus__mascot {
+        width: min(220px, 62%);
+        color: var(--ink);
+      }
+      .focus__zzz {
+        font-family: var(--font-display);
+        font-size: 22px;
+        color: var(--muted);
+        letter-spacing: 0.2em;
+      }
+
+      /* ---- the statement moment ---- */
+      .statement {
+        display: grid;
+        align-content: start;
+      }
+      #faq .faq__item {
+        padding-block: var(--s-4);
+      }
+      .faq__mark {
+        width: 36px;
+        height: 36px;
+        margin-top: var(--s-5);
+        color: var(--ink);
+      }
+      .mo-wh__text {
+        max-width: 34ch;
+        font-family: var(--font-display);
+        font-weight: 500;
+        font-variation-settings:
+          'ELGR' 1,
+          'ELSH' 2;
+      }
+
+      /* ---- footer ---- */
+      .footer .closing__cta .btn--xl {
+        width: auto;
+      }
+      @media (max-width: 639px) {
+        .footer.closing {
+          --padt: 48px;
+          --padb: 24px;
+        }
+        .faq__intro {
+          display: none;
+        }
+        .faq [data-phone-hide] {
+          display: none;
+        }
+        #parts .grid:last-child .panel {
+          --p-h: 210px;
+        }
+        .footer__lede {
+          display: none;
+        }
+        .closing__links .grid > .span-4 {
+          display: none;
+        }
+        .closing__cta {
+          gap: var(--s-4);
+        }
+        .closing__links {
+          gap: var(--s-3);
+        }
+        .closing__links .grid {
+          row-gap: var(--s-3);
+        }
+        .footer__legal {
+          margin-top: var(--s-2);
+          padding-top: 0;
+        }
+      }
+      .closing__cta,
+      .closing__links,
+      .closing__cta > *,
+      .closing__links > * {
+        min-width: 0;
+      }
+      .closing__cta h2,
+      .closing__cta p {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+      }
+
+      @media (max-width: 1023px) {
+        .focus {
+          height: 260px;
+          aspect-ratio: auto;
+        }
+        .focus__mascot,
+        .focus__zzz {
+          display: none;
+        }
+        .octo__thumbs {
+          display: none;
+        }
+      }
+      @media (max-width: 639px) {
+        .octo__body {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .octo__rail {
+          display: none;
+        }
+        .octo__stage {
+          border-right: 0;
+        }
+        .octo__pip {
+          left: 12px;
+          bottom: 8px;
+          width: calc(100% - 24px);
+        }
+        .octo__cat {
+          width: 40%;
+          top: 32%;
+        }
+        .octo__chip {
+          display: none;
+        }
+      }
+    </style>
+    <script>
+      document.documentElement.classList.add('m-enter');
+      setTimeout(() => document.documentElement.classList.add('m-enter-done'), 700);
+    </script>
+    <script src="assets/backgrounds/backgrounds.js"></script>
+    <script>
+      document.documentElement.classList.add('mo-js');
+      setTimeout(() => document.documentElement.classList.add('mo-safe'), 2500);
+    </script>
+    <link rel="modulepreload" href="assets/moments/moments.js" />
+    <link rel="modulepreload" href="assets/moments/lib.js" />
+    <link rel="modulepreload" href="assets/moments/word-highlight/moment.js" />
+  </head>
+  <body>
+    <!-- type: software
+     deal: hero split (window, no photograph), nav nav-centre (nav-cards dealt again: no photographs),
+     close close-type, footer footer-columns (footer-statement dealt again: the page is monochrome,
+     no lit sand/sky/sage ground), rhythm dark-band, buttons tonal, mark ring, grounds paper + topglow
+     moments: word-highlight in #statement
+     The page is a stack of screens: one section per screen, every heading on the left line. -->
+
+    <header class="nav nav--centre">
+      <div class="wrap nav__bar">
+        <a class="skip-link" href="#top">К содержанию</a>
+        <a class="nav__logo" href="#top"
+          ><span class="mark" data-mark="ring" aria-hidden="true"></span>octo</a
+        >
+        <nav class="nav__links" aria-label="Основная">
+          <div class="nav__item"><a class="nav__link" href="#app">Панель</a></div>
+          <div class="nav__item"><a class="nav__link" href="#parts">Возможности</a></div>
+          <div class="nav__item"><a class="nav__link" href="#quiet">Тихий режим</a></div>
+          <div class="nav__item"><a class="nav__link" href="#faq">Вопросы</a></div>
+        </nav>
+        <div class="nav__actions">
+          <a class="nav__link" href="https://github.com/octomood/tiktok-octo">GitHub</a>
+          <a class="btn btn--primary" href="https://github.com/octomood/tiktok-octo/releases"
+            >Скачать приложение</a
+          >
+        </div>
+        <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Меню">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+            <path
+              d="M2 5h14M2 13h14"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero hero--split" data-enter aria-labelledby="hero-h">
+        <div class="wrap">
+          <div class="hero-text grid hero__grid">
+            <div class="hero__text span-5">
+              <p class="hero__kicker">
+                <span class="dot" aria-hidden="true"></span>Версия 1.1.0 · Linux, Windows, macOS
+              </p>
+              <h1 id="hero-h">Десктопный клиент TikTok</h1>
+              <p class="hero__lead">
+                Официальный сайт TikTok в отдельном окне на Electron. Полоса заголовка 44 пикселя,
+                мини-плеер поверх всех окон и 12 языков интерфейса. Без API и парсинга.
+              </p>
+              <div class="btn-row">
+                <a class="btn btn--primary" href="https://github.com/octomood/tiktok-octo/releases"
+                  >Скачать приложение<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true">
+                    <path class="m-arrow__stem" d="M1 6h8" />
+                    <path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5" /></svg
+                ></a>
+                <a class="btn btn--secondary" href="#app">Посмотреть функции</a>
+              </div>
+              <dl class="hero-facts">
+                <div>
+                  <dt>Полоса заголовка</dt>
+                  <dd>44 px</dd>
+                </div>
+                <div>
+                  <dt>Языков интерфейса</dt>
+                  <dd>12</dd>
+                </div>
+                <div>
+                  <dt>Лицензия</dt>
+                  <dd>MIT</dd>
+                </div>
+              </dl>
+            </div>
+            <div class="hero__media span-6 start-7">
+              <figure
+                class="octo"
+                role="img"
+                aria-label="Окно TikTok octo: полоса заголовка с навигацией и счётчиком, видео по центру и мини-плеер внизу слева"
+              >
+                <div class="octo__bar">
+                  <span class="octo__mark" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 22 22" role="presentation">
+                      <g fill="currentColor">
+                        <circle cx="11" cy="3" r="1.4" />
+                        <circle cx="6.6" cy="4.4" r="1.4" />
+                        <circle cx="15.4" cy="4.4" r="1.4" />
+                        <circle cx="3.6" cy="8.2" r="1.4" />
+                        <circle cx="18.4" cy="8.2" r="1.4" />
+                        <circle cx="3.6" cy="13.4" r="1.4" />
+                        <circle cx="18.4" cy="13.4" r="1.4" />
+                        <circle cx="6.6" cy="17.4" r="1.4" />
+                        <circle cx="15.4" cy="17.4" r="1.4" />
+                        <circle cx="11" cy="18.8" r="1.4" />
+                        <circle
+                          cx="8"
+                          cy="10.4"
+                          r="1.7"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.3"
+                        />
+                        <circle
+                          cx="14"
+                          cy="10.4"
+                          r="1.7"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.3"
+                        />
+                      </g>
+                    </svg>
+                  </span>
+                  <span class="octo__nav" aria-hidden="true"
+                    ><span>←</span><span>→</span><span>⟳</span><span>⌂</span></span
+                  >
+                  <span class="octo__chip" aria-hidden="true">tiktok.com · Для тебя</span>
+                  <span class="octo__badge" aria-hidden="true">3</span>
+                  <span class="octo__win" aria-hidden="true">− ▢ ✕</span>
+                </div>
+                <div class="octo__body">
+                  <div class="octo__stage">
+                    <span class="octo__still u-dots" aria-hidden="true"></span>
+                    <svg class="octo__cat" viewBox="0 0 240 200" aria-hidden="true">
+                      <defs>
+                        <pattern id="octo-dot" width="7" height="7" patternUnits="userSpaceOnUse">
+                          <circle cx="3.5" cy="3.5" r="1.5" fill="currentColor" />
+                        </pattern>
+                        <clipPath id="octo-head"><circle cx="120" cy="112" r="58" /></clipPath>
+                      </defs>
+                      <g fill="url(#octo-dot)">
+                        <path d="M72 76 60 26l44 22z" />
+                        <path d="M168 76 180 26l-44 22z" />
+                        <circle cx="120" cy="112" r="58" />
+                      </g>
+                      <g fill="var(--ink)">
+                        <ellipse cx="100" cy="106" rx="7" ry="9" />
+                        <ellipse cx="140" cy="106" rx="7" ry="9" />
+                        <path d="m120 118-5 5h10z" />
+                      </g>
+                      <g fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round">
+                        <path d="M112 132c2 4 6 4 8 0" />
+                        <path d="M120 132c2 4 6 4 8 0" />
+                        <path d="M62 112h16M62 122l16-4M178 112h-16M178 122l-16-4" />
+                      </g>
+                      <g fill="currentColor" opacity=".7">
+                        <circle cx="82" cy="124" r="2" />
+                        <circle cx="88" cy="129" r="2" />
+                        <circle cx="76" cy="130" r="2" />
+                        <circle cx="158" cy="124" r="2" />
+                        <circle cx="152" cy="129" r="2" />
+                        <circle cx="164" cy="130" r="2" />
+                      </g>
+                    </svg>
+                    <span class="octo__cap"><span>0:24 / 1:08</span></span>
+                  </div>
+                  <div class="octo__rail" aria-hidden="true">
+                    <span class="octo__thumb is-on"></span>
+                    <span class="octo__thumb"></span>
+                    <span class="octo__thumb"></span>
+                  </div>
+                </div>
+              </figure>
+              <div class="octo__pip">
+                <div class="octo__pip-row"><span>Мини-плеер</span><span>×</span></div>
+                <div class="octo__pip-title">Поверх всех окон</div>
+                <div class="octo__pip-row"><span>0:24 / 1:08</span><span>Автолистание</span></div>
+                <div class="octo__pip-row">
+                  <span>−10 с</span><span class="octo__pause" aria-hidden="true"></span
+                  ><span>+10 с</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="app" aria-labelledby="app-h" style="--h: 1">
+        <div class="wrap">
+          <div class="grid grid--top">
+            <div class="section-head span-5"><h2 id="app-h">Все настройки в одной панели.</h2></div>
+            <div class="span-6 start-7">
+              <p class="t-body">
+                Панель «Функции» открывается по <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>:
+                разделы списком слева, переключатели справа, поиск сразу по всем настройкам. Скрытая
+                подстраница возвращается кнопкой «Назад», а не закрытием окна.
+              </p>
+              <p style="margin-top: var(--s-4)">
+                <a class="link" href="#parts">Смотреть клавиши</a>
+              </p>
+            </div>
+          </div>
+          <div
+            class="ui app fill"
+            role="img"
+            aria-label="Панель «Функции»: слева список разделов и настроек плеера, справа переключатели звука"
+          >
+            <div class="app__pane app__pane--list">
+              <div
+                class="ui ui-panel ui-win"
+                data-ui="window"
+                data-ui-still
+                data-open="Вкл"
+                data-work="Проверка"
+                data-done="Готово"
+              >
+                <div class="ui-win__bar">
+                  <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="ui-win__crumb"
+                    ><svg class="ui-icon" aria-hidden="true" viewBox="0 0 16 16">
+                      <circle cx="8" cy="8" r="5" />
+                      <circle cx="8" cy="8" r="1.6" /></svg
+                    >Функции <i>/</i> <b>Плеер</b></span
+                  >
+                  <span class="ui-spacer"></span>
+                  <span class="ui-win__search" aria-hidden="true"
+                    ><svg class="ui-icon" viewBox="0 0 16 16">
+                      <circle cx="7" cy="7" r="4.5" />
+                      <path d="m10.5 10.5 3 3" /></svg
+                    ><span class="ui-win__ph">Поиск</span><span class="ui-kbd">/</span></span
+                  >
+                </div>
+                <div class="ui-win__body">
+                  <nav class="ui-win__side" aria-hidden="true">
+                    <span class="ui-win__nav is-on"
+                      ><svg class="ui-icon" viewBox="0 0 16 16">
+                        <path d="M2.5 9h3l1 1.5h3l1-1.5h3" />
+                        <path d="M2.5 9 4 3.5h8L13.5 9v3.5h-11z" /></svg
+                      >Плеер<em>12</em></span
+                    >
+                    <span class="ui-win__nav"
+                      ><svg class="ui-icon" viewBox="0 0 16 16">
+                        <path d="M3 6.5v3h2l3 2.5v-8L5 6.5z" />
+                        <path d="M10.5 6a3 3 0 0 1 0 4" /></svg
+                      >Звук<em>8</em></span
+                    >
+                    <span class="ui-win__nav"
+                      ><svg class="ui-icon" viewBox="0 0 16 16">
+                        <path d="M8 2.5v7M5.5 5 8 2.5 10.5 5" />
+                        <path d="M3 9.5v3h10v-3" /></svg
+                      >Загрузки<em>6</em></span
+                    >
+                    <span class="ui-win__nav"
+                      ><svg class="ui-icon" viewBox="0 0 16 16">
+                        <rect x="2.5" y="3" width="11" height="10" rx="1.5" />
+                        <path d="M2.5 6h11" /></svg
+                      >Вид<em>9</em></span
+                    >
+                    <span class="ui-win__nav"
+                      ><svg class="ui-icon" viewBox="0 0 16 16">
+                        <circle cx="8" cy="8" r="5.5" />
+                        <path d="M2.5 8h11M8 2.5c2 2 2 9 0 11M8 2.5c-2 2-2 9 0 11" /></svg
+                      >Регион<em>5</em></span
+                    >
+                    <span class="ui-win__label">Ещё</span>
+                    <span class="ui-win__nav"><span class="ui-win__hash">#</span>Клавиши</span>
+                    <span class="ui-win__nav"><span class="ui-win__hash">#</span>Плагины</span>
+                  </nav>
+                  <div class="ui-win__main">
+                    <div class="ui-win__cols" aria-hidden="true">
+                      <span>Настройка</span><span>Клавиша</span><span>Статус</span>
+                    </div>
+                    <ul class="ui-win__rows">
+                      <li class="ui-win__row">
+                        <span class="ui-win__who">Мини-плеер</span
+                        ><span class="ui-win__sub">Отдельное окно</span
+                        ><span class="ui-win__st">Вкл</span
+                        ><span class="ui-win__age">Ctrl ⇧ P</span>
+                      </li>
+                      <li class="ui-win__row">
+                        <span class="ui-win__who">Таймер сна</span
+                        ><span class="ui-win__sub">15 / 30 / 60 минут</span
+                        ><span class="ui-win__st">Вкл</span><span class="ui-win__age">15:00</span>
+                      </li>
+                      <li class="ui-win__row">
+                        <span class="ui-win__who">Автопауза</span
+                        ><span class="ui-win__sub">Нет ввода 10 минут</span
+                        ><span class="ui-win__st is-you">Вкл</span
+                        ><span class="ui-win__age">10:00</span>
+                      </li>
+                      <li class="ui-win__row">
+                        <span class="ui-win__who">Фокус-режим</span
+                        ><span class="ui-win__sub">Лимит 25 минут</span
+                        ><span class="ui-win__st">Вкл</span><span class="ui-win__age">25:00</span>
+                      </li>
+                      <li class="ui-win__row">
+                        <span class="ui-win__who">Загрузки</span
+                        ><span class="ui-win__sub">Шаблон имени</span
+                        ><span class="ui-win__st is-done">Готово</span
+                        ><span class="ui-win__age">3 из 4</span>
+                      </li>
+                      <li class="ui-win__row">
+                        <span class="ui-win__who">Плагины</span
+                        ><span class="ui-win__sub">Подпись и аудит</span
+                        ><span class="ui-win__st is-done">Готово</span
+                        ><span class="ui-win__age">2 шт.</span>
+                      </li>
+                      <li class="ui-win__row">
+                        <span class="ui-win__who">Прокси</span
+                        ><span class="ui-win__sub">SOCKS5 и HTTP</span
+                        ><span class="ui-win__st is-done">Готово</span
+                        ><span class="ui-win__age">—</span>
+                      </li>
+                      <li class="ui-win__row">
+                        <span class="ui-win__who">Регион</span
+                        ><span class="ui-win__sub">Язык и часовой пояс</span
+                        ><span class="ui-win__st">Вкл</span><span class="ui-win__age">Сербия</span>
+                      </li>
+                      <li class="ui-win__row">
+                        <span class="ui-win__who">Язык интерфейса</span
+                        ><span class="ui-win__sub">12 языков</span
+                        ><span class="ui-win__st">Вкл</span><span class="ui-win__age">Русский</span>
+                      </li>
+                      <li class="ui-win__row">
+                        <span class="ui-win__who">Масштаб</span
+                        ><span class="ui-win__sub">Интерфейс отдельно от сайта</span
+                        ><span class="ui-win__st">Вкл</span><span class="ui-win__age">110%</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="app__pane app__pane--open">
+              <div class="ui ui-panel ui-toggles" data-ui="toggles" data-ui-still>
+                <div class="ui-head">
+                  <svg class="ui-icon ui-toggles__ico" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M2.5 9h3l1 1.5h3l1-1.5h3" />
+                    <path d="M2.5 9 4 3.5h8L13.5 9v3.5h-11z" />
+                  </svg>
+                  <div class="ui-title">Плеер и звук</div>
+                  <span class="ui-spacer"></span>
+                  <div class="ui-meta">4 из 5 вкл</div>
+                </div>
+                <ul class="ui-toggles__list">
+                  <li class="ui-tg">
+                    <span class="ui-tg__text"
+                      ><span class="ui-tg__label">Громкость до 200%</span
+                      ><span class="ui-tg__sub">Ползунок в панели «Воспроизведение»</span></span
+                    ><button
+                      class="ui-switch is-on"
+                      type="button"
+                      role="switch"
+                      aria-checked="true"
+                      aria-label="Громкость до 200 процентов"
+                      tabindex="-1"
+                    >
+                      <i></i>
+                    </button>
+                  </li>
+                  <li class="ui-tg">
+                    <span class="ui-tg__text"
+                      ><span class="ui-tg__label">Моно в одном наушнике</span
+                      ><span class="ui-tg__sub">Левый и правый канал вместе</span></span
+                    ><button
+                      class="ui-switch"
+                      type="button"
+                      role="switch"
+                      aria-checked="false"
+                      aria-label="Моно в одном наушнике"
+                      tabindex="-1"
+                    >
+                      <i></i>
+                    </button>
+                  </li>
+                  <li class="ui-tg">
+                    <span class="ui-tg__text"
+                      ><span class="ui-tg__label">Не спать, пока играет</span
+                      ><span class="ui-tg__sub">Экран включён через powerSaveBlocker</span></span
+                    ><button
+                      class="ui-switch is-on"
+                      type="button"
+                      role="switch"
+                      aria-checked="true"
+                      aria-label="Не спать, пока играет"
+                      tabindex="-1"
+                    >
+                      <i></i>
+                    </button>
+                  </li>
+                  <li class="ui-tg">
+                    <span class="ui-tg__text"
+                      ><span class="ui-tg__label">Автопауза без ввода</span
+                      ><span class="ui-tg__sub">Пауза через 10 минут</span></span
+                    ><button
+                      class="ui-switch is-on"
+                      type="button"
+                      role="switch"
+                      aria-checked="true"
+                      aria-label="Автопауза без ввода"
+                      tabindex="-1"
+                    >
+                      <i></i>
+                    </button>
+                  </li>
+                  <li class="ui-tg">
+                    <span class="ui-tg__text"
+                      ><span class="ui-tg__label">Тихие часы для уведомлений</span
+                      ><span class="ui-tg__sub">С 23:00 до 8:00</span></span
+                    ><button
+                      class="ui-switch is-on"
+                      type="button"
+                      role="switch"
+                      aria-checked="true"
+                      aria-label="Тихие часы для уведомлений"
+                      tabindex="-1"
+                    >
+                      <i></i>
+                    </button>
+                  </li>
+                  <li class="ui-tg">
+                    <span class="ui-tg__text"
+                      ><span class="ui-tg__label">Эквалайзер для речи</span
+                      ><span class="ui-tg__sub">Голос слышно на тихой громкости</span></span
+                    ><button
+                      class="ui-switch is-on"
+                      type="button"
+                      role="switch"
+                      aria-checked="true"
+                      aria-label="Эквалайзер для речи"
+                      tabindex="-1"
+                    >
+                      <i></i>
+                    </button>
+                  </li>
+                  <li class="ui-tg">
+                    <span class="ui-tg__text"
+                      ><span class="ui-tg__label">Субтитры с фоном</span
+                      ><span class="ui-tg__sub">Размер и обводка без смены аккаунта</span></span
+                    ><button
+                      class="ui-switch"
+                      type="button"
+                      role="switch"
+                      aria-checked="false"
+                      aria-label="Субтитры с фоном"
+                      tabindex="-1"
+                    >
+                      <i></i>
+                    </button>
+                  </li>
+                  <li class="ui-tg">
+                    <span class="ui-tg__text"
+                      ><span class="ui-tg__label">Аппаратное декодирование</span
+                      ><span class="ui-tg__sub">HEVC на Linux, после перезапуска</span></span
+                    ><button
+                      class="ui-switch"
+                      type="button"
+                      role="switch"
+                      aria-checked="false"
+                      aria-label="Аппаратное декодирование"
+                      tabindex="-1"
+                    >
+                      <i></i>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section g2" id="parts" aria-labelledby="parts-h">
+        <div class="wrap">
+          <div class="group">
+            <div class="section-head">
+              <h2 id="parts-h">
+                Что умеет окно. <span class="muted">Четыре вещи, ради которых его ставят.</span>
+              </h2>
+            </div>
+            <div class="grid">
+              <article class="card card--row card--open span-6">
+                <h3>Мини-плеер поверх всех окон</h3>
+                <p>
+                  Ролик остаётся поверх других программ: автолистание, перемотка с таймкодом и «−10
+                  секунд».
+                </p>
+                <div
+                  class="panel ui"
+                  role="img"
+                  aria-label="Мини-плеер: экран ролика, очередь и громкость 120 процентов"
+                >
+                  <div class="shot">
+                    <div class="shot__bar">
+                      <span class="u-dots"></span><b>Мини-плеер</b
+                      ><span class="shot__num" style="margin-left: auto">Ctrl ⇧ P</span>
+                    </div>
+                    <div class="mini__screen">
+                      <span class="u-dots"></span>
+                      <span class="mini__play"></span>
+                      <span class="mini__time">0:42 / 1:18</span>
+                    </div>
+                    <div class="mini__ctl">
+                      <span class="shot__chip">Автолистание</span
+                      ><span class="shot__chip">Поверх окон</span><span class="vol">120%</span>
+                    </div>
+                    <div class="shot__list">
+                      <div class="shot__row" data-phone-hide>
+                        <span class="grow"
+                          ><span class="shot__name">Дальше: mio-desk-tour.mp4</span
+                          ><span class="shot__sub">@studio_mio · 0:58</span></span
+                        ><span class="shot__num">6 из 9</span>
+                      </div>
+                      <div class="shot__row" data-phone-hide data-phone-hide>
+                        <span class="grow"
+                          ><span class="shot__name">Потом: cat-piano.webm</span
+                          ><span class="shot__sub">@kawaii_neko · 0:21</span></span
+                        ><span class="shot__num">7 из 9</span>
+                      </div>
+                      <div class="shot__row" data-phone-hide data-phone-hide>
+                        <span class="grow"
+                          ><span class="shot__name">Громкость и эквалайзер</span
+                          ><span class="shot__sub">«Речь» на тихой громкости</span></span
+                        ><span class="shot__num">120%</span>
+                      </div>
+                    </div>
+                    <div class="shot__foot">
+                      <span>Поверх всех окон</span><span>Закрыть плеер</span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              <article class="card card--row card--open span-6">
+                <h3>Загрузки в отдельном окне</h3>
+                <p>
+                  Шаблон «{author}-{date}-{title}» с папкой автора, очередь, пауза и «показать в
+                  папке».
+                </p>
+                <div
+                  class="panel ui"
+                  role="img"
+                  aria-label="Менеджер загрузок: четыре файла, прогресс и кнопка «Показать в папке»"
+                >
+                  <div class="shot">
+                    <div class="shot__bar">
+                      <span class="u-dots"></span><b>Загрузки</b
+                      ><span class="shot__num" style="margin-left: auto">3 из 4</span>
+                    </div>
+                    <div class="shot__list">
+                      <div class="shot__row">
+                        <span class="grow"
+                          ><span class="shot__name">sunset-loop.mp4</span
+                          ><span class="shot__sub">@studio_mio · 14,2 МБ</span
+                          ><span class="shot__prog"><i style="width: 64%"></i></span></span
+                        ><span class="shot__num">64%</span>
+                      </div>
+                      <div class="shot__row">
+                        <span class="grow"
+                          ><span class="shot__name">mio-desk-tour.mp4</span
+                          ><span class="shot__sub">@studio_mio · 8,7 МБ</span
+                          ><span class="shot__prog"><i style="width: 32%"></i></span></span
+                        ><span class="shot__chip">Пауза</span>
+                      </div>
+                      <div class="shot__row" data-phone-hide>
+                        <span class="grow"
+                          ><span class="shot__name">cat-piano.webm</span
+                          ><span class="shot__sub">@kawaii_neko · 3,1 МБ</span
+                          ><span class="shot__prog"><i style="width: 100%"></i></span></span
+                        ><span class="shot__chip">Готово</span>
+                      </div>
+                      <div class="shot__row" data-phone-hide>
+                        <span class="grow"
+                          ><span class="shot__name">soft-keys-demo.mp4</span
+                          ><span class="shot__sub">@octo_lab · 2,4 МБ</span
+                          ><span class="shot__prog"><i style="width: 100%"></i></span></span
+                        ><span class="shot__chip">Готово</span>
+                      </div>
+                      <div class="shot__row" data-phone-hide>
+                        <span class="grow"
+                          ><span class="shot__name">night-feed-loop.mp4</span
+                          ><span class="shot__sub">@studio_mio · 11,8 МБ</span
+                          ><span class="shot__prog"><i style="width: 100%"></i></span></span
+                        ><span class="shot__chip">Готово</span>
+                      </div>
+                      <div class="shot__row" data-phone-hide>
+                        <span class="grow"
+                          ><span class="shot__name">octo-plugins-demo.mp4</span
+                          ><span class="shot__sub">@octo_lab · 6,3 МБ</span
+                          ><span class="shot__prog"><i style="width: 100%"></i></span></span
+                        ><span class="shot__chip">Готово</span>
+                      </div>
+                    </div>
+                    <div class="shot__foot">
+                      <span>Папка: Видео/octo</span><span>Показать в папке</span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
+          <div class="grid">
+            <article class="card card--row card--open span-6">
+              <h3>Плагины с разрешениями</h3>
+              <p>
+                Файл .octoplugin ставится вручную: подпись Ed25519 и аудит проверяются до включения.
+              </p>
+              <div
+                class="panel ui"
+                role="img"
+                aria-label="Менеджер плагинов: подписи, разрешения и откат версии"
+              >
+                <div class="shot">
+                  <div class="shot__bar">
+                    <span class="u-dots"></span><b>Плагины</b
+                    ><span class="shot__num" style="margin-left: auto">2 включены</span>
+                  </div>
+                  <div class="shot__list">
+                    <div class="shot__row">
+                      <span class="grow"
+                        ><span class="shot__name">gradient-frame</span
+                        ><span class="shot__sub">1.2.0 · подпись проверена</span></span
+                      ><span class="shot__chip">CSS</span><span class="shot__chip">Тема</span>
+                    </div>
+                    <div class="shot__row">
+                      <span class="grow"
+                        ><span class="shot__name">shelf</span
+                        ><span class="shot__sub">0.9.1 · подпись проверена</span></span
+                      ><span class="shot__chip">DOM</span>
+                    </div>
+                    <div class="shot__row" data-phone-hide>
+                      <span class="grow"
+                        ><span class="shot__name">soft-keys</span
+                        ><span class="shot__sub">1.0.4 · ждёт разрешения</span></span
+                      ><span class="shot__chip">Клавиши</span>
+                    </div>
+                    <div class="shot__row">
+                      <span class="grow"
+                        ><span class="shot__name">quiet-hours</span
+                        ><span class="shot__sub">0.4.2 · подпись проверена</span></span
+                      ><span class="shot__chip">Тема</span>
+                    </div>
+                  </div>
+                  <div class="shot__note">
+                    <span class="shot__name">shelf 0.9.1 · разрешения</span>
+                    <span class="shot__sub"
+                      >ui:panel, storage:local. Аудит: без Node, файловой системы и сети.</span
+                    >
+                  </div>
+                  <div class="shot__note" data-phone-hide>
+                    <span class="shot__name">Целостность и подпись</span>
+                    <span class="shot__sub"
+                      >Ed25519 совпала, хэш файла сходится. Откат хранит три прошлые версии.</span
+                    >
+                  </div>
+                  <div class="shot__foot">
+                    <span>Откатить версию</span><span>Открыть логи</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+            <article class="card card--row card--open span-6">
+              <h3>Клавиши как в плеере</h3>
+              <p>
+                J и L мотают на 10 секунд, K ставит паузу, S снимает кадр, 0–9 прыгают по проценту.
+              </p>
+              <div
+                class="panel ui"
+                role="img"
+                aria-label="Список горячих клавиш: перемотка, пауза, снимок, процент ролика"
+              >
+                <div class="shot">
+                  <div class="shot__bar">
+                    <span class="u-dots"></span><b>Клавиатура</b
+                    ><span class="shot__num" style="margin-left: auto">профиль «Стандартный»</span>
+                  </div>
+                  <div class="shot__list">
+                    <div class="shot__row">
+                      <span class="grow"
+                        ><span class="shot__name">Перемотка на 10 секунд</span></span
+                      ><kbd>J</kbd><kbd>L</kbd>
+                    </div>
+                    <div class="shot__row">
+                      <span class="grow"><span class="shot__name">Пауза и продолжение</span></span
+                      ><kbd>K</kbd><kbd>␣</kbd>
+                    </div>
+                    <div class="shot__row">
+                      <span class="grow"><span class="shot__name">Снимок кадра</span></span
+                      ><kbd>S</kbd>
+                    </div>
+                    <div class="shot__row" data-phone-hide>
+                      <span class="grow"><span class="shot__name">Процент ролика</span></span
+                      ><kbd>0</kbd><kbd>–</kbd><kbd>9</kbd>
+                    </div>
+                    <div class="shot__row" data-phone-hide>
+                      <span class="grow"><span class="shot__name">Мини-плеер</span></span
+                      ><kbd>Ctrl</kbd><kbd>⇧</kbd><kbd>P</kbd>
+                    </div>
+                    <div class="shot__row" data-phone-hide>
+                      <span class="grow"><span class="shot__name">Подсказка по клавишам</span></span
+                      ><kbd>?</kbd>
+                    </div>
+                    <div class="shot__row" data-phone-hide>
+                      <span class="grow"><span class="shot__name">Панель «Функции»</span></span
+                      ><kbd>Ctrl</kbd><kbd>⇧</kbd><kbd>B</kbd>
+                    </div>
+                    <div class="shot__row" data-phone-hide>
+                      <span class="grow"><span class="shot__name">Выключить звук</span></span
+                      ><kbd>Ctrl</kbd><kbd>⇧</kbd><kbd>M</kbd>
+                    </div>
+                    <div class="shot__row" data-phone-hide>
+                      <span class="grow"><span class="shot__name">Поиск по странице</span></span
+                      ><kbd>Ctrl</kbd><kbd>F</kbd>
+                    </div>
+                  </div>
+                  <div class="shot__foot">
+                    <span>Конфликтов нет</span><span>Сбросить профиль</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section ground-inverse" id="quiet" aria-labelledby="quiet-h" style="--h: 1">
+        <div class="wrap">
+          <div class="grid grid--top">
+            <div class="span-5">
+              <div class="section-head">
+                <h2 id="quiet-h">Тихий режим на вечер.</h2>
+              </div>
+              <p class="t-body">
+                Фокус-режим гасит ленту на 25 минут и возвращает звук после перерыва, а таймер сна
+                плавно заканчивает ролик и выключает воспроизведение. Отсчёт переживает перезапуск
+                приложения.
+              </p>
+              <ul class="rows" style="margin-top: var(--s-6)">
+                <li>
+                  <span class="rows__name">Фокус</span><span class="rows__value">25 минут</span>
+                </li>
+                <li>
+                  <span class="rows__name">Перерыв</span><span class="rows__value">5 минут</span>
+                </li>
+                <li>
+                  <span class="rows__name">Сон</span><span class="rows__value">15 / 30 / 60</span>
+                </li>
+              </ul>
+            </div>
+            <div class="span-6 start-7">
+              <figure
+                class="focus ui"
+                role="img"
+                aria-label="Фокус-таймер 25:00, рядом спящий осьминог из точек"
+              >
+                <div class="focus__ring">
+                  <svg viewBox="0 0 200 200" aria-hidden="true">
+                    <circle
+                      cx="100"
+                      cy="100"
+                      r="88"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-opacity=".16"
+                      stroke-width="6"
+                    />
+                    <circle
+                      cx="100"
+                      cy="100"
+                      r="88"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="6"
+                      stroke-linecap="round"
+                      stroke-dasharray="1.5 8"
+                      transform="rotate(-90 100 100)"
+                    />
+                  </svg>
+                  <span class="focus__time">25:00</span>
+                  <span class="focus__note">осталось</span>
+                </div>
+                <svg class="focus__mascot" viewBox="0 0 200 120" aria-hidden="true">
+                  <g fill="currentColor">
+                    <circle cx="100" cy="16" r="4" />
+                    <circle cx="80" cy="20" r="4" />
+                    <circle cx="120" cy="20" r="4" />
+                    <circle cx="62" cy="30" r="4" />
+                    <circle cx="138" cy="30" r="4" />
+                    <circle cx="50" cy="46" r="4" />
+                    <circle cx="150" cy="46" r="4" />
+                    <circle cx="46" cy="64" r="4" />
+                    <circle cx="154" cy="64" r="4" />
+                    <circle cx="52" cy="82" r="4" />
+                    <circle cx="148" cy="82" r="4" />
+                  </g>
+                  <g
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="4"
+                    stroke-linecap="round"
+                    stroke-dasharray="0.1 9"
+                  >
+                    <path d="M62 92c-2 8-2 12-6 16" />
+                    <path d="M82 96c-1 8-1 12-3 16" />
+                    <path d="M100 98v14" />
+                    <path d="M118 96c1 8 1 12 3 16" />
+                    <path d="M138 92c2 8 2 12 6 16" />
+                  </g>
+                  <g fill="currentColor">
+                    <path
+                      d="M78 56c4-6 12-6 16 0"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="4"
+                      stroke-linecap="round"
+                    />
+                    <path
+                      d="M106 56c4-6 12-6 16 0"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="4"
+                      stroke-linecap="round"
+                    />
+                    <circle cx="90" cy="48" r="1.6" />
+                    <circle cx="118" cy="48" r="1.6" />
+                  </g>
+                </svg>
+                <span class="focus__zzz" aria-hidden="true">z z z</span>
+              </figure>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="section statement"
+        id="statement"
+        data-moment="word-highlight"
+        aria-label="О приложении"
+        style="--h: 1"
+      >
+        <div class="wrap">
+          <p class="t-label">Зачем оболочка</p>
+          <p class="mo-wh__text">
+            TikTok не даёт сторонним приложениям доступ к ленте. Поэтому octo показывает их же сайт:
+            в своём окне, со своими клавишами и памятью.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" id="faq" aria-labelledby="faq-h" style="--h: 1">
+        <div class="wrap">
+          <div class="grid grid--top">
+            <div class="span-5">
+              <div class="section-head">
+                <h2 id="faq-h">Вопросы</h2>
+                <p class="faq__intro">Что чаще всего спрашивают перед установкой.</p>
+                <p>
+                  <a class="link" href="https://github.com/octomood/tiktok-octo/issues"
+                    >Написать нам</a
+                  >
+                </p>
+                <svg
+                  class="faq__mark"
+                  viewBox="0 0 36 36"
+                  role="img"
+                  aria-label="Точечный осьминог"
+                >
+                  <g fill="currentColor">
+                    <circle cx="18" cy="4" r="1.7" />
+                    <circle cx="11.5" cy="6.5" r="1.7" />
+                    <circle cx="24.5" cy="6.5" r="1.7" />
+                    <circle cx="7" cy="12" r="1.7" />
+                    <circle cx="29" cy="12" r="1.7" />
+                    <circle cx="5.5" cy="18.5" r="1.7" />
+                    <circle cx="30.5" cy="18.5" r="1.7" />
+                    <circle cx="8" cy="25" r="1.7" />
+                    <circle cx="28" cy="25" r="1.7" />
+                    <circle cx="13" cy="29.5" r="1.7" />
+                    <circle cx="23" cy="29.5" r="1.7" />
+                    <circle cx="18" cy="30.5" r="1.7" />
+                  </g>
+                  <g fill="none" stroke="currentColor" stroke-width="1.6">
+                    <circle cx="13.5" cy="16" r="2" />
+                    <circle cx="22.5" cy="16" r="2" />
+                  </g>
+                </svg>
+              </div>
+            </div>
+            <div class="span-6 start-7">
+              <div class="faq">
+                <div class="faq__item">
+                  <h3>Это официальное приложение TikTok?</h3>
+                  <p>Нет. Это оболочка на Electron: внутри официальный сайт TikTok.</p>
+                </div>
+                <div class="faq__item">
+                  <h3>Нужен ли API или доступ к аккаунту?</h3>
+                  <p>Нет. Приложение не трогает приватные данные и не парсит ленту.</p>
+                </div>
+                <div class="faq__item">
+                  <h3>Что плагины могут делать?</h3>
+                  <p>В песочнице: только window.octo и разрешения из манифеста.</p>
+                </div>
+                <div class="faq__item">
+                  <h3>Где хранятся мои данные?</h3>
+                  <p>Локально: закладки, статистика, настройки. Экспорт в ZIP.</p>
+                </div>
+                <div class="faq__item" data-phone-hide>
+                  <h3>Куда ставится приложение?</h3>
+                  <p>Linux: AppImage, Windows: .exe, macOS: .dmg.</p>
+                </div>
+                <div class="faq__item" data-phone-hide>
+                  <h3>Сколько оно стоит?</h3>
+                  <p>Ничего. Код открыт под MIT, плагины бесплатны.</p>
+                </div>
+                <div class="faq__item" data-phone-hide>
+                  <h3>Как приходят обновления?</h3>
+                  <p>Собранная версия проверяет GitHub Releases и предлагает перезапуск.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer closing" id="contact" aria-labelledby="close-h">
+      <div class="wrap">
+        <div class="closing__cta close--type">
+          <div class="section-head">
+            <h2 id="close-h">Скачайте приложение для своей системы</h2>
+            <p>Версия 1.1.0, 12 языков, лицензия MIT. Сборки для Linux, Windows и macOS.</p>
+          </div>
+          <a
+            class="btn btn--primary btn--xl btn--wide"
+            href="https://github.com/octomood/tiktok-octo/releases"
+            >Скачать приложение<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true">
+              <path class="m-arrow__stem" d="M1 6h8" />
+              <path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5" /></svg
+          ></a>
+        </div>
+        <div class="closing__links">
+          <div class="grid">
+            <div class="span-4 stack-4">
+              <a class="nav__logo" href="#top"
+                ><span class="mark" data-mark="ring" aria-hidden="true"></span>octo</a
+              >
+              <p class="footer__lede">Оболочка для TikTok на Electron.</p>
+            </div>
+            <div class="span-2 footer__col">
+              <h3>Приложение</h3>
+              <ul>
+                <li><a href="#app">Панель</a></li>
+                <li><a href="#parts">Возможности</a></li>
+                <li><a href="#quiet">Тихий режим</a></li>
+              </ul>
+            </div>
+            <div class="span-2 footer__col">
+              <h3>Помощь</h3>
+              <ul>
+                <li><a href="#faq">Вопросы</a></li>
+                <li><a href="https://github.com/octomood/tiktok-octo/issues">Проблемы</a></li>
+              </ul>
+            </div>
+            <div class="span-2 footer__col">
+              <h3>Код</h3>
+              <ul>
+                <li><a href="https://github.com/octomood/tiktok-octo">GitHub</a></li>
+                <li><a href="https://github.com/octomood/tiktok-octo/releases">Релизы</a></li>
+              </ul>
+            </div>
+            <div class="span-2 footer__col">
+              <h3>Ещё</h3>
+              <ul>
+                <li><a href="https://t.me/octo_plugins">Плагины</a></li>
+                <li><a href="https://github.com/octomood/tiktok-octo/issues">Связь</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="footer__legal">
+            <span
+              >&copy; 2026 octo &nbsp;
+              <a href="https://github.com/octomood/tiktok-octo/blob/main/LICENSE"
+                >Лицензия MIT</a
+              ></span
+            >
+            <div class="socials"></div>
+            <span class="credits">Не связан с TikTok.</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="assets/system.js"></script>
+    <script type="module" src="assets/motion/motion.js"></script>
+    <script type="module" src="assets/layout/layout.js"></script>
+    <script type="module" src="assets/moments/moments.js"></script>
+  </body>
+</html>

@@ -50,8 +50,11 @@ function insertScript(text) {
       const rect = node.getBoundingClientRect();
       return rect.width > 0 && rect.height > 0;
     };
-    const nodes = [...document.querySelectorAll('textarea, input[type="text"], [contenteditable]')]
-      .filter((node) => visible(node) && !node.disabled && !node.readOnly);
+    const nodes = [
+      ...document.querySelectorAll(
+        'textarea, input[type="text"], [contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]',
+      ),
+    ].filter((node) => visible(node) && !node.disabled && !node.readOnly);
     const field = nodes[nodes.length - 1];
     if (!field) return false;
 

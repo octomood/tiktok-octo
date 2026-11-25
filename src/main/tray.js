@@ -117,7 +117,7 @@ function refreshTrayMenu() {
         click: () => actions.pipAdaptive?.(),
       },
       {
-        label: 'Панель функций',
+        label: 'Настройки',
         type: 'checkbox',
         checked: ctx.panelOpen,
         click: () => actions.panel(),

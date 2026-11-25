@@ -1,6 +1,7 @@
 'use strict';
 
 const { app, shell } = require('electron');
+const { execFile } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { ctx, pushState, toast } = require('./app-context');
@@ -260,7 +261,7 @@ function handle(item, source) {
     patch(id, {
       state: finalState,
       path: item.getSavePath() || '',
-      percent: finalState === 'completed' ? 100 : undefined,
+      ...(finalState === 'completed' ? { percent: 100 } : {}),
     });
 
     const index = queued.indexOf(id);
@@ -317,6 +318,53 @@ function showInFolder(id) {
   if (filePath) shell.showItemInFolder(filePath);
 }
 
+/** Извлечь аудиодорожку из завершённого видео через системный ffmpeg. */
+function extractAudio(id) {
+  const item = items.get(id);
+  const filePath = item?.getSavePath?.();
+  if (!filePath || !fs.existsSync(filePath)) {
+    toast('Файл загрузки не найден на диске');
+    return;
+  }
+
+  const dir = path.dirname(filePath);
+  const stem = path.basename(filePath, path.extname(filePath));
+  const outMp3 = uniquePath(path.join(dir, `${stem}.mp3`));
+
+  toast('Извлекаю аудио…');
+  execFile(
+    'ffmpeg',
+    ['-y', '-i', filePath, '-vn', '-acodec', 'libmp3lame', '-q:a', '2', outMp3],
+    { timeout: 60_000 },
+    (err) => {
+      if (!err) {
+        toast(`Аудио сохранено: ${path.basename(outMp3)}`);
+        shell.showItemInFolder(outMp3);
+        return;
+      }
+      if (err.code === 'ENOENT') {
+        toast('ffmpeg не найден — установите ffmpeg для извлечения аудио');
+        return;
+      }
+      // Если нет кодека libmp3lame, пробуем копировать поток в m4a.
+      const outM4a = uniquePath(path.join(dir, `${stem}.m4a`));
+      execFile(
+        'ffmpeg',
+        ['-y', '-i', filePath, '-vn', '-c:a', 'copy', outM4a],
+        { timeout: 60_000 },
+        (fallbackErr) => {
+          if (fallbackErr) {
+            toast('Не удалось извлечь аудио из этого файла');
+            return;
+          }
+          toast(`Аудио сохранено: ${path.basename(outM4a)}`);
+          shell.showItemInFolder(outM4a);
+        },
+      );
+    },
+  );
+}
+
 /** Убирает из списка всё, что уже не качается. Активные не трогаем. */
 function clearFinished() {
   const finished = ctx.downloads.filter(
@@ -339,6 +387,7 @@ module.exports = {
   pause,
   resume,
   showInFolder,
+  extractAudio,
   clearFinished,
   setAuto,
   setTemplate,

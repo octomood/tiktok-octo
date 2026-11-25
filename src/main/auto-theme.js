@@ -17,7 +17,8 @@
 
 let target = null;
 let desired = false;
-let owned = false;
+/** Владение отладчиком по конкретному WebContents (лента и чат раздельно). */
+const ownedByWc = new WeakSet();
 // Переключения и sync после перезагрузки идут через одну очередь: быстрые
 // «выключить → включить» иначе выполняются наперегонки, и отложенный detach
 // старого вызова снимает режим уже после того, как новый его включил.
@@ -28,13 +29,13 @@ function alive(wc) {
 }
 
 function detachOwned(wc) {
-  if (!owned || !wc) return;
+  if (!wc || !ownedByWc.has(wc)) return;
   try {
     if (wc.debugger.isAttached()) wc.debugger.detach();
   } catch {
     /* отладчик уже отключён или занят DevTools */
   }
-  owned = false;
+  ownedByWc.delete(wc);
 }
 
 /**
@@ -45,17 +46,16 @@ function detachOwned(wc) {
 function applyNow(wc, on) {
   if (!alive(wc)) {
     detachOwned(target);
-    target = null;
+    if (target === wc) target = null;
     return false;
   }
 
-  if (target !== wc) owned = false;
   target = wc;
 
   try {
     if (!wc.debugger.isAttached()) {
       wc.debugger.attach('1.3');
-      owned = true;
+      ownedByWc.add(wc);
     }
     return wc.debugger
       .sendCommand('Emulation.setAutoDarkModeOverride', { enabled: Boolean(on) })
@@ -65,12 +65,12 @@ function applyNow(wc, on) {
       })
       .catch((err) => {
         if (process.env.OCTO_DEBUG) console.warn('[octo] auto dark:', err.message);
-        if (owned) detachOwned(wc);
+        if (ownedByWc.has(wc)) detachOwned(wc);
         return false;
       });
   } catch (err) {
     if (process.env.OCTO_DEBUG) console.warn('[octo] auto dark:', err.message);
-    if (owned) detachOwned(wc);
+    if (ownedByWc.has(wc)) detachOwned(wc);
     return false;
   }
 }

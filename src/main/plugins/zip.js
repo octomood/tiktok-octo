@@ -118,13 +118,15 @@ function readZip(buffer, limits = {}) {
 
     const rawName = buffer.subarray(pointer + 46, pointer + 46 + nameLength);
     const name = normalizeName(decodeName(rawName));
-    if (!isSafeName(name)) throw new Error('ZIP: недопустимый путь внутри пакета');
+    const isDir = name.endsWith('/');
+    const checkName = isDir ? name.slice(0, -1) : name;
+    if (!isSafeName(checkName)) throw new Error('ZIP: недопустимый путь внутри пакета');
 
     const mode = externalAttrs >>> 16;
     if ((mode & 0xf000) === 0xa000) throw new Error('ZIP: символические ссылки запрещены');
 
     pointer += 46 + nameLength + extraLength + commentLength;
-    if (name.endsWith('/')) continue;
+    if (isDir) continue;
     if (files.has(name)) throw new Error(`ZIP: файл «${name}» повторяется`);
 
     if (uncompressedSize > max.entryBytes) {
