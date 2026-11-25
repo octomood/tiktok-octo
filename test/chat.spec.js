@@ -99,8 +99,14 @@ test('чат открывается панелью слева, двойной к
 
     await expect(page.locator('#btnChat')).toHaveAttribute('aria-pressed', 'true');
     await expect
-      .poll(async () => (await views(app)).length, { message: 'панель чата не появилась' })
-      .toBe(2);
+      .poll(
+        async () => {
+          const list = await views(app);
+          return list.length === 2 && list.some((view) => view.url.startsWith('data:text/html'));
+        },
+        { message: 'панель чата не появилась' },
+      )
+      .toBe(true);
 
     const withChat = await views(app);
     const chatView = withChat.find((view) => view.url.startsWith('data:text/html'));
