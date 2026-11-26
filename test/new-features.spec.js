@@ -43,6 +43,8 @@ test('профили аккаунтов, заметки к авторам, пл�
     await app.firstWindow();
     const page = await waitForFileWindow(app);
     expect(page, 'окно с полосой заголовка не появилось').toBeTruthy();
+    await page.waitForLoadState('load');
+    await expect(page.locator('#btnPanel')).toBeVisible();
 
     await page.click('#btnPanel');
     await expect(page.locator('#panel')).toBeVisible();

@@ -39,6 +39,17 @@ async function showUpdate(app, state) {
   }, state);
 }
 
+async function clickAndWaitForClose(page, selector) {
+  const closed = page.waitForEvent('close');
+  await page
+    .locator(selector)
+    .click()
+    .catch((error) => {
+      if (!page.isClosed()) throw error;
+    });
+  await closed;
+}
+
 test('окно обновления: предложение, загрузка и перезапуск', async () => {
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-e2e-update-'));
   let app;
@@ -88,10 +99,7 @@ test('окно обновления: предложение, загрузка и
     await expect(update.locator('#btnLater')).toHaveText('Скрыть');
 
     // Закрытие во время загрузки не отменяет её: окно откроется после установки.
-    await Promise.all([
-      update.waitForEvent('close'),
-      update.locator('#btnClose').click({ noWaitAfter: true }),
-    ]);
+    await clickAndWaitForClose(update, '#btnClose');
     await expect.poll(() => update.isClosed()).toBe(true);
 
     await showUpdate(app, { phase: 'ready', version: '9.9.9', percent: 100 });
@@ -118,10 +126,7 @@ test('окно обновления: предложение, загрузка и
     await expect(update.locator('#btnLater')).toHaveText('Закрыть');
     await expect(update.locator('#updateProgress')).toBeHidden();
 
-    await Promise.all([
-      update.waitForEvent('close'),
-      update.locator('#btnLater').click({ noWaitAfter: true }),
-    ]);
+    await clickAndWaitForClose(update, '#btnLater');
     await expect.poll(() => update.isClosed()).toBe(true);
   } finally {
     await app?.close();
