@@ -22,6 +22,63 @@ function versionFromPackage() {
   return require(path.join(ROOT, 'package.json')).version;
 }
 
+/**
+ * Склеивает мягкие переносы внутри абзацев и пунктов списка: GitHub Releases
+ * рендерит одиночный `\n` как жёсткий `<br>`, поэтому 80-колоночная разметка
+ * из CHANGELOG.md обрывается на каждой строке.
+ */
+function unwrap(section) {
+  const out = [];
+  let buffer = '';
+  let inFence = false;
+
+  const flush = () => {
+    if (!buffer) return;
+    out.push(buffer);
+    buffer = '';
+  };
+
+  for (const rawLine of section.split('\n')) {
+    const line = rawLine.trimEnd();
+    const trimmed = line.trim();
+
+    if (/^(```|~~~)/.test(trimmed)) {
+      flush();
+      inFence = !inFence;
+      out.push(line);
+      continue;
+    }
+
+    if (inFence) {
+      out.push(rawLine);
+      continue;
+    }
+
+    if (!trimmed) {
+      flush();
+      out.push('');
+      continue;
+    }
+
+    if (/^(#{1,6}\s|>\s?|[-*_]{3,}$|\|)/.test(trimmed)) {
+      flush();
+      out.push(line);
+      continue;
+    }
+
+    if (/^(\s*[-*+]\s|\s*\d+\.\s)/.test(line)) {
+      flush();
+      buffer = line;
+      continue;
+    }
+
+    buffer = buffer ? `${buffer} ${trimmed}` : trimmed;
+  }
+
+  flush();
+  return out.join('\n').trim();
+}
+
 function extract(version, source) {
   const lines = source.split('\n');
   const heading = `## ${version}`;
@@ -36,10 +93,7 @@ function extract(version, source) {
     }
   }
 
-  return lines
-    .slice(start + 1, end)
-    .join('\n')
-    .trim();
+  return unwrap(lines.slice(start + 1, end).join('\n'));
 }
 
 function main() {
@@ -58,4 +112,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { extract };
+module.exports = { extract, unwrap };
