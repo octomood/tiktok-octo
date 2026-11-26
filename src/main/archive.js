@@ -42,14 +42,14 @@ const SETTINGS_KEYS = [
 const STICKER_MAX_BYTES = 8 * 1024 * 1024;
 const STICKERS_TOTAL_BYTES = 18 * 1024 * 1024;
 
-const README = `TikTok octo — мой архив
+const README = `TikTok Octo — мой архив
 
 library.json / library.md  — закладки с таймкодом, заметками и очередь
 stats.json                 — статистика просмотра по дням
 settings.json              — настройки приложения (только локальные)
 stickers/                  — свои картинки для чата
 
-Архив создан приложением TikTok octo. Неофициальный клиент, не связан с TikTok Ltd.
+Архив создан приложением TikTok Octo. Неофициальный клиент, не связан с TikTok Ltd.
 `;
 
 function dateStamp() {

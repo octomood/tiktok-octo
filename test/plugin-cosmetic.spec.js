@@ -97,11 +97,8 @@ octo.onActivate(async () => {
       .toBe('rgb(10, 20, 30)');
 
     await page.evaluate(() => window.octo.cmd('plugins'));
-    const manager = await waitForWindow(
-      app,
-      (candidate) => candidate.url().endsWith('/renderer/plugins.html'),
-      'менеджер плагинов',
-    );
+    const manager = page.locator('#pluginsPanel');
+    await expect(manager).toBeVisible();
     await manager.locator('[data-tab="installed"]').click();
 
     const card = manager.locator('.card--wide').filter({ hasText: 'Cosmetic test' });

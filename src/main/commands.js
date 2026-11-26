@@ -27,6 +27,7 @@ const videoQuality = require('./video-quality');
 const pip = require('./pip');
 const { captureFrame, captureForAnnotation } = require('./screenshot');
 const autostart = require('./autostart');
+const linkHandler = require('./link-handler');
 const appimage = require('./appimage-install');
 const ads = require('./ads');
 const region = require('./region');
@@ -681,6 +682,25 @@ function handleCommand(command, payload) {
       );
       break;
     }
+    case 'linkHandler': {
+      if (!linkHandler.isAvailable()) {
+        toast('Доступно только на Linux');
+        break;
+      }
+      const next = !ctx.linkHandler;
+      const result = next ? linkHandler.enable() : linkHandler.disable();
+      ctx.linkHandler = linkHandler.isEnabled();
+      if (result.ok && ctx.linkHandler === next) {
+        toast(
+          next
+            ? 'Ссылки TikTok будут открываться в клиенте'
+            : 'Ссылки TikTok снова открываются в браузере',
+        );
+      } else {
+        toast('Не удалось изменить обработчик ссылок');
+      }
+      break;
+    }
     case 'startInTray': {
       ctx.startInTray = !ctx.startInTray;
       writeState({ startInTray: ctx.startInTray });
@@ -750,6 +770,12 @@ function handleCommand(command, payload) {
       break;
     case 'themeMode':
       if (typeof payload === 'string') cosmetics.applyThemeMode(payload);
+      break;
+    case 'themePalette':
+      if (typeof payload === 'string') cosmetics.applyThemePalette(payload);
+      break;
+    case 'feedLayout':
+      if (typeof payload === 'string') cosmetics.applyFeedLayout(payload);
       break;
     case 'profileSwitch':
       if (typeof payload === 'string') profiles.switchTo(payload);
@@ -848,8 +874,16 @@ function handleCommand(command, payload) {
       checkNow();
       break;
     case 'plugins':
-      setPopover(null);
-      plugins.openManager();
+      if (!ctx.htmlFullscreen && !ctx.pipActive && !ctx.barOnly) {
+        setPopover(null);
+        if (ctx.pluginsOpen) plugins.closeManager();
+        else plugins.openManager();
+      }
+      refreshTrayMenu();
+      break;
+    case 'pluginsClose':
+      if (ctx.pluginsOpen) plugins.closeManager();
+      refreshTrayMenu();
       break;
     case 'pluginInstallFile':
       plugins.installFromFile();

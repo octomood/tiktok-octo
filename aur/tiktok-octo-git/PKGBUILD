@@ -62,7 +62,7 @@ EOF
 
   install -Dm644 /dev/stdin "$pkgdir/usr/share/applications/$_name.desktop" << 'EOF'
 [Desktop Entry]
-Name=TikTok octo
+Name=TikTok Octo
 Comment=Неофициальный десктоп-клиент TikTok
 Exec=tiktok-octo %U
 Terminal=false

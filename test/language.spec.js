@@ -72,16 +72,20 @@ test('язык интерфейса и сайта переключается и 
     expect(menu).toContain('Datei');
     expect(menu).toContain('Sprache');
 
-    // Менеджер плагинов — отдельное окно, словарь приходит через свой preload.
+    // Менеджер плагинов открывается оверлеем поверх окна, как панель функций.
     await page.evaluate(() => window.octo.cmd('plugins'));
-    const manager = await waitForWindow(app, (candidate) =>
-      candidate.url().includes('plugins.html'),
-    );
-    expect(manager, 'окно менеджера плагинов не появилось').toBeTruthy();
-    await expect(manager.locator('h1')).toHaveText('Plugins');
-    await expect(manager.locator('[data-tab="settings"] span:not(.nav-badge)')).toHaveText(
+    const manager = page.locator('#pluginsPanel');
+    await expect(manager, 'оверлей менеджера плагинов не появился').toBeVisible();
+    await expect(manager.locator('#pluginsHeadTitle')).toHaveText('Plugins');
+    await expect(manager.locator('[data-tab="settings"] .panel-cat-title')).toHaveText(
       'Einstellungen',
     );
+    await page.evaluate(() => window.octo.cmd('pluginsClose'));
+    await expect(manager).toBeHidden();
+
+    // Возвращаемся в панель функций для проверки языка сайта.
+    await page.click('#btnPanel');
+    await page.locator('[data-cat-head="language"]').click();
 
     // Язык сайта: cookie default_lang и состояние селекта.
     await page.selectOption('#siteLanguageSelect', 'de');

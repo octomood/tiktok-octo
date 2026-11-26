@@ -1,5 +1,5 @@
 #!/bin/sh
-# Запуск TikTok octo внутри песочницы Flatpak.
+# Запуск TikTok Octo внутри песочницы Flatpak.
 #
 # zypak подменяет песочницу Chromium на песочницу Flatpak: SUID-хелпер
 # chrome-sandbox внутри sandbox недоступен, поэтому Electron запускается

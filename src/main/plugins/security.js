@@ -451,6 +451,181 @@ function startOf(path, prefix) {
   return prefix.every((part, index) => path[index] === part);
 }
 
+function stripJsComments(code, { sourceType = 'script', allowReturnOutsideFunction = false } = {}) {
+  const comments = [];
+  try {
+    acorn.parse(code, {
+      ecmaVersion: 'latest',
+      sourceType,
+      allowHashBang: true,
+      allowReturnOutsideFunction,
+      onComment: (_isBlock, _text, start, end) => {
+        comments.push([start, end]);
+      },
+    });
+  } catch {
+    return code;
+  }
+  if (!comments.length) return code;
+  const chars = code.split('');
+  for (const [start, end] of comments) {
+    for (let index = start; index < end && index < chars.length; index += 1) {
+      if (chars[index] !== '\n' && chars[index] !== '\r') chars[index] = ' ';
+    }
+  }
+  return chars.join('');
+}
+
+const RAW_TEXT_RULE_IDS = new Set(['long-line', 'long-base64', 'hex-escapes', 'unicode-escapes']);
+
+function scanJsText(rawCode, fileName, rules, findings, parseOptions) {
+  const cleanCode = stripJsComments(rawCode, parseOptions);
+  const rawRules = rules.filter((rule) => RAW_TEXT_RULE_IDS.has(rule.id));
+  const codeRules = rules.filter((rule) => !RAW_TEXT_RULE_IDS.has(rule.id));
+  if (codeRules.length) scanText(cleanCode, fileName, codeRules, findings);
+  if (rawRules.length) scanText(rawCode, fileName, rawRules, findings);
+}
+
+const API_PERMISSION_RULES = [
+  {
+    prefix: ['octo', 'page', 'run'],
+    permission: 'page:script',
+    re: /\bocto\s*\.\s*page\s*\.\s*run\s*\(/,
+    message: 'Код вызывает octo.page.run(), но в манифесте нет разрешения page:script',
+  },
+  {
+    prefix: ['octo', 'page', 'getMediaInfo'],
+    permission: 'page:script',
+    re: /\bocto\s*\.\s*page\s*\.\s*getMediaInfo\s*\(/,
+    message: 'Код вызывает octo.page.getMediaInfo(), но в манифесте нет разрешения page:script',
+  },
+  {
+    prefix: ['octo', 'page', 'watch'],
+    permission: 'page:script',
+    re: /\bocto\s*\.\s*page\s*\.\s*watch\s*\(/,
+    message: 'Код вызывает octo.page.watch(), но в манифесте нет разрешения page:script',
+  },
+  {
+    prefix: ['octo', 'page', 'injectCSS'],
+    permission: 'page:css',
+    re: /\bocto\s*\.\s*page\s*\.\s*injectCSS\s*\(/,
+    message: 'Код вызывает octo.page.injectCSS(), но в манифесте нет разрешения page:css',
+  },
+  {
+    prefix: ['octo', 'page', 'setCSS'],
+    permission: 'page:css',
+    re: /\bocto\s*\.\s*page\s*\.\s*setCSS\s*\(/,
+    message: 'Код вызывает octo.page.setCSS(), но в манифесте нет разрешения page:css',
+  },
+  {
+    prefix: ['octo', 'page', 'removeCSS'],
+    permission: 'page:css',
+    re: /\bocto\s*\.\s*page\s*\.\s*removeCSS\s*\(/,
+    message: 'Код вызывает octo.page.removeCSS(), но в манифесте нет разрешения page:css',
+  },
+  {
+    prefix: ['octo', 'net', 'fetch'],
+    permission: 'network',
+    re: /\bocto\s*\.\s*net\s*\.\s*fetch\s*\(/,
+    message: 'Код вызывает octo.net.fetch(), но в манифесте нет разрешения network',
+  },
+  {
+    prefix: ['octo', 'navigate'],
+    permission: 'navigation',
+    re: /\bocto\s*\.\s*navigate\s*\(/,
+    message: 'Код вызывает octo.navigate(), но в манифесте нет разрешения navigation',
+  },
+  {
+    prefix: ['octo', 'shortcuts', 'add'],
+    permission: 'shortcuts',
+    re: /\bocto\s*\.\s*shortcuts\s*\.\s*add\s*\(/,
+    message: 'Код вызывает octo.shortcuts.add(), но в манифесте нет разрешения shortcuts',
+  },
+  {
+    prefix: ['octo', 'openExternal'],
+    permission: 'links',
+    re: /\bocto\s*\.\s*openExternal\s*\(/,
+    message: 'Код вызывает octo.openExternal(), но в манифесте нет разрешения links',
+  },
+  {
+    prefix: ['octo', 'playback', 'status'],
+    permission: 'playback',
+    re: /\bocto\s*\.\s*playback\s*\.\s*(?:status|playPause|seek|setVolume|setSpeed|onChange)\s*\(/,
+    message: 'Код вызывает octo.playback, но в манифесте нет разрешения playback',
+  },
+  {
+    prefix: ['octo', 'playback', 'playPause'],
+    permission: 'playback',
+    message: 'Код вызывает octo.playback, но в манифесте нет разрешения playback',
+  },
+  {
+    prefix: ['octo', 'playback', 'seek'],
+    permission: 'playback',
+    message: 'Код вызывает octo.playback, но в манифесте нет разрешения playback',
+  },
+  {
+    prefix: ['octo', 'playback', 'setVolume'],
+    permission: 'playback',
+    message: 'Код вызывает octo.playback, но в манифесте нет разрешения playback',
+  },
+  {
+    prefix: ['octo', 'playback', 'setSpeed'],
+    permission: 'playback',
+    message: 'Код вызывает octo.playback, но в манифесте нет разрешения playback',
+  },
+  {
+    prefix: ['octo', 'playback', 'onChange'],
+    permission: 'playback',
+    message: 'Код вызывает octo.playback, но в манифесте нет разрешения playback',
+  },
+  {
+    prefix: ['octo', 'feed', 'next'],
+    permission: 'feed',
+    re: /\bocto\s*\.\s*feed\s*\.\s*(?:next|prev)\s*\(/,
+    message: 'Код вызывает octo.feed, но в манифесте нет разрешения feed',
+  },
+  {
+    prefix: ['octo', 'feed', 'prev'],
+    permission: 'feed',
+    message: 'Код вызывает octo.feed, но в манифесте нет разрешения feed',
+  },
+  {
+    prefix: ['octo', 'downloads', 'add'],
+    permission: 'downloads',
+    re: /\bocto\s*\.\s*downloads\s*\.\s*add\s*\(/,
+    message: 'Код вызывает octo.downloads.add(), но в манифесте нет разрешения downloads',
+  },
+  {
+    prefix: ['octo', 'ui', 'overlay', 'show'],
+    permission: 'overlay',
+    re: /\bocto\s*\.\s*ui\s*\.\s*overlay\s*\.\s*(?:show|hide)\s*\(/,
+    message: 'Код вызывает octo.ui.overlay, но в манифесте нет разрешения overlay',
+  },
+  {
+    prefix: ['octo', 'ui', 'overlay', 'hide'],
+    permission: 'overlay',
+    message: 'Код вызывает octo.ui.overlay, но в манифесте нет разрешения overlay',
+  },
+  {
+    prefix: ['octo', 'i18n', 'get'],
+    permission: 'i18n',
+    re: /\bocto\s*\.\s*i18n\s*\.\s*get\s*\(/,
+    message: 'Код вызывает octo.i18n.get(), но в манифесте нет разрешения i18n',
+  },
+  {
+    prefix: ['octo', 'clipboard', 'write'],
+    permission: 'clipboard',
+    re: /\bocto\s*\.\s*clipboard\s*\.\s*write\s*\(/,
+    message: 'Код вызывает octo.clipboard.write(), но в манифесте нет разрешения clipboard',
+  },
+  {
+    prefix: ['octo', 'os', 'notify'],
+    permission: 'os:notify',
+    re: /\bocto\s*\.\s*os\s*\.\s*notify\s*\(/,
+    message: 'Код вызывает octo.os.notify(), но в манифесте нет разрешения os:notify',
+  },
+];
+
 /**
  * AST-проверка вместо одних регулярных выражений.
  *
@@ -460,11 +635,12 @@ function startOf(path, prefix) {
  * блокируется: непроверенный JavaScript мы не запускаем.
  */
 function scanAst(code, fileName, manifest, findings, { allowReturnOutsideFunction = false } = {}) {
+  const sourceType = manifest?.module === true && !allowReturnOutsideFunction ? 'module' : 'script';
   let ast;
   try {
     ast = acorn.parse(code, {
       ecmaVersion: 'latest',
-      sourceType: 'script',
+      sourceType,
       allowHashBang: true,
       allowReturnOutsideFunction,
       locations: true,
@@ -495,6 +671,24 @@ function scanAst(code, fileName, manifest, findings, { allowReturnOutsideFunctio
   walkAst(ast, (node) => {
     if (node.type === 'ImportExpression') {
       add('block', 'dynamic-import', 'Динамический import() запрещён', node);
+      return;
+    }
+
+    if (
+      (node.type === 'ImportDeclaration' ||
+        node.type === 'ExportNamedDeclaration' ||
+        node.type === 'ExportAllDeclaration') &&
+      node.source
+    ) {
+      const target = typeof node.source.value === 'string' ? node.source.value : '';
+      if (!/^\.\.?\//.test(target) || !target.endsWith('.js') || /[:\0\\]/.test(target)) {
+        add(
+          'block',
+          'external-import',
+          'В ES-модулях разрешены только относительные импорты .js (./file.js)',
+          node,
+        );
+      }
       return;
     }
 
@@ -573,48 +767,11 @@ function scanAst(code, fileName, manifest, findings, { allowReturnOutsideFunctio
           add('block', 'wasm', 'WebAssembly запрещён', node);
         }
         if (pathParts[0] === 'octo') {
-          if (startOf(pathParts, ['octo', 'page', 'run'])) {
-            permissionFinding(
-              manifest,
-              findings,
-              'page:script',
-              'Код вызывает octo.page.run(), но в манифесте нет разрешения page:script',
-            );
-          } else if (startOf(pathParts, ['octo', 'page', 'injectCSS'])) {
-            permissionFinding(
-              manifest,
-              findings,
-              'page:css',
-              'Код вызывает octo.page.injectCSS(), но в манифесте нет разрешения page:css',
-            );
-          } else if (startOf(pathParts, ['octo', 'net', 'fetch'])) {
-            permissionFinding(
-              manifest,
-              findings,
-              'network',
-              'Код вызывает octo.net.fetch(), но в манифесте нет разрешения network',
-            );
-          } else if (startOf(pathParts, ['octo', 'navigate'])) {
-            permissionFinding(
-              manifest,
-              findings,
-              'navigation',
-              'Код вызывает octo.navigate(), но в манифесте нет разрешения navigation',
-            );
-          } else if (startOf(pathParts, ['octo', 'shortcuts', 'add'])) {
-            permissionFinding(
-              manifest,
-              findings,
-              'shortcuts',
-              'Код вызывает octo.shortcuts.add(), но в манифесте нет разрешения shortcuts',
-            );
-          } else if (startOf(pathParts, ['octo', 'openExternal'])) {
-            permissionFinding(
-              manifest,
-              findings,
-              'links',
-              'Код вызывает octo.openExternal(), но в манифесте нет разрешения links',
-            );
+          for (const rule of API_PERMISSION_RULES) {
+            if (startOf(pathParts, rule.prefix)) {
+              permissionFinding(manifest, findings, rule.permission, rule.message);
+              break;
+            }
           }
         }
       }
@@ -688,58 +845,16 @@ function permissionFinding(manifest, findings, permission, message) {
 
 function collectApiFindings(manifest, files, findings) {
   let apiText = '';
+  const sourceType = manifest?.module === true ? 'module' : 'script';
   for (const [name, buffer] of files) {
     if (extensionOf(name) !== '.js') continue;
-    apiText += `\n${buffer.toString('utf8')}`;
+    apiText += `\n${stripJsComments(buffer.toString('utf8'), { sourceType })}`;
   }
 
-  if (/\bocto\s*\.\s*page\s*\.\s*run\s*\(/.test(apiText)) {
-    permissionFinding(
-      manifest,
-      findings,
-      'page:script',
-      'Код вызывает octo.page.run(), но в манифесте нет разрешения page:script',
-    );
-  }
-  if (/\bocto\s*\.\s*page\s*\.\s*injectCSS\s*\(/.test(apiText)) {
-    permissionFinding(
-      manifest,
-      findings,
-      'page:css',
-      'Код вызывает octo.page.injectCSS(), но в манифесте нет разрешения page:css',
-    );
-  }
-  if (/\bocto\s*\.\s*net\s*\.\s*fetch\s*\(/.test(apiText)) {
-    permissionFinding(
-      manifest,
-      findings,
-      'network',
-      'Код вызывает octo.net.fetch(), но в манифесте нет разрешения network',
-    );
-  }
-  if (/\bocto\s*\.\s*openExternal\s*\(/.test(apiText)) {
-    permissionFinding(
-      manifest,
-      findings,
-      'links',
-      'Код вызывает octo.openExternal(), но в манифесте нет разрешения links',
-    );
-  }
-  if (/\bocto\s*\.\s*navigate\s*\(/.test(apiText)) {
-    permissionFinding(
-      manifest,
-      findings,
-      'navigation',
-      'Код вызывает octo.navigate(), но в манифесте нет разрешения navigation',
-    );
-  }
-  if (/\bocto\s*\.\s*shortcuts\s*\.\s*add\s*\(/.test(apiText)) {
-    permissionFinding(
-      manifest,
-      findings,
-      'shortcuts',
-      'Код вызывает octo.shortcuts.add(), но в манифесте нет разрешения shortcuts',
-    );
+  for (const rule of API_PERMISSION_RULES) {
+    if (rule.re && rule.re.test(apiText)) {
+      permissionFinding(manifest, findings, rule.permission, rule.message);
+    }
   }
 }
 
@@ -835,7 +950,8 @@ function scanFiles(files, manifest) {
     if (extensionOf(name) === '.js') {
       const text = buffer.toString('utf8');
       const before = findings.length;
-      scanText(text, name, HOST_RULES, findings);
+      const sourceType = manifest?.module === true ? 'module' : 'script';
+      scanJsText(text, name, HOST_RULES, findings, { sourceType });
       scanAst(text, name, manifest, findings);
       // Точка входа — обычный скрипт в хосте; остальные .js тоже исполняемые.
       if (findings.length === before && !text.trim()) {
@@ -910,13 +1026,32 @@ function scanPageScript(code) {
   }
 
   const findings = [];
-  scanText(text, 'page', PAGE_RULES, findings);
+  scanJsText(text, 'page', PAGE_RULES, findings, {
+    sourceType: 'script',
+    allowReturnOutsideFunction: true,
+  });
   // Проверяем ещё и AST, чтобы обфускация вроде window['fe'+'tch'] или
   // document['coo'+'kie'] не проходила в octo.page.run().
   scanAst(
     text,
     'page',
-    { permissions: ['page:script', 'page:css', 'network', 'navigation', 'shortcuts', 'links'] },
+    {
+      permissions: [
+        'page:script',
+        'page:css',
+        'network',
+        'navigation',
+        'shortcuts',
+        'links',
+        'playback',
+        'feed',
+        'downloads',
+        'overlay',
+        'i18n',
+        'clipboard',
+        'os:notify',
+      ],
+    },
     findings,
     { allowReturnOutsideFunction: true },
   );

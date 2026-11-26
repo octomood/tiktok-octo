@@ -297,3 +297,124 @@ test('ZIP: детерминированная упаковка, CRC и защи�
   expect(scanPageScript("window['fe' + 'tch']('https://evil.example')").ok).toBe(false);
   expect(scanPageScript("return document.querySelector('video') !== null;").ok).toBe(true);
 });
+
+test('расширенный аудит: все 13 прав, комментарии, ES-модули, настройки и встроенная подпись', () => {
+  const crypto = require('node:crypto');
+  const { applySettings } = require('../src/main/plugins/manifest');
+  const {
+    createSignatureManifest,
+    parseAndVerifySignatureFile,
+  } = require('../src/main/plugins/signature');
+  const { inspectPackage } = require('../src/main/plugins/installer');
+
+  // 1. Все 13 разрешений помещаются в манифест.
+  const allPerms = [
+    'page:css',
+    'page:script',
+    'network',
+    'navigation',
+    'shortcuts',
+    'links',
+    'playback',
+    'feed',
+    'downloads',
+    'overlay',
+    'i18n',
+    'clipboard',
+    'os:notify',
+  ];
+  const fullManifest = manifestWith({
+    permissions: allPerms,
+    networkHosts: ['api.example.com'],
+    module: true,
+    settings: [
+      { key: 'accent', type: 'color', title: 'Цвет', default: '#FF00AA' },
+      { key: 'note', type: 'textarea', title: 'Заметка', default: 'abc' },
+      { key: 'api_key', type: 'secret', title: 'Токен', description: 'Секретный ключ' },
+      { key: 'run_check', type: 'action', title: 'Проверка', buttonLabel: 'Проверить' },
+    ],
+  });
+  expect(fullManifest.permissions).toHaveLength(13);
+  expect(fullManifest.module).toBe(true);
+  expect(fullManifest.settings.find((s) => s.key === 'accent').default).toBe('#ff00aa');
+
+  // Секреты и action не попадают в обычный объект settings.
+  const applied = applySettings(fullManifest, {
+    accent: '#123456',
+    api_key: 'should-not-persist',
+    run_check: true,
+  });
+  expect(applied).toEqual({ accent: '#123456', note: 'abc' });
+
+  // 2. Новые разрешения проверяются статическим аудитом.
+  const emptyManifest = manifestWith({ permissions: [] });
+  for (const [snippet, expectedRule] of [
+    ['octo.playback.status();', 'missing-permission:playback'],
+    ['octo.feed.next();', 'missing-permission:feed'],
+    ['octo.downloads.add("https://www.tiktok.com/a");', 'missing-permission:downloads'],
+    ['octo.ui.overlay.show({ text: "hi" });', 'missing-permission:overlay'],
+    ['octo.i18n.get();', 'missing-permission:i18n'],
+    ['octo.clipboard.write("x");', 'missing-permission:clipboard'],
+    ['octo.os.notify({ title: "t" });', 'missing-permission:os:notify'],
+    ['octo.page.setCSS("a", "body{}");', 'missing-permission:page:css'],
+    ['octo.page.getMediaInfo();', 'missing-permission:page:script'],
+  ]) {
+    const report = scanFiles(filesOf(snippet, emptyManifest), emptyManifest);
+    expect(report.verdict, snippet).toBe('blocked');
+    expect(report.findings.map((f) => f.rule)).toContain(expectedRule);
+  }
+
+  // 3. Комментарии не вызывают ложных срабатываний на fetch/eval/WebSocket.
+  const withComment = scanFiles(
+    filesOf('// Запрещены fetch() и eval() и WebSocket\nocto.notify("ok");', emptyManifest),
+    emptyManifest,
+  );
+  expect(withComment.verdict).toBe('safe');
+
+  // 4. ES-модули разрешают относительный import ./ и блокируют внешние/системные.
+  const modManifest = manifestWith({ module: true });
+  const goodMod = scanFiles(
+    filesOf("import { x } from './helper.js';\nocto.notify(x);", modManifest),
+    modManifest,
+  );
+  expect(goodMod.verdict).toBe('safe');
+
+  const badMod = scanFiles(filesOf("import fs from 'node:fs';", modManifest), modManifest);
+  expect(badMod.verdict).toBe('blocked');
+  expect(badMod.findings.map((f) => f.rule)).toContain('external-import');
+
+  // 5. Встроенная подпись SIGNATURE.json проверяется без registry.json.
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
+  const pubPem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
+  const privPem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+  const pkgFiles = new Map([
+    ['plugin.json', Buffer.from(JSON.stringify(rawManifest()))],
+    ['index.js', Buffer.from('octo.notify("signed");')],
+  ]);
+  const sigText = createSignatureManifest(privPem, {
+    id: 'app.octo.test',
+    version: '1.0.0',
+    files: pkgFiles,
+  });
+  pkgFiles.set('SIGNATURE.json', Buffer.from(sigText, 'utf8'));
+
+  expect(
+    parseAndVerifySignatureFile(
+      pkgFiles.get('SIGNATURE.json'),
+      { id: 'app.octo.test', version: '1.0.0', files: pkgFiles },
+      [pubPem],
+    ).status,
+  ).toBe('verified');
+
+  const signedZip = createZip(pkgFiles);
+  const inspected = inspectPackage(signedZip, { publicKeys: [pubPem] });
+  expect(inspected.ok).toBe(true);
+  expect(inspected.signature).toBe('verified');
+
+  // Подмена файла внутри ZIP ломает встроенную подпись.
+  pkgFiles.set('index.js', Buffer.from('octo.notify("tampered");'));
+  const tamperedZip = createZip(pkgFiles);
+  const tampered = inspectPackage(tamperedZip, { publicKeys: [pubPem] });
+  expect(tampered.ok).toBe(true);
+  expect(tampered.signature).toBe('invalid');
+});

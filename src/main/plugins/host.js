@@ -11,7 +11,7 @@ const {
 } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
-const { ctx, toast } = require('../app-context');
+const { ctx, toast, setPluginDialogOpen } = require('../app-context');
 const { openExternal } = require('../links');
 const { isSafeRelativePath, isCompatible } = require('./manifest');
 const { scanPageScript, validateCss } = require('./security');
@@ -21,6 +21,7 @@ const state = require('./state');
 const { normalizeTikTokUrl } = require('./navigation');
 const { evalInPage } = require('../page-eval');
 const player = require('../player');
+const cosmetics = require('../cosmetics');
 const i18n = require('../i18n');
 const { findAppLanguage } = require('../language-catalog');
 const { normalizeAccelerator, matchesInput } = require('./accelerator');
@@ -45,6 +46,9 @@ let nextEventToken = 1;
 /** Изолированные миры, уже занятые плагинами в этом запуске. */
 const usedWorldIds = new Set();
 let networkSession = null;
+let watchTimer = null;
+let activeDialog = null;
+let nextDialogToken = 1;
 
 const LOCAL_ID_RE = /^[a-zA-Z0-9._-]{1,48}$/;
 const STORAGE_KEY_RE = /^[a-zA-Z0-9._-]{1,64}$/;
@@ -94,7 +98,7 @@ function hostHtml(manifest) {
     <title>${manifest.name.replace(/[<>&"]/g, '')}</title>
   </head>
   <body>
-    <script src="./${manifest.main.replace(/[<>&"]/g, '')}"></script>
+    <script ${manifest.module ? 'type="module" ' : ''}src="./${manifest.main.replace(/[<>&"]/g, '')}"></script>
   </body>
 </html>`;
 }
@@ -279,9 +283,13 @@ async function removeCss(entry) {
   const wc = ctx.view?.webContents;
   if (!wc || wc.isDestroyed()) {
     entry.cssKeys = [];
+    for (const item of entry.namedCss.values()) item.keys = [];
     return;
   }
   const keys = entry.cssKeys.splice(0);
+  for (const item of entry.namedCss.values()) {
+    keys.push(...item.keys.splice(0));
+  }
   await Promise.all(keys.map((key) => wc.removeInsertedCSS(key).catch(() => {})));
 }
 
@@ -297,10 +305,56 @@ async function applyCss(entry, css) {
   }
 }
 
+async function applyNamedCss(entry, id, css) {
+  const wc = ctx.view?.webContents;
+  if (!wc || wc.isDestroyed()) return false;
+  const existing = entry.namedCss.get(id);
+  if (existing && existing.keys.length) {
+    await Promise.all(
+      existing.keys.splice(0).map((key) => wc.removeInsertedCSS(key).catch(() => {})),
+    );
+  }
+  try {
+    const key = await wc.insertCSS(css, { cssOrigin: 'user' });
+    entry.namedCss.set(id, { css, keys: [key] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function removeNamedCss(entry, id) {
+  const existing = entry.namedCss.get(id);
+  if (!existing) return;
+  entry.namedCss.delete(id);
+  const wc = ctx.view?.webContents;
+  if (!wc || wc.isDestroyed()) return;
+  await Promise.all(
+    existing.keys.splice(0).map((key) => wc.removeInsertedCSS(key).catch(() => {})),
+  );
+}
+
+function totalCssBytes(entry) {
+  let size = entry.cssBlocks.reduce((sum, block) => sum + block.length, 0);
+  for (const item of entry.namedCss.values()) size += item.css.length;
+  return size;
+}
+
 async function reapplyCss(entry) {
   await removeCss(entry);
   for (const css of entry.cssBlocks) {
     await applyCss(entry, css);
+  }
+  for (const [id, item] of entry.namedCss.entries()) {
+    const wc = ctx.view?.webContents;
+    if (!wc || wc.isDestroyed()) break;
+    try {
+      const key = await wc.insertCSS(item.css, { cssOrigin: 'user' });
+      item.keys = [key];
+    } catch {
+      /* страница ушла */
+    }
+    if (!entry.namedCss.has(id)) break;
   }
 }
 
@@ -318,7 +372,7 @@ async function load(record) {
     return false;
   }
   if (!isCompatible(manifest, require('electron').app.getVersion())) {
-    if (onError) onError(record.id, `Нужен TikTok octo ${manifest.minAppVersion} или новее`);
+    if (onError) onError(record.id, `Нужен TikTok Octo ${manifest.minAppVersion} или новее`);
     return false;
   }
 
@@ -345,6 +399,9 @@ async function load(record) {
     shortcuts: new Map(),
     cssBlocks: [],
     cssKeys: [],
+    namedCss: new Map(),
+    watchers: new Map(),
+    lastPlaybackSig: '',
     calls: [],
     notifyCalls: [],
     networkCalls: [],
@@ -450,6 +507,11 @@ async function unload(id) {
   const entry = hostWindows.get(id);
   if (!entry) return;
   hostWindows.delete(id);
+  entry.watchers.clear();
+  syncWatchTimer();
+  if (activeDialog && activeDialog.pluginId === id) {
+    cancelDialog();
+  }
   if (entry.saveTimer) {
     clearTimeout(entry.saveTimer);
     if (!entry.record.dev) saveRecord(entry.record);
@@ -466,7 +528,149 @@ async function unload(id) {
 }
 
 async function unloadAll() {
+  cancelDialog();
+  if (watchTimer) {
+    clearInterval(watchTimer);
+    watchTimer = null;
+  }
   await Promise.all([...hostWindows.keys()].map((id) => unload(id)));
+}
+
+function hasAnyWatchers() {
+  for (const entry of hostWindows.values()) {
+    if (entry.active && entry.watchers.size > 0) return true;
+  }
+  return false;
+}
+
+function syncWatchTimer() {
+  if (hasAnyWatchers()) {
+    if (!watchTimer) {
+      watchTimer = setInterval(() => {
+        for (const entry of hostWindows.values()) {
+          if (entry.active && entry.watchers.size > 0) {
+            pollWatchersFor(entry).catch(() => {});
+          }
+        }
+      }, 900);
+      if (typeof watchTimer.unref === 'function') watchTimer.unref();
+    }
+  } else if (watchTimer) {
+    clearInterval(watchTimer);
+    watchTimer = null;
+  }
+}
+
+async function pollWatchersFor(entry) {
+  if (!entry || !entry.active || !entry.watchers.size) return;
+  const wc = ctx.view?.webContents;
+  if (!wc || wc.isDestroyed()) return;
+  const specs = [...entry.watchers.entries()].map(([id, item]) => ({
+    id,
+    selector: item.selector,
+  }));
+  let results;
+  try {
+    results = await wc.executeJavaScriptInIsolatedWorld(entry.worldId, [
+      {
+        code: `(() => {
+          const specs = ${JSON.stringify(specs)};
+          const out = {};
+          for (const spec of specs) {
+            try {
+              const nodes = [...document.querySelectorAll(spec.selector)];
+              out[spec.id] = {
+                count: nodes.length,
+                texts: nodes.slice(0, 12).map((n) => String(n.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 160)),
+              };
+            } catch {
+              out[spec.id] = { count: 0, texts: [], invalid: true };
+            }
+          }
+          return out;
+        })()`,
+      },
+    ]);
+  } catch {
+    return;
+  }
+  if (!results || typeof results !== 'object') return;
+  for (const [id, data] of Object.entries(results)) {
+    const watcher = entry.watchers.get(id);
+    if (!watcher || !data) continue;
+    const hash = JSON.stringify(data);
+    if (hash === watcher.lastHash) continue;
+    watcher.lastHash = hash;
+    send(entry, 'page-watch', {
+      id,
+      count: Number(data.count) || 0,
+      matched: (Number(data.count) || 0) > 0,
+      texts: Array.isArray(data.texts) ? data.texts : [],
+    });
+  }
+}
+
+function cancelDialog() {
+  if (!activeDialog) return;
+  const current = activeDialog;
+  activeDialog = null;
+  clearTimeout(current.timer);
+  setPluginDialogOpen(false);
+  if (ctx.win && !ctx.win.isDestroyed()) {
+    try {
+      ctx.win.webContents.send('octo:plugin-dialog', { action: 'close', token: current.token });
+    } catch {
+      /* окно закрывается */
+    }
+  }
+  current.resolve(current.kind === 'confirm' ? false : null);
+}
+
+function openPluginDialog(entry, kind, spec) {
+  if (!ctx.win || ctx.win.isDestroyed()) {
+    return Promise.resolve(hostForbidden('Окно приложения недоступно'));
+  }
+  if (activeDialog) {
+    return Promise.resolve(hostForbidden('Другой диалог плагина уже открыт'));
+  }
+
+  const token = `dlg-${nextDialogToken++}`;
+  return new Promise((resolve) => {
+    const finish = (value) => {
+      if (!activeDialog || activeDialog.token !== token) return;
+      clearTimeout(activeDialog.timer);
+      activeDialog = null;
+      setPluginDialogOpen(false);
+      resolve({ ok: true, result: value });
+    };
+    const timer = setTimeout(() => {
+      if (activeDialog && activeDialog.token === token) cancelDialog();
+    }, 120_000);
+    if (typeof timer.unref === 'function') timer.unref();
+    activeDialog = {
+      token,
+      pluginId: entry.id,
+      kind,
+      timer,
+      resolve: (val) => resolve({ ok: true, result: val }),
+      finish,
+    };
+    setPluginDialogOpen(true);
+    try {
+      ctx.win.webContents.send('octo:plugin-dialog', {
+        action: 'open',
+        token,
+        kind,
+        pluginName: entry.manifest.name,
+        ...spec,
+      });
+    } catch (err) {
+      clearTimeout(timer);
+      activeDialog = null;
+      setPluginDialogOpen(false);
+      resolve(hostForbidden(`Не удалось открыть диалог: ${err.message}`));
+    }
+  });
 }
 
 function markReady(entry) {
@@ -729,7 +933,7 @@ async function handleApi(entry, method, payload) {
       const id = typeof payload?.id === 'string' ? payload.id : '';
       const label = typeof payload?.label === 'string' ? payload.label.trim().slice(0, 80) : '';
       if (!LOCAL_ID_RE.test(id) || !label) return hostForbidden('Некорректная строка панели');
-      if (entry.panelRows.size >= LIMITS.maxPanelRows) {
+      if (!entry.panelRows.has(id) && entry.panelRows.size >= LIMITS.maxPanelRows) {
         return hostForbidden('Слишком много строк панели');
       }
       entry.panelRows.set(id, {
@@ -737,15 +941,127 @@ async function handleApi(entry, method, payload) {
         label,
         description:
           typeof payload?.description === 'string' ? payload.description.trim().slice(0, 200) : '',
+        badge: typeof payload?.badge === 'string' ? payload.badge.trim().slice(0, 24) : '',
       });
       notifyChange();
       return { ok: true, result: `plugin:${entry.id}:row:${id}` };
+    }
+
+    case 'panel.update': {
+      const id = typeof payload?.id === 'string' ? payload.id : '';
+      const existing = entry.panelRows.get(id);
+      if (!existing) return hostForbidden('Строка панели не найдена');
+      const next = { ...existing };
+      if (typeof payload?.label === 'string' && payload.label.trim()) {
+        next.label = payload.label.trim().slice(0, 80);
+      }
+      if (typeof payload?.description === 'string') {
+        next.description = payload.description.trim().slice(0, 200);
+      }
+      if (typeof payload?.badge === 'string') {
+        next.badge = payload.badge.trim().slice(0, 24);
+      }
+      entry.panelRows.set(id, next);
+      notifyChange();
+      return { ok: true };
     }
 
     case 'panel.remove':
       entry.panelRows.delete(String(payload?.id || ''));
       notifyChange();
       return { ok: true };
+
+    case 'ui.confirm': {
+      if (rateLimited(entry, 'systemCalls', 20, 60_000)) {
+        return hostForbidden('Слишком много диалогов');
+      }
+      const title =
+        typeof payload?.title === 'string' && payload.title.trim()
+          ? payload.title.trim().slice(0, 80)
+          : entry.manifest.name;
+      const message =
+        typeof payload?.message === 'string' ? payload.message.trim().slice(0, 400) : '';
+      if (!message) return hostForbidden('Нужен текст подтверждения');
+      return openPluginDialog(entry, 'confirm', {
+        title,
+        message,
+        confirmText:
+          typeof payload?.confirmText === 'string' && payload.confirmText.trim()
+            ? payload.confirmText.trim().slice(0, 32)
+            : 'Подтвердить',
+        cancelText:
+          typeof payload?.cancelText === 'string' && payload.cancelText.trim()
+            ? payload.cancelText.trim().slice(0, 32)
+            : 'Отмена',
+      });
+    }
+
+    case 'ui.prompt': {
+      if (rateLimited(entry, 'systemCalls', 20, 60_000)) {
+        return hostForbidden('Слишком много диалогов');
+      }
+      const title =
+        typeof payload?.title === 'string' && payload.title.trim()
+          ? payload.title.trim().slice(0, 80)
+          : entry.manifest.name;
+      const message =
+        typeof payload?.message === 'string' ? payload.message.trim().slice(0, 300) : '';
+      return openPluginDialog(entry, 'prompt', {
+        title,
+        message,
+        placeholder:
+          typeof payload?.placeholder === 'string' ? payload.placeholder.trim().slice(0, 100) : '',
+        defaultValue:
+          typeof payload?.defaultValue === 'string' ? payload.defaultValue.slice(0, 1000) : '',
+        confirmText:
+          typeof payload?.confirmText === 'string' && payload.confirmText.trim()
+            ? payload.confirmText.trim().slice(0, 32)
+            : 'Готово',
+        cancelText:
+          typeof payload?.cancelText === 'string' && payload.cancelText.trim()
+            ? payload.cancelText.trim().slice(0, 32)
+            : 'Отмена',
+      });
+    }
+
+    case 'ui.pick': {
+      if (rateLimited(entry, 'systemCalls', 20, 60_000)) {
+        return hostForbidden('Слишком много диалогов');
+      }
+      const rawItems = Array.isArray(payload?.items) ? payload.items : [];
+      const items = rawItems
+        .slice(0, 100)
+        .map((item) => {
+          if (typeof item === 'string') {
+            const label = item.trim().slice(0, 80);
+            return label ? { value: label, label, description: '' } : null;
+          }
+          if (!item || typeof item !== 'object') return null;
+          const value = typeof item.value === 'string' ? item.value.slice(0, 120) : '';
+          const label = typeof item.label === 'string' ? item.label.trim().slice(0, 80) : '';
+          if (!value || !label) return null;
+          return {
+            value,
+            label,
+            description:
+              typeof item.description === 'string' ? item.description.trim().slice(0, 120) : '',
+          };
+        })
+        .filter(Boolean);
+      if (!items.length) return hostForbidden('Нужен хотя бы один вариант для выбора');
+      const title =
+        typeof payload?.title === 'string' && payload.title.trim()
+          ? payload.title.trim().slice(0, 80)
+          : entry.manifest.name;
+      return openPluginDialog(entry, 'pick', {
+        title,
+        placeholder:
+          typeof payload?.placeholder === 'string'
+            ? payload.placeholder.trim().slice(0, 100)
+            : 'Поиск…',
+        items,
+      });
+    }
 
     case 'contextMenu.add': {
       const id = typeof payload?.id === 'string' ? payload.id : '';
@@ -918,6 +1234,27 @@ async function handleApi(entry, method, payload) {
       scheduleSave(entry);
       return { ok: true };
 
+    case 'storage.keys':
+      return { ok: true, result: Object.keys(entry.record.storage || {}) };
+
+    case 'storage.usage':
+      return {
+        ok: true,
+        result: {
+          bytes: storageSize(entry.record.storage || {}),
+          limit: LIMITS.storageBytes,
+        },
+      };
+
+    case 'theme.get':
+      return {
+        ok: true,
+        result: {
+          mode: ctx.themeMode || 'dark',
+          ...cosmetics.getThemePayload(),
+        },
+      };
+
     case 'settings.get':
       return { ok: true, result: { ...entry.record.settings } };
 
@@ -932,14 +1269,153 @@ async function handleApi(entry, method, payload) {
       const css = typeof payload?.css === 'string' ? payload.css : '';
       const validation = validateCss(css);
       if (!validation.ok) return hostForbidden(validation.error);
-      const currentSize = entry.cssBlocks.reduce((sum, block) => sum + block.length, 0);
-      if (currentSize + css.length > LIMITS.cssBytes * 2) {
+      if (totalCssBytes(entry) + css.length > LIMITS.cssBytes * 2) {
         return hostForbidden('Слишком много CSS для одного плагина');
       }
       entry.cssBlocks.push(css);
       if (entry.cssBlocks.length > 32) entry.cssBlocks.shift();
       const applied = await applyCss(entry, css);
       if (!applied) return hostForbidden('Не удалось применить CSS');
+      return { ok: true };
+    }
+
+    case 'page.setCSS': {
+      if (!entry.manifest.permissions.includes('page:css')) {
+        return hostForbidden('Нет разрешения page:css');
+      }
+      if (rateLimited(entry, 'cssCalls', 60, 60_000)) {
+        return hostForbidden('Слишком много изменений CSS');
+      }
+      const id = typeof payload?.id === 'string' ? payload.id : '';
+      if (!LOCAL_ID_RE.test(id)) return hostForbidden('Некорректный id CSS-блока');
+      if (!entry.namedCss.has(id) && entry.namedCss.size >= 32) {
+        return hostForbidden('Слишком много именованных CSS-блоков');
+      }
+      if (!(await pageContents(entry))) return hostForbidden('Страница ещё не готова');
+      const css = typeof payload?.css === 'string' ? payload.css : '';
+      const validation = validateCss(css);
+      if (!validation.ok) return hostForbidden(validation.error);
+      const prevLen = entry.namedCss.get(id)?.css.length || 0;
+      if (totalCssBytes(entry) - prevLen + css.length > LIMITS.cssBytes * 2) {
+        return hostForbidden('Слишком много CSS для одного плагина');
+      }
+      const applied = await applyNamedCss(entry, id, css);
+      if (!applied) return hostForbidden('Не удалось применить CSS');
+      return { ok: true };
+    }
+
+    case 'page.removeCSS': {
+      if (!entry.manifest.permissions.includes('page:css')) {
+        return hostForbidden('Нет разрешения page:css');
+      }
+      const id = typeof payload?.id === 'string' ? payload.id : '';
+      if (!LOCAL_ID_RE.test(id)) return hostForbidden('Некорректный id CSS-блока');
+      await removeNamedCss(entry, id);
+      return { ok: true };
+    }
+
+    case 'page.getMediaInfo': {
+      if (!entry.manifest.permissions.includes('page:script')) {
+        return hostForbidden('Нет разрешения page:script');
+      }
+      if (rateLimited(entry, 'pageCalls', 120, 60_000)) {
+        return hostForbidden('Слишком много запросов со страницы');
+      }
+      const wc = await pageContents(entry);
+      if (!wc) return hostForbidden('Страница ещё не готова');
+      try {
+        const result = await wc.executeJavaScriptInIsolatedWorld(entry.worldId, [
+          {
+            code: `(() => {
+              const pickText = (selectors) => {
+                for (const sel of selectors) {
+                  const el = document.querySelector(sel);
+                  if (el && el.textContent && el.textContent.trim()) {
+                    return el.textContent.replace(/\\s+/g, ' ').trim();
+                  }
+                }
+                return '';
+              };
+              const url = String(document.URL || '');
+              let author = pickText([
+                '[data-e2e="browse-username"]',
+                '[data-e2e="video-author-uniqueid"]',
+                '[data-e2e="user-title"]',
+              ]);
+              if (!author) {
+                try {
+                  const match = /^\\/@([^/]+)/.exec(new URL(url).pathname);
+                  if (match) author = '@' + decodeURIComponent(match[1]);
+                } catch {}
+              } else if (!author.startsWith('@')) {
+                author = '@' + author;
+              }
+              const description = pickText([
+                '[data-e2e="browse-video-desc"]',
+                '[data-e2e="video-desc"]',
+                'h1',
+              ]).slice(0, 500);
+              const videos = [...document.querySelectorAll('video')];
+              const videoEl = videos.find((v) => !v.paused && v.readyState > 0) || videos[0] || null;
+              return {
+                url,
+                title: String(document.title || ''),
+                author: author.slice(0, 120),
+                description,
+                video: videoEl
+                  ? {
+                      playing: !videoEl.paused && !videoEl.ended,
+                      paused: Boolean(videoEl.paused),
+                      time: Number(videoEl.currentTime) || 0,
+                      duration: Number.isFinite(videoEl.duration) ? videoEl.duration : 0,
+                      width: Number(videoEl.videoWidth) || 0,
+                      height: Number(videoEl.videoHeight) || 0,
+                    }
+                  : null,
+              };
+            })()`,
+          },
+        ]);
+        return { ok: true, result };
+      } catch (err) {
+        return hostForbidden(`Ошибка чтения страницы: ${err.message}`);
+      }
+    }
+
+    case 'page.watch': {
+      if (!entry.manifest.permissions.includes('page:script')) {
+        return hostForbidden('Нет разрешения page:script');
+      }
+      const id = typeof payload?.id === 'string' ? payload.id : '';
+      const selector = typeof payload?.selector === 'string' ? payload.selector.trim() : '';
+      if (!LOCAL_ID_RE.test(id)) return hostForbidden('Некорректный id наблюдателя');
+      if (!selector || selector.length > 200 || /[\0\n\r]/.test(selector)) {
+        return hostForbidden('Некорректный CSS-селектор');
+      }
+      if (!entry.watchers.has(id) && entry.watchers.size >= 10) {
+        return hostForbidden('Слишком много наблюдателей на странице');
+      }
+      const wc = await pageContents(entry);
+      if (!wc) return hostForbidden('Страница ещё не готова');
+      try {
+        await wc.executeJavaScriptInIsolatedWorld(entry.worldId, [
+          { code: `document.querySelector(${JSON.stringify(selector)}); true;` },
+        ]);
+      } catch {
+        return hostForbidden('Некорректный CSS-селектор');
+      }
+      entry.watchers.set(id, { selector, lastHash: '' });
+      syncWatchTimer();
+      pollWatchersFor(entry).catch(() => {});
+      return { ok: true };
+    }
+
+    case 'page.unwatch': {
+      if (!entry.manifest.permissions.includes('page:script')) {
+        return hostForbidden('Нет разрешения page:script');
+      }
+      entry.watchers.delete(String(payload?.id || ''));
+      syncWatchTimer();
       return { ok: true };
     }
 
@@ -1262,11 +1738,52 @@ function updateSettings(record) {
   send(entry, 'settings-changed', { settings: { ...record.settings } });
 }
 
+function sendSettingAction(id, key) {
+  const entry = hostWindows.get(id);
+  if (!entry || !entry.active) return false;
+  send(entry, 'setting-action', { key });
+  return true;
+}
+
+function openDevTools(id) {
+  const entry = hostWindows.get(id);
+  if (!entry || !entry.record?.dev || !entry.wc || entry.wc.isDestroyed()) return false;
+  entry.wc.openDevTools({ mode: 'detach' });
+  return true;
+}
+
+function onThemeChange(payload) {
+  for (const entry of hostWindows.values()) {
+    if (!entry.active) continue;
+    send(entry, 'theme-changed', payload);
+  }
+}
+
+function onPlaybackChange() {
+  const wc = ctx.view?.webContents;
+  const snapshot = {
+    playing: Boolean(ctx.playing),
+    muted: Boolean(wc && !wc.isDestroyed() && wc.isAudioMuted()),
+    volume: Number(ctx.player?.volume ?? 1),
+    speed: Number(ctx.player?.speed ?? 1),
+    url: wc && !wc.isDestroyed() ? wc.getURL() : '',
+  };
+  const sig = JSON.stringify(snapshot);
+  for (const entry of hostWindows.values()) {
+    if (!entry.active) continue;
+    if (!entry.manifest.permissions.includes('playback')) continue;
+    if (entry.lastPlaybackSig === sig) continue;
+    entry.lastPlaybackSig = sig;
+    send(entry, 'playback-changed', snapshot);
+  }
+}
+
 function onPageReady(info) {
   for (const entry of hostWindows.values()) {
     if (!entry.active) continue;
     reapplyCss(entry);
     send(entry, 'page-ready', info);
+    if (entry.watchers.size > 0) pollWatchersFor(entry).catch(() => {});
   }
 }
 
@@ -1274,6 +1791,7 @@ function onPageNavigate(info) {
   for (const entry of hostWindows.values()) {
     if (!entry.active) continue;
     send(entry, 'page-navigate', info);
+    if (entry.watchers.size > 0) pollWatchersFor(entry).catch(() => {});
   }
 }
 
@@ -1347,6 +1865,7 @@ function summaryRows() {
         id: `plugin:${entry.id}:row:${row.id}`,
         label: row.label,
         description: row.description,
+        badge: row.badge || '',
         pluginId: entry.id,
         pluginName: entry.manifest.name,
       });
@@ -1420,6 +1939,17 @@ function init({ onChange: changeHandler, onError: errorHandler } = {}) {
     setError(entry, text);
     notifyChange();
   });
+
+  ipcMain.on('octo:plugin-dialog-result', (event, payload) => {
+    const winWc = ctx.win && !ctx.win.isDestroyed() ? ctx.win.webContents : null;
+    if (!winWc || event.sender !== winWc) return;
+    if (!activeDialog || payload?.token !== activeDialog.token) return;
+    if (payload.cancelled) {
+      cancelDialog();
+      return;
+    }
+    activeDialog.finish(payload.value);
+  });
 }
 
 module.exports = {
@@ -1430,6 +1960,11 @@ module.exports = {
   unloadAll,
   onPageReady,
   onPageNavigate,
+  onThemeChange,
+  onPlaybackChange,
+  sendSettingAction,
+  openDevTools,
+  cancelDialog,
   runCommand,
   handleShortcut,
   contextMenuItems,

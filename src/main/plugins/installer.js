@@ -11,7 +11,12 @@ const {
   isSafeRelativePath,
 } = require('./manifest');
 const { scanFiles, installDecision } = require('./security');
-const { verifySignature, sha256 } = require('./signature');
+const {
+  verifySignature,
+  parseAndVerifySignatureFile,
+  SIGNATURE_FILE,
+  sha256,
+} = require('./signature');
 const { LIMITS } = require('./constants');
 const state = require('./state');
 
@@ -94,7 +99,7 @@ function sameList(left, right) {
  * @param {Buffer} buffer
  * @param {{registryEntry?: object|null, expectedId?: string}} options
  */
-function inspectPackage(buffer, { registryEntry = null, expectedId = '' } = {}) {
+function inspectPackage(buffer, { registryEntry = null, expectedId = '', publicKeys } = {}) {
   if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
     return { ok: false, error: 'Пустой файл плагина' };
   }
@@ -151,6 +156,17 @@ function inspectPackage(buffer, { registryEntry = null, expectedId = '' } = {}) 
   let signature = 'unsigned';
   let signatureError = '';
 
+  const embeddedSig = files.get(SIGNATURE_FILE);
+  if (embeddedSig) {
+    const verified = parseAndVerifySignatureFile(
+      embeddedSig,
+      { id: manifest.id, version: manifest.version, files },
+      publicKeys,
+    );
+    signature = verified.status;
+    signatureError = verified.error || '';
+  }
+
   if (registryEntry) {
     if (manifest.id !== registryEntry.pluginId || manifest.version !== registryEntry.version) {
       return {
@@ -174,13 +190,21 @@ function inspectPackage(buffer, { registryEntry = null, expectedId = '' } = {}) 
       return { ok: false, error: 'Список networkHosts не совпадает с каталогом' };
     }
 
-    signature = verifySignature({
-      id: manifest.id,
-      version: manifest.version,
-      sha256: hash,
-      signature: registryEntry.signature,
-    });
-    if (signature === 'invalid') signatureError = 'Подпись пакета недействительна';
+    const regSignature = verifySignature(
+      {
+        id: manifest.id,
+        version: manifest.version,
+        sha256: hash,
+        signature: registryEntry.signature,
+      },
+      publicKeys,
+    );
+    if (regSignature === 'invalid' || signature === 'invalid') {
+      signature = 'invalid';
+      signatureError = signatureError || 'Подпись пакета недействительна';
+    } else if (regSignature === 'verified' || signature === 'verified') {
+      signature = 'verified';
+    }
   }
 
   return {
@@ -213,6 +237,7 @@ function readDirectoryFiles(
       continue;
     }
     if (entry.name.endsWith('.octoplugin') || entry.name.endsWith('.zip')) continue;
+    if (entry.name === SIGNATURE_FILE && !prefix) continue;
     const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
     const absolute = path.join(root, entry.name);
     if (entry.isSymbolicLink()) throw new Error('Символические ссылки в плагине запрещены');

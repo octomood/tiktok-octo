@@ -1,7 +1,7 @@
 {
   "name": "tiktok-octo",
-  "productName": "TikTok octo",
-  "version": "1.2.0",
+  "productName": "TikTok Octo",
+  "version": "2.0.0",
   "description": "Неофициальный десктоп-клиент TikTok: официальный веб-сайт в нативной оболочке Electron",
   "main": "src/main/main.js",
   "desktopName": "tiktok-octo.desktop",
@@ -65,8 +65,8 @@
   },
   "build": {
     "appId": "app.octo.tiktok",
-    "productName": "TikTok octo",
-    "copyright": "TikTok octo. Неофициальный клиент, не связан с TikTok Ltd.",
+    "productName": "TikTok Octo",
+    "copyright": "TikTok Octo. Неофициальный клиент, не связан с TikTok Ltd.",
     "artifactName": "${name}-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "dist",
@@ -121,7 +121,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "TikTok octo",
+      "shortcutName": "TikTok Octo",
       "artifactName": "${name}-${version}-win-${arch}-setup.${ext}"
     },
     "portable": {

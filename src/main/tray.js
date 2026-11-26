@@ -32,7 +32,7 @@ function createTray() {
     return;
   }
 
-  ctx.tray.setToolTip('TikTok octo');
+  ctx.tray.setToolTip('TikTok Octo');
   ctx.tray.on('click', toggleWindow);
   refreshTrayMenu();
 }

@@ -45,6 +45,8 @@ const el = {
   min: $('btnMin'),
   max: $('btnMax'),
   close: $('btnClose'),
+  feedCentered: $('btnFeedCentered'),
+  feedWide: $('btnFeedWide'),
   pill: $('pagePill'),
   title: $('pageTitle'),
   unread: $('unreadBadge'),
@@ -58,6 +60,7 @@ const el = {
   download: $('download'),
   downloadFill: $('downloadFill'),
   panel: $('panel'),
+  pluginsPanel: $('pluginsPanel'),
   btnPanel: $('btnPanel'),
   btnStickers: $('btnStickers'),
   btnPluginsActive: $('btnPluginsActive'),
@@ -208,6 +211,9 @@ const el = {
   regionPingValue: $('regionPingValue'),
   regionPingResult: $('regionPingResult'),
   themeModeSelect: $('themeModeSelect'),
+  themePaletteGrid: $('themePaletteGrid'),
+  themePaletteActiveName: $('themePaletteActiveName'),
+  feedLayoutSelect: $('feedLayoutSelect'),
   profileSelect: $('profileSelect'),
   profileNewName: $('profileNewName'),
   btnProfileAdd: $('btnProfileAdd'),
@@ -224,6 +230,8 @@ const el = {
   siteLanguageSelect: $('siteLanguageSelect'),
   rowInstallApp: $('rowInstallApp'),
   installAppLabel: $('installAppLabel'),
+  rowLinkHandler: $('rowLinkHandler'),
+  linkHandlerNote: $('linkHandlerNote'),
   palette: $('palette'),
   paletteInput: $('paletteInput'),
   paletteList: $('paletteList'),
@@ -248,6 +256,7 @@ const state = {
   find: { open: false, text: '', matches: 0, active: 0 },
   download: null,
   panel: false,
+  pluginsOpen: false,
   popover: null,
   panelWidth: 300,
   palette: false,
@@ -280,6 +289,7 @@ const state = {
   languages: [],
   siteLanguages: [],
   appimage: { available: false, installed: false },
+  linkHandler: { available: false, enabled: false },
   downloads: [],
   sleepTimerEnds: 0,
   sleepTimerMinutes: 0,
@@ -363,6 +373,7 @@ let panelQuery = '';
 const settingsBodies = new Map();
 let settingsContent = null;
 let panelWasOpen = false;
+let pluginsPanelWasOpen = false;
 
 buildPanelNav();
 buildSettingsLayout();
@@ -703,6 +714,18 @@ el.themeModeSelect.addEventListener('change', () => {
   api.cmd('themeMode', el.themeModeSelect.value);
 });
 
+el.themePaletteGrid?.addEventListener('click', (event) => {
+  const swatch = event.target.closest('[data-theme-palette]');
+  if (swatch) api.cmd('themePalette', swatch.dataset.themePalette);
+});
+
+el.feedLayoutSelect.addEventListener('change', () => {
+  api.cmd('feedLayout', el.feedLayoutSelect.value);
+});
+
+el.feedCentered.addEventListener('click', () => api.cmd('feedLayout', 'centered'));
+el.feedWide.addEventListener('click', () => api.cmd('feedLayout', 'wide'));
+
 el.profileSelect.addEventListener('change', () => {
   api.cmd('profileSwitch', el.profileSelect.value);
 });
@@ -874,6 +897,8 @@ function pipSeekSeconds() {
 
 el.pipSeek.addEventListener('input', () => {
   pipSeeking = true;
+  const fraction = Math.min(1, Math.max(0, (Number(el.pipSeek.value) || 0) / 1000));
+  el.pipSeek.style.setProperty('--progress', `${(fraction * 100).toFixed(1)}%`);
   el.pipTime.textContent = `${formatTime(pipSeekSeconds())} / ${formatTime(
     Number(state.pipDuration) || 0,
   )}`;
@@ -1127,7 +1152,7 @@ function renderPlugins(summary) {
     )
     .concat(
       (Array.isArray(plugins.rows) ? plugins.rows : []).map(
-        (row) => `row:${row.id}:${row.label}:${row.pluginName}`,
+        (row) => `row:${row.id}:${row.label}:${row.badge || ''}:${row.pluginName}`,
       ),
     )
     .join('|');
@@ -1187,7 +1212,9 @@ function renderPlugins(summary) {
 
     const badge = document.createElement('span');
     badge.className = 'panel-row-badge';
-    badge.textContent = command.pluginName;
+    badge.textContent = command.badge
+      ? `${command.badge} · ${command.pluginName}`
+      : command.pluginName;
     row.append(badge);
 
     el.panelPluginActions.append(row);
@@ -1802,6 +1829,15 @@ function paletteItems() {
     { label: 'Тема: как в системе', cmd: 'themeMode', payload: 'system' },
     { label: 'Тема: тёмная', cmd: 'themeMode', payload: 'dark' },
     { label: 'Тема: светлая', cmd: 'themeMode', payload: 'light' },
+    ...(Array.isArray(api.themePalettes)
+      ? api.themePalettes.map((palette) => ({
+          label: `${tr('Палитра')}: ${tr(palette.label)}`,
+          cmd: 'themePalette',
+          payload: palette.id,
+        }))
+      : []),
+    { label: 'Лента: по центру (как Shorts)', cmd: 'feedLayout', payload: 'centered' },
+    { label: 'Лента: широкий режим', cmd: 'feedLayout', payload: 'wide' },
     { label: 'Сбросить данные сайта…', cmd: 'regionResetData' },
   );
 
@@ -2809,6 +2845,73 @@ function renderPopovers() {
   el.btnPluginsActive.setAttribute('aria-pressed', String(active === 'plugins'));
 }
 
+let paletteGridSignature = '';
+
+function renderThemePalettes(isDark) {
+  if (!el.themePaletteGrid) return;
+  const list = Array.isArray(api.themePalettes) ? api.themePalettes : [];
+  const activeId = state.themePalette || 'octo-lavender';
+  const modeKey = isDark ? 'dark' : 'light';
+  const signature = `${modeKey}#${list.map((p) => p.id).join('|')}`;
+
+  if (signature !== paletteGridSignature) {
+    paletteGridSignature = signature;
+    el.themePaletteGrid.replaceChildren(
+      ...list.map((palette) => {
+        const scheme = palette[modeKey] || palette.dark || {};
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'theme-swatch';
+        button.dataset.themePalette = palette.id;
+        button.setAttribute('role', 'radio');
+        button.setAttribute('aria-checked', String(palette.id === activeId));
+        button.title = palette.label;
+
+        const wheel = document.createElement('span');
+        wheel.className = 'theme-swatch-wheel';
+        wheel.setAttribute('aria-hidden', 'true');
+
+        const c1 = document.createElement('span');
+        c1.className = 'theme-swatch-c1';
+        c1.style.backgroundColor = scheme.primary || '#8c84a9';
+
+        const c2 = document.createElement('span');
+        c2.className = 'theme-swatch-c2';
+        c2.style.backgroundColor = scheme.primaryContainer || '#3e3854';
+
+        const c3 = document.createElement('span');
+        c3.className = 'theme-swatch-c3';
+        c3.style.backgroundColor = scheme.tertiary || '#ddd2e0';
+
+        const check = document.createElement('span');
+        check.className = 'theme-swatch-check';
+        check.innerHTML =
+          '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 10.5 3.6 3.6 7.4-7.8"/></svg>';
+
+        wheel.append(c1, c2, c3, check);
+
+        const name = document.createElement('span');
+        name.className = 'theme-swatch-name';
+        name.textContent = palette.label;
+
+        button.append(wheel, name);
+        return button;
+      }),
+    );
+  }
+
+  let activeLabel = '';
+  for (const button of el.themePaletteGrid.children) {
+    const isSelected = button.dataset.themePalette === activeId;
+    button.setAttribute('aria-checked', String(isSelected));
+    if (isSelected) {
+      const palette = list.find((p) => p.id === activeId);
+      activeLabel = palette ? palette.label : '';
+    }
+  }
+  if (el.themePaletteActiveName) el.themePaletteActiveName.textContent = activeLabel;
+}
+
 function renderPanel() {
   const open = Boolean(state.panel);
   el.panel.hidden = !open;
@@ -2873,9 +2976,26 @@ function renderPanel() {
     ? 'Удалить из меню приложений'
     : 'Установить в приложения';
 
+  const linkHandler = state.linkHandler || { available: false, enabled: false };
+  el.rowLinkHandler.hidden = !linkHandler.available;
+  el.linkHandlerNote.hidden = !linkHandler.available;
+  setSwitch(el.rowLinkHandler, linkHandler.enabled);
+
   renderCosmetics(state.cosmetics);
+  const darkCosmetic = Array.isArray(state.cosmetics)
+    ? state.cosmetics.find((item) => item.id === 'dark-theme')
+    : null;
+  renderThemePalettes(darkCosmetic ? Boolean(darkCosmetic.enabled) : true);
   if (document.activeElement !== el.themeModeSelect && state.themeMode) {
     el.themeModeSelect.value = state.themeMode;
+  }
+  const feedLayout = state.feedLayout === 'wide' ? 'wide' : 'centered';
+  el.feedCentered.classList.toggle('is-on', feedLayout === 'centered');
+  el.feedCentered.setAttribute('aria-pressed', String(feedLayout === 'centered'));
+  el.feedWide.classList.toggle('is-on', feedLayout === 'wide');
+  el.feedWide.setAttribute('aria-pressed', String(feedLayout === 'wide'));
+  if (document.activeElement !== el.feedLayoutSelect && el.feedLayoutSelect) {
+    el.feedLayoutSelect.value = feedLayout;
   }
   renderProfiles();
   renderPlugins(state.plugins);
@@ -2897,7 +3017,39 @@ function renderPanel() {
   applyPanelFilter();
 }
 
+function renderPluginsPanel() {
+  if (!el.pluginsPanel) return;
+  const open = Boolean(state.pluginsOpen);
+  el.pluginsPanel.hidden = !open;
+  if (!open) {
+    const content = $('pluginsContent');
+    if (content) content.scrollTop = 0;
+  } else if (!pluginsPanelWasOpen && !el.pluginsPanel.contains(document.activeElement)) {
+    const firstTab = el.pluginsPanel.querySelector('[data-tab]');
+    firstTab?.focus({ preventScroll: true });
+  }
+  pluginsPanelWasOpen = open;
+}
+
 function render() {
+  const darkRule = Array.isArray(state.cosmetics)
+    ? state.cosmetics.find((item) => item.id === 'dark-theme')
+    : null;
+  const isDark = darkRule ? Boolean(darkRule.enabled) : true;
+  const activePaletteId = state.themePalette || 'octo-lavender';
+  const paletteObj = Array.isArray(api.themePalettes)
+    ? api.themePalettes.find((item) => item.id === activePaletteId)
+    : null;
+  if (window.octoTheme && paletteObj) {
+    window.octoTheme.apply({
+      dark: isDark,
+      palette: activePaletteId,
+      tokens: isDark ? paletteObj.dark : paletteObj.light,
+    });
+  } else {
+    document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+  }
+
   el.back.disabled = !state.canGoBack;
   el.forward.disabled = !state.canGoForward;
 
@@ -2947,6 +3099,7 @@ function render() {
   renderFind();
   renderDownload();
   renderPanel();
+  renderPluginsPanel();
   renderPopovers();
   renderStickerPicker(state.stickers);
   renderActivePlugins(state.plugins);
@@ -2990,3 +3143,167 @@ syncChromeHeight();
 setInterval(() => {
   if (Number(state.sleepTimerEnds) > 0) renderSleep();
 }, 1000);
+
+(() => {
+  const root = document.getElementById('pluginDialog');
+  if (!root || !api.onPluginDialog) return;
+
+  const backdrop = document.getElementById('pluginDialogBackdrop');
+  const sourceEl = document.getElementById('pluginDialogSource');
+  const titleEl = document.getElementById('pluginDialogTitle');
+  const messageEl = document.getElementById('pluginDialogMessage');
+  const inputEl = document.getElementById('pluginDialogInput');
+  const listEl = document.getElementById('pluginDialogList');
+  const cancelBtn = document.getElementById('pluginDialogCancel');
+  const confirmBtn = document.getElementById('pluginDialogConfirm');
+
+  let current = null;
+  let filtered = [];
+  let activeIndex = 0;
+
+  function closeDialog(cancelled, value = null) {
+    if (!current) return;
+    const token = current.token;
+    current = null;
+    root.hidden = true;
+    inputEl.value = '';
+    listEl.replaceChildren();
+    api.replyPluginDialog({ token, cancelled, value });
+  }
+
+  function renderPickList() {
+    listEl.replaceChildren();
+    if (!filtered.length) {
+      const empty = document.createElement('div');
+      empty.className = 'palette-empty';
+      empty.textContent = 'Ничего не найдено';
+      listEl.append(empty);
+      return;
+    }
+    filtered.forEach((item, index) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `palette-item${index === activeIndex ? ' is-active' : ''}`;
+      btn.setAttribute('role', 'option');
+      btn.setAttribute('aria-selected', String(index === activeIndex));
+      btn.dataset.value = item.value;
+
+      const label = document.createElement('span');
+      label.textContent = item.label;
+      btn.append(label);
+
+      if (item.description) {
+        const meta = document.createElement('span');
+        meta.className = 'plugin-dialog-item-meta';
+        meta.textContent = item.description;
+        btn.append(meta);
+      }
+
+      btn.addEventListener('click', () => closeDialog(false, item.value));
+      listEl.append(btn);
+    });
+  }
+
+  function filterPick() {
+    if (!current || current.kind !== 'pick') return;
+    const query = inputEl.value.trim().toLowerCase();
+    filtered = query
+      ? current.items.filter(
+          (item) =>
+            item.label.toLowerCase().includes(query) ||
+            item.description.toLowerCase().includes(query),
+        )
+      : current.items;
+    activeIndex = Math.min(activeIndex, Math.max(0, filtered.length - 1));
+    renderPickList();
+  }
+
+  api.onPluginDialog((payload) => {
+    if (!payload || typeof payload !== 'object') return;
+    if (payload.action === 'close') {
+      current = null;
+      root.hidden = true;
+      return;
+    }
+    if (payload.action !== 'open') return;
+
+    current = payload;
+    sourceEl.textContent = payload.pluginName || 'Плагин';
+    titleEl.textContent = payload.title || '';
+    messageEl.textContent = payload.message || '';
+    messageEl.hidden = !payload.message;
+
+    if (payload.kind === 'confirm') {
+      inputEl.hidden = true;
+      listEl.hidden = true;
+      confirmBtn.hidden = false;
+      confirmBtn.textContent = payload.confirmText || 'Подтвердить';
+      cancelBtn.textContent = payload.cancelText || 'Отмена';
+      root.hidden = false;
+      confirmBtn.focus();
+    } else if (payload.kind === 'prompt') {
+      listEl.hidden = true;
+      inputEl.hidden = false;
+      inputEl.placeholder = payload.placeholder || '';
+      inputEl.value = payload.defaultValue || '';
+      confirmBtn.hidden = false;
+      confirmBtn.textContent = payload.confirmText || 'Готово';
+      cancelBtn.textContent = payload.cancelText || 'Отмена';
+      root.hidden = false;
+      inputEl.focus();
+      inputEl.select();
+    } else if (payload.kind === 'pick') {
+      inputEl.hidden = false;
+      inputEl.placeholder = payload.placeholder || 'Поиск…';
+      inputEl.value = '';
+      listEl.hidden = false;
+      confirmBtn.hidden = true;
+      cancelBtn.textContent = 'Отмена';
+      filtered = Array.isArray(payload.items) ? payload.items : [];
+      activeIndex = 0;
+      renderPickList();
+      root.hidden = false;
+      inputEl.focus();
+    }
+  });
+
+  backdrop.addEventListener('click', () => closeDialog(true));
+  cancelBtn.addEventListener('click', () => closeDialog(true));
+  confirmBtn.addEventListener('click', () => {
+    if (!current) return;
+    if (current.kind === 'confirm') closeDialog(false, true);
+    else if (current.kind === 'prompt') closeDialog(false, inputEl.value);
+  });
+
+  inputEl.addEventListener('input', () => {
+    if (current?.kind === 'pick') filterPick();
+  });
+
+  inputEl.addEventListener('keydown', (event) => {
+    if (!current) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeDialog(true);
+      return;
+    }
+    if (current.kind === 'prompt' && event.key === 'Enter') {
+      event.preventDefault();
+      closeDialog(false, inputEl.value);
+      return;
+    }
+    if (current.kind === 'pick') {
+      if (event.key === 'ArrowDown' && filtered.length) {
+        event.preventDefault();
+        activeIndex = (activeIndex + 1) % filtered.length;
+        renderPickList();
+      } else if (event.key === 'ArrowUp' && filtered.length) {
+        event.preventDefault();
+        activeIndex = (activeIndex - 1 + filtered.length) % filtered.length;
+        renderPickList();
+      } else if (event.key === 'Enter' && filtered[activeIndex]) {
+        event.preventDefault();
+        closeDialog(false, filtered[activeIndex].value);
+      }
+    }
+  });
+})();

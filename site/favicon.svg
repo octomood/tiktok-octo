@@ -1,11 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#15141c"/>
-  <g fill="#f3f1ea">
-    <circle cx="16" cy="6" r="2.1"/><circle cx="9.5" cy="8.5" r="2.1"/><circle cx="22.5" cy="8.5" r="2.1"/>
-    <circle cx="6" cy="15" r="2.1"/><circle cx="26" cy="15" r="2.1"/><circle cx="9.5" cy="21.5" r="2.1"/>
-    <circle cx="22.5" cy="21.5" r="2.1"/><circle cx="16" cy="26" r="2.1"/>
-  </g>
-  <g fill="none" stroke="#f3f1ea" stroke-width="1.7">
-    <circle cx="12.4" cy="15" r="2.2"/><circle cx="19.6" cy="15" r="2.2"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="16" fill="#3e3854"/>
+  <path d="M25.5 16.3 Q32.0 5.0 38.5 16.3 Q51.1 12.9 47.7 25.5 Q59.0 32.0 47.7 38.5 Q51.1 51.1 38.5 47.7 Q32.0 59.0 25.5 47.7 Q12.9 51.1 16.3 38.5 Q5.0 32.0 16.3 25.5 Q12.9 12.9 25.5 16.3 Z" fill="#ddd2e0"/>
+  <path d="M27.6 21.4 Q32.0 11.5 36.4 21.4 Q46.5 17.5 42.6 27.6 Q52.5 32.0 42.6 36.4 Q46.5 46.5 36.4 42.6 Q32.0 52.5 27.6 42.6 Q17.5 46.5 21.4 36.4 Q11.5 32.0 21.4 27.6 Q17.5 17.5 27.6 21.4 Z" fill="#8c84a9"/>
+  <path d="M35 22v12.8a4.8 4.8 0 1 1-2.6-4.3V22h3.4c1 2.1 2.8 3.5 5.2 3.8v3c-2.2-.2-4.2-1-6-2.4Z" fill="#ddd2e0"/>
 </svg>

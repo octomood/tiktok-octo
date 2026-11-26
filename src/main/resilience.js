@@ -18,12 +18,14 @@ const { showMessageBox } = require('./dialogs');
  */
 
 const FILE = 'resilience.json';
+const DEFAULT_MEMORY_LIMIT_MB = 2500;
 const MAX_RELOADS = 3;
 const RELOAD_COOLDOWN_MS = 10 * 60 * 1000;
 
 let running = false;
 let safeMode = false;
 let memoryTimer = null;
+let memoryCheckBusy = false;
 let lastMemoryReload = 0;
 let memoryReloads = 0;
 
@@ -212,26 +214,53 @@ function noteMemoryReload(kb) {
   }
 }
 
-function checkMemory() {
-  if (ctx.memoryGuard === false || ctx.offline) return;
+function isPlayingVideo(wc) {
+  if (ctx.win && !ctx.win.isDestroyed()) {
+    if (!ctx.win.isVisible() || ctx.win.isMinimized()) return Promise.resolve(false);
+  }
+  const check = wc
+    .executeJavaScript(
+      'Array.from(document.querySelectorAll("video")).some((v) => !v.paused && !v.ended && v.readyState >= 2)',
+      true,
+    )
+    .then(Boolean)
+    .catch(() => false);
+  const timeout = new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), 1500);
+    if (typeof timer.unref === 'function') timer.unref();
+  });
+  return Promise.race([check, timeout]);
+}
+
+async function checkMemory() {
+  if (memoryCheckBusy || ctx.memoryGuard === false || ctx.offline) return;
   const wc = ctx.view?.webContents;
   if (!wc || wc.isDestroyed()) return;
 
   const kb = memoryUsed();
-  const limitMb = Number(process.env.OCTO_MEMORY_LIMIT_MB) || 1200;
+  const limitMb = Number(process.env.OCTO_MEMORY_LIMIT_MB) || DEFAULT_MEMORY_LIMIT_MB;
   if (kb < limitMb * 1024) return;
   if (memoryReloads >= MAX_RELOADS) return;
 
   const now = Date.now();
   if (now - lastMemoryReload < RELOAD_COOLDOWN_MS) return;
-  lastMemoryReload = now;
-  memoryReloads += 1;
-  noteMemoryReload(kb);
-  toast('Высокий расход памяти — перезапускаю страницу');
+
+  memoryCheckBusy = true;
   try {
-    wc.reload();
-  } catch {
-    /* страница уже закрылась */
+    if (await isPlayingVideo(wc)) return;
+    if (wc.isDestroyed() || ctx.memoryGuard === false || ctx.offline) return;
+
+    lastMemoryReload = Date.now();
+    memoryReloads += 1;
+    noteMemoryReload(kb);
+    toast('Высокий расход памяти — перезапускаю страницу');
+    try {
+      wc.reload();
+    } catch {
+      /* страница уже закрылась */
+    }
+  } finally {
+    memoryCheckBusy = false;
   }
 }
 

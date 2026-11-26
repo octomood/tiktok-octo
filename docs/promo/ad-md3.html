@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>TikTok octo — реклама MD3 (10s)</title>
+    <link rel="stylesheet" href="../../src/renderer/fonts.css" />
+    <style>
+      :root {
+        --md-primary: #d0bcff;
+        --md-on-primary: #381e72;
+        --md-primary-container: #4f378b;
+        --md-on-primary-container: #eaddff;
+        --md-secondary-container: #4a4458;
+        --md-on-secondary-container: #e8def8;
+        --md-tertiary: #efb8c8;
+        --md-tertiary-container: #633b48;
+        --md-on-tertiary-container: #ffd8e4;
+        --md-surface-dim: #0e0d12;
+        --md-surface: #131218;
+        --md-surface-container-low: #1b1922;
+        --md-surface-container: #211f2a;
+        --md-surface-container-high: #2b2836;
+        --md-on-surface: #e6e0e9;
+        --md-on-surface-variant: #cac4d0;
+        --md-outline: #948f99;
+        --md-outline-variant: #49454f;
+
+        --sans: 'Google Sans', 'Google Sans Medium', 'Inter', system-ui, sans-serif;
+        --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        margin: 0;
+        overflow: hidden;
+        background: var(--md-surface-dim);
+        color: var(--md-on-surface);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+      }
+
+      #scene {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--md-surface-dim);
+      }
+
+      #bg-glow {
+        position: absolute;
+        inset: -120px;
+        background:
+          radial-gradient(820px 820px at 50% 24%, rgba(208, 188, 255, 0.18), transparent 62%),
+          radial-gradient(760px 760px at 50% 78%, rgba(239, 184, 200, 0.1), transparent 65%);
+        will-change: transform, opacity;
+      }
+
+      .vignette {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(120% 95% at 50% 48%, transparent 44%, rgba(6, 5, 10, 0.65) 100%);
+      }
+
+      .grain {
+        position: absolute;
+        inset: -6%;
+        pointer-events: none;
+        opacity: 0.045;
+        mix-blend-mode: soft-light;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+        background-size: 160px 160px;
+      }
+
+      /* ---------- общие слои ---------- */
+
+      .stage {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 90px 72px;
+      }
+
+      /* ---------- сцена 1: hook (0..1.8s) ---------- */
+
+      #hook {
+        text-align: center;
+      }
+
+      .hero-squircle {
+        display: grid;
+        place-items: center;
+        width: 240px;
+        height: 240px;
+        border-radius: 64px;
+        background: var(--md-surface-container-high);
+        border: 2px solid rgba(208, 188, 255, 0.28);
+        box-shadow:
+          0 32px 80px rgba(0, 0, 0, 0.55),
+          0 0 90px rgba(208, 188, 255, 0.16);
+      }
+
+      .hero-squircle img {
+        width: 164px;
+        height: 164px;
+        display: block;
+      }
+
+      .hero-pill {
+        margin-top: 44px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        height: 44px;
+        padding: 0 22px;
+        border-radius: 999px;
+        background: var(--md-primary-container);
+        color: var(--md-on-primary-container);
+        font-family: var(--mono);
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .hero-pill i {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: var(--md-primary);
+        box-shadow: 0 0 12px var(--md-primary);
+      }
+
+      .hero-title {
+        margin-top: 28px;
+        font-size: 108px;
+        font-weight: 600;
+        letter-spacing: -0.045em;
+        line-height: 0.96;
+        color: var(--md-on-surface);
+      }
+
+      .hero-sub {
+        margin-top: 24px;
+        font-size: 40px;
+        font-weight: 500;
+        letter-spacing: -0.02em;
+        line-height: 1.25;
+        color: var(--md-on-surface-variant);
+        max-width: 780px;
+      }
+
+      /* ---------- сцена 2: фичи (1.8..6.4s) ---------- */
+
+      #features {
+        justify-content: space-between;
+        padding: 130px 72px 140px;
+      }
+
+      .top-brand {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 12px 24px 12px 14px;
+        border-radius: 999px;
+        background: var(--md-surface-container-low);
+        border: 1px solid rgba(73, 69, 79, 0.65);
+      }
+
+      .top-brand img {
+        width: 44px;
+        height: 44px;
+        display: block;
+      }
+
+      .top-brand span {
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .cards-stack {
+        position: relative;
+        width: 100%;
+        height: 820px;
+      }
+
+      .f-card {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        padding: 54px 52px;
+        border-radius: 44px;
+        background: var(--md-surface-container);
+        border: 1.5px solid rgba(73, 69, 79, 0.7);
+        box-shadow: 0 36px 90px rgba(0, 0, 0, 0.52);
+        transform-origin: 50% 50%;
+      }
+
+      .f-card.lead {
+        background: linear-gradient(150deg, #d0bcff 0%, #bca7ff 100%);
+        color: var(--md-on-primary);
+        border-color: rgba(255, 255, 255, 0.5);
+        box-shadow: 0 36px 100px rgba(79, 55, 139, 0.48);
+      }
+
+      .f-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .f-icon {
+        display: grid;
+        place-items: center;
+        width: 84px;
+        height: 84px;
+        border-radius: 26px;
+        background: var(--md-secondary-container);
+        color: var(--md-on-secondary-container);
+      }
+
+      .f-icon.tertiary {
+        background: var(--md-tertiary-container);
+        color: var(--md-on-tertiary-container);
+      }
+
+      .f-card.lead .f-icon {
+        background: rgba(56, 30, 114, 0.14);
+        color: var(--md-on-primary);
+      }
+
+      .f-icon svg {
+        width: 44px;
+        height: 44px;
+      }
+
+      .f-num {
+        font-family: var(--mono);
+        font-size: 24px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        color: var(--md-outline);
+      }
+
+      .f-card.lead .f-num {
+        color: rgba(56, 30, 114, 0.55);
+      }
+
+      .f-title {
+        margin-top: 46px;
+        font-size: 64px;
+        font-weight: 600;
+        letter-spacing: -0.035em;
+        line-height: 1.04;
+      }
+
+      .f-sub {
+        margin-top: 22px;
+        font-size: 34px;
+        line-height: 1.38;
+        letter-spacing: -0.01em;
+        color: var(--md-on-surface-variant);
+      }
+
+      .f-card.lead .f-sub {
+        color: rgba(56, 30, 114, 0.86);
+      }
+
+      .f-tags {
+        margin-top: 38px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+
+      .f-tag {
+        padding: 12px 22px;
+        border-radius: 999px;
+        background: var(--md-surface-container-high);
+        color: var(--md-on-surface);
+        font-family: var(--mono);
+        font-size: 20px;
+        letter-spacing: 0.02em;
+      }
+
+      .f-card.lead .f-tag {
+        background: rgba(56, 30, 114, 0.12);
+        color: var(--md-on-primary);
+      }
+
+      .steps-bar {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .step-dot {
+        height: 12px;
+        border-radius: 999px;
+        background: var(--md-outline-variant);
+      }
+
+      /* ---------- сцена 3: CTA финал (6.4..10.0s) ---------- */
+
+      #cta {
+        justify-content: space-between;
+        padding: 130px 72px 120px;
+      }
+
+      .cta-top {
+        text-align: center;
+      }
+
+      .cta-os {
+        font-family: var(--mono);
+        font-size: 22px;
+        letter-spacing: 0.24em;
+        color: var(--md-primary);
+        text-transform: uppercase;
+      }
+
+      .cta-head {
+        margin-top: 18px;
+        font-size: 86px;
+        font-weight: 600;
+        letter-spacing: -0.04em;
+        line-height: 1;
+      }
+
+      .cta-card {
+        width: 100%;
+        padding: 52px;
+        border-radius: 48px;
+        background: linear-gradient(155deg, #d0bcff 0%, #bfb0ff 100%);
+        color: var(--md-on-primary);
+        box-shadow: 0 36px 110px rgba(79, 55, 139, 0.5);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      .cta-kicker {
+        font-family: var(--mono);
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.22em;
+        color: rgba(56, 30, 114, 0.68);
+        text-transform: uppercase;
+      }
+
+      .cta-qr-box {
+        margin-top: 32px;
+        padding: 24px;
+        border-radius: 36px;
+        background: #ffffff;
+        box-shadow: 0 18px 44px rgba(56, 30, 114, 0.22);
+      }
+
+      .cta-qr-box img {
+        display: block;
+        width: 310px;
+        height: 310px;
+        image-rendering: pixelated;
+      }
+
+      .cta-tg {
+        margin-top: 36px;
+        display: inline-flex;
+        align-items: center;
+        gap: 16px;
+        padding: 18px 34px;
+        border-radius: 999px;
+        background: var(--md-on-primary);
+        color: #f6f2ff;
+        font-family: var(--mono);
+        font-size: 40px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .cta-tg svg {
+        width: 38px;
+        height: 38px;
+        color: var(--md-primary);
+      }
+
+      .cta-footer {
+        font-family: var(--mono);
+        font-size: 22px;
+        letter-spacing: 0.08em;
+        color: var(--md-outline);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="scene">
+      <div id="bg-glow"></div>
+
+      <!-- Сцена 1: Hook -->
+      <div id="hook" class="stage">
+        <div class="hero-squircle">
+          <img src="assets/tiktok-octo.png" alt="" />
+        </div>
+        <div class="hero-pill"><i></i>material design 3</div>
+        <div class="hero-title">TikTok octo</div>
+        <div class="hero-sub">Десктоп-клиент нового поколения — без браузера и вкладок</div>
+      </div>
+
+      <!-- Сцена 2: Фичи -->
+      <div id="features" class="stage">
+        <div class="top-brand">
+          <img src="assets/tiktok-octo.png" alt="" />
+          <span>TikTok octo</span>
+        </div>
+
+        <div class="cards-stack">
+          <div id="card-1" class="f-card lead">
+            <div class="f-head">
+              <div class="f-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="4" /><path d="M9 4v16" /><path d="M13 9h4M13 13h3" /></svg>
+              </div>
+              <span class="f-num">01 / 03</span>
+            </div>
+            <div class="f-title">Новый дизайн MD3</div>
+            <div class="f-sub">Единые настройки поверх ленты с поиском, тональные карточки и шрифт Google Sans.</div>
+            <div class="f-tags">
+              <span class="f-tag">Material 3</span>
+              <span class="f-tag">Свои шрифты</span>
+              <span class="f-tag">Системная тема</span>
+            </div>
+          </div>
+
+          <div id="card-2" class="f-card">
+            <div class="f-head">
+              <div class="f-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.2" /><path d="M3.5 19.2c.6-2.9 2.7-4.5 5.5-4.5s4.9 1.6 5.5 4.5" /><circle cx="17" cy="9.5" r="2.4" /><path d="M16.5 14.8c2 .3 3.5 1.7 4 4.2" /></svg>
+              </div>
+              <span class="f-num">02 / 03</span>
+            </div>
+            <div class="f-title">Профили и история</div>
+            <div class="f-sub">Изолированные аккаунты без перезапуска, журнал просмотров и заметки к авторам.</div>
+            <div class="f-tags">
+              <span class="f-tag">Мультиаккаунт</span>
+              <span class="f-tag">Поиск по истории</span>
+              <span class="f-tag">Теги</span>
+            </div>
+          </div>
+
+          <div id="card-3" class="f-card">
+            <div class="f-head">
+              <div class="f-icon tertiary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2 19 6v5.6c0 4.3-2.9 7.6-7 9.2-4.1-1.6-7-4.9-7-9.2V6z" /><path d="m8.9 12 2.2 2.2 4-4.4" /></svg>
+              </div>
+              <span class="f-num">03 / 03</span>
+            </div>
+            <div class="f-title">Обход DPI и плеер</div>
+            <div class="f-sub">DNS-over-HTTPS и резка TLS внутри SNI, покадровый шаг на паузе и цикл A–B.</div>
+            <div class="f-tags">
+              <span class="f-tag">Без VPN</span>
+              <span class="f-tag">Кадры , / .</span>
+              <span class="f-tag">Цикл A–B</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="steps-bar">
+          <div id="dot-1" class="step-dot"></div>
+          <div id="dot-2" class="step-dot"></div>
+          <div id="dot-3" class="step-dot"></div>
+        </div>
+      </div>
+
+      <!-- Сцена 3: CTA -->
+      <div id="cta" class="stage">
+        <div class="cta-top">
+          <div class="cta-os">linux · windows · macos</div>
+          <div class="cta-head">Попробуй сейчас</div>
+        </div>
+
+        <div class="cta-card">
+          <div class="cta-kicker">скачивай в telegram</div>
+          <div class="cta-qr-box">
+            <img src="assets/telegram-qr.png" alt="QR t.me/tiktok_octo" />
+          </div>
+          <div class="cta-tg">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.6 19.7c-.2 1-.9 1.3-1.7.8l-4.6-3.4-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.6 8.3-7.5c.4-.3-.1-.5-.6-.2L6.4 13.3 1.9 11.9c-1-.3-1-1 .2-1.4l18.3-7.1c.8-.3 1.6.2 1.5.9z" /></svg>
+            t.me/tiktok_octo
+          </div>
+        </div>
+
+        <div class="cta-footer">github.com/octomood/tiktok-octo</div>
+      </div>
+
+      <div class="vignette"></div>
+      <div class="grain"></div>
+    </div>
+
+    <script>
+      window.DUR = 10.0;
+
+      const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+      const inv = (x, a, b) => clamp((x - a) / (b - a));
+      const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+      const easeOutBack = (t) => {
+        const c1 = 1.70158;
+        const c3 = c1 + 1;
+        return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+      };
+
+      const hookEl = document.getElementById('hook');
+      const featuresEl = document.getElementById('features');
+      const ctaEl = document.getElementById('cta');
+      const bgGlow = document.getElementById('bg-glow');
+      const cards = [
+        document.getElementById('card-1'),
+        document.getElementById('card-2'),
+        document.getElementById('card-3'),
+      ];
+      const dots = [
+        document.getElementById('dot-1'),
+        document.getElementById('dot-2'),
+        document.getElementById('dot-3'),
+      ];
+
+      function layoutCard(el, t, start, end) {
+        const enter = easeOutBack(inv(t, start, start + 0.34));
+        const exit = easeOut(inv(t, end - 0.24, end));
+        const active = t >= start - 0.02 && t <= end + 0.05;
+        if (!active) {
+          el.style.opacity = '0';
+          el.style.pointerEvents = 'none';
+          return;
+        }
+        const yIn = (1 - enter) * 140;
+        const yOut = -exit * 110;
+        const scale = (0.9 + 0.1 * enter) * (1 - 0.05 * exit);
+        const op = clamp(inv(t, start, start + 0.18)) * (1 - exit);
+        el.style.opacity = op.toFixed(4);
+        el.style.transform = `translateY(calc(-50% + ${(yIn + yOut).toFixed(1)}px)) scale(${scale.toFixed(4)})`;
+      }
+
+      window.renderAt = function (t) {
+        // Фоновое дыхание
+        const glowScale = 1 + 0.06 * Math.sin(t * 1.1);
+        bgGlow.style.transform = `scale(${glowScale.toFixed(4)})`;
+
+        // Сцена 1: Hook (0.0 .. 1.85)
+        if (t < 1.9) {
+          const inP = easeOutBack(inv(t, 0.05, 0.55));
+          const outP = easeOut(inv(t, 1.52, 1.85));
+          const op = clamp(inv(t, 0.0, 0.22)) * (1 - outP);
+          const sc = (0.86 + 0.14 * inP) * (1 + 0.06 * outP);
+          hookEl.style.opacity = op.toFixed(4);
+          hookEl.style.transform = `scale(${sc.toFixed(4)})`;
+        } else {
+          hookEl.style.opacity = '0';
+        }
+
+        // Сцена 2: Features (1.75 .. 6.45)
+        if (t >= 1.72 && t <= 6.5) {
+          const fIn = easeOut(inv(t, 1.72, 2.02));
+          const fOut = easeOut(inv(t, 6.18, 6.45));
+          featuresEl.style.opacity = (fIn * (1 - fOut)).toFixed(4);
+          featuresEl.style.transform = `scale(${(1 - 0.04 * fOut).toFixed(4)})`;
+
+          const windows = [
+            [1.8, 3.35],
+            [3.3, 4.85],
+            [4.8, 6.42],
+          ];
+          windows.forEach(([s, e], idx) => {
+            layoutCard(cards[idx], t, s, e);
+            const isCur = t >= s && t < e;
+            dots[idx].style.width = isCur ? '54px' : '16px';
+            dots[idx].style.background = isCur ? 'var(--md-primary)' : 'var(--md-outline-variant)';
+          });
+        } else {
+          featuresEl.style.opacity = '0';
+        }
+
+        // Сцена 3: CTA (6.35 .. 10.0)
+        if (t >= 6.32) {
+          const cIn = easeOutBack(inv(t, 6.35, 6.82));
+          const op = clamp(inv(t, 6.32, 6.55));
+          const y = (1 - cIn) * 90;
+          const sc = 0.92 + 0.08 * cIn;
+          ctaEl.style.opacity = op.toFixed(4);
+          ctaEl.style.transform = `translateY(${y.toFixed(1)}px) scale(${sc.toFixed(4)})`;
+        } else {
+          ctaEl.style.opacity = '0';
+        }
+      };
+
+      document.fonts.ready.then(() => {
+        document.body.dataset.ready = '1';
+      });
+    </script>
+  </body>
+</html>

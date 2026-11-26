@@ -310,7 +310,7 @@ function formatDate(value) {
 }
 
 function buildMarkdown(list) {
-  const lines = ['# TikTok octo — библиотека', ''];
+  const lines = ['# TikTok Octo — библиотека', ''];
   if (!list.length) lines.push('Пока пусто.');
   for (const item of list) {
     const title = item.title || item.url;
@@ -327,7 +327,7 @@ function buildMarkdown(list) {
 function buildJson(list) {
   return `${JSON.stringify(
     {
-      app: 'TikTok octo',
+      app: 'TikTok Octo',
       exportedAt: new Date().toISOString(),
       items: list.map((item) => ({ ...item })),
       queue: queue.slice(),

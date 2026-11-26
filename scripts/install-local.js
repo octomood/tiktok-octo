@@ -5,7 +5,7 @@
  *
  * После правок агенту не нужно запускать приложение, чтобы что-то показать:
  * `npm run install:local` собирает AppImage из текущего рабочего дерева и
- * обновляет пункт «TikTok octo (локальная сборка)» в меню. Пользователь сам
+ * обновляет пункт «TikTok Octo (локальная сборка)» в меню. Пользователь сам
  * открывает его, когда ему удобно.
  *
  * Сборка не открывает окон и не публикуется на GitHub: `--publish never`.
@@ -23,7 +23,7 @@ const ICON = path.join(ROOT, 'build', 'icon.png');
 const APPIMAGE = path.join(DIST, 'tiktok-octo-local.AppImage');
 const APPLICATIONS = path.join(os.homedir(), '.local', 'share', 'applications');
 const DESKTOP_FILE = path.join(APPLICATIONS, 'tiktok-octo-local.desktop');
-const NAME = 'TikTok octo (локальная сборка)';
+const NAME = 'TikTok Octo (локальная сборка)';
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { cwd: ROOT, stdio: 'inherit', ...options });
@@ -63,6 +63,22 @@ function findArtifact() {
   return candidate;
 }
 
+function refreshStaleAppIcons() {
+  const hicolor = path.join(os.homedir(), '.local', 'share', 'icons', 'hicolor');
+  if (!fs.existsSync(hicolor) || !fs.existsSync(ICON)) return;
+  for (const size of ['512x512', '256x256', '128x128', '64x64', '48x48', '32x32']) {
+    const target = path.join(hicolor, size, 'apps', 'tiktok-octo.png');
+    if (fs.existsSync(target)) {
+      try {
+        fs.copyFileSync(ICON, target);
+      } catch {
+        /* права на каталог недоступны */
+      }
+    }
+  }
+  spawnSync('gtk-update-icon-cache', ['-f', '-t', hicolor], { stdio: 'ignore' });
+}
+
 function writeDesktopEntry() {
   fs.mkdirSync(APPLICATIONS, { recursive: true });
   const entry = [
@@ -84,6 +100,7 @@ function writeDesktopEntry() {
 
   // Индекс меню обновляем, если утилита есть; её отсутствие не ошибка.
   spawnSync('update-desktop-database', [APPLICATIONS], { stdio: 'ignore' });
+  refreshStaleAppIcons();
 }
 
 function main() {

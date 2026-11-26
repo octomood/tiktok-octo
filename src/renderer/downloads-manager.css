@@ -1,15 +1,16 @@
-/* Отдельное окно менеджера загрузок */
+/* Отдельное окно менеджера загрузок (Material Design 3 Expressive) */
 
 body.manager {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   min-height: 100vh;
   margin: 0;
-  padding: 18px 20px 24px;
-  background: var(--bg, #0b0b0f);
-  color: var(--fg, #f4f4f5);
-  font-family: Inter, system-ui, sans-serif;
+  padding: 20px 22px 26px;
+  overflow: auto;
+  background: var(--bg, #191624);
+  color: var(--fg, #ddd2e0);
+  font-family: var(--ui-font, 'Inter', system-ui, sans-serif);
   font-size: 13px;
 }
 
@@ -23,57 +24,109 @@ body.manager {
 
 .manager-title {
   margin: 0;
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .manager-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid color-mix(in srgb, var(--md-outline-variant, #47405e) 50%, transparent);
+  border-radius: 9999px;
+  background: var(--md-surface-container-low, #211d30);
 }
 
 .manager-btn {
   height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--md-outline-variant, #3f3f46);
-  border-radius: 8px;
-  background: var(--md-surface-container, #18181b);
-  color: var(--md-on-surface, #f4f4f5);
+  padding: 0 16px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--md-surface-container, #2b263d);
+  color: var(--md-on-surface, #ddd2e0);
   font: inherit;
-  font-size: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
+  transition:
+    background 0.16s var(--md-spring-effects-fast, ease),
+    color 0.16s var(--md-spring-effects-fast, ease),
+    border-radius 0.24s var(--md-shape-ease, cubic-bezier(0.2, 0, 0, 1)),
+    transform 0.35s var(--md-spring-spatial-fast, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.manager-btn:first-child {
+  border-radius: 24px 6px 6px 24px;
+}
+
+.manager-btn:last-child {
+  border-radius: 6px 24px 24px 6px;
+}
+
+.manager-btn:only-child {
+  border-radius: 24px;
 }
 
 .manager-btn:hover {
-  border-color: var(--md-primary, #7c9cff);
+  background: var(--md-secondary-container, #564e70);
+  color: var(--md-on-secondary-container, #ddd2e0);
+  border-radius: 12px;
+}
+
+.manager-btn:first-child:hover {
+  border-radius: 24px 12px 12px 24px;
+}
+
+.manager-btn:last-child:hover {
+  border-radius: 12px 24px 24px 12px;
+}
+
+.manager-btn:active {
+  transform: scale(0.95);
+  border-radius: 24px;
 }
 
 .manager-btn--small {
-  height: 26px;
-  padding: 0 9px;
-  font-size: 11px;
+  height: 28px;
+  padding: 0 13px;
+  font-size: 11.5px;
 }
 
 .manager-btn--ghost {
   background: transparent;
-  color: var(--muted, #a1a1aa);
+  color: var(--md-on-surface-variant, #b8aec8);
 }
 
 .manager-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .manager-row {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding: 10px 12px;
-  border: 1px solid var(--md-outline-variant, #3f3f46);
-  border-radius: 12px;
-  background: var(--md-surface-container-high, #202024);
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--md-outline-variant, #47405e) 50%, transparent);
+  border-radius: 6px;
+  background: var(--md-surface-container, #2b263d);
+}
+
+.manager-row:first-child {
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+
+.manager-row:last-child {
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+}
+
+.manager-row:only-child {
+  border-radius: 16px;
 }
 
 .manager-row-head {
@@ -93,40 +146,69 @@ body.manager {
 
 .manager-status {
   flex: none;
-  color: var(--muted, #a1a1aa);
-  font-size: 11px;
+  color: var(--md-on-surface-variant, #b8aec8);
+  font-size: 11.5px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
+/* Волновой прогресс загрузки MD3 Expressive с точкой-ограничителем */
 .manager-bar {
-  height: 4px;
+  position: relative;
+  height: 6px;
   overflow: hidden;
-  border-radius: 999px;
-  background: var(--md-surface-container-highest, #2d2d33);
+  border-radius: 9999px;
+  background: var(--md-surface-container-highest, #4c4566);
+}
+
+.manager-bar::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--md-primary, #8c84a9);
+  transform: translateY(-50%);
 }
 
 .manager-bar > span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--md-primary, #7c9cff);
-  transition: width 0.2s ease;
+  background: var(--md-primary, #8c84a9);
+  transition: width 0.2s var(--md-spring-effects-default, ease);
+}
+
+.manager-row[data-state='progressing'] .manager-bar > span {
+  -webkit-mask-image: url('assets/md3-wave.svg');
+  mask-image: url('assets/md3-wave.svg');
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+  -webkit-mask-size: 20px 100%;
+  mask-size: 20px 100%;
+  animation: wave-flow 0.7s linear infinite;
 }
 
 .manager-row-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 2px;
 }
 
 .manager-empty {
-  margin: 24px 0;
-  color: var(--muted, #a1a1aa);
+  margin: 32px 0;
+  padding: 28px 20px;
+  border: 1px dashed color-mix(in srgb, var(--md-outline-variant, #47405e) 70%, transparent);
+  border-radius: 24px;
+  background: var(--md-surface-container-low, #211d30);
+  color: var(--md-on-surface-variant, #b8aec8);
   text-align: center;
 }
 
 :where(button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])):focus-visible {
-  outline: 2px solid var(--md-primary, #6c8cff);
+  outline: 2px solid var(--md-primary, #8c84a9);
   outline-offset: 2px;
 }
 

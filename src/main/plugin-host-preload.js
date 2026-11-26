@@ -37,6 +37,10 @@ const deactivateHandlers = [];
 const pageReadyHandlers = [];
 const pageNavigateHandlers = [];
 const settingsHandlers = [];
+const settingActionHandlers = [];
+const themeHandlers = [];
+const playbackHandlers = [];
+const watchers = new Map();
 const commands = new Map();
 const panelRows = new Map();
 const contextItems = new Map();
@@ -111,11 +115,26 @@ async function addPanelRow(spec) {
       id: spec.id,
       label: spec.label,
       description: spec.description,
+      badge: spec.badge,
     });
   } catch (error) {
     panelRows.delete(spec.id);
     throw error;
   }
+}
+
+async function updatePanelRow(id, patch) {
+  if (typeof id !== 'string' || !/^[a-zA-Z0-9._-]{1,48}$/.test(id)) {
+    throw new Error('ui.updatePanelRow: некорректный id');
+  }
+  const options = patch && typeof patch === 'object' ? patch : {};
+  if (typeof options.run === 'function') panelRows.set(id, options.run);
+  return call('panel.update', {
+    id,
+    label: options.label,
+    description: options.description,
+    badge: options.badge,
+  });
 }
 
 async function addContextItem(spec) {
@@ -188,6 +207,38 @@ ipcRenderer.on('octo:plugin-event', (_event, message) => {
       settings = { ...(message.settings || {}) };
       runAll(settingsHandlers, { ...settings });
       break;
+    case 'setting-action':
+      runAll(settingActionHandlers, String(message.key || ''));
+      break;
+    case 'theme-changed':
+      runAll(themeHandlers, {
+        mode: message.mode || 'dark',
+        dark: Boolean(message.dark),
+        palette: message.palette || 'octo-lavender',
+        tokens: message.tokens || {},
+      });
+      break;
+    case 'playback-changed':
+      runAll(playbackHandlers, {
+        playing: Boolean(message.playing),
+        muted: Boolean(message.muted),
+        volume: Number(message.volume ?? 1),
+        speed: Number(message.speed ?? 1),
+        url: message.url || '',
+      });
+      break;
+    case 'page-watch': {
+      const handler = watchers.get(message.id);
+      if (handler) {
+        runHandler(handler, {
+          id: message.id,
+          count: Number(message.count) || 0,
+          matched: Boolean(message.matched),
+          texts: Array.isArray(message.texts) ? message.texts : [],
+        });
+      }
+      break;
+    }
     case 'command': {
       const handler = commands.get(message.id);
       if (handler) runHandler(handler, message.payload);
@@ -250,9 +301,20 @@ const api = {
   onSettingsChange(callback) {
     return register(settingsHandlers, callback);
   },
+  onSettingAction(callback) {
+    return register(settingActionHandlers, callback);
+  },
+  onThemeChange(callback) {
+    return register(themeHandlers, callback);
+  },
   settings: {
     get() {
       return { ...settings };
+    },
+  },
+  theme: {
+    get() {
+      return call('theme.get', {});
     },
   },
   storage: {
@@ -268,6 +330,12 @@ const api = {
     clear() {
       return call('storage.clear', {});
     },
+    keys() {
+      return call('storage.keys', {});
+    },
+    usage() {
+      return call('storage.usage', {});
+    },
   },
   commands: {
     add(spec) {
@@ -282,9 +350,40 @@ const api = {
     panelRow(spec) {
       return addPanelRow(spec);
     },
+    updatePanelRow(id, patch) {
+      return updatePanelRow(id, patch);
+    },
     removePanelRow(id) {
       panelRows.delete(String(id));
       return call('panel.remove', { id: String(id) });
+    },
+    confirm(spec = {}) {
+      const options = spec && typeof spec === 'object' ? spec : {};
+      return call('ui.confirm', {
+        title: options.title,
+        message: options.message,
+        confirmText: options.confirmText,
+        cancelText: options.cancelText,
+      });
+    },
+    prompt(spec = {}) {
+      const options = spec && typeof spec === 'object' ? spec : {};
+      return call('ui.prompt', {
+        title: options.title,
+        message: options.message,
+        placeholder: options.placeholder,
+        defaultValue: options.defaultValue,
+        confirmText: options.confirmText,
+        cancelText: options.cancelText,
+      });
+    },
+    pick(spec = {}) {
+      const options = spec && typeof spec === 'object' ? spec : {};
+      return call('ui.pick', {
+        title: options.title,
+        placeholder: options.placeholder,
+        items: options.items,
+      });
     },
     contextMenu: {
       add(spec) {
@@ -336,9 +435,46 @@ const api = {
       if (typeof css !== 'string') throw new Error('page.injectCSS принимает строку');
       return call('page.css', { css });
     },
+    setCSS(id, css) {
+      if (typeof id !== 'string') throw new Error('page.setCSS принимает id и css');
+      if (typeof css !== 'string') throw new Error('page.setCSS принимает строку CSS');
+      return call('page.setCSS', { id, css });
+    },
+    removeCSS(id) {
+      return call('page.removeCSS', { id: String(id) });
+    },
     run(code) {
       if (typeof code !== 'string') throw new Error('page.run принимает строку кода');
       return call('page.run', { code });
+    },
+    getMediaInfo() {
+      return call('page.getMediaInfo', {});
+    },
+    async watch(id, selector, callback) {
+      if (typeof id !== 'string' || !/^[a-zA-Z0-9._-]{1,48}$/.test(id)) {
+        throw new Error('page.watch: некорректный id');
+      }
+      if (typeof selector !== 'string' || !selector.trim()) {
+        throw new Error('page.watch: нужен CSS-селектор');
+      }
+      if (typeof callback !== 'function') {
+        throw new Error('page.watch: нужен callback');
+      }
+      watchers.set(id, callback);
+      try {
+        await call('page.watch', { id, selector });
+      } catch (error) {
+        watchers.delete(id);
+        throw error;
+      }
+      return () => {
+        watchers.delete(id);
+        return call('page.unwatch', { id }).catch(() => {});
+      };
+    },
+    unwatch(id) {
+      watchers.delete(String(id));
+      return call('page.unwatch', { id: String(id) });
     },
   },
   net: {
@@ -361,6 +497,12 @@ const api = {
     },
     setSpeed(value) {
       return call('playback.speed', { value: Number(value) });
+    },
+    onChange(callback) {
+      if (!(init.plugin.permissions || []).includes('playback')) {
+        throw new Error('Нет разрешения playback');
+      }
+      return register(playbackHandlers, callback);
     },
   },
   feed: {

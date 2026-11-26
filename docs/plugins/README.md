@@ -1,4 +1,4 @@
-# Плагины TikTok octo
+# Плагины TikTok Octo
 
 Плагины — это небольшие JavaScript-пакеты, которые добавляют команды, строки в
 панель функций и умеют аккуратно менять страницу TikTok. Они запускаются в
@@ -99,28 +99,30 @@ node scripts/pack-plugin.js plugins/examples/hello-octo \
 
 ## Что умеет плагин
 
-| Возможность                          | API                                   | Разрешение    |
-| :----------------------------------- | :------------------------------------ | :------------ |
-| Команда в палитре                    | `octo.commands.add()`                 | базовое       |
-| Строка в панели функций              | `octo.ui.panelRow()`                  | базовое       |
-| Пункт контекстного меню              | `octo.ui.contextMenu.add()`           | базовое       |
-| Горячая клавиша                      | `octo.shortcuts.add()`                | `shortcuts`   |
-| Свои настройки                       | `manifest.settings` + `octo.settings` | базовое       |
-| Своё хранилище                       | `octo.storage`                        | базовое       |
-| Шифрованные секреты                  | `octo.secrets`                        | базовое       |
-| Всплывающее сообщение                | `octo.notify()`                       | базовое       |
-| CSS на странице                      | `octo.page.injectCSS()`               | `page:css`    |
-| Скрипт в изолированном мире страницы | `octo.page.run()`                     | `page:script` |
-| Запросы к своим серверам             | `octo.net.fetch()`                    | `network`     |
-| Переход по страницам TikTok          | `octo.navigate()`                     | `navigation`  |
-| Открыть ссылку в браузере            | `octo.openExternal()`                 | `links`       |
-| Управление плеером                   | `octo.playback`                       | `playback`    |
-| Лента вперёд и назад                 | `octo.feed`                           | `feed`        |
-| Загрузка файла TikTok                | `octo.downloads.add()`                | `downloads`   |
-| Плашка на странице                   | `octo.ui.overlay`                     | `overlay`     |
-| Язык интерфейса                      | `octo.i18n.get()`                     | `i18n`        |
-| Текст в буфер обмена                 | `octo.clipboard.write()`              | `clipboard`   |
-| Системное уведомление                | `octo.os.notify()`                    | `os:notify`   |
+| Возможность                   | API                                                | Разрешение    |
+| :---------------------------- | :------------------------------------------------- | :------------ |
+| Команда в палитре             | `octo.commands.add()`                              | базовое       |
+| Строка в панели функций       | `octo.ui.panelRow()` / `updatePanelRow()`          | базовое       |
+| Диалоги в интерфейсе          | `octo.ui.confirm()` / `prompt()` / `pick()`        | базовое       |
+| Пункт контекстного меню       | `octo.ui.contextMenu.add()`                        | базовое       |
+| Горячая клавиша               | `octo.shortcuts.add()`                             | `shortcuts`   |
+| Свои настройки                | `manifest.settings` + `octo.settings`              | базовое       |
+| Своё хранилище                | `octo.storage` (`keys`, `usage`)                   | базовое       |
+| Шифрованные секреты           | `octo.secrets`                                     | базовое       |
+| Тема и палитра приложения     | `octo.theme.get()` + `octo.onThemeChange()`        | базовое       |
+| Всплывающее сообщение         | `octo.notify()`                                    | базовое       |
+| CSS на странице               | `octo.page.injectCSS()` / `setCSS()` / `removeCSS` | `page:css`    |
+| Скрипт и наблюдатель страницы | `octo.page.run()` / `getMediaInfo()` / `watch()`   | `page:script` |
+| Запросы к своим серверам      | `octo.net.fetch()`                                 | `network`     |
+| Переход по страницам TikTok   | `octo.navigate()`                                  | `navigation`  |
+| Открыть ссылку в браузере     | `octo.openExternal()`                              | `links`       |
+| Управление и события плеера   | `octo.playback` + `onChange()`                     | `playback`    |
+| Лента вперёд и назад          | `octo.feed`                                        | `feed`        |
+| Загрузка файла TikTok         | `octo.downloads.add()`                             | `downloads`   |
+| Плашка на странице            | `octo.ui.overlay`                                  | `overlay`     |
+| Язык интерфейса               | `octo.i18n.get()`                                  | `i18n`        |
+| Текст в буфер обмена          | `octo.clipboard.write()`                           | `clipboard`   |
+| Системное уведомление         | `octo.os.notify()`                                 | `os:notify`   |
 
 Базовые возможности не перечисляются в манифесте: они не трогают страницу и не
 ходят в сеть. Всё, что связано со страницей и сетью, пользователь видит в
@@ -212,10 +214,11 @@ zip-бомбой не будет даже распакован.
 | `main`          | нет            | относительный `.js`, по умолчанию `index.js`                                        |
 | `icon`          | нет            | относительный `png/jpg/webp/svg` до 512 КБ                                          |
 | `screenshots`   | нет            | до 4 относительных `png/jpg/webp/svg` для карточки                                  |
-| `permissions`   | нет            | массив известных разрешений                                                         |
+| `permissions`   | нет            | массив известных разрешений (до 20)                                                 |
 | `networkHosts`  | при `network`  | до 30 хостов, можно `*.example.com`                                                 |
 | `settings`      | нет            | до 20 настроек                                                                      |
 | `cosmetic`      | нет            | `true` — косметический пак: разрешён только `page:css`                              |
+| `module`        | нет            | `true` — запускать точку входа как ES-модуль (разрешены только относительные `./`)  |
 | `changelog`     | для обновлений | до 4000 символов                                                                    |
 | `categories`    | нет            | до 5 коротких тегов                                                                 |
 
@@ -225,8 +228,10 @@ zip-бомбой не будет даже распакован.
 
 ### Настройки
 
-Типы: `boolean`, `string`, `number`, `select`. Значения показываются в карточке
-плагина и сохраняются между запусками.
+Типы: `boolean`, `string`, `textarea`, `number`, `select`, `color`, `secret`, `action`.
+Значения показываются в карточке плагина и сохраняются между запусками. Тип `secret`
+шифруется через `safeStorage` и попадает в `octo.secrets.get(key)`, а `action`
+рисует кнопку в карточке настроек и вызывает `octo.onSettingAction(fn)`.
 
 ```json
 {
@@ -274,7 +279,8 @@ zip-бомбой не будет даже распакован.
 
 ## Точка входа и жизненный цикл
 
-`index.js` — обычный классический скрипт. Модулей, `require` и `import` нет.
+`index.js` — классический скрипт (либо ES-модуль с относительными импортами `./...`,
+если в манифесте указано `"module": true`). `require()` и внешние пакеты недоступны.
 Код выполняется в скрытом окне плагина; страница TikTok в этот момент ещё не
 доступна. Регистрируйте команды в `onActivate`, а к странице обращайтесь в
 `onPageReady` или по действию пользователя.
@@ -321,6 +327,8 @@ octo.onDeactivate(async () => {
 | `octo.onPageReady(fn)`      | страница TikTok загрузилась; `fn({ url, title })`                |
 | `octo.onPageNavigate(fn)`   | SPA-переход внутри TikTok; `fn({ url, title })`                  |
 | `octo.onSettingsChange(fn)` | пользователь изменил настройку; `fn(values)`                     |
+| `octo.onSettingAction(fn)`  | нажата кнопка настройки с типом `action`; `fn(key)`              |
+| `octo.onThemeChange(fn)`    | изменилась тема или палитра приложения; `fn(theme)`              |
 
 Обработчики могут быть асинхронными. Ошибки не роняют приложение: они
 попадают в лог плагина и в карточку менеджера.
@@ -359,12 +367,23 @@ const { greeting, accent } = octo.settings.get();
 ```js
 await octo.storage.set('last-run', Date.now());
 const last = await octo.storage.get('last-run');
+const keys = await octo.storage.keys();
+const usage = await octo.storage.usage(); // { bytes, limit }
 await octo.storage.remove('last-run');
 await octo.storage.clear();
 ```
 
 Ключ — `[a-zA-Z0-9._-]`, до 64 символов. Хранилище переживает обновления и
 удаляется вместе с плагином.
+
+### `octo.theme.get()`
+
+Возвращает текущую тему и токены палитры Material 3:
+
+```js
+const theme = await octo.theme.get();
+// { mode: 'dark', dark: true, palette: 'octo-lavender', tokens: { ... } }
+```
 
 ### `octo.commands.add(spec)`
 
@@ -401,7 +420,21 @@ await octo.ui.panelRow({
 });
 ```
 
-Удаление — `octo.ui.removePanelRow(id)`.
+Удаление — `octo.ui.removePanelRow(id)`. Обновление на лету —
+`octo.ui.updatePanelRow(id, { label, description, badge })`.
+
+### `octo.ui.confirm` / `prompt` / `pick`
+
+Встроенные MD3-диалоги приложения без выхода на страницу:
+
+```js
+const ok = await octo.ui.confirm({ title: 'Удалить?', message: 'Очистить список?' });
+const name = await octo.ui.prompt({ title: 'Название', placeholder: 'Введите текст…' });
+const choice = await octo.ui.pick({
+  title: 'Выберите вариант',
+  items: [{ value: 'a', label: 'Вариант А', description: 'Пояснение' }],
+});
+```
 
 ### `octo.ui.contextMenu.add(spec)`
 
@@ -459,9 +492,15 @@ await octo.page.injectCSS(`
 ```
 
 CSS применяется и после перезагрузки страницы, пока плагин включён. Не чаще
-30 вызовов в минуту и не больше 512 КБ CSS на плагин.
+30 вызовов в минуту и не больше 512 КБ CSS на плагин. Для обновления или удаления
+отдельного блока без накопления правил используйте именованный CSS:
 
-### `octo.page.run(code)` — `page:script`
+```js
+await octo.page.setCSS('frame', 'body { outline: 2px solid #8c84a9; }');
+await octo.page.removeCSS('frame');
+```
+
+### `octo.page.run(code)` / `getMediaInfo()` / `watch()` — `page:script`
 
 Выполняет строку JavaScript в **изолированном мире** страницы TikTok:
 
@@ -490,6 +529,18 @@ const videos = await octo.page.run(`
 страницы вернётся как отклонённый Promise. Не чаще 120 вызовов в минуту;
 результат — до 256 КБ JSON.
 
+Для типовых сценариев доступны безопасные хелперы без ручного парсинга DOM:
+
+```js
+const media = await octo.page.getMediaInfo();
+// { url, title, author, description, video: { playing, paused, time, duration, width, height } | null }
+
+const stop = await octo.page.watch('comments', '[data-e2e="comment-item"]', (event) => {
+  // event: { id, count, matched, texts }
+});
+await stop(); // или octo.page.unwatch('comments')
+```
+
 > **Риск.** `page:script` — самое сильное разрешение. Плагин видит содержимое
 > страницы, включая текст и элементы интерфейса, и теоретически может увести
 > его через ресурсы (`img`, `link`). Статическая проверка ловит прямые
@@ -508,6 +559,9 @@ await octo.playback.playPause();
 await octo.playback.seek(12.5);
 await octo.playback.setVolume(0.4); // 0…1
 await octo.playback.setSpeed(1.5); // 0.5…3
+const off = octo.playback.onChange((state) => {
+  // { playing, muted, volume, speed, url }
+});
 ```
 
 Громкость и скорость сохраняются как обычные настройки приложения: плагин
@@ -553,7 +607,7 @@ const { locale, dir } = await octo.i18n.get(); // { locale: 'ru', dir: 'ltr' }
 
 ### `octo.os.notify({ title, body })` — `os:notify`
 
-Показывает системное уведомление от имени TikTok octo. Заголовок до 80
+Показывает системное уведомление от имени TikTok Octo. Заголовок до 80
 символов, текст до 300; не больше 10 уведомлений в минуту. Чужие уведомления
 плагин не читает. Если система не поддерживает уведомления, текст показывается
 обычной плашкой приложения.
@@ -627,14 +681,21 @@ await octo.secrets.clear();
 Базовые возможности (`ui`, `storage`, `notify`) доступны всем. Остальные
 перечисляются в `permissions` и показываются в диалоге установки:
 
-| Разрешение    | Риск    | Что даёт                                   |
-| :------------ | :------ | :----------------------------------------- |
-| `page:css`    | средний | добавлять CSS на страницу                  |
-| `page:script` | высокий | DOM и изолированный JavaScript на странице |
-| `network`     | высокий | запросы только на хосты из `networkHosts`  |
-| `navigation`  | средний | открывать страницы tiktok.com в приложении |
-| `shortcuts`   | средний | назначать горячие клавиши                  |
-| `links`       | низкий  | открывать https-ссылки в браузере          |
+| Разрешение    | Риск    | Что даёт                                                   |
+| :------------ | :------ | :--------------------------------------------------------- |
+| `page:css`    | средний | добавлять, обновлять и удалять CSS на странице             |
+| `page:script` | высокий | DOM, `getMediaInfo`, `watch` и скрипт в изолированном мире |
+| `network`     | высокий | запросы только на хосты из `networkHosts`                  |
+| `navigation`  | средний | открывать страницы tiktok.com в приложении                 |
+| `shortcuts`   | средний | назначать горячие клавиши                                  |
+| `links`       | низкий  | открывать https-ссылки в браузере                          |
+| `playback`    | средний | управлять плеером и подписываться на его состояние         |
+| `feed`        | средний | перелистывать ленту вперёд и назад                         |
+| `downloads`   | высокий | запускать загрузку по ссылке TikTok или его CDN            |
+| `overlay`     | низкий  | показывать короткую текстовую плашку поверх страницы       |
+| `i18n`        | низкий  | узнавать язык интерфейса и направление текста              |
+| `clipboard`   | низкий  | копировать текст в буфер обмена                            |
+| `os:notify`   | низкий  | показывать системные уведомления от имени приложения       |
 
 Принцип минимальных прав: если плагин может работать без `page:script`, не
 просите его. Проверка при установке отклоняет манифест, где заявлено меньше
@@ -658,8 +719,10 @@ await octo.secrets.clear();
    `octo.shortcuts.add` или `octo.openExternal` без соответствующего разрешения.
 5. **Диалог.** Пользователь видит автора, версию, источник, подпись,
    разрешения, предупреждения и итог проверки.
-6. **Подпись.** SHA-256 пакета + Ed25519-подпись издателя. Недействительная
-   подпись блокирует установку; неподписанные плагины регулируются настройкой.
+6. **Подпись.** SHA-256 пакета + Ed25519-подпись издателя (как встроенный
+   `SIGNATURE.json` внутри `.octoplugin` для установки из файла, так и подпись
+   в `registry.json`). Недействительная подпись блокирует установку; неподписанные
+   плагины регулируются настройкой.
 7. **Песочница.** Отдельное скрытое окно, `sandbox: true`,
    `contextIsolation: true`, без Node, без preload сайта, эфемерная сессия.
 8. **Сеть.** На уровне сессии плагина все `http/https/ws/wss` отменяются.

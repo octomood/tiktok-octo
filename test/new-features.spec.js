@@ -80,12 +80,33 @@ test('профили аккаунтов, заметки к авторам, пл�
     await expect(page.locator('#rowStickySpeed')).toHaveAttribute('aria-checked', 'false');
     await expect.poll(() => readState(userData).player?.stickySpeed).toBe(false);
 
-    // 4. Тема: системная / светлая / тёмная.
+    // 4. Тема: системная / светлая / тёмная (синхронизируется и на оболочке приложения).
     await page.click('#catCosmeticsHead');
     await page.selectOption('#themeModeSelect', 'system');
     await expect.poll(() => readState(userData).themeMode).toBe('system');
     await page.selectOption('#themeModeSelect', 'light');
     await expect.poll(() => readState(userData).themeMode).toBe('light');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await page.selectOption('#themeModeSelect', 'dark');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+    // 5. 20 гармоничных цветовых палитр MD3 Expressive в настройках косметики.
+    await expect(page.locator('#themePaletteGrid .theme-swatch')).toHaveCount(20);
+    await expect(page.locator('[data-theme-palette="octo-lavender"]')).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await page.click('[data-theme-palette="emerald-forest"]');
+    await expect(page.locator('[data-theme-palette="emerald-forest"]')).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await expect(page.locator('html')).toHaveAttribute('data-palette', 'emerald-forest');
+    await expect.poll(() => readState(userData).themePalette).toBe('emerald-forest');
+    const primaryHex = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--md-primary').trim(),
+    );
+    expect(primaryHex).not.toBe('#8c84a9');
   } finally {
     if (app) await app.close();
     fs.rmSync(userData, { recursive: true, force: true });

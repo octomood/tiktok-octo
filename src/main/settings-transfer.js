@@ -42,6 +42,9 @@ const LIMITS = { depth: 5, keys: 300, array: 300, string: 4000 };
 const SETTINGS_KEYS = [
   'player',
   'cosmetics',
+  'themeMode',
+  'themePalette',
+  'feedLayout',
   'region',
   'language',
   'siteLanguage',
@@ -218,6 +221,19 @@ function cleanSettings(raw) {
       result.cosmetics = cleanCosmetics(value);
       continue;
     }
+    if (key === 'themeMode') {
+      if (value === 'system' || value === 'dark' || value === 'light') result.themeMode = value;
+      continue;
+    }
+    if (key === 'themePalette') {
+      const { normalizePaletteId } = require('./md3-palettes');
+      if (typeof value === 'string') result.themePalette = normalizePaletteId(value);
+      continue;
+    }
+    if (key === 'feedLayout') {
+      if (value === 'centered' || value === 'wide') result.feedLayout = value;
+      continue;
+    }
     if (key === 'region') {
       const region = cleanRegion(value);
       if (region) result.region = region;
@@ -244,6 +260,9 @@ function liveDefaults() {
   return {
     player: ctx.player,
     cosmetics: cosmetic,
+    themeMode: ctx.themeMode,
+    themePalette: ctx.themePalette,
+    feedLayout: ctx.feedLayout,
     // Логин и пароль прокси остаются в профиле, но не в экспорте.
     region: stripRegionCredentials(ctx.region),
     language: ctx.language,
@@ -296,7 +315,7 @@ function buildSettings() {
 
   const saved = pluginsState.getSettings();
   return {
-    app: 'TikTok octo',
+    app: 'TikTok Octo',
     kind: EXPORT_KIND,
     schema: SCHEMA,
     appVersion: app.getVersion(),
@@ -363,7 +382,7 @@ function parseImport(text) {
     return { ok: false, error: 'Файл настроек повреждён: это не JSON' };
   }
   if (!isPlainObject(raw) || raw.kind !== EXPORT_KIND) {
-    return { ok: false, error: 'Это не файл настроек TikTok octo' };
+    return { ok: false, error: 'Это не файл настроек TikTok Octo' };
   }
   if (raw.schema !== SCHEMA) {
     return { ok: false, error: 'Неподдерживаемая версия файла настроек' };
@@ -424,6 +443,15 @@ function refreshLive() {
   call('./ads', 'sync');
 
   setCosmeticsState(state.cosmetics || {});
+  if (state.themePalette) {
+    call('./cosmetics', 'applyThemePalette', state.themePalette);
+  }
+  if (state.themeMode) {
+    call('./cosmetics', 'applyThemeMode', state.themeMode, { reload: false });
+  }
+  if (state.feedLayout) {
+    call('./cosmetics', 'applyFeedLayout', state.feedLayout);
+  }
   call('./cosmetics', 'schedule');
   try {
     const ses = require('electron').session.fromPartition(
@@ -575,7 +603,7 @@ function createBackup(reason = 'manual', { silent = false } = {}) {
     const saved = pluginsState.read();
     const state = readState();
     const payload = {
-      app: 'TikTok octo',
+      app: 'TikTok Octo',
       kind: BACKUP_KIND,
       schema: SCHEMA,
       appVersion: app.getVersion(),
@@ -637,7 +665,7 @@ function parseBackup(text) {
     return { ok: false, error: 'Копия повреждена: это не JSON' };
   }
   if (!isPlainObject(raw) || raw.kind !== BACKUP_KIND || raw.schema !== SCHEMA) {
-    return { ok: false, error: 'Это не резервная копия TikTok octo' };
+    return { ok: false, error: 'Это не резервная копия TikTok Octo' };
   }
   if (!isPlainObject(raw.state) || !isPlainObject(raw.plugins)) {
     return { ok: false, error: 'Копия неполная' };

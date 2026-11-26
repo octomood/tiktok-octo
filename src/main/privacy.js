@@ -240,7 +240,7 @@ function buildDiagnostics() {
   const state = readState();
   const plugins = pluginsState.list();
   const lines = [
-    `TikTok octo ${app.getVersion()}`,
+    `TikTok Octo ${app.getVersion()}`,
     `Electron ${process.versions.electron} · Chromium ${process.versions.chrome}`,
     `Node ${process.versions.node} · V8 ${process.versions.v8}`,
     `ОС: ${process.platform} ${process.arch} · ${os.release()}`,
@@ -325,7 +325,7 @@ function licensesText() {
   }
 
   const lines = [
-    'TikTok octo — MIT',
+    'TikTok Octo — MIT',
     'Electron — MIT',
     'Chromium — BSD-3-Clause и другие открытые лицензии',
     '',
@@ -361,7 +361,7 @@ async function showLicenses() {
   await showMessageBox(ctx.win, {
     type: 'info',
     title: 'Лицензии',
-    message: 'Лицензии TikTok octo',
+    message: 'Лицензии TikTok Octo',
     detail: text,
     buttons: ['ОК'],
   });
@@ -370,7 +370,7 @@ async function showLicenses() {
 
 async function showDisclaimer() {
   const lines = [
-    'TikTok octo — независимый клиент, сделанный пользователями. Он не связан с TikTok Ltd., ByteDance и их продуктами, не одобрен ими и не использует приватные API, обход подписей или scraping cookies.',
+    'TikTok Octo — независимый клиент, сделанный пользователями. Он не связан с TikTok Ltd., ByteDance и их продуктами, не одобрен ими и не использует приватные API, обход подписей или scraping cookies.',
     'Приложение открывает обычные страницы TikTok как браузер. Сайт видит стандартные запросы: IP, cookies, язык и регион, которые вы выбрали. Ваши файлы, библиотека и статистика остаются на устройстве и никуда не отправляются.',
     'TikTok и связанные знаки принадлежат их владельцам.',
   ];
@@ -378,7 +378,7 @@ async function showDisclaimer() {
   await showMessageBox(ctx.win, {
     type: 'info',
     title: 'Не связан с TikTok',
-    message: 'TikTok octo — неофициальный клиент',
+    message: 'TikTok Octo — неофициальный клиент',
     detail: lines.join('\n\n'),
     buttons: ['Понятно'],
   });

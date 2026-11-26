@@ -1,5 +1,5 @@
 /**
- * Типы моста window.octo для плагинов TikTok octo.
+ * Типы моста window.octo для плагинов TikTok Octo.
  *
  * Плагин — обычный классический скрипт без Node, require, fetch и eval.
  * Единственный доступ к приложению — глобальный объект `octo`.
@@ -8,11 +8,16 @@
 
 export type SettingValue = string | number | boolean;
 
+export interface OctoPluginAuthor {
+  readonly name: string;
+  readonly url: string;
+}
+
 export interface OctoPluginInfo {
   readonly id: string;
   readonly name: string;
   readonly version: string;
-  readonly author: string;
+  readonly author: OctoPluginAuthor;
   readonly permissions: readonly string[];
 }
 
@@ -33,17 +38,29 @@ export interface OctoPanelRowSpec {
   id: string;
   label: string;
   description?: string;
+  badge?: string;
   run?: () => void | Promise<void>;
+}
+
+export interface OctoContextMenuContext {
+  pageURL: string;
+  linkURL: string;
+  selectionText: string;
+  isEditable: boolean;
+  mediaType: string;
+  srcURL: string;
 }
 
 export interface OctoContextMenuItemSpec {
   id: string;
   title: string;
-  run: (context: { link?: string; selection?: string; media?: string }) => void | Promise<void>;
+  description?: string;
+  run: (context: OctoContextMenuContext) => void | Promise<void>;
 }
 
 export interface OctoShortcutSpec {
   id: string;
+  title: string;
   accelerator: string;
   run: () => void | Promise<void>;
 }
@@ -51,6 +68,43 @@ export interface OctoShortcutSpec {
 export interface OctoPageInfo {
   url: string;
   title: string;
+}
+
+export interface OctoThemeInfo {
+  mode: 'system' | 'dark' | 'light';
+  dark: boolean;
+  palette: string;
+  tokens: Record<string, string>;
+}
+
+export interface OctoPlaybackState {
+  playing: boolean;
+  muted: boolean;
+  volume: number;
+  speed: number;
+  url: string;
+}
+
+export interface OctoMediaInfo {
+  url: string;
+  title: string;
+  author: string;
+  description: string;
+  video: {
+    playing: boolean;
+    paused: boolean;
+    time: number;
+    duration: number;
+    width: number;
+    height: number;
+  } | null;
+}
+
+export interface OctoWatchEvent {
+  id: string;
+  count: number;
+  matched: boolean;
+  texts: string[];
 }
 
 export interface Octo {
@@ -63,9 +117,15 @@ export interface Octo {
   onPageReady(callback: (page: OctoPageInfo) => void): () => void;
   onPageNavigate(callback: (page: OctoPageInfo) => void): () => void;
   onSettingsChange(callback: (values: Record<string, SettingValue>) => void): () => void;
+  onSettingAction(callback: (key: string) => void): () => void;
+  onThemeChange(callback: (theme: OctoThemeInfo) => void): () => void;
 
   settings: {
     get(): Record<string, SettingValue>;
+  };
+
+  theme: {
+    get(): Promise<OctoThemeInfo>;
   };
 
   /** До 256 КБ JSON на плагин. */
@@ -74,6 +134,8 @@ export interface Octo {
     set(key: string, value: unknown): Promise<unknown>;
     remove(key: string): Promise<unknown>;
     clear(): Promise<unknown>;
+    keys(): Promise<string[]>;
+    usage(): Promise<{ bytes: number; limit: number }>;
   };
 
   commands: {
@@ -83,7 +145,27 @@ export interface Octo {
 
   ui: {
     panelRow(spec: OctoPanelRowSpec): Promise<unknown>;
+    updatePanelRow(id: string, patch: Partial<OctoPanelRowSpec>): Promise<unknown>;
     removePanelRow(id: string): Promise<unknown>;
+    confirm(spec: {
+      title?: string;
+      message: string;
+      confirmText?: string;
+      cancelText?: string;
+    }): Promise<boolean>;
+    prompt(spec: {
+      title?: string;
+      message?: string;
+      placeholder?: string;
+      defaultValue?: string;
+      confirmText?: string;
+      cancelText?: string;
+    }): Promise<string | null>;
+    pick(spec: {
+      title?: string;
+      placeholder?: string;
+      items: Array<string | { value: string; label: string; description?: string }>;
+    }): Promise<string | null>;
     contextMenu: {
       add(spec: OctoContextMenuItemSpec): Promise<unknown>;
       remove(id: string): Promise<unknown>;
@@ -112,16 +194,36 @@ export interface Octo {
   page: {
     /** Разрешение `page:css`, до 256 КБ. */
     injectCSS(css: string): Promise<unknown>;
+    /** Разрешение `page:css`: заменить или удалить именованный блок CSS по id. */
+    setCSS(id: string, css: string): Promise<unknown>;
+    removeCSS(id: string): Promise<unknown>;
     /** Разрешение `page:script`, изолированный мир, таймаут 10 секунд. */
     run<T = unknown>(code: string): Promise<T>;
+    getMediaInfo(): Promise<OctoMediaInfo>;
+    watch(
+      id: string,
+      selector: string,
+      callback: (event: OctoWatchEvent) => void,
+    ): Promise<() => Promise<unknown>>;
+    unwatch(id: string): Promise<unknown>;
   };
 
   /** Разрешение `network` и `networkHosts` в манифесте. */
   net: {
     fetch(
       url: string,
-      options?: { method?: string; headers?: Record<string, string>; body?: string },
-    ): Promise<{ status: number; body: string; headers: Record<string, string> }>;
+      options?: {
+        method?: string;
+        headers?: Record<string, string>;
+        body?: string | Record<string, unknown>;
+      },
+    ): Promise<{
+      ok: boolean;
+      status: number;
+      url: string;
+      headers: Record<string, string>;
+      text: string;
+    }>;
   };
 
   /** Разрешение `playback`: управление текущим роликом. */
@@ -140,6 +242,7 @@ export interface Octo {
     setVolume(value: number): Promise<unknown>;
     /** 0.5…3. */
     setSpeed(value: number): Promise<unknown>;
+    onChange(callback: (state: OctoPlaybackState) => void): () => void;
   };
 
   /** Разрешение `feed`: перелистывание ленты. */

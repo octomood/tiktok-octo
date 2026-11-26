@@ -42,6 +42,7 @@ function rowFor(entry) {
   const row = document.createElement('article');
   row.className = 'manager-row';
   row.dataset.id = entry.id;
+  row.dataset.state = entry.state || '';
 
   const head = document.createElement('div');
   head.className = 'manager-row-head';

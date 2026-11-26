@@ -55,9 +55,11 @@ function handleShortcut(event, input) {
         }
       });
     }
+    if (ctx.pluginDialogOpen) return run(() => plugins.cancelDialog());
     if (ctx.paletteOpen) return run(() => handleCommand('palette'));
     if (ctx.find.open) return run(() => handleCommand('findClose'));
     if (ctx.popover) return run(() => setPopover(null));
+    if (ctx.pluginsOpen) return run(() => handleCommand('pluginsClose'));
     if (ctx.panelOpen) return run(() => handleCommand('panel'));
     if (ctx.chatOpen) return run(() => handleCommand('chat'));
     if (ctx.barOnly) return run(() => handleCommand('barExit'));

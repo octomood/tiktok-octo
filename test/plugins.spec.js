@@ -122,13 +122,10 @@ test('плагин, команды, панель и менеджер', async () 
     await page.click('#btnPluginsPopoverClose');
     await expect(page.locator('#popover')).toBeHidden();
 
-    // Отдельный менеджер: установленные, отчёт и настройки.
+    // Менеджер плагинов открывается оверлеем, как меню функций.
     await page.evaluate(() => window.octo.cmd('plugins'));
-    const manager = await waitForWindow(
-      app,
-      (candidate) => candidate.url().endsWith('/renderer/plugins.html'),
-      'менеджер плагинов',
-    );
+    const manager = page.locator('#pluginsPanel');
+    await expect(manager).toBeVisible();
 
     // Каталог заменён ссылкой на Telegram-канал, кнопка уводит в него.
     await expect(manager.locator('[data-page="catalog"]')).toBeVisible();
@@ -170,14 +167,10 @@ test('плагин, команды, панель и менеджер', async () 
       'false',
     );
 
-    await manager.evaluate(() => {
+    await page.evaluate(() => {
       window.octoPlugins.action('close').catch(() => {});
     });
-    await expect
-      .poll(() =>
-        app.windows().some((candidate) => candidate.url().endsWith('/renderer/plugins.html')),
-      )
-      .toBe(false);
+    await expect(manager).toBeHidden();
 
     // Встроенная документация работает офлайн и без публикации.
     await page.evaluate(() => window.octo.cmd('pluginDocs'));
@@ -186,7 +179,7 @@ test('плагин, команды, панель и менеджер', async () 
       (candidate) => candidate.url().endsWith('/renderer/plugins-docs/index.html'),
       'встроенная документация',
     );
-    await expect(docs.locator('h1')).toContainText('Плагины TikTok octo');
+    await expect(docs.locator('h1')).toContainText('Плагины TikTok Octo');
     await docs.locator('.topnav a[href="publishing.html"]').click();
     await expect.poll(() => docs.url()).toContain('/renderer/plugins-docs/publishing.html');
     await expect(docs.locator('h1')).toContainText('Правила публикации плагинов');

@@ -37,8 +37,8 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     show: false,
-    backgroundColor: '#131218',
-    title: 'TikTok octo',
+    backgroundColor: '#191624',
+    title: 'TikTok Octo',
     icon: path.join(__dirname, '../../build/icon.png'),
     autoHideMenuBar: true,
     // На Linux/Windows прячем системный заголовок, но оставляем рамку —
@@ -62,6 +62,7 @@ function createWindow() {
   ctx.chromeHeight = Math.round(TITLEBAR_H * uiScale);
   win.webContents.setZoomFactor(uiScale);
   ctx.panelOpen = false;
+  ctx.pluginsOpen = false;
   ctx.paletteOpen = false;
   ctx.startInTray = saved.startInTray === true;
   setCloseToTray(saved.closeToTray === true);

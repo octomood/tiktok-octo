@@ -10,6 +10,12 @@ contextBridge.exposeInMainWorld('octo', {
     ipcRenderer.on('octo:i18n-changed', listener);
     return () => ipcRenderer.removeListener('octo:i18n-changed', listener);
   },
+  theme: ipcRenderer.sendSync('octo:theme'),
+  onTheme(callback) {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('octo:theme-changed', listener);
+    return () => ipcRenderer.removeListener('octo:theme-changed', listener);
+  },
 });
 
 /** Мост окна аннотаций: картинка входит, PNG выходит. */

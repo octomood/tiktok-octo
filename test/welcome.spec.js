@@ -72,7 +72,7 @@ test('мастер: язык, поиск прокси и сохранение н
     expect(page, 'окно с полосой заголовка не появилось').toBeTruthy();
 
     await expect(page.locator('#welcome')).toBeVisible();
-    await expect(page.locator('#welcomeTitle')).toHaveText('Добро пожаловать в TikTok octo');
+    await expect(page.locator('#welcomeTitle')).toHaveText('Добро пожаловать в TikTok Octo');
     await expect(page.locator('#welcomeLanguage')).toHaveValue('ru');
     // Лента под мастером не должна играть втихую.
     await expect.poll(() => viewMuted(app)).toBe(true);
@@ -80,7 +80,7 @@ test('мастер: язык, поиск прокси и сохранение н
     // Язык меняется сразу и переводит сам мастер.
     await page.selectOption('#welcomeLanguage', 'en');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-    await expect(page.locator('#welcomeTitle')).toHaveText('Welcome to TikTok octo');
+    await expect(page.locator('#welcomeTitle')).toHaveText('Welcome to TikTok Octo');
 
     // Тумблер открывает поле адреса и поиск локального клиента.
     await expect(page.locator('#welcomeProxyFields')).toBeHidden();

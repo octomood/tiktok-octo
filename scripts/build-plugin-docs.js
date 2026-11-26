@@ -31,7 +31,7 @@ const PAGES = [
   {
     source: path.join(DOCS, 'README.md'),
     output: 'index.html',
-    title: 'Плагины TikTok octo',
+    title: 'Плагины TikTok Octo',
     description:
       'Руководство разработчика: манифест, API, разрешения, безопасность, сборка, подписи и обновления.',
     active: 'guide',
@@ -40,7 +40,7 @@ const PAGES = [
     source: path.join(DOCS, 'PUBLISHING.md'),
     output: 'publishing.html',
     title: 'Правила публикации плагинов',
-    description: 'Строгие требования каталога TikTok octo: безопасность, код, подписи и ревью.',
+    description: 'Строгие требования каталога TikTok Octo: безопасность, код, подписи и ревью.',
     active: 'rules',
   },
 ];
@@ -351,7 +351,7 @@ function layout({ title, description, body, headings, active, output }) {
     />
     <meta name="color-scheme" content="dark light" />
     <meta name="description" content="${escapeHtml(description)}" />
-    <title>${escapeHtml(title)} — TikTok octo</title>
+    <title>${escapeHtml(title)} — TikTok Octo</title>
     <link rel="stylesheet" href="style.css" />
     <script src="site.js" defer></script>
   </head>
@@ -391,7 +391,7 @@ function layout({ title, description, body, headings, active, output }) {
           ${body}
         </article>
         <footer class="page-foot">
-          <span>TikTok octo · ${isRules ? 'правила каталога' : 'руководство разработчика'}</span>
+          <span>TikTok Octo · ${isRules ? 'правила каталога' : 'руководство разработчика'}</span>
           <span><a href="https://github.com/octomood/tiktok-octo">Исходный код</a> · MIT</span>
         </footer>
       </main>
@@ -401,7 +401,7 @@ function layout({ title, description, body, headings, active, output }) {
 `;
 }
 
-const STYLE = `/* Статическая документация TikTok octo. */
+const STYLE = `/* Статическая документация TikTok Octo. */
 :root {
   --bg: #0d1117;
   --bg-soft: #11161d;
@@ -844,7 +844,7 @@ function main() {
   fs.writeFileSync(path.join(OUT, '.nojekyll'), '');
   fs.writeFileSync(
     path.join(OUT, '404.html'),
-    `<!doctype html><meta charset="utf-8"><title>404</title><meta http-equiv="refresh" content="0; url=index.html"><p><a href="index.html">Документация TikTok octo</a></p>`,
+    `<!doctype html><meta charset="utf-8"><title>404</title><meta http-equiv="refresh" content="0; url=index.html"><p><a href="index.html">Документация TikTok Octo</a></p>`,
   );
 
   console.log(`Документация собрана: ${OUT}`);

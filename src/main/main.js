@@ -64,6 +64,8 @@ const settingsTransfer = require('./settings-transfer');
 const privacy = require('./privacy');
 const resilience = require('./resilience');
 const deepLinks = require('./deep-links');
+const { externalHttpUrlFromArgv } = require('./deep-link-url');
+const linkHandler = require('./link-handler');
 const jumpList = require('./jump-list');
 const videoQuality = require('./video-quality');
 
@@ -75,6 +77,10 @@ stickers.registerScheme();
 const cliInstall = process.argv.includes('--install-appimage');
 const cliUninstall = process.argv.includes('--uninstall-appimage');
 const cliMode = cliInstall || cliUninstall;
+
+if (!cliMode && !process.env.OCTO_E2E && linkHandler.dispatchEarlyFromArgv(process.argv)) {
+  app.exit(0);
+}
 
 deepLinks.init();
 
@@ -125,9 +131,15 @@ if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', (_event, argv) => {
+    if (!deepLinks.queueFrom(argv)) {
+      const extUrl = externalHttpUrlFromArgv(argv);
+      if (extUrl && linkHandler.isAvailable()) {
+        linkHandler.openInFallbackBrowser(extUrl);
+        return;
+      }
+    }
     if (ctx.win && !ctx.win.isDestroyed()) showWindow();
     else createWindow();
-    deepLinks.queueFrom(argv);
   });
 
   app.whenReady().then(async () => {
@@ -216,6 +228,11 @@ if (!gotLock) {
       ctx.autostart = autostart.isEnabled();
     } catch {
       ctx.autostart = false;
+    }
+    try {
+      ctx.linkHandler = process.env.OCTO_E2E ? false : linkHandler.isEnabled();
+    } catch {
+      ctx.linkHandler = false;
     }
 
     initMpris();

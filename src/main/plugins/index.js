@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, safeStorage } = require('electron');
 const { showMessageBox, showOpenDialog } = require('../dialogs');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -180,10 +180,19 @@ function installedView(record) {
     risk: highestRisk(record.permissions || manifest?.permissions || []),
     networkHosts: record.networkHosts || manifest?.networkHosts || [],
     scan: report,
-    settings: (manifest?.settings || []).map((setting) => ({
-      ...setting,
-      value: record.settings?.[setting.key],
-    })),
+    settings: (manifest?.settings || []).map((setting) => {
+      if (setting.type === 'secret') {
+        return {
+          ...setting,
+          value: '',
+          hasValue: Boolean(record.secrets && record.secrets[setting.key]),
+        };
+      }
+      return {
+        ...setting,
+        value: record.settings?.[setting.key],
+      };
+    }),
     icon: record.icon || '',
     screenshots: record.screenshots || [],
     logs,
@@ -499,7 +508,7 @@ function applyInspection(inspection) {
   if (!isCompatible(inspection.manifest, app.getVersion())) {
     return {
       ok: false,
-      error: `Нужен TikTok octo ${inspection.manifest.minAppVersion} или новее`,
+      error: `Нужен TikTok Octo ${inspection.manifest.minAppVersion} или новее`,
     };
   }
 
@@ -612,7 +621,7 @@ async function installFromFile() {
       title: 'Установить плагин из файла',
       properties: ['openFile'],
       filters: [
-        { name: 'Плагины TikTok octo', extensions: ['octoplugin', 'zip'] },
+        { name: 'Плагины TikTok Octo', extensions: ['octoplugin', 'zip'] },
         { name: 'Все файлы', extensions: ['*'] },
       ],
     });
@@ -669,7 +678,7 @@ async function installFromRegistry(id) {
     return { ok: false };
   }
   if (!isCompatible({ minAppVersion: release.minAppVersion }, app.getVersion())) {
-    await showError(`Нужен TikTok octo ${release.minAppVersion} или новее`);
+    await showError(`Нужен TikTok Octo ${release.minAppVersion} или новее`);
     return { ok: false };
   }
 
@@ -706,7 +715,7 @@ async function performUpdate(record, release, { auto = false } = {}) {
   const signature = registry.releaseSignature(release);
   if (signature === 'invalid') return { ok: false, error: 'Подпись обновления недействительна' };
   if (!isCompatible({ minAppVersion: release.minAppVersion }, app.getVersion())) {
-    return { ok: false, error: `Нужен TikTok octo ${release.minAppVersion} или новее` };
+    return { ok: false, error: `Нужен TikTok Octo ${release.minAppVersion} или новее` };
   }
 
   const added = (release.permissions || []).filter(
@@ -904,7 +913,7 @@ async function loadInstalled() {
     }
     record.manifest = manifest;
     if (!isCompatible(manifest, app.getVersion())) {
-      record.lastError = `Нужен TikTok octo ${manifest.minAppVersion} или новее`;
+      record.lastError = `Нужен TikTok Octo ${manifest.minAppVersion} или новее`;
       state.set(record);
       continue;
     }
@@ -1143,6 +1152,32 @@ function savePluginSetting(id, key, value) {
   const manifest = manifestOf(record);
   const setting = manifest?.settings?.find((item) => item.key === key);
   if (!setting) return { ok: false, error: 'Неизвестная настройка' };
+  if (setting.type === 'action') return { ok: false, error: 'Это кнопка действия' };
+
+  if (setting.type === 'secret') {
+    const raw = typeof value === 'string' ? value : '';
+    const secrets = { ...(record.secrets || {}) };
+    if (!raw) {
+      delete secrets[key];
+    } else {
+      if (raw.length > (setting.maxLength || 4096)) {
+        return { ok: false, error: 'Секрет слишком длинный' };
+      }
+      if (!safeStorage.isEncryptionAvailable()) {
+        return { ok: false, error: 'Системное хранилище секретов недоступно' };
+      }
+      try {
+        secrets[key] = safeStorage.encryptString(raw).toString('base64');
+      } catch (err) {
+        return { ok: false, error: `Не удалось сохранить секрет: ${err.message}` };
+      }
+    }
+    record.secrets = secrets;
+    if (!record.dev) installer.saveRecord(record);
+    if (managerWindow.isOpen()) managerWindow.send(managerState());
+    publishSummary();
+    return { ok: true };
+  }
 
   if (record.dev) {
     record.settings = applySettings(manifest, { ...record.settings, [key]: value });
@@ -1152,6 +1187,27 @@ function savePluginSetting(id, key, value) {
   host.updateSettings(record);
   if (managerWindow.isOpen()) managerWindow.send(managerState());
   publishSummary();
+  return { ok: true };
+}
+
+function triggerPluginSettingAction(id, key) {
+  const record = getRecord(id);
+  if (!record) return { ok: false, error: 'Плагин не найден' };
+  const manifest = manifestOf(record);
+  const setting = manifest?.settings?.find((item) => item.key === key && item.type === 'action');
+  if (!setting) return { ok: false, error: 'Действие не найдено' };
+  if (!host.sendSettingAction(id, key)) {
+    return { ok: false, error: 'Включите плагин, чтобы выполнить действие' };
+  }
+  return { ok: true };
+}
+
+function openPluginDevTools(id) {
+  const record = getRecord(id);
+  if (!record || !record.dev) {
+    return { ok: false, error: 'DevTools доступен только для dev-плагинов' };
+  }
+  if (!host.openDevTools(id)) return { ok: false, error: 'Плагин сейчас не запущен' };
   return { ok: true };
 }
 
@@ -1285,6 +1341,10 @@ async function dispatchAction(action, payload) {
       return saveSettings(payload.patch || {});
     case 'pluginSettings':
       return savePluginSetting(String(payload.id || ''), String(payload.key || ''), payload.value);
+    case 'pluginSettingAction':
+      return triggerPluginSettingAction(String(payload.id || ''), String(payload.key || ''));
+    case 'openDevTools':
+      return openPluginDevTools(String(payload.id || ''));
     case 'update':
       return updatePlugin(String(payload.id || ''));
     case 'updateAll':
@@ -1416,6 +1476,18 @@ function onPageNavigate(info) {
   host.onPageNavigate(info);
 }
 
+function onThemeChange(payload) {
+  host.onThemeChange(payload);
+}
+
+function onPlaybackChange() {
+  host.onPlaybackChange();
+}
+
+function cancelDialog() {
+  host.cancelDialog();
+}
+
 function runCommand(commandId, payload) {
   return host.runCommand(commandId, payload);
 }
@@ -1481,6 +1553,9 @@ module.exports = {
   closeManager,
   onPageReady,
   onPageNavigate,
+  onThemeChange,
+  onPlaybackChange,
+  cancelDialog,
   runCommand,
   handleShortcut,
   contextMenuItems,

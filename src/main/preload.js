@@ -21,6 +21,13 @@ contextBridge.exposeInMainWorld('octo', {
     ipcRenderer.on('octo:i18n-changed', listener);
     return () => ipcRenderer.removeListener('octo:i18n-changed', listener);
   },
+  theme: ipcRenderer.sendSync('octo:theme'),
+  themePalettes: ipcRenderer.sendSync('octo:theme-palettes'),
+  onTheme(callback) {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('octo:theme-changed', listener);
+    return () => ipcRenderer.removeListener('octo:theme-changed', listener);
+  },
   cmd(command, payload) {
     ipcRenderer.send('octo:cmd', command, payload);
   },
@@ -46,7 +53,36 @@ contextBridge.exposeInMainWorld('octo', {
     ipcRenderer.on('octo:panel-category', listener);
     return () => ipcRenderer.removeListener('octo:panel-category', listener);
   },
+  onPluginDialog(callback) {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('octo:plugin-dialog', listener);
+    return () => ipcRenderer.removeListener('octo:plugin-dialog', listener);
+  },
+  replyPluginDialog(payload) {
+    ipcRenderer.send('octo:plugin-dialog-result', payload);
+  },
   ready() {
     ipcRenderer.send('octo:ready');
+  },
+});
+
+contextBridge.exposeInMainWorld('octoPlugins', {
+  platform: process.platform,
+  i18n: ipcRenderer.sendSync('octo:i18n'),
+  onI18n(callback) {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('octo:i18n-changed', listener);
+    return () => ipcRenderer.removeListener('octo:i18n-changed', listener);
+  },
+  action(action, payload) {
+    return ipcRenderer.invoke('octo:plugins', action, payload);
+  },
+  onState(callback) {
+    const listener = (_event, state) => callback(state);
+    ipcRenderer.on('octo:plugins-state', listener);
+    return () => ipcRenderer.removeListener('octo:plugins-state', listener);
+  },
+  ready() {
+    return ipcRenderer.invoke('octo:plugins', 'ready');
   },
 });

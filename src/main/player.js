@@ -879,6 +879,11 @@ function setSpeed(value) {
   save({ speed });
   apply();
   pushState();
+  try {
+    require('./plugins').onPlaybackChange();
+  } catch {
+    /* плагины ещё не загружены */
+  }
 }
 
 /**
@@ -890,6 +895,11 @@ function setVolume(value) {
   save({ volume: Math.round(volume * 100) / 100 });
   apply();
   pushState();
+  try {
+    require('./plugins').onPlaybackChange();
+  } catch {
+    /* плагины ещё не загружены */
+  }
   if (volume > 1.001) probeBlocked();
 }
 

@@ -58,7 +58,7 @@ function setEnabled(enabled) {
     const content = [
       '[Desktop Entry]',
       'Type=Application',
-      'Name=TikTok octo',
+      'Name=TikTok Octo',
       `Exec="${exec}" --hidden`,
       'X-GNOME-Autostart-enabled=true',
       'Terminal=false',

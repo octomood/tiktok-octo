@@ -84,8 +84,12 @@ const ctx = {
   uiScale: 1,
   /** Шрифт собственного интерфейса (Google Sans Medium по умолчанию). */
   uiFont: { preset: 'google-sans-medium', family: '', fileName: '' },
-  /** Открыта ли боковая панель функций. */
+  /** Открыта ли панель функций. */
   panelOpen: false,
+  /** Открыт ли оверлей менеджера плагинов. */
+  pluginsOpen: false,
+  /** Открыт ли модальный диалог плагина (confirm/prompt/pick). */
+  pluginDialogOpen: false,
   /** Какое быстрое меню открыто под полосой: стикеры или активные плагины. */
   popover: null,
   /** Открыта ли палитра команд (view на время скрывается). */
@@ -108,6 +112,10 @@ const ctx = {
   abLoop: { a: null, b: null, enabled: false },
   /** Режим темы: 'system' | 'dark' | 'light'. */
   themeMode: 'dark',
+  /** Цветовая палитра MD3 Expressive (см. md3-palettes.js). */
+  themePalette: 'octo-lavender',
+  /** Режим расположения ленты: 'centered' (как Shorts) | 'wide' (широкий). */
+  feedLayout: 'centered',
   /** Настройки плеера, которых нет у сайта. */
   player: {
     speed: 1,
@@ -214,6 +222,7 @@ const ctx = {
   pipTime: 0,
   pipDuration: 0,
   autostart: false,
+  linkHandler: false,
   startInTray: false,
   /** Автоматически пролистывать рекламные ролики в ленте. */
   adsSkip: false,
@@ -304,7 +313,13 @@ function syncViewVisibility() {
   if (ctx.view.webContents && ctx.view.webContents.isDestroyed()) return;
   try {
     ctx.view.setVisible(
-      !ctx.offline && !ctx.paletteOpen && !ctx.panelOpen && !ctx.barOnly && !ctx.welcome.open,
+      !ctx.offline &&
+        !ctx.paletteOpen &&
+        !ctx.panelOpen &&
+        !ctx.pluginsOpen &&
+        !ctx.pluginDialogOpen &&
+        !ctx.barOnly &&
+        !ctx.welcome.open,
     );
   } catch {
     /* view уже закрывается */
@@ -332,6 +347,8 @@ function layout() {
       !ctx.pipActive &&
       !ctx.paletteOpen &&
       !ctx.panelOpen &&
+      !ctx.pluginsOpen &&
+      !ctx.pluginDialogOpen &&
       !ctx.barOnly &&
       !ctx.welcome.open;
     const chatWidth = Math.min(ctx.chatWidth, chatWidthLimit(available));
@@ -403,7 +420,10 @@ function setPanelOpen(open) {
   const next = Boolean(open);
   if (next === ctx.panelOpen) return;
   ctx.panelOpen = next;
-  if (next) ctx.popover = null;
+  if (next) {
+    ctx.popover = null;
+    ctx.pluginsOpen = false;
+  }
   layoutSoon();
 
   if (ctx.win && !ctx.win.isDestroyed()) {
@@ -411,6 +431,72 @@ function setPanelOpen(open) {
     if (next && wc && !wc.isDestroyed()) wc.focus();
     else if (
       !next &&
+      !ctx.pluginsOpen &&
+      !ctx.paletteOpen &&
+      !ctx.welcome.open &&
+      !ctx.find.open &&
+      ctx.view &&
+      !ctx.view.webContents.isDestroyed()
+    ) {
+      ctx.view.webContents.focus();
+    }
+  }
+
+  pushState();
+}
+
+/** Показать/скрыть модальный диалог плагина поверх основного окна. */
+function setPluginDialogOpen(open) {
+  const next = Boolean(open);
+  if (next === ctx.pluginDialogOpen) return;
+  ctx.pluginDialogOpen = next;
+  syncViewVisibility();
+  if (next && ctx.chatView && !ctx.chatView.webContents.isDestroyed()) {
+    try {
+      ctx.chatView.setVisible(false);
+    } catch {
+      /* view уже закрывается */
+    }
+  }
+  if (!next) layout();
+  repaintWindow();
+  setTimeout(repaintWindow, 40);
+
+  if (ctx.win && !ctx.win.isDestroyed()) {
+    const wc = ctx.win.webContents;
+    if (next && wc && !wc.isDestroyed()) wc.focus();
+    else if (
+      !next &&
+      !ctx.panelOpen &&
+      !ctx.pluginsOpen &&
+      !ctx.paletteOpen &&
+      !ctx.welcome.open &&
+      !ctx.find.open &&
+      ctx.view &&
+      !ctx.view.webContents.isDestroyed()
+    ) {
+      ctx.view.webContents.focus();
+    }
+  }
+}
+
+/** Открыть/закрыть оверлей менеджера плагинов поверх главного окна. */
+function setPluginsOpen(open) {
+  const next = Boolean(open);
+  if (next === ctx.pluginsOpen) return;
+  ctx.pluginsOpen = next;
+  if (next) {
+    ctx.popover = null;
+    ctx.panelOpen = false;
+  }
+  layoutSoon();
+
+  if (ctx.win && !ctx.win.isDestroyed()) {
+    const wc = ctx.win.webContents;
+    if (next && wc && !wc.isDestroyed()) wc.focus();
+    else if (
+      !next &&
+      !ctx.panelOpen &&
       !ctx.paletteOpen &&
       !ctx.welcome.open &&
       !ctx.find.open &&
@@ -437,8 +523,9 @@ function setPopover(id, { toggle = true } = {}) {
   if (next === ctx.popover) return;
   ctx.popover = next;
 
-  if (next && ctx.panelOpen) {
+  if (next && (ctx.panelOpen || ctx.pluginsOpen)) {
     ctx.panelOpen = false;
+    ctx.pluginsOpen = false;
     layoutSoon();
   }
 
@@ -673,6 +760,7 @@ function currentState() {
     playing: ctx.playing,
     unread: ctx.unread,
     panel: ctx.panelOpen,
+    pluginsOpen: ctx.pluginsOpen,
     popover: ctx.popover,
     panelWidth: PANEL_W,
     uiScale: ctx.uiScale,
@@ -721,6 +809,8 @@ function currentState() {
     })),
     abLoop: { ...ctx.abLoop },
     themeMode: ctx.themeMode,
+    themePalette: ctx.themePalette,
+    feedLayout: ctx.feedLayout,
     proxyScan: {
       state: ctx.proxyScan.state,
       items: ctx.proxyScan.items.map((item) => ({ ...item })),
@@ -767,6 +857,10 @@ function currentState() {
     pipTime: ctx.pipTime,
     pipDuration: ctx.pipDuration,
     autostart: ctx.autostart,
+    linkHandler: {
+      available: process.platform === 'linux' && !process.env.FLATPAK_ID,
+      enabled: ctx.linkHandler,
+    },
     startInTray: ctx.startInTray,
     adsSkip: ctx.adsSkip,
     adsInPip: ctx.adsInPip,
@@ -832,6 +926,8 @@ module.exports = {
   layoutSoon,
   setChromeHeight,
   setPanelOpen,
+  setPluginsOpen,
+  setPluginDialogOpen,
   setPopover,
   setPaletteOpen,
   setWelcomeOpen,

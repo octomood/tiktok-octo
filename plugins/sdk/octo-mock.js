@@ -26,8 +26,16 @@
     const systemNotifications = [];
     const logs = [];
     const css = [];
+    const namedCss = new Map();
+    const watchers = new Map();
     const overlays = new Map();
     const downloads = [];
+    const theme = {
+      mode: config.theme?.mode || 'dark',
+      dark: config.theme?.dark !== false,
+      palette: config.theme?.palette || 'octo-lavender',
+      tokens: config.theme?.tokens || {},
+    };
     const playback = {
       time: Number(config.time) || 0,
       duration: Number(config.duration) || 0,
@@ -45,6 +53,9 @@
       pageReady: [],
       pageNavigate: [],
       settings: [],
+      settingAction: [],
+      theme: [],
+      playback: [],
     };
 
     const register = (list, callback) => {
@@ -62,7 +73,10 @@
         id: config.id || 'app.octo.test',
         name: config.name || 'Test plugin',
         version: config.version || '1.0.0',
-        author: config.author || 'test',
+        author:
+          config.author && typeof config.author === 'object'
+            ? config.author
+            : { name: String(config.author || 'test'), url: '' },
         permissions: Object.freeze([...(config.permissions || [])]),
       }),
       app: Object.freeze({
@@ -76,9 +90,15 @@
       onPageReady: (callback) => register(handlers.pageReady, callback),
       onPageNavigate: (callback) => register(handlers.pageNavigate, callback),
       onSettingsChange: (callback) => register(handlers.settings, callback),
+      onSettingAction: (callback) => register(handlers.settingAction, callback),
+      onThemeChange: (callback) => register(handlers.theme, callback),
 
       settings: {
         get: () => ({ ...settings }),
+      },
+
+      theme: {
+        get: async () => ({ ...theme }),
       },
 
       storage: {
@@ -95,6 +115,11 @@
           storage.clear();
           return true;
         },
+        keys: async () => [...storage.keys()],
+        usage: async () => ({
+          bytes: Buffer.byteLength(JSON.stringify(Object.fromEntries(storage)), 'utf8'),
+          limit: 256 * 1024,
+        }),
       },
 
       commands: {
@@ -119,9 +144,29 @@
           panelRows.set(spec.id, spec);
           return true;
         },
+        updatePanelRow: async (id, patch) => {
+          const existing = panelRows.get(String(id));
+          if (!existing) throw new Error('Строка панели не найдена');
+          panelRows.set(String(id), { ...existing, ...(patch || {}) });
+          return true;
+        },
         removePanelRow: async (id) => {
           panelRows.delete(String(id));
           return true;
+        },
+        confirm: async (spec) =>
+          typeof config.confirm === 'function' ? Boolean(config.confirm(spec)) : true,
+        prompt: async (spec) =>
+          typeof config.prompt === 'function'
+            ? config.prompt(spec)
+            : spec && spec.defaultValue !== undefined
+              ? String(spec.defaultValue)
+              : null,
+        pick: async (spec) => {
+          if (typeof config.pick === 'function') return config.pick(spec);
+          const first = spec && Array.isArray(spec.items) ? spec.items[0] : null;
+          if (!first) return null;
+          return typeof first === 'string' ? first : first.value;
         },
         overlay: {
           show: async (spec) => {
@@ -185,10 +230,49 @@
           css.push(value);
           return true;
         },
+        setCSS: async (id, value) => {
+          if (typeof id !== 'string' || typeof value !== 'string') {
+            throw new Error('page.setCSS принимает id и строку CSS');
+          }
+          namedCss.set(id, value);
+          return true;
+        },
+        removeCSS: async (id) => {
+          namedCss.delete(String(id));
+          return true;
+        },
         run: async (code) => {
           if (typeof code !== 'string') throw new Error('page.run принимает строку');
           if (typeof config.pageRun === 'function') return config.pageRun(code);
           return null;
+        },
+        getMediaInfo: async () =>
+          typeof config.mediaInfo === 'function'
+            ? config.mediaInfo()
+            : config.mediaInfo || {
+                url: 'https://www.tiktok.com/@octo/video/1',
+                title: 'TikTok',
+                author: '@octo',
+                description: '',
+                video: null,
+              },
+        watch: async (id, selector, callback) => {
+          if (
+            typeof id !== 'string' ||
+            typeof selector !== 'string' ||
+            typeof callback !== 'function'
+          ) {
+            throw new Error('page.watch требует id, selector и callback');
+          }
+          watchers.set(id, { selector, callback });
+          return async () => {
+            watchers.delete(id);
+            return true;
+          };
+        },
+        unwatch: async (id) => {
+          watchers.delete(String(id));
+          return true;
         },
       },
 
@@ -219,6 +303,7 @@
           playback.speed = Number(value) || 1;
           return true;
         },
+        onChange: (callback) => register(handlers.playback, callback),
       },
 
       feed: {
@@ -295,9 +380,12 @@
         systemNotifications,
         logs,
         css,
+        namedCss,
+        watchers,
         overlays,
         downloads,
         playback,
+        theme,
         clipboard: () => clipboardText,
       },
       handlers,

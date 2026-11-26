@@ -122,11 +122,8 @@ test('плагин «Градиентная обводка»: CSS и настр�
 
     // Настройки из карточки плагина применяются на лету.
     await page.evaluate(() => window.octo.cmd('plugins'));
-    const manager = await waitForWindow(
-      app,
-      (candidate) => candidate.url().endsWith('/renderer/plugins.html'),
-      'менеджер плагинов',
-    );
+    const manager = page.locator('#pluginsPanel');
+    await expect(manager).toBeVisible();
     await manager.locator('[data-tab="installed"]').click();
     const card = manager.locator('.card--wide').filter({ hasText: 'Градиентная обводка' });
     await expect(card).toHaveCount(1);
@@ -136,22 +133,22 @@ test('плагин «Градиентная обводка»: CSS и настр�
     // Настройки из карточки плагина применяются на лету. UI менеджера
     // перерисовывается после каждого изменения, поэтому меняем через тот же
     // IPC, который вызывает и сама карточка.
-    await setSetting(manager, 'thickness', 10);
+    await setSetting(page, 'thickness', 10);
     await expect.poll(() => probe(site, '#card').then((style) => style.padding)).toBe('10px');
 
-    await setSetting(manager, 'palette', 'custom');
-    await setSetting(manager, 'color_one', '#00ff00');
+    await setSetting(page, 'palette', 'custom');
+    await setSetting(page, 'color_one', '#00ff00');
     await expect
       .poll(() => probe(site, '#card').then((style) => style.background))
       .toContain('rgb(0, 255, 0)');
 
-    await setSetting(manager, 'mode', 'flow');
+    await setSetting(page, 'mode', 'flow');
     await expect
       .poll(() => probe(site, '#card').then((style) => style.animation))
       .toBe('octo-gf-flow');
 
     // Край окна: рамка переезжает на html::after, а карточка очищается.
-    await setSetting(manager, 'scope', 'window');
+    await setSetting(page, 'scope', 'window');
     await expect
       .poll(() =>
         site.evaluate(() => {
@@ -163,7 +160,7 @@ test('плагин «Градиентная обводка»: CSS и настр�
     await expect.poll(() => probe(site, '#card').then((style) => style.content)).toBe('none');
 
     // Главный выключатель убирает и возвращает эффект.
-    await setSetting(manager, 'enabled', false);
+    await setSetting(page, 'enabled', false);
     await expect
       .poll(() =>
         site.evaluate(
@@ -172,7 +169,7 @@ test('плагин «Градиентная обводка»: CSS и настр�
       )
       .toBe(true);
 
-    await setSetting(manager, 'enabled', true);
+    await setSetting(page, 'enabled', true);
     await expect
       .poll(() =>
         site.evaluate(

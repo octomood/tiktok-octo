@@ -128,7 +128,7 @@ test('приватность: локальные данные, удаление,
       'файл диагностики',
     );
     const diagnostics = fs.readFileSync(diagFile, 'utf8');
-    expect(diagnostics).toContain('TikTok octo');
+    expect(diagnostics).toContain('TikTok Octo');
     expect(diagnostics).toContain('Electron');
     expect(diagnostics).toContain('Профиль: ~');
     expect(diagnostics).not.toContain(os.homedir());
@@ -144,7 +144,7 @@ test('приватность: локальные данные, удаление,
       'файл лицензий',
     );
     const licenses = fs.readFileSync(licensesFile, 'utf8');
-    expect(licenses).toContain('TikTok octo — MIT');
+    expect(licenses).toContain('TikTok Octo — MIT');
     expect(licenses).toContain('acorn');
     expect(licenses).toContain('MIT');
 

@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('node:path');
 const { app } = require('electron');
 const { showMessageBox } = require('./dialogs');
 const { t } = require('./i18n');
@@ -9,7 +10,8 @@ function showAbout(parent) {
   const options = {
     type: 'info',
     title: 'О программе',
-    message: 'TikTok octo',
+    message: 'TikTok Octo',
+    icon: path.join(__dirname, '../../build/icon.png'),
     detail: [
       t(`Версия ${app.getVersion()}`),
       `Electron ${process.versions.electron} · Chromium ${process.versions.chrome}`,

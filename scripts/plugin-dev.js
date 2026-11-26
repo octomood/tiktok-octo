@@ -11,6 +11,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { validateManifest } = require('../src/main/plugins/manifest');
+const { scanFiles } = require('../src/main/plugins/security');
+const { inspectDirectory } = require('../src/main/plugins/installer');
 
 const dir = path.resolve(process.argv[2] || process.env.OCTO_PLUGIN_DEV_DIR || 'plugins/examples');
 
@@ -37,10 +39,28 @@ function check() {
     }
 
     const result = validateManifest(manifest);
-    if (result.ok) {
-      console.log(`[octo] ${entry.name}: манифест в порядке (id ${manifest.id})`);
-    } else {
+    if (!result.ok) {
       console.error(`[octo] ${entry.name}: ${result.errors.join('; ')}`);
+      continue;
+    }
+
+    const inspection = inspectDirectory(path.join(dir, entry.name));
+    if (!inspection.ok) {
+      console.error(`[octo] ${entry.name}: ${inspection.error}`);
+      continue;
+    }
+    const report = inspection.report || scanFiles(inspection.files, result.manifest);
+    if (report.verdict === 'blocked') {
+      console.error(`[octo] ${entry.name}: статическая проверка заблокировала плагин:`);
+      for (const finding of report.findings.filter((item) => item.severity === 'block')) {
+        console.error(`  • ${finding.file || 'код'}:${finding.line || 0} — ${finding.message}`);
+      }
+    } else if (report.verdict === 'review') {
+      console.warn(
+        `[octo] ${entry.name}: манифест в порядке (id ${manifest.id}), предупреждений аудита: ${report.warnings}`,
+      );
+    } else {
+      console.log(`[octo] ${entry.name}: манифест и аудит в порядке (id ${manifest.id})`);
     }
   }
 }

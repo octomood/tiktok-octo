@@ -230,7 +230,7 @@ test('настройки: экспорт, импорт, ежедневная к�
     fs.writeFileSync(
       custom,
       JSON.stringify({
-        app: 'TikTok octo',
+        app: 'TikTok Octo',
         kind: 'tiktok-octo-settings',
         schema: 1,
         settings: {

@@ -85,8 +85,8 @@ function translateWith(source, compiledDict) {
 }
 
 function protectBrand(source, value) {
-  if (!source.includes('TikTok octo')) return value;
-  return value.replace(/TikTok\s+[^\s.,:;!?)«»]+/u, 'TikTok octo');
+  if (!source.includes('TikTok Octo')) return value;
+  return value.replace(/TikTok\s+[^\s.,:;!?)«»]+/u, 'TikTok Octo');
 }
 
 /** Перевести строку интерфейса. Для русского возвращает исходник. */

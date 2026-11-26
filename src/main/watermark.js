@@ -3,7 +3,7 @@
 const { nativeImage } = require('electron');
 const { ctx } = require('./app-context');
 
-const LABEL = 'tiktok octo';
+const LABEL = 'TikTok Octo';
 
 /**
  * Подпись в углу снимка.

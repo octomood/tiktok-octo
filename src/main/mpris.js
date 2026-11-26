@@ -286,7 +286,7 @@ function initMpris() {
   try {
     player = Player({
       name: 'tiktok_octo',
-      identity: 'TikTok octo',
+      identity: 'TikTok Octo',
       supportedUriSchemes: [],
       supportedMimeTypes: [],
     });

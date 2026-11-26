@@ -1,13 +1,13 @@
-/* Окно снимка с аннотацией */
+/* Окно снимка с аннотацией (Material Design 3 Expressive) */
 
 body.annotator {
   display: flex;
   flex-direction: column;
   height: 100vh;
   margin: 0;
-  background: #050507;
-  color: var(--fg, #f4f4f5);
-  font-family: Inter, system-ui, sans-serif;
+  background: var(--md-surface-dim, #13101c);
+  color: var(--fg, #ddd2e0);
+  font-family: var(--ui-font, 'Inter', system-ui, sans-serif);
 }
 
 .annotator-bar {
@@ -16,52 +16,111 @@ body.annotator {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--line, #27272a);
-  background: var(--bar-top, #141418);
+  padding: 10px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--md-outline-variant, #47405e) 55%, transparent);
+  background: var(--md-surface-container-low, #211d30);
 }
 
 .annotator-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-.annotator-tools,
+/* Плавающая панель инструментов MD3 Expressive */
+.annotator-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid color-mix(in srgb, var(--md-outline-variant, #47405e) 50%, transparent);
+  border-radius: 9999px;
+  background: var(--md-surface-container, #2b263d);
+}
+
 .annotator-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 2px;
 }
 
 .annotator-tool,
 .annotator-btn {
-  height: 30px;
-  padding: 0 10px;
-  border: 1px solid var(--md-outline-variant, #3f3f46);
-  border-radius: 8px;
-  background: var(--md-surface-container, #18181b);
-  color: var(--md-on-surface, #f4f4f5);
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--md-on-surface-variant, #b8aec8);
   font: inherit;
-  font-size: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
+  transition:
+    background 0.16s var(--md-spring-effects-fast, ease),
+    color 0.16s var(--md-spring-effects-fast, ease),
+    border-radius 0.24s var(--md-shape-ease, cubic-bezier(0.2, 0, 0, 1)),
+    transform 0.35s var(--md-spring-spatial-fast, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.annotator-btn {
+  background: var(--md-surface-container-high, #3e3854);
+  color: var(--md-on-surface, #ddd2e0);
+}
+
+.annotator-tool:first-child,
+.annotator-btn:first-child {
+  border-radius: 24px 6px 6px 24px;
+}
+
+.annotator-tool:last-child,
+.annotator-btn:last-child {
+  border-radius: 6px 24px 24px 6px;
 }
 
 .annotator-tool:hover,
 .annotator-btn:hover {
-  border-color: var(--md-primary, #7c9cff);
+  background: var(--md-state-hover, rgba(140, 132, 169, 0.16));
+  color: var(--md-on-surface, #ddd2e0);
+  border-radius: 12px;
+}
+
+.annotator-tool:first-child:hover,
+.annotator-btn:first-child:hover {
+  border-radius: 24px 12px 12px 24px;
+}
+
+.annotator-tool:last-child:hover,
+.annotator-btn:last-child:hover {
+  border-radius: 12px 24px 24px 12px;
+}
+
+.annotator-tool:active,
+.annotator-btn:active {
+  transform: scale(0.95);
+  border-radius: 24px;
 }
 
 .annotator-tool.is-on {
-  border-color: var(--md-primary, #7c9cff);
-  background: var(--md-secondary-container, #26304d);
-  color: var(--md-on-secondary-container, #dbe4ff);
+  border-radius: 24px;
+  background: var(--md-primary, #8c84a9);
+  color: var(--md-on-primary, #171422);
+}
+
+.annotator-tool.is-on:hover {
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--md-primary, #8c84a9) 88%, var(--md-tertiary, #ddd2e0));
+  color: var(--md-on-primary, #171422);
 }
 
 .annotator-btn--primary {
-  border-color: transparent;
-  background: var(--md-primary, #7c9cff);
-  color: #0b0b0f;
-  font-weight: 600;
+  background: var(--md-primary, #8c84a9);
+  color: var(--md-on-primary, #171422);
+}
+
+.annotator-btn--primary:hover {
+  background: color-mix(in srgb, var(--md-primary, #8c84a9) 88%, var(--md-tertiary, #ddd2e0));
+  color: var(--md-on-primary, #171422);
 }
 
 .annotator-stage {
@@ -70,7 +129,7 @@ body.annotator {
   align-items: center;
   justify-content: center;
   min-height: 0;
-  padding: 14px;
+  padding: 16px;
 }
 
 #annotateCanvas {
@@ -78,14 +137,14 @@ body.annotator {
   max-width: 100%;
   max-height: 100%;
   background: #000;
-  border-radius: 8px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  border-radius: 16px;
+  box-shadow: var(--md-elev-3, 0 16px 48px rgba(0, 0, 0, 0.52));
   cursor: crosshair;
   touch-action: none;
 }
 
 :where(button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])):focus-visible {
-  outline: 2px solid var(--md-primary, #6c8cff);
+  outline: 2px solid var(--md-primary, #8c84a9);
   outline-offset: 2px;
 }
 

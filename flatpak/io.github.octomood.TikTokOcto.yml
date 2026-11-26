@@ -1,4 +1,4 @@
-# Flatpak-манифест TikTok octo.
+# Flatpak-манифест TikTok Octo.
 #
 # Локальная проверка (из каталога flatpak/):
 #   flatpak-builder --user --install --force-clean \

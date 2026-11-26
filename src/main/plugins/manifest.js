@@ -21,6 +21,17 @@ const HOST_RE =
 const SAFE_FILE_RE = /^[A-Za-z0-9._/-]+$/;
 const SAFE_URL_RE = /^https:\/\/[^\s]+$/i;
 const ICON_RE = /\.(?:png|jpe?g|webp|svg)$/i;
+const COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const SETTING_TYPES = [
+  'boolean',
+  'string',
+  'number',
+  'select',
+  'color',
+  'textarea',
+  'secret',
+  'action',
+];
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -131,9 +142,11 @@ function normalizeSetting(raw, index, errors) {
     return null;
   }
 
-  const type = ['boolean', 'string', 'number', 'select'].includes(raw.type) ? raw.type : '';
+  const type = SETTING_TYPES.includes(raw.type) ? raw.type : '';
   if (!type) {
-    errors.push(`settings[${index}].type: boolean, string, number или select`);
+    errors.push(
+      `settings[${index}].type: boolean, string, number, select, color, textarea, secret или action`,
+    );
     return null;
   }
 
@@ -144,13 +157,28 @@ function normalizeSetting(raw, index, errors) {
   }
 
   const description = normalizeString(raw.description, { max: 300 });
+  const placeholder = normalizeString(raw.placeholder, { max: 80 });
   const setting = { key, type, title, description };
+  if (placeholder) setting.placeholder = placeholder;
 
   if (type === 'boolean') {
     setting.default = raw.default === true;
   } else if (type === 'string') {
     setting.default = typeof raw.default === 'string' ? raw.default.slice(0, 1000) : '';
     setting.maxLength = Math.min(1000, Math.max(1, Number(raw.maxLength) || 200));
+  } else if (type === 'textarea') {
+    setting.default = typeof raw.default === 'string' ? raw.default.slice(0, 4000) : '';
+    setting.maxLength = Math.min(4000, Math.max(1, Number(raw.maxLength) || 1000));
+  } else if (type === 'color') {
+    const rawColor = typeof raw.default === 'string' ? raw.default.trim() : '';
+    setting.default = COLOR_RE.test(rawColor) ? rawColor.toLowerCase() : '#8c84a9';
+  } else if (type === 'secret') {
+    // Значение секрета хранится отдельно через safeStorage и никогда не пишется в settings.
+    setting.default = '';
+    setting.maxLength = Math.min(4096, Math.max(1, Number(raw.maxLength) || 1000));
+  } else if (type === 'action') {
+    setting.buttonLabel = normalizeString(raw.buttonLabel, { max: 48 }) || title;
+    setting.default = null;
   } else if (type === 'number') {
     const min = Number.isFinite(Number(raw.min)) ? Number(raw.min) : 0;
     const max = Number.isFinite(Number(raw.max)) ? Number(raw.max) : 100;
@@ -274,7 +302,7 @@ function validateManifest(raw) {
       }
     }
   }
-  if (permissions.length > 10) errors.push('permissions: не больше 10 разрешений');
+  if (permissions.length > 20) errors.push('permissions: не больше 20 разрешений');
 
   const networkHosts = [];
   if (raw.networkHosts !== undefined) {
@@ -303,6 +331,10 @@ function validateManifest(raw) {
   if (raw.cosmetic !== undefined && typeof raw.cosmetic !== 'boolean') {
     errors.push('cosmetic: ожидается true или false');
   }
+  const isModule = raw.module === true;
+  if (raw.module !== undefined && typeof raw.module !== 'boolean') {
+    errors.push('module: ожидается true или false');
+  }
   if (cosmetic) {
     if (!permissions.includes('page:css')) {
       errors.push('cosmetic: косметическому паку нужно разрешение page:css');
@@ -310,6 +342,9 @@ function validateManifest(raw) {
     const extra = permissions.filter((permission) => permission !== 'page:css');
     if (extra.length) {
       errors.push(`cosmetic: косметическому паку нельзя разрешения ${extra.join(', ')}`);
+    }
+    if (isModule) {
+      errors.push('cosmetic: косметическому паку нельзя module: true');
     }
   }
 
@@ -369,6 +404,7 @@ function validateManifest(raw) {
       permissions,
       networkHosts,
       cosmetic,
+      module: cosmetic ? false : isModule,
       settings,
       changelog,
       categories,
@@ -382,6 +418,7 @@ function validateManifest(raw) {
 function settingsDefaults(manifest) {
   const values = {};
   for (const setting of manifest.settings || []) {
+    if (setting.type === 'secret' || setting.type === 'action') continue;
     values[setting.key] = setting.default;
   }
   return values;
@@ -392,6 +429,13 @@ function normalizeSettingValue(setting, value) {
   if (setting.type === 'boolean') return value === true;
   if (setting.type === 'string') {
     return typeof value === 'string' ? value.slice(0, setting.maxLength || 1000) : setting.default;
+  }
+  if (setting.type === 'textarea') {
+    return typeof value === 'string' ? value.slice(0, setting.maxLength || 4000) : setting.default;
+  }
+  if (setting.type === 'color') {
+    const raw = typeof value === 'string' ? value.trim() : '';
+    return COLOR_RE.test(raw) ? raw.toLowerCase() : setting.default;
   }
   if (setting.type === 'number') {
     const number = Number(value);
@@ -410,7 +454,7 @@ function applySettings(manifest, saved) {
   const byKey = new Map((manifest.settings || []).map((setting) => [setting.key, setting]));
   for (const [key, value] of Object.entries(saved)) {
     const setting = byKey.get(key);
-    if (!setting) continue;
+    if (!setting || setting.type === 'secret' || setting.type === 'action') continue;
     values[key] = normalizeSettingValue(setting, value);
   }
   return values;

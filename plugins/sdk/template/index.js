@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Стартовый плагин TikTok octo.
+ * Стартовый плагин TikTok Octo.
  *
  * Никакого Node, require, fetch и eval: только window.octo. Настройки
  * объявлены в plugin.json и уже отрисованы в карточке плагина, хранилище

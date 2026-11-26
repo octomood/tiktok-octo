@@ -57,7 +57,7 @@ function openPage(page = 'index.html') {
       return undefined;
     })(),
     backgroundColor: '#0d1117',
-    title: t('Документация — TikTok octo'),
+    title: t('Документация — TikTok Octo'),
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,

@@ -72,6 +72,34 @@ test('мок octo: команды, настройки, хранилище и х�
   await octo.clipboard.write('скопировано');
   expect(state.clipboard()).toBe('скопировано');
 
+  // Расширенные методы: author-объект, storage keys/usage, theme, named CSS, watch, dialogs.
+  expect(octo.plugin.author).toEqual({ name: 'test', url: '' });
+  await octo.storage.set('alpha', 1);
+  expect(await octo.storage.keys()).toEqual(['alpha']);
+  expect((await octo.storage.usage()).limit).toBe(256 * 1024);
+
+  const theme = await octo.theme.get();
+  expect(theme.palette).toBe('octo-lavender');
+
+  await octo.page.setCSS('badge', 'body { opacity: 1; }');
+  expect(state.namedCss.get('badge')).toBe('body { opacity: 1; }');
+  await octo.page.removeCSS('badge');
+  expect(state.namedCss.has('badge')).toBe(false);
+
+  const media = await octo.page.getMediaInfo();
+  expect(media.author).toBe('@octo');
+
+  const stopWatch = await octo.page.watch('w1', 'video', () => {});
+  expect(state.watchers.has('w1')).toBe(true);
+  await stopWatch();
+  expect(state.watchers.has('w1')).toBe(false);
+
+  await octo.ui.updatePanelRow('row', { badge: 'NEW' });
+  expect(state.panelRows.get('row').badge).toBe('NEW');
+  expect(await octo.ui.confirm({ message: 'Ок?' })).toBe(true);
+  expect(await octo.ui.prompt({ defaultValue: 'abc' })).toBe('abc');
+  expect(await octo.ui.pick({ items: [{ value: 'v1', label: 'Один' }] })).toBe('v1');
+
   let activated = 0;
   octo.onActivate(() => {
     activated += 1;
@@ -138,10 +166,22 @@ test('типы SDK описывают реальные лимиты и API', () 
     'storage',
     'commands',
     'panelRow',
+    'updatePanelRow',
+    'confirm',
+    'prompt',
+    'pick',
     'contextMenu',
     'shortcuts',
     'secrets',
     'injectCSS',
+    'setCSS',
+    'removeCSS',
+    'getMediaInfo',
+    'watch',
+    'theme',
+    'onThemeChange',
+    'onSettingAction',
+    'onChange',
     'run<',
     'net',
     'navigate',

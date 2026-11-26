@@ -1,4 +1,4 @@
-# SDK плагинов TikTok octo
+# SDK плагинов TikTok Octo
 
 Локальный набор для разработки без Electron: типы моста `window.octo`, мок для
 unit-тестов и шаблон проекта.

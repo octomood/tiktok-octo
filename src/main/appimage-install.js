@@ -15,7 +15,7 @@ const path = require('node:path');
  */
 
 const APP_ID = 'tiktok-octo';
-const APP_NAME = 'TikTok octo';
+const APP_NAME = 'TikTok Octo';
 const PROTOCOL = 'tiktok-octo';
 const ICON_SIZES = [512, 256, 128, 64, 48, 32];
 
@@ -146,6 +146,8 @@ function install() {
 
 function uninstall() {
   try {
+    const linkHandler = require('./link-handler');
+    if (linkHandler.isEnabled()) linkHandler.disable();
     fs.rmSync(desktopFilePath(), { force: true });
 
     for (const size of ICON_SIZES) {

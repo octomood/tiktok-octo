@@ -92,7 +92,7 @@ function onUnread(previous, next) {
   try {
     if (!Notification.isSupported()) return;
     const note = new Notification({
-      title: 'TikTok octo',
+      title: 'TikTok Octo',
       body: next > 1 ? `Непрочитанных: ${next}` : 'Новое сообщение',
       icon: path.join(__dirname, '../../build/icon.png'),
     });

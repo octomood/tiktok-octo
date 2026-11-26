@@ -225,6 +225,7 @@ function createView(urlOverride) {
     // Новое видео может быть другим по пропорциям — адаптивный PiP подстроится.
     pip.scheduleFit(600);
     pushState();
+    plugins.onPlaybackChange();
   });
 
   wc.on('media-paused', () => {
@@ -232,6 +233,7 @@ function createView(urlOverride) {
     windowsMedia.setPlaying(false);
     mpris.setPlaying(false);
     pushState();
+    plugins.onPlaybackChange();
   });
 
   wc.on('page-title-updated', (_event, title) => {
@@ -334,7 +336,7 @@ function createView(urlOverride) {
       lastHangReload = now;
       toast('Перезапускаю зависшую страницу…');
       wc.reload();
-    }, 12000);
+    }, 20000);
   });
   wc.on('responsive', () => {
     clearTimeout(hangTimer);

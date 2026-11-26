@@ -16,13 +16,15 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { nativeTheme } = require('electron');
+const { BrowserWindow, ipcMain, nativeTheme } = require('electron');
 const { ctx, setCosmeticsState, pushState } = require('./app-context');
 const { readState, writeState } = require('./store');
 const { COSMETIC_RULES } = require('./cosmetic-catalog');
 const { evalInPage } = require('./page-eval');
 const { isTikTokUrl } = require('./shared');
 const autoTheme = require('./auto-theme');
+const md3Site = require('./md3-site');
+const { getPaletteTokens, listPalettes, normalizePaletteId } = require('./md3-palettes');
 
 const PROMO_MARK = 'data-octo-promo';
 const BRAND_MARK = 'data-octo-brand';
@@ -283,8 +285,8 @@ function brandScript() {
     img.style.cssText =
       'display:block;flex:none;width:auto;max-width:none;' +
       'height:' + height + 'px;pointer-events:none;-webkit-user-drag:none;' +
-      // Стекло светлое: на светлой теме сайта его нужно вывернуть.
-      'filter:' + (lightTheme() ? 'invert(1) brightness(0.8)' : 'none') + ';';
+      // Новый светлый знак на светлой теме затемняем с сохранением лавандового оттенка.
+      'filter:' + (lightTheme() ? 'brightness(0.54) contrast(1.38) saturate(1.15)' : 'none') + ';';
     anchor.setAttribute(MARK, variant);
   }
 
@@ -469,11 +471,33 @@ function frameInjectionScript(documentCss, shadowCss) {
       style = document.createElement('style');
       style.id = id;
       (root.head || root).appendChild(style);
+    } else if (root.head && root.head.lastElementChild !== style) {
+      root.head.appendChild(style);
     }
     if (style.textContent !== css) style.textContent = css;
   };
 
   install(document, DOC_CSS, DOC_ID);
+
+  // В подфреймах (Studio, Business Suite) SPA иногда пересоздаёт <head> или
+  // дописывает новые теги стиля: следим, чтобы <style> не пропал при догрузке.
+  if (window.__octoFrameCssObserver) {
+    window.__octoFrameCssObserver.disconnect();
+    delete window.__octoFrameCssObserver;
+  }
+  window.__octoFrameCssValue = DOC_CSS;
+  if (DOC_CSS && document.head && typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver(() => {
+      const targetCss = window.__octoFrameCssValue || '';
+      if (!targetCss) return;
+      const existing = document.querySelector('style#' + DOC_ID);
+      if (!existing || existing.textContent !== targetCss) {
+        install(document, targetCss, DOC_ID);
+      }
+    });
+    observer.observe(document.head, { childList: true });
+    window.__octoFrameCssObserver = observer;
+  }
 
   const seen = new WeakSet();
   const walk = (root) => {
@@ -532,15 +556,29 @@ function framesOf(wc) {
   }
 }
 
+function resolveValue(value) {
+  return typeof value === 'function' ? value() : value || '';
+}
+
+function getFeedLayout() {
+  return readState().feedLayout === 'wide' ? 'wide' : 'centered';
+}
+
 function enabledCss() {
-  return RULES.filter((rule) => isEnabled(rule.id))
-    .map((rule) => rule.css || '')
-    .filter(Boolean)
-    .join('\n');
+  const rulesCss = RULES.filter((rule) => isEnabled(rule.id))
+    .map((rule) => resolveValue(rule.css))
+    .filter(Boolean);
+  rulesCss.push(md3Site.feedLayoutCss(getFeedLayout()));
+  return rulesCss.join('\n');
 }
 
 function enabledShadowCss() {
-  return isEnabled('modern-font') ? shadowFontRule() : '';
+  const parts = [];
+  if (isEnabled('modern-font')) parts.push(shadowFontRule());
+  if (isEnabled('md3-design')) {
+    parts.push(md3Site.shadowCss(isEnabled('dark-theme'), getThemePalette()));
+  }
+  return parts.join('\n');
 }
 
 /**
@@ -563,12 +601,17 @@ async function injectFrameStyles(wc = ctx.view?.webContents) {
   const frames = framesOf(wc);
   if (!frames.length) return;
 
+  const frameMd3Script = isEnabled('md3-design')
+    ? md3Site.syncScript(isEnabled('dark-theme'))
+    : md3Site.CLEANUP_JS;
+
   await Promise.all(
-    frames.map((frame) =>
-      frame
+    frames.map(async (frame) => {
+      await frame
         .executeJavaScript(frameInjectionScript(documentCss, shadowCss), false)
-        .catch(() => false),
-    ),
+        .catch(() => false);
+      await frame.executeJavaScript(frameMd3Script, false).catch(() => false);
+    }),
   );
 }
 
@@ -768,6 +811,11 @@ const IMPLEMENTATIONS = {
     js: brandScript(),
     cleanupJs: BRAND_CLEANUP_JS,
   },
+  'md3-design': {
+    css: () => md3Site.siteCss(isEnabled('dark-theme'), getThemePalette()),
+    js: () => md3Site.syncScript(isEnabled('dark-theme')),
+    cleanupJs: md3Site.CLEANUP_JS,
+  },
   'modern-font': { css: siteFontCss() },
   'hide-app-promo': {
     css: `[${PROMO_MARK}] { display: none !important; }`,
@@ -827,6 +875,43 @@ function getThemeMode() {
   const saved = readState().themeMode;
   if (saved === 'system' || saved === 'dark' || saved === 'light') return saved;
   return settings()['dark-theme'] === false ? 'light' : 'dark';
+}
+
+function getThemePalette() {
+  return normalizePaletteId(readState().themePalette);
+}
+
+function getThemePayload() {
+  const dark = isEnabled('dark-theme');
+  const palette = getThemePalette();
+  return {
+    dark,
+    palette,
+    tokens: getPaletteTokens(palette, dark),
+  };
+}
+
+function broadcastTheme() {
+  const payload = getThemePayload();
+  try {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win || win.isDestroyed()) continue;
+      const wc = win.webContents;
+      if (!wc || wc.isDestroyed()) continue;
+      try {
+        wc.send('octo:theme-changed', payload);
+      } catch {
+        /* окно закрывается */
+      }
+    }
+  } catch {
+    /* тестовая среда */
+  }
+  try {
+    require('./plugins').onThemeChange({ mode: getThemeMode(), ...payload });
+  } catch {
+    /* модуль плагинов ещё не инициализирован */
+  }
 }
 
 function effectiveSettings() {
@@ -900,10 +985,15 @@ async function runScripts(wc = ctx.view?.webContents) {
   const scripts = [];
 
   for (const rule of RULES) {
-    if (!rule.js) continue;
-    if (enabled.includes(rule)) scripts.push(rule.js);
-    else if (rule.cleanupJs) scripts.push(rule.cleanupJs);
+    const js = resolveValue(rule.js);
+    if (!js) continue;
+    if (enabled.includes(rule)) scripts.push(js);
+    else {
+      const cleanup = resolveValue(rule.cleanupJs);
+      if (cleanup) scripts.push(cleanup);
+    }
   }
+  scripts.push(md3Site.feedLayoutScript(getFeedLayout()));
 
   if (!scripts.length) return;
 
@@ -920,6 +1010,7 @@ function scheduleScripts(delay = 500) {
   if (eco) return;
   scriptTimer = setTimeout(() => {
     runScripts();
+    injectFrameStyles().catch(() => {});
   }, delay);
 }
 
@@ -978,6 +1069,32 @@ function applyThemeMode(mode, { reload = true } = {}) {
   } else {
     pushState();
   }
+  broadcastTheme();
+  if (onChange) onChange();
+  return nextMode;
+}
+
+function applyThemePalette(paletteId) {
+  const nextPalette = normalizePaletteId(paletteId);
+  ctx.themePalette = nextPalette;
+  writeState({ themePalette: nextPalette });
+  apply();
+  const chatWc = ctx.chatView?.webContents;
+  if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
+  pushState();
+  broadcastTheme();
+  if (onChange) onChange();
+  return nextPalette;
+}
+
+function applyFeedLayout(mode) {
+  const nextMode = mode === 'wide' ? 'wide' : 'centered';
+  ctx.feedLayout = nextMode;
+  writeState({ feedLayout: nextMode });
+  apply();
+  const chatWc = ctx.chatView?.webContents;
+  if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
+  pushState();
   if (onChange) onChange();
   return nextMode;
 }
@@ -1026,7 +1143,20 @@ function menuItems() {
 
 // Интерфейс получает актуальные галочки сразу при старте.
 ctx.themeMode = getThemeMode();
+ctx.themePalette = getThemePalette();
+ctx.feedLayout = getFeedLayout();
 setCosmeticsState(effectiveSettings());
+
+try {
+  ipcMain?.on('octo:theme', (event) => {
+    event.returnValue = getThemePayload();
+  });
+  ipcMain?.on('octo:theme-palettes', (event) => {
+    event.returnValue = listPalettes();
+  });
+} catch {
+  /* тестовая среда без Electron IPC */
+}
 
 module.exports = {
   RULES,
@@ -1036,6 +1166,11 @@ module.exports = {
   injectFrameStyles,
   prepareTheme,
   applyThemeMode,
+  applyThemePalette,
+  getThemePalette,
+  getThemePayload,
+  applyFeedLayout,
+  getFeedLayout,
   initThemeListener,
   toggle,
   isEnabled,

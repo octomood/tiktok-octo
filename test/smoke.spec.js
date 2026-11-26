@@ -92,6 +92,64 @@ test('окно, команды, поиск и панель функций', asyn
     expect(dialogBox.x).toBeGreaterThan(20);
     expect(dialogBox.x + dialogBox.width).toBeLessThan(viewSize.w - 20);
 
+    // Пункты навигации в группе видны по умолчанию, имеют скругление на краях группы
+    // (16px сверху у первого, 16px снизу у последнего, 6px в середине) и при наведении
+    // становятся ярче без переворота верхних/нижних углов.
+    const readNavGeometry = () =>
+      page.evaluate(() =>
+        ['library', 'stats', 'downloads'].map((id) => {
+          const cs = getComputedStyle(document.querySelector(`[data-cat-head="${id}"]`));
+          return {
+            id,
+            bg: cs.backgroundColor,
+            tl: cs.borderTopLeftRadius,
+            tr: cs.borderTopRightRadius,
+            bl: cs.borderBottomLeftRadius,
+            br: cs.borderBottomRightRadius,
+          };
+        }),
+      );
+    const navDefault = await readNavGeometry();
+    expect(navDefault).toEqual([
+      {
+        id: 'library',
+        bg: expect.not.stringMatching(/^rgba\(0,\s*0,\s*0,\s*0\)$/),
+        tl: '16px',
+        tr: '16px',
+        bl: '6px',
+        br: '6px',
+      },
+      {
+        id: 'stats',
+        bg: expect.not.stringMatching(/^rgba\(0,\s*0,\s*0,\s*0\)$/),
+        tl: '6px',
+        tr: '6px',
+        bl: '6px',
+        br: '6px',
+      },
+      {
+        id: 'downloads',
+        bg: expect.not.stringMatching(/^rgba\(0,\s*0,\s*0,\s*0\)$/),
+        tl: '6px',
+        tr: '6px',
+        bl: '16px',
+        br: '16px',
+      },
+    ]);
+
+    for (const [index, id] of ['library', 'stats', 'downloads'].entries()) {
+      await page.locator(`[data-cat-head="${id}"]`).hover();
+      await expect
+        .poll(async () => {
+          const item = (await readNavGeometry())[index];
+          return item;
+        })
+        .toEqual({
+          ...navDefault[index],
+          bg: expect.not.stringContaining(navDefault[index].bg),
+        });
+    }
+
     // Переключение разделов в один клик без «Назад».
     await page.locator('[data-cat-head="playback"]').click();
     await expect(page.locator('#catPlayback')).toBeVisible();
@@ -151,8 +209,27 @@ test('окно, команды, поиск и панель функций', asyn
     await page.evaluate(() => window.octo.cmd('settings'));
     await expect(page.locator('#panel')).toBeVisible();
 
-    // Косметика: раздел открывается по клику.
+    // Косметика: раздел открывается по клику; кастомное MD3-меню выбора работает вместо OS popup.
     await page.locator('[data-cat-head="cosmetics"]').click();
+    const themeTrigger = page.locator('.octo-select-trigger[data-for="themeModeSelect"]');
+    await expect(themeTrigger).toBeVisible();
+    await themeTrigger.click();
+    await expect(page.locator('#octoSelectMenu')).toBeVisible();
+    await expect(page.locator('#octoSelectMenu .octo-select-opt.is-selected')).toHaveAttribute(
+      'data-value',
+      'dark',
+    );
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#octoSelectMenu')).toBeHidden();
+    await expect(page.locator('#panel')).toBeVisible();
+    await themeTrigger.click();
+    await page.locator('#octoSelectMenu .octo-select-opt[data-value="light"]').click();
+    await expect(page.locator('#themeModeSelect')).toHaveValue('light');
+    await expect(page.locator('#octoSelectMenu')).toBeHidden();
+    await themeTrigger.click();
+    await page.locator('#octoSelectMenu .octo-select-opt[data-value="dark"]').click();
+    await expect(page.locator('#themeModeSelect')).toHaveValue('dark');
+
     const cosmetic = page.locator('#panelCosmetics [data-cosmetic="dark-scrollbars"]');
     await expect(cosmetic).toHaveAttribute('aria-checked', 'true');
     await cosmetic.click();
@@ -230,7 +307,7 @@ test('окно, команды, поиск и панель функций', asyn
       .poll(() => (fs.existsSync(screenshots) ? fs.readdirSync(screenshots).length : 0))
       .toBe(1);
 
-    // В правом нижнем углу есть тёмная плашка с подписью «tiktok octo».
+    // В правом нижнем углу есть тёмная плашка с подписью «TikTok Octo».
     const shot = fs.readFileSync(path.join(screenshots, fs.readdirSync(screenshots)[0]));
     const cornerPixels = await page.evaluate(async (base64) => {
       const image = new window.Image();

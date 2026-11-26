@@ -214,11 +214,41 @@ function cancelFit() {
   fitTimers = [];
 }
 
-function measureNeed(wc) {
-  return wc
+function measureFrame(frame) {
+  try {
+    return frame
+      .executeJavaScript(MEASURE_SCRIPT, false)
+      .then((value) => (Number.isFinite(value) ? Math.round(value) : 0))
+      .catch(() => 0);
+  } catch {
+    return Promise.resolve(0);
+  }
+}
+
+async function measureNeed(wc) {
+  let maxNeed = await wc
     .executeJavaScript(MEASURE_SCRIPT, false)
     .then((value) => (Number.isFinite(value) ? Math.round(value) : 0))
     .catch(() => 0);
+
+  let frames = [];
+  try {
+    frames = wc.mainFrame.framesInSubtree || [];
+  } catch {
+    frames = [];
+  }
+  const subframes = frames.filter((frame) => {
+    if (!frame || frame === wc.mainFrame) return false;
+    const url = frame.url || '';
+    return url.startsWith('about:') || isTikTokUrl(url);
+  });
+  if (subframes.length) {
+    const extra = await Promise.all(subframes.map(measureFrame));
+    for (const value of extra) {
+      if (value > maxNeed) maxNeed = value;
+    }
+  }
+  return maxNeed;
 }
 
 /**
@@ -526,6 +556,41 @@ function attach(wc) {
  */
 const panelCssKeys = new WeakMap();
 
+const PANEL_FRAME_SCRIPT = `(() => {
+  const CSS = ${JSON.stringify(PANEL_CSS)};
+  const ID = 'octo-chat-panel-css';
+  const root = document.head || document.documentElement;
+  if (!root) return false;
+  let style = document.querySelector('style#' + ID);
+  if (!style) {
+    style = document.createElement('style');
+    style.id = ID;
+    root.appendChild(style);
+  }
+  if (style.textContent !== CSS) style.textContent = CSS;
+  return true;
+})()`;
+
+function injectPanelFrameStyles(wc) {
+  if (!wc || wc.isDestroyed()) return;
+  let frames = [];
+  try {
+    frames = wc.mainFrame.framesInSubtree || [];
+  } catch {
+    frames = [];
+  }
+  for (const frame of frames) {
+    if (!frame || frame === wc.mainFrame) continue;
+    const url = frame.url || '';
+    if (!url.startsWith('about:') && !isTikTokUrl(url)) continue;
+    try {
+      frame.executeJavaScript(PANEL_FRAME_SCRIPT, false).catch(() => {});
+    } catch {
+      /* фрейм уже ушёл */
+    }
+  }
+}
+
 function applyChatStyles(wc) {
   if (!wc || wc.isDestroyed()) return;
 
@@ -538,6 +603,7 @@ function applyChatStyles(wc) {
     .catch(() => {
       /* документ сменился между вызовом и вставкой */
     });
+  injectPanelFrameStyles(wc);
   cosmetics.apply(wc);
   autoTheme.sync(wc).catch(() => {});
 }
@@ -586,13 +652,17 @@ function ensureView() {
     scheduleFit(view);
   });
   wc.on('did-frame-finish-load', (_event, isMainFrame) => {
-    if (!isMainFrame) cosmetics.injectFrameStyles(wc).catch(() => {});
+    if (!isMainFrame) {
+      injectPanelFrameStyles(wc);
+      cosmetics.injectFrameStyles(wc).catch(() => {});
+    }
   });
   // Переписка открывается внутри той же страницы: после перехода раскладка
   // сообщений может стать шире, чем была у списка. Иначе правый край диалога
   // остаётся обрезанным до следующего открытия панели.
   wc.on('did-navigate-in-page', (_event, _url, isMainFrame) => {
     if (!isMainFrame) return;
+    cosmetics.injectFrameStyles(wc).catch(() => {});
     // Ждём, пока доиграет переход: в момент анимации колонки ещё сдвинуты,
     // и замер поехавших кнопок расширил бы панель зря.
     if (ctx.chatView === view && ctx.chatOpen) scheduleFit(view, { immediate: false });

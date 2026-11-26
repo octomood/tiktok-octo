@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>TikTok Octo v2.0 — Новый дизайн MD3 Expressive</title>
+    <link rel="stylesheet" href="../../src/renderer/fonts.css" />
+    <style>
+      :root {
+        /* Фирменная палитра MD3 Expressive (Octo Lavender) из src/renderer/styles.css */
+        --md-primary: #8c84a9;
+        --md-primary-bright: #d0bcff;
+        --md-on-primary: #171422;
+        --md-primary-container: #3e3854;
+        --md-on-primary-container: #ddd2e0;
+        --md-secondary: #c5bddb;
+        --md-secondary-container: #564e70;
+        --md-on-secondary-container: #ddd2e0;
+        --md-tertiary: #efb8c8;
+        --md-tertiary-container: #633b48;
+        --md-on-tertiary-container: #ffd8e4;
+        --md-mint: #85d6c0;
+        --md-mint-container: #244a42;
+        --md-on-mint-container: #c4f3e5;
+        --md-surface-dim: #13101c;
+        --md-surface: #191624;
+        --md-surface-container-low: #211d30;
+        --md-surface-container: #2b263d;
+        --md-surface-container-high: #3e3854;
+        --md-surface-container-highest: #4c4566;
+        --md-on-surface: #ddd2e0;
+        --md-on-surface-variant: #b8aec8;
+        --md-outline: #8c84a9;
+        --md-outline-variant: #47405e;
+
+        --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+        --sans: 'Google Sans Medium', 'Google Sans', 'Inter', system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        margin: 0;
+        overflow: hidden;
+        background: var(--md-surface-dim);
+        color: var(--md-on-surface);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+      }
+
+      .frame {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--md-surface-dim);
+      }
+
+      .bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(1080px 760px at 14% 10%, rgba(208, 188, 255, 0.19), transparent 60%),
+          radial-gradient(920px 680px at 88% 92%, rgba(239, 184, 200, 0.13), transparent 64%),
+          radial-gradient(740px 520px at 56% 42%, rgba(133, 214, 192, 0.07), transparent 68%),
+          var(--md-surface-dim);
+      }
+
+      /* Декоративные выразительные формы MD3 Expressive на фоне */
+      .bg-scallop {
+        position: absolute;
+        pointer-events: none;
+        opacity: 0.085;
+      }
+
+      .bg-scallop.top-right {
+        top: -130px;
+        right: -90px;
+        width: 440px;
+        height: 440px;
+        transform: rotate(18deg);
+      }
+
+      .bg-scallop.bottom-left {
+        bottom: -160px;
+        left: -110px;
+        width: 390px;
+        height: 390px;
+        opacity: 0.06;
+        transform: rotate(-24deg);
+      }
+
+      .vignette {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(125% 95% at 50% 45%, transparent 48%, rgba(8, 6, 14, 0.54) 100%);
+        pointer-events: none;
+      }
+
+      .grain {
+        position: absolute;
+        inset: -8%;
+        opacity: 0.038;
+        mix-blend-mode: soft-light;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+        background-size: 160px 160px;
+        pointer-events: none;
+      }
+
+      /* ---------- Шапка ---------- */
+
+      .header {
+        position: absolute;
+        top: 48px;
+        right: 84px;
+        left: 84px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        z-index: 5;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 16px;
+        padding: 8px 22px 8px 10px;
+        border-radius: 9999px;
+        background: rgba(33, 29, 48, 0.86);
+        border: 1px solid rgba(140, 132, 169, 0.24);
+        box-shadow: 0 10px 28px rgba(8, 6, 16, 0.36);
+      }
+
+      .brand-icon {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 9999px;
+        background: var(--md-surface-container-high);
+      }
+
+      .brand-icon img {
+        display: block;
+        width: 44px;
+        height: 44px;
+      }
+
+      .brand-name {
+        font-size: 27px;
+        font-weight: 600;
+        letter-spacing: -0.025em;
+        line-height: 1.05;
+        color: var(--md-on-surface);
+      }
+
+      .brand-sub {
+        margin-top: 4px;
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        color: var(--md-outline);
+        text-transform: uppercase;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .ver-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 46px;
+        padding: 0 20px;
+        border-radius: 9999px 10px 10px 9999px;
+        background: var(--md-surface-container-high);
+        border: 1px solid rgba(208, 188, 255, 0.22);
+        color: var(--md-on-primary-container);
+        font-family: var(--mono);
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+      }
+
+      .ver-pill i {
+        width: 8px;
+        height: 8px;
+        border-radius: 9999px;
+        background: var(--md-mint);
+        box-shadow: 0 0 10px rgba(133, 214, 192, 0.9);
+      }
+
+      .tg-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        height: 46px;
+        padding: 0 22px;
+        border-radius: 10px 9999px 9999px 10px;
+        background: var(--md-primary-bright);
+        color: var(--md-on-primary);
+        font-family: var(--mono);
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        box-shadow: 0 8px 28px rgba(208, 188, 255, 0.24);
+      }
+
+      .tg-pill svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      /* ---------- Заголовок ---------- */
+
+      .hero {
+        position: absolute;
+        top: 142px;
+        right: 84px;
+        left: 84px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        z-index: 5;
+      }
+
+      .label {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        height: 32px;
+        padding: 0 16px;
+        border-radius: 9999px;
+        background: var(--md-surface-container);
+        border: 1px solid rgba(208, 188, 255, 0.22);
+        font-family: var(--mono);
+        font-size: 12.5px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--md-primary-bright);
+      }
+
+      .label i {
+        display: block;
+        width: 8px;
+        height: 8px;
+        border-radius: 9999px;
+        background: var(--md-tertiary);
+        box-shadow: 0 0 12px rgba(239, 184, 200, 0.85);
+      }
+
+      .title {
+        margin-top: 14px;
+        font-size: 92px;
+        font-weight: 600;
+        letter-spacing: -0.04em;
+        line-height: 0.96;
+        color: var(--md-on-surface);
+      }
+
+      .title em {
+        font-style: normal;
+        color: var(--md-primary-bright);
+      }
+
+      .subtitle {
+        margin-top: 12px;
+        font-size: 22px;
+        letter-spacing: -0.01em;
+        color: var(--md-on-surface-variant);
+      }
+
+      .stats {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 8px;
+        border-radius: 28px;
+        background: var(--md-surface-container-low);
+        border: 1px solid rgba(140, 132, 169, 0.22);
+      }
+
+      .stat {
+        min-width: 126px;
+        padding: 12px 22px;
+        border-radius: 10px;
+        background: var(--md-surface-container);
+        text-align: center;
+      }
+
+      .stat:first-child {
+        border-radius: 20px 10px 10px 20px;
+      }
+
+      .stat:last-child {
+        border-radius: 10px 20px 20px 10px;
+      }
+
+      .stat b {
+        display: block;
+        font-size: 42px;
+        font-weight: 600;
+        letter-spacing: -0.04em;
+        line-height: 0.95;
+        color: var(--md-primary-bright);
+      }
+
+      .stat.pink b {
+        color: var(--md-tertiary);
+      }
+
+      .stat.mint b {
+        color: var(--md-mint);
+      }
+
+      .stat span {
+        display: block;
+        margin-top: 6px;
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--md-on-surface-variant);
+      }
+
+      /* ---------- Expressive Bento Сетка ---------- */
+
+      .grid {
+        position: absolute;
+        top: 364px;
+        left: 84px;
+        right: 84px;
+        display: grid;
+        grid-template-columns: 1.18fr 1fr 1fr;
+        grid-template-rows: 242px 242px;
+        gap: 16px;
+        z-index: 5;
+      }
+
+      .card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        padding: 24px 26px;
+        border-radius: 28px;
+        background: var(--md-surface-container);
+        border: 1px solid rgba(140, 132, 169, 0.2);
+        overflow: hidden;
+      }
+
+      /* Скругления MD3 Expressive в сгруппированных карточках */
+      .card.lead {
+        grid-row: 1 / 3;
+        padding: 28px 30px;
+        border-radius: 34px;
+        background: linear-gradient(148deg, #d0bcff 0%, #c1aef7 55%, #ecc4d6 100%);
+        color: var(--md-on-primary);
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        box-shadow: 0 24px 56px rgba(62, 56, 84, 0.46);
+      }
+
+      .card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .card-icon {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        background: var(--md-secondary-container);
+        color: var(--md-on-secondary-container);
+      }
+
+      .card-icon.scallop {
+        border-radius: 9999px;
+        background: transparent;
+      }
+
+      .card-icon.tertiary {
+        background: var(--md-tertiary-container);
+        color: var(--md-on-tertiary-container);
+      }
+
+      .card-icon.mint {
+        background: var(--md-mint-container);
+        color: var(--md-on-mint-container);
+      }
+
+      .card-icon svg {
+        display: block;
+        width: 24px;
+        height: 24px;
+      }
+
+      .card-chip {
+        padding: 5px 12px;
+        border-radius: 9999px;
+        background: var(--md-surface-container-high);
+        color: var(--md-on-surface-variant);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .card.lead .card-icon {
+        width: 54px;
+        height: 54px;
+        border-radius: 18px;
+        background: rgba(23, 20, 34, 0.14);
+        color: var(--md-on-primary);
+      }
+
+      .card.lead .card-chip {
+        background: rgba(23, 20, 34, 0.12);
+        color: #252035;
+      }
+
+      .card-body {
+        margin-top: auto;
+      }
+
+      .card-title {
+        font-size: 27px;
+        font-weight: 600;
+        letter-spacing: -0.025em;
+        line-height: 1.1;
+        color: var(--md-on-surface);
+      }
+
+      .card.lead .card-title {
+        font-size: 38px;
+        line-height: 1.04;
+        color: #171422;
+      }
+
+      .card-sub {
+        margin-top: 8px;
+        font-size: 16px;
+        line-height: 1.42;
+        color: var(--md-on-surface-variant);
+      }
+
+      .card.lead .card-sub {
+        margin-top: 12px;
+        font-size: 18px;
+        line-height: 1.44;
+        color: rgba(23, 20, 34, 0.84);
+      }
+
+      /* ---------- Мини-превью MD3 Expressive внутри главной карточки ---------- */
+
+      .lead-preview {
+        margin-top: 22px;
+        padding: 16px;
+        border-radius: 22px;
+        background: rgba(25, 22, 36, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 14px 32px rgba(23, 20, 34, 0.26);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .lp-pill-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .lp-seg-group {
+        display: flex;
+        gap: 3px;
+      }
+
+      .lp-seg {
+        padding: 7px 14px;
+        font-size: 12.5px;
+        font-weight: 600;
+        background: var(--md-surface-container-high);
+        color: var(--md-on-surface-variant);
+        border-radius: 6px;
+      }
+
+      .lp-seg:first-child {
+        border-radius: 9999px 6px 6px 9999px;
+      }
+
+      .lp-seg:last-child {
+        border-radius: 6px 9999px 9999px 6px;
+      }
+
+      .lp-seg.active {
+        background: var(--md-primary-bright);
+        color: var(--md-on-primary);
+        border-radius: 9999px;
+      }
+
+      .lp-toggle {
+        width: 44px;
+        height: 26px;
+        border-radius: 9999px;
+        background: var(--md-primary-bright);
+        padding: 3px;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+      }
+
+      .lp-toggle-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 9999px;
+        background: var(--md-on-primary);
+      }
+
+      .lp-wave-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .lp-wave-bar {
+        flex: 1;
+        height: 10px;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 12' preserveAspectRatio='none'%3E%3Cpath d='M0 6 Q 10 1 20 6 T 40 6 T 60 6 T 80 6 T 100 6 T 120 6' fill='none' stroke='%23d0bcff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E")
+          repeat-x center / 64px 10px;
+      }
+
+      .lp-wave-rest {
+        width: 72px;
+        height: 3px;
+        border-radius: 9999px;
+        background: var(--md-outline-variant);
+      }
+
+      .lp-colors {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 2px;
+      }
+
+      .lp-hex {
+        font-family: var(--mono);
+        font-size: 11.5px;
+        color: var(--md-outline);
+      }
+
+      .lp-dots {
+        display: flex;
+        gap: 6px;
+      }
+
+      .lp-dots i {
+        display: block;
+        width: 14px;
+        height: 14px;
+        border-radius: 9999px;
+      }
+
+      /* ---------- Мини-визуалы для других карточек ---------- */
+
+      .swatches {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 14px;
+      }
+
+      .swatch {
+        width: 22px;
+        height: 22px;
+        border-radius: 9999px;
+        border: 2px solid rgba(19, 16, 28, 0.65);
+      }
+
+      .swatch-more {
+        margin-left: 4px;
+        padding: 3px 9px;
+        border-radius: 9999px;
+        background: var(--md-surface-container-high);
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--md-primary-bright);
+      }
+
+      /* ---------- Нижняя полоса ---------- */
+
+      .strip {
+        position: absolute;
+        top: 888px;
+        right: 84px;
+        left: 84px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        height: 58px;
+        padding: 0 24px;
+        border-radius: 9999px;
+        background: var(--md-surface-container-low);
+        border: 1px solid rgba(140, 132, 169, 0.22);
+        z-index: 5;
+      }
+
+      .strip-label {
+        flex: none;
+        padding: 5px 12px;
+        border-radius: 9999px;
+        background: var(--md-primary-container);
+        color: var(--md-on-primary-container);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .strip-text {
+        font-size: 17px;
+        letter-spacing: -0.01em;
+        color: var(--md-on-surface-variant);
+      }
+
+      .footer {
+        position: absolute;
+        right: 84px;
+        bottom: 38px;
+        left: 84px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 14px;
+        border-top: 1px solid rgba(71, 64, 94, 0.55);
+        font-family: var(--mono);
+        font-size: 12.5px;
+        letter-spacing: 0.08em;
+        color: var(--md-outline);
+        z-index: 5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <div class="bg"></div>
+
+      <!-- Декоративные формы MD3 Expressive -->
+      <svg class="bg-scallop top-right" viewBox="0 0 100 100">
+        <path
+          fill="#d0bcff"
+          d="M50.0 4.0 C53.7 4.0 59.1 11.9 62.1 12.9 C65.0 13.9 74.1 10.6 77.0 12.8 C80.0 14.9 79.7 24.6 81.6 27.1 C83.4 29.6 92.6 32.3 93.7 35.8 C94.9 39.3 89.0 46.9 89.0 50.0 C89.0 53.1 94.9 60.7 93.7 64.2 C92.6 67.7 83.4 70.4 81.6 72.9 C79.7 75.4 80.0 85.1 77.0 87.2 C74.1 89.4 65.0 86.1 62.1 87.1 C59.1 88.1 53.7 96.0 50.0 96.0 C46.3 96.0 40.9 88.1 37.9 87.1 C35.0 86.1 25.9 89.4 23.0 87.2 C20.0 85.1 20.3 75.4 18.4 72.9 C16.6 70.4 7.4 67.7 6.3 64.2 C5.1 60.7 11.0 53.1 11.0 50.0 C11.0 46.9 5.1 39.3 6.3 35.8 C7.4 32.3 16.6 29.6 18.4 27.1 C20.3 24.6 20.0 14.9 23.0 12.8 C25.9 10.6 35.0 13.9 37.9 12.9 C40.9 11.9 46.3 4.0 50.0 4.0 Z"
+        />
+      </svg>
+      <svg class="bg-scallop bottom-left" viewBox="0 0 100 100">
+        <path
+          fill="#efb8c8"
+          d="M50.0 4.0 C53.7 4.0 59.1 11.9 62.1 12.9 C65.0 13.9 74.1 10.6 77.0 12.8 C80.0 14.9 79.7 24.6 81.6 27.1 C83.4 29.6 92.6 32.3 93.7 35.8 C94.9 39.3 89.0 46.9 89.0 50.0 C89.0 53.1 94.9 60.7 93.7 64.2 C92.6 67.7 83.4 70.4 81.6 72.9 C79.7 75.4 80.0 85.1 77.0 87.2 C74.1 89.4 65.0 86.1 62.1 87.1 C59.1 88.1 53.7 96.0 50.0 96.0 C46.3 96.0 40.9 88.1 37.9 87.1 C35.0 86.1 25.9 89.4 23.0 87.2 C20.0 85.1 20.3 75.4 18.4 72.9 C16.6 70.4 7.4 67.7 6.3 64.2 C5.1 60.7 11.0 53.1 11.0 50.0 C11.0 46.9 5.1 39.3 6.3 35.8 C7.4 32.3 16.6 29.6 18.4 27.1 C20.3 24.6 20.0 14.9 23.0 12.8 C25.9 10.6 35.0 13.9 37.9 12.9 C40.9 11.9 46.3 4.0 50.0 4.0 Z"
+        />
+      </svg>
+
+      <!-- Шапка -->
+      <div class="header">
+        <div class="brand">
+          <div class="brand-icon">
+            <img src="../../src/renderer/assets/octo-logo-mark.png" alt="" />
+          </div>
+          <div>
+            <div class="brand-name">TikTok Octo</div>
+            <div class="brand-sub">desktop client · material design 3 expressive</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="ver-pill"><i></i>v2.0.0</div>
+          <div class="tg-pill">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M21.9 4.3 18.6 19.7c-.2 1-.9 1.3-1.7.8l-4.6-3.4-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.6 8.3-7.5c.4-.3-.1-.5-.6-.2L6.4 13.3 1.9 11.9c-1-.3-1-1 .2-1.4l18.3-7.1c.8-.3 1.6.2 1.5.9z"
+              />
+            </svg>
+            t.me/tiktok_octo
+          </div>
+        </div>
+      </div>
+
+      <!-- Заголовок -->
+      <div class="hero">
+        <div>
+          <div class="label"><i></i>большой редизайн</div>
+          <div class="title">Встречай <em>v2.0.</em></div>
+          <div class="subtitle">Новый дизайн MD3 Expressive, 20 палитр, плагины и ссылки Linux</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><b>3</b><span>новинки</span></div>
+          <div class="stat pink"><b>3</b><span>изменения</span></div>
+          <div class="stat mint"><b>2</b><span>фикса</span></div>
+        </div>
+      </div>
+
+      <!-- Bento-сетка нововведений v2.0 -->
+      <div class="grid">
+        <!-- Главная карточка (2 ряда) -->
+        <div class="card lead">
+          <div class="card-head">
+            <div class="card-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 3l2.4 4.8L19.5 9l-3.7 3.7.9 5.3L12 15.5 7.3 18l.9-5.3L4.5 9l5.1-1.2z" />
+              </svg>
+            </div>
+            <span class="card-chip">01 · редизайн</span>
+          </div>
+
+          <div class="lead-preview">
+            <div class="lp-pill-row">
+              <div class="lp-seg-group">
+                <div class="lp-seg active">По центру</div>
+                <div class="lp-seg">Широкий</div>
+              </div>
+              <div class="lp-toggle"><div class="lp-toggle-thumb"></div></div>
+            </div>
+            <div class="lp-wave-row">
+              <div class="lp-wave-bar"></div>
+              <div class="lp-wave-rest"></div>
+            </div>
+            <div class="lp-colors">
+              <span class="lp-hex">#3e3854 · #8c84a9 · #ddd2e0</span>
+              <div class="lp-dots">
+                <i style="background: #3e3854"></i>
+                <i style="background: #8c84a9"></i>
+                <i style="background: #d0bcff"></i>
+                <i style="background: #ddd2e0"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="card-title">MD3 Expressive и новая айдентика</div>
+            <div class="card-sub">
+              Плавающие панели-пилюли, кнопки с морфингом и пружинной физикой, волновой прогресс,
+              кастомные списки и новая иконка TikTok Octo.
+            </div>
+          </div>
+        </div>
+
+        <!-- Карточка 02 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon tertiary">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="8.5" />
+                <circle cx="9.5" cy="9.5" r="1.2" fill="currentColor" />
+                <circle cx="14.5" cy="9.5" r="1.2" fill="currentColor" />
+                <circle cx="9.5" cy="14" r="1.2" fill="currentColor" />
+                <path d="M14.5 14a1.5 1.5 0 0 1 0 3" />
+              </svg>
+            </div>
+            <span class="card-chip">02 · темы</span>
+          </div>
+          <div class="swatches">
+            <span class="swatch" style="background: #d0bcff"></span>
+            <span class="swatch" style="background: #efb8c8"></span>
+            <span class="swatch" style="background: #85d6c0"></span>
+            <span class="swatch" style="background: #ffb783"></span>
+            <span class="swatch" style="background: #a8c7fa"></span>
+            <span class="swatch-more">20 палитр</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">20 палитр и светлая тема</div>
+            <div class="card-sub">
+              Тёмная и светлая палитра для оболочки и сайта TikTok, плюс возврат обычного вида в
+              один клик.
+            </div>
+          </div>
+        </div>
+
+        <!-- Карточка 03 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon mint">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="3" y="5" width="18" height="14" rx="3.5" />
+                <path d="M9 5v14M15 5v14" />
+              </svg>
+            </div>
+            <span class="card-chip">03 · лента</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Режим ленты: центр или широкий</div>
+            <div class="card-sub">
+              Быстрый переключатель в верхней полосе и «Косметике» — ролик по центру (как Shorts) или
+              во всю ширину.
+            </div>
+          </div>
+        </div>
+
+        <!-- Карточка 04 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M14.5 4.5a2 2 0 0 1 3.5 1.3V8h2a1.5 1.5 0 0 1 1.5 1.5v3A1.5 1.5 0 0 1 20 14h-2v2.5A2.5 2.5 0 0 1 15.5 19H13v-2a2 2 0 1 0-4 0v2H6.5A2.5 2.5 0 0 1 4 16.5V14h2a2 2 0 1 0 0-4H4V7.5A2.5 2.5 0 0 1 6.5 5H9V3.8a2 2 0 0 1 3.5-1.3"
+                />
+              </svg>
+            </div>
+            <span class="card-chip">04 · плагины</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Менеджер и API плагинов</div>
+            <div class="card-sub">
+              Модальный оверлей в MD3, подписи Ed25519 для оффлайн-установки, ES-модули, диалоги и
+              DevTools.
+            </div>
+          </div>
+        </div>
+
+        <!-- Карточка 05 -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon tertiary">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M10 13a5 5 0 0 0 7.1.1l2.8-2.8a5 5 0 0 0-7.1-7.1l-1.5 1.5" />
+                <path d="M14 11a5 5 0 0 0-7.1-.1l-2.8 2.8a5 5 0 0 0 7.1 7.1l1.5-1.5" />
+              </svg>
+            </div>
+            <span class="card-chip">05 · linux</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Перехват ссылок TikTok</div>
+            <div class="card-sub">
+              Ссылки tiktok.com, vm. и vt. открываются прямо в клиенте, а остальные уходят в браузер
+              без поднятия окна.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Нижняя полоса -->
+      <div class="strip">
+        <span class="strip-label">также в v2.0</span>
+        <span class="strip-text"
+          >мягкий сторож памяти (до 2500 МБ) · сообщения и Business Suite в палитре MD3 · единое
+          написание «TikTok Octo»</span
+        >
+      </div>
+
+      <!-- Подвал -->
+      <div class="footer">
+        <span>LINUX · WINDOWS · MACOS</span>
+        <span>MATERIAL DESIGN 3 EXPRESSIVE · V2.0.0</span>
+        <span>github.com/octomood/tiktok-octo</span>
+      </div>
+
+      <div class="vignette"></div>
+      <div class="grain"></div>
+    </div>
+
+    <script>
+      window.renderAt = () => true;
+      document.fonts.ready.then(() => {
+        document.body.dataset.ready = '1';
+      });
+    </script>
+  </body>
+</html>

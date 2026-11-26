@@ -198,3 +198,60 @@ test('экономный режим на батарее и сторож памя
     fs.rmSync(userData, { recursive: true, force: true });
   }
 });
+
+test('сторож памяти не перезагружает страницу во время воспроизведения видео', async () => {
+  test.setTimeout(60_000);
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-mem-playing-'));
+  const memoryLog = path.join(userData, 'memory.log');
+  let app;
+
+  try {
+    app = await launch(userData, {
+      OCTO_MEMORY_LIMIT_MB: '1',
+      OCTO_MEMORY_POLL_MS: '60000',
+      OCTO_MEMORY_LOG: memoryLog,
+    });
+    await app.firstWindow();
+    const viewPage = await waitForWindow(
+      app,
+      (candidate) => candidate.url() === 'about:blank',
+      'страница просмотра',
+    );
+    await expect
+      .poll(() =>
+        app.evaluate(({ BrowserWindow }) => {
+          const win = BrowserWindow.getAllWindows().find((item) =>
+            item.webContents.getURL().endsWith('/index.html'),
+          );
+          return Boolean(win && win.isVisible());
+        }),
+      )
+      .toBe(true);
+
+    await viewPage.evaluate(() => {
+      const video = document.createElement('video');
+      window.__mockPaused = false;
+      Object.defineProperty(video, 'paused', { get: () => window.__mockPaused });
+      Object.defineProperty(video, 'ended', { get: () => false });
+      Object.defineProperty(video, 'readyState', { get: () => 4 });
+      document.body.appendChild(video);
+    });
+
+    await app.evaluate(({ app: electronApp }) =>
+      process.mainModule.require(`${electronApp.getAppPath()}/src/main/resilience`).checkMemory(),
+    );
+    expect(fs.existsSync(memoryLog)).toBe(false);
+
+    await viewPage.evaluate(() => {
+      window.__mockPaused = true;
+    });
+
+    await app.evaluate(({ app: electronApp }) =>
+      process.mainModule.require(`${electronApp.getAppPath()}/src/main/resilience`).checkMemory(),
+    );
+    expect(fs.readFileSync(memoryLog, 'utf8').trim().length).toBeGreaterThan(0);
+  } finally {
+    if (app) await app.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});

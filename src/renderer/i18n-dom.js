@@ -86,8 +86,8 @@
       value = translateWith(source, { exact: fallbackCompiled.exact, patterns: fallbackPatterns });
     }
     if (value === null) return source;
-    if (source.includes('TikTok octo')) {
-      value = value.replace(/TikTok\s+[^\s.,:;!?)«»]+/u, 'TikTok octo');
+    if (source.includes('TikTok Octo')) {
+      value = value.replace(/TikTok\s+[^\s.,:;!?)«»]+/u, 'TikTok Octo');
     }
     return value;
   }

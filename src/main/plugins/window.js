@@ -1,22 +1,18 @@
 'use strict';
 
-const { BrowserWindow, ipcMain, app } = require('electron');
-const path = require('node:path');
-const { ctx } = require('../app-context');
+const { ipcMain, app } = require('electron');
+const { ctx, setPluginsOpen } = require('../app-context');
 const { DOCS_URL, PUBLISHING_URL, DEFAULT_REGISTRY_URL } = require('./constants');
 const state = require('./state');
-const { t } = require('../i18n');
-const { keyFromInput } = require('../key-input');
 
 /**
- * Окно менеджера плагинов.
+ * Контроллер оверлея менеджера плагинов.
  *
- * Живёт отдельно от основного окна, но закрывается вместе с ним. Состояние
- * целиком приходит из main — renderer только рисует и отправляет действия,
- * поэтому подделать установку или разрешения из интерфейса нельзя.
+ * Менеджер живёт в главном окне как модальный MD3-оверлей (как панель функций).
+ * Состояние целиком приходит из main — renderer только рисует и отправляет
+ * действия, поэтому подделать установку или разрешения из интерфейса нельзя.
  */
 
-let win = null;
 let initialized = false;
 let getState = null;
 let dispatch = null;
@@ -35,8 +31,8 @@ function info() {
 }
 
 function sendState() {
-  if (!win || win.isDestroyed()) return;
-  const wc = win.webContents;
+  if (!ctx.win || ctx.win.isDestroyed()) return;
+  const wc = ctx.win.webContents;
   if (!wc || wc.isDestroyed()) return;
   try {
     wc.send('octo:plugins-state', getState ? getState() : null);
@@ -54,7 +50,8 @@ function installIpc() {
   initialized = true;
 
   ipcMain.handle('octo:plugins', async (event, action, payload) => {
-    if (!win || win.isDestroyed() || event.sender !== win.webContents) {
+    const wc = ctx.win && !ctx.win.isDestroyed() ? ctx.win.webContents : null;
+    if (!wc || event.sender !== wc) {
       return { ok: false, error: 'Нет доступа к менеджеру плагинов' };
     }
 
@@ -63,19 +60,11 @@ function installIpc() {
     }
 
     if (action === 'window') {
-      const kind = String(payload || '');
-      if (kind === 'minimize') win.minimize();
-      else if (kind === 'maximize') {
-        if (win.isMaximized()) win.unmaximize();
-        else win.maximize();
-      } else if (kind === 'close') {
-        setTimeout(() => win.close(), 0);
-      }
       return { ok: true };
     }
 
     if (action === 'close') {
-      setTimeout(() => win.close(), 0);
+      close();
       return { ok: true };
     }
 
@@ -91,71 +80,19 @@ function installIpc() {
 
 function open() {
   installIpc();
-
-  if (win && !win.isDestroyed()) {
-    if (win.isMinimized()) win.restore();
-    win.show();
-    win.focus();
-    sendState();
-    return win;
-  }
-
-  win = new BrowserWindow({
-    width: 1040,
-    height: 760,
-    minWidth: 820,
-    minHeight: 560,
-    show: false,
-    parent: ctx.win && !ctx.win.isDestroyed() && ctx.win.isVisible() ? ctx.win : undefined,
-    backgroundColor: '#141218',
-    title: t('Плагины — TikTok octo'),
-    autoHideMenuBar: true,
-    ...(process.platform === 'darwin'
-      ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 18 } }
-      : { titleBarStyle: 'hidden' }),
-    webPreferences: {
-      preload: path.join(__dirname, '../plugins-manager-preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      spellcheck: false,
-    },
-  });
-
-  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  win.webContents.on('will-navigate', (event) => event.preventDefault());
-  win.webContents.on('before-input-event', (event, input) => {
-    if (input.type !== 'keyDown') return;
-    const mod = input.control || input.meta;
-    if (mod && keyFromInput(input).toLowerCase() === 'w') {
-      event.preventDefault();
-      win.close();
-    }
-  });
-
-  win.once('ready-to-show', () => {
-    if (!win || win.isDestroyed()) return;
-    win.show();
-    win.focus();
-  });
-
-  win.webContents.once('did-finish-load', sendState);
-  win.on('closed', () => {
-    win = null;
-    notifyChange();
-  });
-
-  win.loadFile(path.join(__dirname, '../../renderer/plugins.html'));
+  setPluginsOpen(true);
+  sendState();
   notifyChange();
-  return win;
+  return ctx.win;
 }
 
 function close() {
-  if (win && !win.isDestroyed()) win.close();
+  setPluginsOpen(false);
+  notifyChange();
 }
 
 function isOpen() {
-  return Boolean(win && !win.isDestroyed());
+  return Boolean(ctx.pluginsOpen);
 }
 
 function init(options) {

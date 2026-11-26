@@ -9,7 +9,12 @@ const {
 } = require('../src/main/plugins/manifest');
 const { scanFiles } = require('../src/main/plugins/security');
 const { createZip } = require('../src/main/plugins/zip');
-const { sha256, signPayload } = require('../src/main/plugins/signature');
+const {
+  sha256,
+  signPayload,
+  createSignatureManifest,
+  SIGNATURE_FILE,
+} = require('../src/main/plugins/signature');
 
 /**
  * Упаковка плагина в .octoplugin.
@@ -67,6 +72,7 @@ function readTree(root, prefix = '', files = new Map(), state = { total: 0 }) {
       continue;
     }
     if (entry.name.endsWith('.octoplugin') || entry.name.endsWith('.zip')) continue;
+    if (entry.name === SIGNATURE_FILE && !prefix) continue;
 
     const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
     if (!isSafeRelativePath(relative)) throw new Error(`Недопустимый путь: ${relative}`);
@@ -177,6 +183,24 @@ function main() {
     }
   }
 
+  const keyPath = args.key || process.env.OCTO_PLUGIN_SIGNING_KEY || '';
+  let signature = '';
+  let privateKey = '';
+  if (keyPath) {
+    privateKey = fs.readFileSync(path.resolve(keyPath), 'utf8');
+    files.set(
+      SIGNATURE_FILE,
+      Buffer.from(
+        createSignatureManifest(privateKey, {
+          id: manifest.id,
+          version: manifest.version,
+          files,
+        }),
+        'utf8',
+      ),
+    );
+  }
+
   const zip = createZip(files);
   const hash = sha256(zip);
   const fileName = `${manifest.id}-${manifest.version}.octoplugin`;
@@ -185,10 +209,7 @@ function main() {
   const output = path.join(outDir, fileName);
   fs.writeFileSync(output, zip);
 
-  const keyPath = args.key || process.env.OCTO_PLUGIN_SIGNING_KEY || '';
-  let signature = '';
-  if (keyPath) {
-    const privateKey = fs.readFileSync(path.resolve(keyPath), 'utf8');
+  if (privateKey) {
     signature = signPayload(privateKey, {
       id: manifest.id,
       version: manifest.version,
