@@ -153,7 +153,7 @@ const PAGE_SCRIPT = `(() => {
         kicked.set(video, { previous: video.style.transform, timer: null });
       }
       const entry = kicked.get(video);
-      video.style.transform = 'translateZ(0.01px)';
+      video.style.transform = 'translateZ(0)';
       entry.timer = setTimeout(() => {
         const saved = kicked.get(video);
         kicked.delete(video);
@@ -192,21 +192,54 @@ const PAGE_SCRIPT = `(() => {
     state.frameCooldownUntil = 0;
   };
 
+  /**
+   * Мягкий пинок медиа-пайплайна для MSE (blob:) и потоков с буфером:
+   * переустановка currentTime заставляет декодер выдать свежий кадр
+   * композитору без сброса буфера через load().
+   */
+  const nudgePipeline = (video) => {
+    try {
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        const position = Number(video.currentTime) || 0;
+        const seekable = video.seekable;
+        if (seekable && seekable.length > 0) {
+          const end = seekable.end(seekable.length - 1);
+          video.currentTime = Number.isFinite(end) && end > 0 ? Math.min(position, end) : position;
+        } else {
+          video.currentTime = position;
+        }
+      }
+      kick(video);
+      if (!video.paused && !video.ended) video.play().catch(() => {});
+      return true;
+    } catch (err) {
+      return false;
+    }
+  };
+
   /** Перезагрузка источника с возвратом на ту же секунду. */
   const reload = (video) => {
     const source = video.currentSrc || video.getAttribute('src');
     if (!source || /^blob:/i.test(source)) return false;
 
     const position = video.currentTime;
-    const resume = () => {
+    const seekBack = () => {
       try {
         const seekable = video.seekable;
         if (position > 0.25 && seekable && seekable.length > 0) {
           video.currentTime = Math.min(position, seekable.end(seekable.length - 1));
+          return true;
         }
       } catch (err) {
         /* метаданные ещё не пришли */
       }
+      return false;
+    };
+    const resume = () => {
+      if (!seekBack() && position > 0.25) {
+        video.addEventListener('canplay', seekBack, { once: true });
+      }
+      video.addEventListener('loadeddata', () => kick(video), { once: true });
       video.play().catch(() => {});
     };
 
@@ -215,6 +248,7 @@ const PAGE_SCRIPT = `(() => {
       if (video.currentSrc !== source) video.src = source;
       video.load();
     } catch (err) {
+      video.removeEventListener('loadedmetadata', resume);
       return false;
     }
     // После load() счётчик кадров начинается заново.
@@ -240,9 +274,10 @@ const PAGE_SCRIPT = `(() => {
     if (state.attempts === 1 && !withoutData(video)) {
       // Первая попытка мягкая: play() мог быть отклонён политикой автозапуска,
       // а сайт об этом не узнал.
+      kick(video);
       video.play().catch(() => {});
-    } else {
-      reload(video);
+    } else if (!reload(video)) {
+      nudgePipeline(video);
     }
 
     state.progressAt = now;
@@ -270,8 +305,10 @@ const PAGE_SCRIPT = `(() => {
       return true;
     }
 
-    reload(video);
-    // load() сбрасывает паузу и позицию: обычному сторожу тоже нужен отсчёт.
+    if (!reload(video)) {
+      nudgePipeline(video);
+    }
+    // load()/seek сбрасывает или двигает позицию: обычному сторожу тоже нужен отсчёт.
     state.progressAt = now;
     state.lastTime = video.currentTime;
     state.lastAttemptAt = now;
@@ -361,12 +398,23 @@ const PAGE_SCRIPT = `(() => {
   };
 
   // Первый кадр нового ролика иногда не доезжает до экрана: просим
-  // композитор пересобрать слой один раз, не дожидаясь сторожа.
+  // композитор пересобрать слой только если за 180 мс кадры так и не пошли,
+  // чтобы не дёргать здоровый видеослой на каждом старте.
   const onPlaying = (event) => {
     const video = event.target;
     if (!(video instanceof HTMLVideoElement) || !visible(video)) return;
+    const before = framesOf(video);
     setTimeout(() => {
-      if (video.isConnected && !video.paused && inViewport(video)) kick(video);
+      if (!video.isConnected || video.paused || !inViewport(video)) return;
+      const after = framesOf(video);
+      if (
+        after === null ||
+        after === 0 ||
+        video.videoWidth === 0 ||
+        (before !== null && after <= before)
+      ) {
+        kick(video);
+      }
     }, 180);
   };
 
@@ -411,6 +459,17 @@ const PAGE_SCRIPT = `(() => {
       kick(video);
       if (video.paused && !video.ended) video.play().catch(() => {});
     },
+    /** Перерисовать видимое видео после сброса GPU или показа view без снятия паузы. */
+    repaint() {
+      const video = activeVideo();
+      if (!video || !video.isConnected) return false;
+      kick(video);
+      if (!video.paused && !video.ended && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        const frames = framesOf(video);
+        if (frames === 0 || video.videoWidth === 0) nudgePipeline(video);
+      }
+      return true;
+    },
     info() {
       return {
         attempts: state.attempts,
@@ -427,6 +486,7 @@ const PAGE_SCRIPT = `(() => {
 })()`;
 
 const RESUME_SCRIPT = `window.__octoMedia && window.__octoMedia.resume()`;
+const REPAINT_SCRIPT = `window.__octoMedia && window.__octoMedia.repaint()`;
 
 function contents() {
   const wc = ctx.view?.webContents;
@@ -447,4 +507,11 @@ function resume() {
   evalInPage(wc, [RESUME_SCRIPT]);
 }
 
-module.exports = { apply, resume };
+/** View вернулся на экран или перезапустился GPU: пересобрать видеослой. */
+function repaint() {
+  const wc = contents();
+  if (!wc) return;
+  evalInPage(wc, [REPAINT_SCRIPT]);
+}
+
+module.exports = { apply, resume, repaint };

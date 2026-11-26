@@ -33,6 +33,9 @@ const { evalInPage } = require('./page-eval');
 
 const DEFAULT_CHAT_URL = 'https://www.tiktok.com/messages';
 const MESSAGES_PATH = /^\/messages(?:\/|$)/;
+const BUSINESS_CHAT_PATH = /^\/business-suite\/?(?:messages|inbox|chat)?(?:\/|$)/i;
+const BUSINESS_HOST = /^business\.tiktok\.com$/i;
+const BUSINESS_SUB_CHAT_PATH = /^\/(?:$|messages|inbox|chat|i18n|creator)(?:\/|$)/i;
 
 // Метка в console.log, по которой страница просит открыть панель. Токен
 // защищает от случайных сообщений сайта и вложенных фреймов: подделать его
@@ -324,6 +327,23 @@ function isMessagesUrl(rawUrl) {
   }
 }
 
+function isChatPanelUrl(rawUrl) {
+  if (!isTikTokUrl(rawUrl)) return false;
+  try {
+    const parsed = new URL(rawUrl);
+    if (MESSAGES_PATH.test(parsed.pathname) || BUSINESS_CHAT_PATH.test(parsed.pathname)) {
+      return true;
+    }
+    return BUSINESS_HOST.test(parsed.hostname) && BUSINESS_SUB_CHAT_PATH.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function isMainFrameEvent(event, isMainFrame) {
+  return typeof event?.isMainFrame === 'boolean' ? event.isMainFrame : isMainFrame !== false;
+}
+
 // Двойной клик уводит на полноценную страницу сообщений: переходы на этот путь
 // в ближайшие секунды не перехватываем, иначе панель откатит страницу назад.
 let pendingFull = null;
@@ -375,8 +395,13 @@ function addressFor(rawUrl) {
 function linkScript() {
   return `(() => {
   if (window.__octoChatLinks) return 0;
-  // На самой странице сообщений перехватывать уже нечего.
-  if (/^\\/messages(?:\\/|$)/.test(location.pathname)) return 0;
+  // На самой странице сообщений и в Business Suite перехватывать нечего.
+  if (
+    /^\\/(?:messages|business-suite)(?:\\/|$)/i.test(location.pathname) ||
+    /(^|\\.)business\\.tiktok\\.com$/i.test(location.hostname)
+  ) {
+    return 0;
+  }
   const TOKEN = ${JSON.stringify(signalToken)};
   const isMessages = (raw) => {
     try {
@@ -595,10 +620,15 @@ function applyChatStyles(wc) {
   if (!wc || wc.isDestroyed()) return;
 
   const prev = panelCssKeys.get(wc);
-  if (prev) wc.removeInsertedCSS(prev).catch(() => {});
+  // Вставляем новый CSS до удаления прежнего, чтобы страница не мигала без стилей.
   wc.insertCSS(PANEL_CSS, { cssOrigin: 'user' })
     .then((key) => {
-      if (!wc.isDestroyed()) panelCssKeys.set(wc, key);
+      if (wc.isDestroyed()) {
+        wc.removeInsertedCSS(key).catch(() => {});
+        return;
+      }
+      panelCssKeys.set(wc, key);
+      if (prev && prev !== key) wc.removeInsertedCSS(prev).catch(() => {});
     })
     .catch(() => {
       /* документ сменился между вызовом и вставкой */
@@ -655,6 +685,7 @@ function ensureView() {
     if (!isMainFrame) {
       injectPanelFrameStyles(wc);
       cosmetics.injectFrameStyles(wc).catch(() => {});
+      if (ctx.chatView === view && ctx.chatOpen) scheduleFit(view, { immediate: false });
     }
   });
   // Переписка открывается внутри той же страницы: после перехода раскладка
@@ -678,18 +709,23 @@ function ensureView() {
 
   // Ссылки из переписки не должны уводить панель в ленту: внешние открываем
   // в браузере, внутренние TikTok — в основном окне, панель остаётся чатом.
-  wc.on('will-navigate', (event, url) => {
+  // Навигации вложенных iframe (Business Suite web_dm, капча, служебные фреймы)
+  // пропускаем внутри самой панели, иначе /messages блокируется и уводит ленту.
+  wc.on('will-navigate', (event, url, _isInPlace, isMainFrame) => {
+    if (!isMainFrameEvent(event, isMainFrame)) return;
     if (isTikTokUrl(url)) {
-      try {
-        if (MESSAGES_PATH.test(new URL(url).pathname)) return;
-      } catch {
-        /* некорректный URL */
-      }
+      if (isChatPanelUrl(url)) return;
       event.preventDefault();
       const target = ctx.view && ctx.view.webContents;
       if (target && !target.isDestroyed()) target.loadURL(url).catch(() => {});
       return;
     }
+    event.preventDefault();
+    openExternal(url);
+  });
+  wc.on('will-redirect', (event, url, _isInPlace, isMainFrame) => {
+    if (!isMainFrameEvent(event, isMainFrame)) return;
+    if (isTikTokUrl(url) || /^about:blank$/i.test(url)) return;
     event.preventDefault();
     openExternal(url);
   });

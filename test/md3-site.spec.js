@@ -924,6 +924,24 @@ test('MD3 дизайн для всего сайта: все элементы, SP
     }));
     expect(layoutInfo.frameWidth).toBeGreaterThanOrEqual(layoutInfo.winWidth - 2);
 
+    // Повторные сканирования после DOM-мутаций не должны сбрасывать layout (без мигания).
+    await site.evaluate(() => {
+      const marker = document.createElement('div');
+      marker.id = 'lateMutation';
+      document.body.appendChild(marker);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    const stableLayout = await site.evaluate(() => ({
+      emptyDisplay: getComputedStyle(document.getElementById('emptyLeftCol')).display,
+      placeholderDisplay: getComputedStyle(document.getElementById('emptyChatPlaceholder')).display,
+      frameLeft: Math.round(document.getElementById('bsFrame').getBoundingClientRect().left),
+    }));
+    expect(stableLayout).toEqual({
+      emptyDisplay: 'none',
+      placeholderDisplay: 'none',
+      frameLeft: 0,
+    });
+
     await expect
       .poll(() =>
         site.evaluate(() => {
@@ -958,6 +976,59 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         composerBg: 'rgb(62, 56, 84)', // #3e3854 — поле ввода сообщения
         composerColor: 'rgb(221, 210, 224)', // #ddd2e0 — читаемый ввод в поле
         rowBadgeBg: 'rgb(140, 132, 169)', // #8c84a9 — бейдж непрочитанных в MD3
+      });
+
+    // 7.5. Прямая страница /business-suite/messages: узкое левое меню (~145 px), вложенная
+    // белая шапка и выпадающее меню профиля не остаются белыми или с чёрным текстом.
+    await site.evaluate(() => {
+      document.body.innerHTML = `
+        <div id="bsApp" style="min-height:100vh;">
+          <div id="bsDeepWrap" style="background:#ffffff;">
+            <div>
+              <div>
+                <div id="bsMainHeader" style="height:56px;background:#ffffff;display:flex;align-items:center;padding:0 16px;">
+                  <svg id="bsMainLogo" width="90" height="24"><path id="bsMainLogoPath" fill="#161823" d="M0 0h20v20H0z"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div role="menu" id="bsProfileMenu" style="position:fixed;right:12px;top:56px;width:220px;padding:8px;">
+            <a role="menuitem" id="bsMenuItem" style="display:flex;align-items:center;gap:8px;padding:8px;">
+              <svg width="16" height="16"><path id="bsMenuIcon" fill="#161823" d="M0 0h16v16H0z"/></svg>
+              <span id="bsMenuText" style="color:#161823;">Смотреть профиль</span>
+            </a>
+          </div>
+          <div style="display:flex;min-height:calc(100vh - 56px);">
+            <div id="bsLeftMenu" style="width:145px;background:#ffffff;padding:12px;">
+              <div style="color:#161823;">Главная страница</div>
+            </div>
+            <div class="SessionList" id="bsInboxCol" style="flex:1;padding:12px;">
+              <div>Диалог</div>
+            </div>
+          </div>
+        </div>
+      `;
+      window.history.pushState({}, '', '/business-suite/messages');
+    });
+
+    await expect
+      .poll(() =>
+        site.evaluate(() => ({
+          menuDisplay: getComputedStyle(document.getElementById('bsLeftMenu')).display,
+          menuBg: getComputedStyle(document.getElementById('bsLeftMenu')).backgroundColor,
+          headerBg: getComputedStyle(document.getElementById('bsMainHeader')).backgroundColor,
+          headerLogoFill: getComputedStyle(document.getElementById('bsMainLogoPath')).fill,
+          dropdownTextColor: getComputedStyle(document.getElementById('bsMenuText')).color,
+          dropdownIconFill: getComputedStyle(document.getElementById('bsMenuIcon')).fill,
+        })),
+      )
+      .toEqual({
+        menuDisplay: 'block',
+        menuBg: 'rgb(33, 29, 48)',
+        headerBg: 'rgb(33, 29, 48)',
+        headerLogoFill: 'rgb(221, 210, 224)',
+        dropdownTextColor: 'rgb(221, 210, 224)',
+        dropdownIconFill: 'rgb(221, 210, 224)',
       });
 
     // 8. Страница трансляций (/live и /@user/live, стек live_new + TUX v2):
@@ -1092,6 +1163,65 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         chatInputBg: 'rgb(62, 56, 84)', // #3e3854 — поле ввода в чате трансляции
         heartBg: 'rgb(140, 132, 169)', // #8c84a9 — кнопка лайка в чате перекрашена в primary
       });
+
+    // 9. Поверхность page не мигает между сканами, а плеер без DivBasicPlayerWrapper
+    // (например, превью эфира в ленте) получает непрозрачный video-stage.
+    await site.evaluate(() => {
+      const host = document.createElement('div');
+      host.id = 'main-content-homepage_hot';
+      host.style.cssText = 'position:relative;width:960px;height:640px;';
+      const pageInner = document.createElement('div');
+      pageInner.id = 'pageWrapStable';
+      pageInner.style.cssText = 'width:100%;height:100%;background:rgb(18, 18, 18);';
+      const liveWrap = document.createElement('div');
+      liveWrap.className = 'DivLiveContainer';
+      liveWrap.style.cssText = 'width:520px;height:320px;';
+      const livePlayer = document.createElement('div');
+      livePlayer.id = 'liveFeedStage';
+      livePlayer.className = 'LivePlayerBox';
+      livePlayer.style.cssText = 'width:480px;height:270px;';
+      const liveVideo = document.createElement('video');
+      liveVideo.id = 'liveFeedVideo';
+      liveVideo.style.cssText = 'width:480px;height:270px;';
+      livePlayer.appendChild(liveVideo);
+      liveWrap.appendChild(livePlayer);
+      pageInner.appendChild(liveWrap);
+      host.appendChild(pageInner);
+      document.body.appendChild(host);
+    });
+
+    await expect
+      .poll(() =>
+        site.evaluate(() => ({
+          pageSurface: document
+            .getElementById('pageWrapStable')
+            ?.getAttribute('data-octo-md3-surface'),
+          stageSurface: document
+            .getElementById('liveFeedStage')
+            ?.getAttribute('data-octo-md3-surface'),
+          stageBg: getComputedStyle(document.getElementById('liveFeedStage')).backgroundColor,
+        })),
+      )
+      .toEqual({
+        pageSurface: 'page',
+        stageSurface: 'video-stage',
+        stageBg: 'rgb(19, 16, 28)', // #13101c — surface-dim под видео эфира в ленте
+      });
+
+    // Повторные мутации DOM не сбрасывают surface="page" (нет цикла мигания фигур).
+    const stableAfterMutations = await site.evaluate(async () => {
+      const el = document.getElementById('pageWrapStable');
+      const seen = [];
+      for (let i = 0; i < 3; i += 1) {
+        const probe = document.createElement('div');
+        el.appendChild(probe);
+        await new Promise((resolve) => setTimeout(resolve, 450));
+        seen.push(el.getAttribute('data-octo-md3-surface'));
+        probe.remove();
+      }
+      return seen;
+    });
+    expect(stableAfterMutations).toEqual(['page', 'page', 'page']);
   } finally {
     if (app) await app.close();
     await new Promise((resolve) => server.close(resolve));

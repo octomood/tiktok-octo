@@ -876,8 +876,14 @@ const COMPONENT_CSS = `
   header[class*="Header"],
   [${SURFACE_ATTR}="header"] {
     background-color: var(--octo-md-surface-container-low) !important;
+    background-image: none !important;
     color: var(--octo-md-on-surface) !important;
     border-bottom: 1px solid color-mix(in srgb, var(--octo-md-outline-variant) 42%, transparent) !important;
+  }
+
+  [${SURFACE_ATTR}="header"] :where(div, nav, section, ul, li):not([${SURFACE_ATTR}="header"]):not([data-e2e="search-box"]):not([class*="Search"]):not([role="button"]):not(button):not([role="menu"]):not([role="menu"] *):not([role="listbox"]):not([role="listbox"] *):not([role="dialog"]):not([role="dialog"] *):not([role="tooltip"]):not([role="tooltip"] *):not([data-e2e="search-transfer-list"]):not([data-e2e="search-transfer-list"] *):not([class*="TUXPopover"]):not([class*="TUXPopover"] *):not([class*="DivPopupContainer"]):not([class*="DivPopupContainer"] *):not([class*="DivDropdown"]):not([class*="DivDropdown"] *):not([class*="DivMenuContainer"]):not([class*="DivMenuContainer"] *):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([class*="Avatar" i]):not([id^="octo-"]) {
+    background-color: transparent !important;
+    background-image: none !important;
   }
 
   :is(
@@ -1470,9 +1476,15 @@ const COMPONENT_CSS = `
   [class*="DivBasicPlayerWrapper"]:not(:fullscreen) {
     border-radius: 16px !important;
     background-color: var(--octo-md-surface-dim) !important;
+    isolation: isolate !important;
     box-shadow:
       0 10px 24px rgba(8, 6, 16, 0.45),
       0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 50%, transparent) !important;
+  }
+
+  [${SURFACE_ATTR}="video-stage"]:not(:fullscreen) {
+    background-color: var(--octo-md-surface-dim) !important;
+    isolation: isolate !important;
   }
 
   :fullscreen,
@@ -1927,6 +1939,17 @@ const COMPONENT_CSS = `
       inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 50%, transparent) !important;
   }
 
+  :is(
+    [role="menu"]:not([id^="octo-"]),
+    [role="listbox"]:not([id^="octo-"]),
+    [class*="TUXPopover-content"]:not([id^="octo-"]),
+    [class*="DivPopupContainer"]:not([id^="octo-"]),
+    [class*="DivDropdown"]:not([id^="octo-"]),
+    [class*="DivMenuContainer"]:not([id^="octo-"])
+  ) :where(a, span, p, div, label, strong, li, button, svg, [role="menuitem"], [role="option"]):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([${ACCENT_ATTR}="primary-text"]):not(:disabled):not([aria-disabled="true"]) {
+    color: var(--octo-md-on-surface) !important;
+  }
+
   [role="menuitem"],
   [role="option"],
   [class*="DivMenuItem"],
@@ -2379,8 +2402,11 @@ function syncScript(dark = true) {
       return result;
     };
 
+    const isMessagesTopPage = () => /^\\/messages(?:\\/|$)/i.test(location.pathname || '');
+
     const isMessagesRoute = () =>
-      /^\\/(?:messages|business-suite)(?:\\/|$)/i.test(location.pathname || '') ||
+      isMessagesTopPage() ||
+      /^\\/business-suite(?:\\/|$)/i.test(location.pathname || '') ||
       /business\\.tiktok\\.com/i.test(location.hostname || '');
 
     const isMessagesContext = () =>
@@ -2864,7 +2890,7 @@ function syncScript(dark = true) {
     };
 
     const syncMessagesLayout = () => {
-      if (!isMessagesRoute()) {
+      if (!isMessagesTopPage()) {
         if (document.querySelector('[' + CHAT_LAYOUT + ']')) {
           document.querySelectorAll('[' + CHAT_LAYOUT + ']').forEach((el) => delAttrIfSet(el, CHAT_LAYOUT));
         }
@@ -2885,7 +2911,7 @@ function syncScript(dark = true) {
           continue;
         }
         const r = frame.getBoundingClientRect();
-        if (r.width >= 300 && r.height >= 260) {
+        if (frame.getAttribute(CHAT_LAYOUT) === 'frame' || (r.width >= 240 && r.height >= 200)) {
           workspace = frame;
           isBusinessFrame = /(?:business-suite|business\\.tiktok)/i.test(src);
           break;
@@ -2894,7 +2920,10 @@ function syncScript(dark = true) {
 
       const isEmptyPane = (el) => {
         if (!el || el.id?.startsWith('octo-')) return false;
-        if (hasRealNav(el) || el.querySelector('[class*="DivSideNavContainer"] [data-e2e^="nav-"]')) {
+        if (
+          hasRealNav(el) ||
+          el.querySelector('[class*="DivSideNavContainer"] [data-e2e^="nav-"], [class*="DivSideNavContainer"] a[href], nav a[href]')
+        ) {
           return false;
         }
         if (el.querySelector(mediaOrInputSelector)) {
@@ -2917,7 +2946,10 @@ function syncScript(dark = true) {
           '[class*="SessionList" i], [class*="ConversationList" i], [class*="ChatList" i], [class*="Inbox" i]',
         )) {
           const r = candidate.getBoundingClientRect();
-          if (r.left >= 180 && r.width >= 240 && r.height >= 260 && (candidate.innerText || '').trim()) {
+          const inManaged = Boolean(
+            candidate.closest('[' + CHAT_LAYOUT + '="host"], [' + CHAT_LAYOUT + '="flush"]'),
+          );
+          if ((r.left >= 180 || inManaged) && r.width >= 200 && r.height >= 240 && (candidate.innerText || '').trim()) {
             workspace = candidate;
             break;
           }
@@ -2926,25 +2958,36 @@ function syncScript(dark = true) {
 
       if (workspace) {
         const wsRect = workspace.getBoundingClientRect();
-        if (wsRect.left >= 180) {
+        const isFrame = workspace.tagName === 'IFRAME';
+        const alreadyManaged =
+          workspace.getAttribute(CHAT_LAYOUT) === 'frame' ||
+          Boolean(workspace.closest('[' + CHAT_LAYOUT + '="host"], [' + CHAT_LAYOUT + '="flush"]'));
+        if (wsRect.left >= 180 || alreadyManaged) {
+          const ancestors = [];
+          let anyHidden = false;
+          let anyFlushed = false;
           let cur = workspace;
           while (cur && cur.parentElement && cur.parentElement !== document.documentElement) {
             const parent = cur.parentElement;
             for (const sibling of parent.children) {
               if (sibling === cur || sibling.id?.startsWith('octo-')) continue;
-              const sr = sibling.getBoundingClientRect();
-              if (sr.width < 40 || sr.height < 200 || sr.right > wsRect.left + 20) continue;
+              const wasHidden = sibling.getAttribute(CHAT_LAYOUT) === 'hidden';
+              if (!wasHidden) {
+                const sr = sibling.getBoundingClientRect();
+                if (sr.width < 40 || sr.height < 200 || sr.right > wsRect.left + 20) continue;
+              }
               if (isEmptyPane(sibling)) {
                 nextLayout.set(sibling, 'hidden');
+                anyHidden = true;
               }
             }
             if (cur !== workspace && parent !== document.body) {
-              nextLayout.set(cur, 'host');
+              ancestors.push(cur);
             }
             cur = parent;
           }
 
-          if (workspace.tagName === 'IFRAME') {
+          if (isFrame) {
             nextLayout.set(workspace, 'frame');
           }
 
@@ -2958,12 +3001,22 @@ function syncScript(dark = true) {
           if (!hasVisibleSideNav) {
             let node = workspace.parentElement;
             while (node && node !== document.body && node !== document.documentElement) {
-              const st = getComputedStyle(node);
-              if (parseFloat(st.marginLeft) >= 120 || parseFloat(st.paddingLeft) >= 120) {
+              if (node.getAttribute(CHAT_LAYOUT) === 'flush') {
                 nextLayout.set(node, 'flush');
+                anyFlushed = true;
+              } else {
+                const st = getComputedStyle(node);
+                if (parseFloat(st.marginLeft) >= 120 || parseFloat(st.paddingLeft) >= 120) {
+                  nextLayout.set(node, 'flush');
+                  anyFlushed = true;
+                }
               }
               node = node.parentElement;
             }
+          }
+
+          if (isFrame || anyHidden || anyFlushed) {
+            for (const el of ancestors) nextLayout.set(el, 'host');
           }
         }
       }
@@ -3056,7 +3109,7 @@ function syncScript(dark = true) {
       for (const el of pageContainers) {
         if (
           el.id?.startsWith('octo-') ||
-          el.matches('[role="dialog"], [role="menu"], [role="tooltip"], [class*="DivSideNavContainer"], [' + SURFACE + '="sidenav"], [' + SURFACE + '="live-chat"], [data-e2e="live-room-content"], [class*="DivHeaderContainer"], [class*="DivMainContainer"], [class*="DivBodyContainer"], [class*="DivLayoutContainer"], video, iframe') ||
+          el.matches('[role="dialog"], [role="menu"], [role="tooltip"], [class*="DivSideNavContainer"], [' + SURFACE + '="sidenav"], [' + SURFACE + '="live-chat"], [' + SURFACE + '="video-stage"], [data-e2e="live-room-content"], [class*="DivHeaderContainer"], [class*="DivMainContainer"], [class*="DivBodyContainer"], [class*="DivLayoutContainer"], video, iframe') ||
           el.closest('[role="dialog"], [role="menu"], [' + SURFACE + '="sidenav"]') ||
           hasPlannedAncestor(el, 'live-chat', true)
         ) {
@@ -3072,7 +3125,8 @@ function syncScript(dark = true) {
           ) {
             continue;
           }
-          if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+          const alreadyPage = el.getAttribute(SURFACE) === 'page';
+          if (alreadyPage || (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent')) {
             nextSurface.set(el, 'page');
           }
         }
@@ -3452,17 +3506,19 @@ function syncScript(dark = true) {
 
       if (MODE === 'dark') {
         const topBars = root.querySelectorAll(
-          'body > div, #app > div, #app > div > div, #root > div, #root > div > div, #root header, header, nav, [class*="Header" i], [class*="TopBar" i], [class*="NavBar" i]',
+          msgCtx
+            ? 'header, nav, [role="banner"], [class*="Header" i], [class*="TopBar" i], [class*="NavBar" i], div, section'
+            : 'body > div, #app > div, #app > div > div, #root > div, #root > div > div, #root header, header, nav, [class*="Header" i], [class*="TopBar" i], [class*="NavBar" i]',
         );
         const topLimit = msgCtx ? 140 : 20;
         for (const el of topBars) {
           if (el.id?.startsWith('octo-')) continue;
-          if (hasPlannedAncestor(el, 'header')) continue;
+          if (!msgCtx && hasPlannedAncestor(el, 'header')) continue;
           const rect = el.getBoundingClientRect();
           if (
             rect.top >= -4 &&
             rect.top <= topLimit &&
-            rect.height >= 36 &&
+            rect.height >= 32 &&
             rect.height <= 120 &&
             rect.width >= window.innerWidth * 0.45
           ) {
@@ -3488,13 +3544,13 @@ function syncScript(dark = true) {
         }
 
         const msgPanels = root.querySelectorAll(
-          '#root div, #app div, section, aside, [class*="Panel" i], [class*="Card" i], [class*="List" i], [class*="Header" i], [class*="Container" i]',
+          'div, section, aside, nav, ul',
         );
         for (const panel of msgPanels) {
           if (
             panel.id?.startsWith('octo-') ||
             nextSurface.has(panel) ||
-            panel.matches('button, [role="button"], input, textarea, [contenteditable], img, video, svg') ||
+            panel.matches('button, [role="button"], input, textarea, [contenteditable], img, video, svg, [class*="Bubble" i], [class*="MessageContent" i], [class*="Avatar" i], [class*="Badge" i]') ||
             panel.closest('[role="dialog"], [role="menu"], [role="tooltip"]') ||
             hasPlannedAncestor(panel, 'chat-active') ||
             hasPlannedAncestor(panel, 'header')
@@ -3502,7 +3558,7 @@ function syncScript(dark = true) {
             continue;
           }
           const r = panel.getBoundingClientRect();
-          if (r.width < 160 || r.height < 36) {
+          if (r.width < 120 || r.height < 36) {
             continue;
           }
           if (isLightColor(getComputedStyle(panel).backgroundColor)) {
@@ -3788,6 +3844,22 @@ function syncScript(dark = true) {
       for (const video of root.querySelectorAll('video')) {
         if (video.id?.startsWith('octo-') || video.closest('[role="dialog"], [aria-modal="true"]')) continue;
         const vr = video.getBoundingClientRect();
+        if (vr.width < 120 || vr.height < 120) continue;
+        const stageHost =
+          video.closest(
+            '[class*="DivBasicPlayerWrapper"], [class*="DivVideoWrapper"], [data-e2e="feed-video"], [data-e2e="live-room-content"], [class*="DivLivePlayer"], [class*="LivePlayer"], [class*="xgplayer"]',
+          ) || video.parentElement;
+        if (
+          stageHost &&
+          stageHost !== document.body &&
+          stageHost !== document.documentElement &&
+          !stageHost.id?.startsWith('octo-') &&
+          !stageHost.matches(
+            '[class*="DivBasicPlayerWrapper"], [data-e2e="live-room-content"], main, [role="main"], [id^="main-content-"], [class*="DivFeedContainer"], [class*="DivRecommendList"], [class*="DivItemContainerV2"]',
+          )
+        ) {
+          markPlayerSurface(stageHost, 'video-stage');
+        }
         if (vr.width < 180 || vr.height < 160) continue;
         const host =
           video.closest('[class*="DivItemContainerV2"], [class*="DivRecommendList"], [class*="DivBasicPlayerWrapper"], [class*="DivVideoWrapper"]') ||
@@ -3960,7 +4032,9 @@ function syncScript(dark = true) {
             SURFACE +
             '="player-more"], [' +
             SURFACE +
-            '="feed-nav-group"]',
+            '="feed-nav-group"], [' +
+            SURFACE +
+            '="video-stage"]',
         )
         .forEach((el) => {
           if (!nextPlayerSurfaces.has(el)) delAttrIfSet(el, SURFACE);
@@ -4025,7 +4099,13 @@ function syncScript(dark = true) {
       if (MODE === 'dark' && isMessagesContext()) {
         const lumCache = new WeakMap();
         const uiSvgs = root.querySelectorAll(
-          '[' + SURFACE + '="header"] svg, [' + SURFACE + '="card"] svg, [' + SURFACE + '="chat-input"] svg, [class*="Header" i] svg, [class*="Toolbar" i] svg, [class*="MessageEditor" i] svg, [class*="ChatEditor" i] svg',
+          '[' +
+            SURFACE +
+            '="header"] svg, [' +
+            SURFACE +
+            '="card"] svg, [' +
+            SURFACE +
+            '="chat-input"] svg, [role="menu"] svg, [role="listbox"] svg, [class*="TUXPopover-content"] svg, [class*="DivPopupContainer"] svg, [class*="DivDropdown"] svg, [class*="DivMenuContainer"] svg, [class*="Header" i] svg, [class*="Toolbar" i] svg, [class*="MessageEditor" i] svg, [class*="ChatEditor" i] svg',
         );
         const nextOnSurface = new Set();
         const delOnSurface = [];

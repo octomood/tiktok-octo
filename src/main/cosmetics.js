@@ -969,19 +969,18 @@ async function applyNow(wc) {
   const previous = state.keys;
   state.keys = [];
 
-  await Promise.all(previous.map((key) => wc.removeInsertedCSS(key).catch(() => {})));
-  if (currentGeneration !== state.generation) return;
-
   const css = enabledCss();
 
   if (css.trim()) {
     try {
       const key = await wc.insertCSS(css, { cssOrigin: 'user' });
       if (currentGeneration === state.generation) state.keys.push(key);
+      else wc.removeInsertedCSS(key).catch(() => {});
     } catch {
       /* документ сменился между вызовом и вставкой */
     }
   }
+  await Promise.all(previous.map((key) => wc.removeInsertedCSS(key).catch(() => {})));
   if (currentGeneration !== state.generation) return;
 
   await runScripts(wc);

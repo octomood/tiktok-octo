@@ -220,7 +220,12 @@ function installChatLinks() {
     .catch(() => {});
 }
 
-if (isTikTok && !/^\/messages(?:\/|$)/.test(window.location.pathname)) {
+if (
+  pageRole !== 'chat' &&
+  isTikTok &&
+  !/^\/(?:messages|business-suite)(?:\/|$)/i.test(window.location.pathname) &&
+  !/(?:^|\.)business\.tiktok\.com$/i.test(host)
+) {
   try {
     installChatLinks();
   } catch {

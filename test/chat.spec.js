@@ -236,3 +236,76 @@ test('чат открывается панелью слева, двойной к
     if (app) await app.close();
   }
 });
+
+test('панель чата пропускает вложенный iframe Business Suite, не уводя основное окно', async () => {
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-chat-iframe-'));
+  let app;
+
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: {
+        ...process.env,
+        OCTO_E2E: '1',
+        OCTO_USER_DATA: userData,
+        OCTO_HOME_URL: 'about:blank',
+      },
+    });
+
+    await app.firstWindow();
+    const page = await waitForWindow(
+      app,
+      (candidate) => candidate.url().startsWith('file://'),
+      'полоса заголовка',
+    );
+    await waitForWindow(app, (candidate) => candidate.url() === 'about:blank', 'страница сайта');
+
+    // Мокаем https://www.tiktok.com прямо в сессии, чтобы не ходить в сеть.
+    await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows()[0];
+      const ses = win.contentView.children[0].webContents.session;
+      ses.protocol.handle('https', (req) => {
+        const url = new URL(req.url);
+        if (url.hostname === 'www.tiktok.com' && url.pathname === '/messages') {
+          return new Response(
+            '<!doctype html><html><body><iframe id="dmFrame" src="https://www.tiktok.com/business-suite/messages"></iframe></body></html>',
+            { headers: { 'content-type': 'text/html; charset=utf-8' } },
+          );
+        }
+        if (url.hostname === 'www.tiktok.com' && url.pathname === '/business-suite/messages') {
+          return new Response(
+            '<!doctype html><html><body><div id="bs-ready">Inbox OK</div></body></html>',
+            { headers: { 'content-type': 'text/html; charset=utf-8' } },
+          );
+        }
+        return new Response('<!doctype html><html><body>ok</body></html>', {
+          headers: { 'content-type': 'text/html; charset=utf-8' },
+        });
+      });
+    });
+
+    await page.click('#btnChat');
+    const chatPage = await waitForWindow(
+      app,
+      (candidate) => candidate.url() === 'https://www.tiktok.com/messages',
+      'панель /messages',
+    );
+
+    await expect
+      .poll(async () =>
+        chatPage.evaluate(() => {
+          const frame = document.getElementById('dmFrame');
+          return frame?.contentDocument?.getElementById('bs-ready')?.textContent || '';
+        }),
+      )
+      .toBe('Inbox OK');
+
+    // Основное окно не должно быть перенаправлено на Business Suite.
+    const list = await views(app);
+    expect(list.some((view) => view.url === 'about:blank')).toBe(true);
+    expect(list.some((view) => view.url.includes('/business-suite'))).toBe(false);
+  } finally {
+    if (app) await app.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});

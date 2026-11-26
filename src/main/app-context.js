@@ -305,20 +305,33 @@ function chatWidthLimit(available = contentWidth()) {
   return Math.max(200, available - spare);
 }
 
+let viewHidden = false;
+
 /** Показать view только когда нет оверлеев (настройки, палитра, мастер, экран ошибки). */
 function syncViewVisibility() {
   if (!ctx.view || typeof ctx.view.setVisible !== 'function') return;
   if (ctx.view.webContents && ctx.view.webContents.isDestroyed()) return;
+  const visible =
+    !ctx.offline &&
+    !ctx.paletteOpen &&
+    !ctx.panelOpen &&
+    !ctx.pluginsOpen &&
+    !ctx.pluginDialogOpen &&
+    !ctx.barOnly &&
+    !ctx.welcome.open;
   try {
-    ctx.view.setVisible(
-      !ctx.offline &&
-        !ctx.paletteOpen &&
-        !ctx.panelOpen &&
-        !ctx.pluginsOpen &&
-        !ctx.pluginDialogOpen &&
-        !ctx.barOnly &&
-        !ctx.welcome.open,
-    );
+    ctx.view.setVisible(visible);
+    if (visible && viewHidden) {
+      viewHidden = false;
+      ctx.view.webContents?.invalidate?.();
+      try {
+        require('./media').repaint();
+      } catch {
+        /* view ещё не готов */
+      }
+    } else if (!visible) {
+      viewHidden = true;
+    }
   } catch {
     /* view уже закрывается */
   }

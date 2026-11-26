@@ -73,7 +73,7 @@ test('зависшее видео восстанавливается, пауза
       /** Видео с полностью управляемыми часами, кадрами и паузой. */
       const makeVideo = ({ source, time, frames }) => {
         const video = document.createElement('video');
-        const control = { playCalls: 0, loadCalls: 0, time, frames, paused: false };
+        const control = { playCalls: 0, loadCalls: 0, seekCalls: 0, time, frames, paused: false };
 
         Object.defineProperties(video, {
           paused: { get: () => control.paused },
@@ -81,9 +81,11 @@ test('зависшее видео восстанавливается, пауза
           currentTime: {
             get: () => control.time,
             set: (value) => {
+              control.seekCalls += 1;
               control.time = value;
             },
           },
+          seekable: { get: () => ({ length: 1, end: () => 30 }) },
           readyState: { get: () => 4 },
           networkState: { get: () => 1 },
           error: { get: () => null },
@@ -152,8 +154,38 @@ test('зависшее видео восстанавливается, пауза
       media.tick();
       const frameAttempts = media.info().frameAttempts;
       const frameLoadsAfter = second.control.loadCalls;
-
       second.video.remove();
+      clock += 1000;
+
+      // --- 3. blob: (MSE) без кадров восстанавливается мягким пинком без load() ---
+      const blob = makeVideo({
+        source: 'blob:https://www.tiktok.com/fake-mse-id',
+        time: 5,
+        frames: 20,
+      });
+
+      media.tick();
+      clock += 1000;
+      blob.control.time += 1;
+      media.tick();
+
+      clock += 3500;
+      blob.control.time += 1;
+      media.tick(); // попытка 1: kick
+
+      clock += 3500;
+      blob.control.time += 1;
+      media.tick(); // попытка 2 для blob: мягкий seek без load()
+      const blobSeeksAfter = blob.control.seekCalls;
+      const blobLoadsAfter = blob.control.loadCalls;
+
+      // repaint() перерисовывает активный ролик и не снимает пользовательскую паузу.
+      blob.control.paused = true;
+      const pausedPlayBefore = blob.control.playCalls;
+      const repainted = media.repaint();
+      const pausedPlayAfter = blob.control.playCalls;
+
+      blob.video.remove();
       Date.now = realNow;
       delete document.visibilityState;
 
@@ -166,6 +198,11 @@ test('зависшее видео восстанавливается, пауза
         frameLoads,
         frameAttempts,
         frameLoadsAfter,
+        blobSeeksAfter,
+        blobLoadsAfter,
+        repainted,
+        pausedPlayBefore,
+        pausedPlayAfter,
       };
     });
 
@@ -178,6 +215,84 @@ test('зависшее видео восстанавливается, пауза
     expect(result.frameLoads).toBe(1);
     expect(result.frameAttempts).toBe(0);
     expect(result.frameLoadsAfter).toBe(result.frameLoads);
+    expect(result.blobSeeksAfter).toBeGreaterThan(0);
+    expect(result.blobLoadsAfter).toBe(0);
+    expect(result.repainted).toBe(true);
+    expect(result.pausedPlayAfter).toBe(result.pausedPlayBefore);
+  } finally {
+    if (app) await app.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+test('playing не дёргает слой у видео, которое уже рисует кадры', async () => {
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-e2e-media-playing-'));
+  let app;
+
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: {
+        ...process.env,
+        OCTO_E2E: '1',
+        OCTO_USER_DATA: userData,
+        OCTO_HOME_URL: 'about:blank',
+      },
+    });
+
+    await app.firstWindow();
+    const view = await waitForView(app);
+    expect(view, 'страница сайта не появилась').toBeTruthy();
+    await expect.poll(() => view.evaluate(() => typeof window.__octoMedia)).toBe('object');
+
+    const result = await view.evaluate(async () => {
+      const make = (initialFrames) => {
+        const video = document.createElement('video');
+        let frames = initialFrames;
+        Object.defineProperties(video, {
+          paused: { get: () => false },
+          ended: { get: () => false },
+          videoWidth: { get: () => 720 },
+          videoHeight: { get: () => 1280 },
+        });
+        video.getBoundingClientRect = () => ({
+          width: 320,
+          height: 568,
+          left: 0,
+          top: 0,
+          right: 320,
+          bottom: 568,
+          x: 0,
+          y: 0,
+        });
+        video.getVideoPlaybackQuality = () => ({ totalVideoFrames: frames });
+        document.body.appendChild(video);
+        return {
+          video,
+          setFrames: (v) => {
+            frames = v;
+          },
+        };
+      };
+
+      const healthy = make(10);
+      healthy.video.dispatchEvent(new window.Event('playing'));
+      healthy.setFrames(22);
+      await new Promise((r) => setTimeout(r, 220));
+      const healthyKicked = healthy.video.style.transform.includes('translateZ');
+      healthy.video.remove();
+
+      const stalled = make(0);
+      stalled.video.dispatchEvent(new window.Event('playing'));
+      await new Promise((r) => setTimeout(r, 220));
+      const stalledKicked = stalled.video.style.transform.includes('translateZ');
+      stalled.video.remove();
+
+      return { healthyKicked, stalledKicked };
+    });
+
+    expect(result.healthyKicked).toBe(false);
+    expect(result.stalledKicked).toBe(true);
   } finally {
     if (app) await app.close();
     fs.rmSync(userData, { recursive: true, force: true });

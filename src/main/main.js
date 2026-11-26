@@ -69,6 +69,7 @@ const { externalHttpUrlFromArgv } = require('./deep-link-url');
 const linkHandler = require('./link-handler');
 const jumpList = require('./jump-list');
 const videoQuality = require('./video-quality');
+const media = require('./media');
 
 // Кастомные схемы (хосты плагинов и превью стикеров) должны быть объявлены
 // до app.whenReady().
@@ -264,6 +265,21 @@ if (!gotLock) {
     app.on('activate', () => {
       if (!ctx.win || ctx.win.isDestroyed()) createWindow();
       else showWindow();
+    });
+
+    // После сбоя и перезапуска GPU-процесса активное видео может остаться с
+    // пустой текстурой (чёрный экран): перерисовываем view и видеослой.
+    app.on('child-process-gone', (_event, details) => {
+      if (details?.type !== 'GPU') return;
+      const wc = ctx.view?.webContents;
+      if (wc && !wc.isDestroyed()) {
+        try {
+          wc.invalidate();
+        } catch {
+          /* view уже закрывается */
+        }
+      }
+      setTimeout(() => media.repaint(), 250);
     });
   });
 
