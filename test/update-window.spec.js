@@ -88,7 +88,10 @@ test('окно обновления: предложение, загрузка и
     await expect(update.locator('#btnLater')).toHaveText('Скрыть');
 
     // Закрытие во время загрузки не отменяет её: окно откроется после установки.
-    await update.locator('#btnClose').click();
+    await Promise.all([
+      update.waitForEvent('close'),
+      update.locator('#btnClose').click({ noWaitAfter: true }),
+    ]);
     await expect.poll(() => update.isClosed()).toBe(true);
 
     await showUpdate(app, { phase: 'ready', version: '9.9.9', percent: 100 });
@@ -115,7 +118,10 @@ test('окно обновления: предложение, загрузка и
     await expect(update.locator('#btnLater')).toHaveText('Закрыть');
     await expect(update.locator('#updateProgress')).toBeHidden();
 
-    await update.locator('#btnLater').click();
+    await Promise.all([
+      update.waitForEvent('close'),
+      update.locator('#btnLater').click({ noWaitAfter: true }),
+    ]);
     await expect.poll(() => update.isClosed()).toBe(true);
   } finally {
     await app?.close();

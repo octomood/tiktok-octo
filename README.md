@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/banner.png" width="880" alt="TikTok Octo — Material Design 3 Expressive desktop shell for tiktok.com" />
+  <img src="docs/banner.png?v=2" width="880" alt="TikTok Octo — Material Design 3 Expressive desktop shell for tiktok.com" />
 </div>
 
 <div align="center">
@@ -34,7 +34,7 @@ floating mini player and desktop shortcuts that make sense.
 > bypass. A browser, shaped like an app.
 
 <div align="center">
-  <img src="docs/titlebar.png" width="820" alt="TikTok Octo MD3 Expressive title bar with scalloped flower mark, tonal navigation pill group, unread badge, feed layout switch and Settings pill" />
+  <img src="docs/titlebar.png?v=2" width="820" alt="TikTok Octo MD3 Expressive title bar with scalloped flower mark, tonal navigation pill group, unread badge, feed layout switch and Settings pill" />
   <br />
   <sub><i>The 52 px MD3 Expressive title bar: scalloped brand mark, tonal navigation group, unread badge, playback &amp; feed-layout controls, Settings pill and window controls.</i></sub>
 </div>
@@ -107,7 +107,7 @@ setting cards sit on the right, and header search filters every section at once.
 <br />
 
 <div align="center">
-  <img src="docs/findbar.png" width="820" alt="TikTok Octo MD3 Expressive find bar with match counter below the 52 px title bar" />
+  <img src="docs/findbar.png?v=2" width="820" alt="TikTok Octo MD3 Expressive find bar with match counter below the 52 px title bar" />
   <br />
   <sub><i>Find in page: the content shrinks smoothly below the tonal search bar, never covered.</i></sub>
 </div>

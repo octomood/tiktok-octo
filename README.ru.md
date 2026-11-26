@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/banner.png" width="880" alt="TikTok Octo — неофициальный десктоп-клиент TikTok в стиле Material Design 3 Expressive" />
+  <img src="docs/banner.png?v=2" width="880" alt="TikTok Octo — неофициальный десктоп-клиент TikTok в стиле Material Design 3 Expressive" />
 </div>
 
 <div align="center">
@@ -35,7 +35,7 @@
 > приложения.
 
 <div align="center">
-  <img src="docs/titlebar.png" width="820" alt="Полоса заголовка TikTok Octo в стиле MD3 Expressive: цветочный знак бренда, тональная группа навигации, бейдж непрочитанных, переключатель режима ленты и кнопка Настроек" />
+  <img src="docs/titlebar.png?v=2" width="820" alt="Полоса заголовка TikTok Octo в стиле MD3 Expressive: цветочный знак бренда, тональная группа навигации, бейдж непрочитанных, переключатель режима ленты и кнопка Настроек" />
   <br />
   <sub><i>Полоса заголовка высотой 52 px в стиле MD3 Expressive: знак бренда, тональная навигация, непрочитанные, кнопки плеера и режима ленты, кнопка «Настройки» и кнопки окна.</i></sub>
 </div>
@@ -109,7 +109,7 @@
 <br />
 
 <div align="center">
-  <img src="docs/findbar.png" width="820" alt="Панель поиска по странице со счётчиком совпадений под полосой заголовка 52 px в стиле MD3 Expressive" />
+  <img src="docs/findbar.png?v=2" width="820" alt="Панель поиска по странице со счётчиком совпадений под полосой заголовка 52 px в стиле MD3 Expressive" />
   <br />
   <sub><i>Поиск по странице: контент плавно поджимается под тональную строку поиска и не перекрывается.</i></sub>
 </div>
