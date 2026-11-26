@@ -114,8 +114,6 @@ const ctx = {
   themeMode: 'dark',
   /** Цветовая палитра MD3 Expressive (см. md3-palettes.js). */
   themePalette: 'octo-lavender',
-  /** Режим расположения ленты: 'centered' (как Shorts) | 'wide' (широкий). */
-  feedLayout: 'centered',
   /** Настройки плеера, которых нет у сайта. */
   player: {
     speed: 1,
@@ -810,7 +808,6 @@ function currentState() {
     abLoop: { ...ctx.abLoop },
     themeMode: ctx.themeMode,
     themePalette: ctx.themePalette,
-    feedLayout: ctx.feedLayout,
     proxyScan: {
       state: ctx.proxyScan.state,
       items: ctx.proxyScan.items.map((item) => ({ ...item })),

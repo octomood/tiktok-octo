@@ -45,8 +45,6 @@ const el = {
   min: $('btnMin'),
   max: $('btnMax'),
   close: $('btnClose'),
-  feedCentered: $('btnFeedCentered'),
-  feedWide: $('btnFeedWide'),
   pill: $('pagePill'),
   title: $('pageTitle'),
   unread: $('unreadBadge'),
@@ -213,7 +211,6 @@ const el = {
   themeModeSelect: $('themeModeSelect'),
   themePaletteGrid: $('themePaletteGrid'),
   themePaletteActiveName: $('themePaletteActiveName'),
-  feedLayoutSelect: $('feedLayoutSelect'),
   profileSelect: $('profileSelect'),
   profileNewName: $('profileNewName'),
   btnProfileAdd: $('btnProfileAdd'),
@@ -718,13 +715,6 @@ el.themePaletteGrid?.addEventListener('click', (event) => {
   const swatch = event.target.closest('[data-theme-palette]');
   if (swatch) api.cmd('themePalette', swatch.dataset.themePalette);
 });
-
-el.feedLayoutSelect.addEventListener('change', () => {
-  api.cmd('feedLayout', el.feedLayoutSelect.value);
-});
-
-el.feedCentered.addEventListener('click', () => api.cmd('feedLayout', 'centered'));
-el.feedWide.addEventListener('click', () => api.cmd('feedLayout', 'wide'));
 
 el.profileSelect.addEventListener('change', () => {
   api.cmd('profileSwitch', el.profileSelect.value);
@@ -1836,8 +1826,6 @@ function paletteItems() {
           payload: palette.id,
         }))
       : []),
-    { label: 'Лента: по центру (как Shorts)', cmd: 'feedLayout', payload: 'centered' },
-    { label: 'Лента: широкий режим', cmd: 'feedLayout', payload: 'wide' },
     { label: 'Сбросить данные сайта…', cmd: 'regionResetData' },
   );
 
@@ -2988,14 +2976,6 @@ function renderPanel() {
   renderThemePalettes(darkCosmetic ? Boolean(darkCosmetic.enabled) : true);
   if (document.activeElement !== el.themeModeSelect && state.themeMode) {
     el.themeModeSelect.value = state.themeMode;
-  }
-  const feedLayout = state.feedLayout === 'wide' ? 'wide' : 'centered';
-  el.feedCentered.classList.toggle('is-on', feedLayout === 'centered');
-  el.feedCentered.setAttribute('aria-pressed', String(feedLayout === 'centered'));
-  el.feedWide.classList.toggle('is-on', feedLayout === 'wide');
-  el.feedWide.setAttribute('aria-pressed', String(feedLayout === 'wide'));
-  if (document.activeElement !== el.feedLayoutSelect && el.feedLayoutSelect) {
-    el.feedLayoutSelect.value = feedLayout;
   }
   renderProfiles();
   renderPlugins(state.plugins);

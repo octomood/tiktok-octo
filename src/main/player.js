@@ -823,6 +823,10 @@ function pageScript(config) {
         }
         return true;
       },
+      position() {
+        const video = activeVideo();
+        return video ? Number(video.currentTime) || 0 : 0;
+      },
       status() {
         const video = activeVideo();
         return {
@@ -1057,6 +1061,23 @@ async function refreshDevices() {
   return devices;
 }
 
+async function position() {
+  const wc = contents();
+  if (!wc) return null;
+  try {
+    const time = await withTimeout(
+      wc.executeJavaScript(
+        `(() => (window.__octoPlayer && window.__octoPlayer.position ? window.__octoPlayer.position() : null))()`,
+        false,
+      ),
+      1200,
+    );
+    return typeof time === 'number' && Number.isFinite(time) ? time : null;
+  } catch {
+    return null;
+  }
+}
+
 async function status() {
   const wc = contents();
   if (!wc) return null;
@@ -1202,6 +1223,7 @@ module.exports = {
   resetPicture,
   watchPanel,
   refreshDevices,
+  position,
   status,
   nudge,
   stepFrame,

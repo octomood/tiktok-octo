@@ -21,6 +21,11 @@ const COSMETIC_RULES = [
     label: 'Скрыть панель справа до комментариев',
     default: true,
   },
+  {
+    id: 'user-badges',
+    label: 'Бейджи сообщества у ников',
+    default: true,
+  },
 ];
 
 module.exports = { COSMETIC_RULES };

@@ -165,7 +165,7 @@ const PAGE_SCRIPT = `(() => {
 
   // Один XPath на все подписи: полный обход DOM 11 раз подряд слишком дорог.
   const TEXT_XPATH =
-    '//*[self::span or self::div or self::p][' +
+    './/*[self::span or self::div or self::p][' +
     LABELS.map((label) => 'normalize-space(.)="' + label + '"').join(' or ') +
     ']';
 
@@ -174,11 +174,12 @@ const PAGE_SCRIPT = `(() => {
    * иначе «реклама» в комментарии или описании тоже считалась бы роликом.
    */
   function fromText() {
+    const root = document.querySelector('main, [role="main"], [id^="main-content-"]') || document;
     let snapshot;
     try {
       snapshot = document.evaluate(
         TEXT_XPATH,
-        document,
+        root,
         null,
         XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
         null,

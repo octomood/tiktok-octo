@@ -10,7 +10,7 @@ const path = require('node:path');
  */
 
 // Тесты и отладка могут подменить стартовую страницу (см. OCTO_HOME_URL).
-const HOME_URL = process.env.OCTO_HOME_URL || 'https://www.tiktok.com/';
+const HOME_URL = process.env.OCTO_HOME_URL || 'https://www.tiktok.com/foryou';
 
 // Высота нашей собственной полосы заголовка (px).
 const TITLEBAR_H = 50;

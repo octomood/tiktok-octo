@@ -23,6 +23,7 @@ const { COSMETIC_RULES } = require('./cosmetic-catalog');
 const { evalInPage } = require('./page-eval');
 const { isTikTokUrl } = require('./shared');
 const autoTheme = require('./auto-theme');
+const badges = require('./badges');
 const md3Site = require('./md3-site');
 const { getPaletteTokens, listPalettes, normalizePaletteId } = require('./md3-palettes');
 
@@ -79,10 +80,10 @@ const PROMO_JS = `(() => {
 
     for (const node of nodes) {
       if (node.hasAttribute(MARK)) continue;
-      // Сначала проверяем textContent (не вызывает reflow), и только короткие
+      // Сначала проверяем textContent (не вызывает reflow), и только точные
       // кандидаты перепроверяем через innerText.
       const tc = norm(node.textContent);
-      if (!tc || tc.length > 120) continue;
+      if (!tc || tc.length > 120 || !LABELS.has(tc)) continue;
       const text = norm(node.innerText);
       if (!text || text.length > 40 || !LABELS.has(text)) continue;
       if (node.closest('[role="dialog"], [aria-modal="true"]')) continue;
@@ -282,12 +283,16 @@ function brandScript() {
     if (!img.getAttribute('src')) img.src = variant === 'full' ? FULL : MARK_SRC;
 
     const height = variant === 'full' ? 42 : 28;
-    img.style.cssText =
+    const nextCss =
       'display:block;flex:none;width:auto;max-width:none;' +
       'height:' + height + 'px;pointer-events:none;-webkit-user-drag:none;' +
       // Новый светлый знак на светлой теме затемняем с сохранением лавандового оттенка.
       'filter:' + (lightTheme() ? 'brightness(0.54) contrast(1.38) saturate(1.15)' : 'none') + ';';
-    anchor.setAttribute(MARK, variant);
+    if (img.dataset.octoBrandStyle !== nextCss) {
+      img.dataset.octoBrandStyle = nextCss;
+      img.style.cssText = nextCss;
+    }
+    if (anchor.getAttribute(MARK) !== variant) anchor.setAttribute(MARK, variant);
   }
 
   const observed = new WeakSet();
@@ -342,7 +347,9 @@ function brandScript() {
   });
   if (document.body) observer.observe(document.body, { childList: true, subtree: true });
 
-  const heartbeat = setInterval(scan, 3000);
+  const heartbeat = setInterval(() => {
+    if (document.visibilityState !== 'hidden') scan();
+  }, 3000);
 
   window.__octoBrand = {
     scan,
@@ -499,26 +506,32 @@ function frameInjectionScript(documentCss, shadowCss) {
     window.__octoFrameCssObserver = observer;
   }
 
-  const seen = new WeakSet();
-  const walk = (root) => {
-    if (!root || seen.has(root)) return;
-    seen.add(root);
-    let nodes;
-    try {
-      nodes = root.querySelectorAll('*');
-    } catch {
-      return;
-    }
-    for (const element of nodes) {
-      if (!element.shadowRoot) continue;
-      install(element.shadowRoot, SHADOW_CSS, SHADOW_ID);
-      walk(element.shadowRoot);
-    }
-  };
-  walk(document);
+  const prevShadowCss = window.__octoShadowCssValue;
+  const hasShadowHook = Boolean(window.__octoShadowCssHook);
+  window.__octoShadowCssValue = SHADOW_CSS;
+
+  if (!hasShadowHook || prevShadowCss !== SHADOW_CSS) {
+    const seen = new WeakSet();
+    const walk = (root) => {
+      if (!root || seen.has(root)) return;
+      seen.add(root);
+      let nodes;
+      try {
+        nodes = root.querySelectorAll('*');
+      } catch {
+        return;
+      }
+      for (const element of nodes) {
+        if (!element.shadowRoot) continue;
+        install(element.shadowRoot, SHADOW_CSS, SHADOW_ID);
+        walk(element.shadowRoot);
+      }
+    };
+    walk(document);
+  }
 
   // Новые shadow root появляются после SPA-переходов и ленивой отрисовки.
-  if (!window.__octoShadowCssHook) {
+  if (!hasShadowHook) {
     const original = Element.prototype.attachShadow;
     window.__octoShadowCssHook = { original };
     Element.prototype.attachShadow = function (init) {
@@ -531,7 +544,6 @@ function frameInjectionScript(documentCss, shadowCss) {
       return root;
     };
   }
-  window.__octoShadowCssValue = SHADOW_CSS;
   return true;
 })()`;
 }
@@ -560,16 +572,11 @@ function resolveValue(value) {
   return typeof value === 'function' ? value() : value || '';
 }
 
-function getFeedLayout() {
-  return readState().feedLayout === 'wide' ? 'wide' : 'centered';
-}
-
 function enabledCss() {
-  const rulesCss = RULES.filter((rule) => isEnabled(rule.id))
+  return RULES.filter((rule) => isEnabled(rule.id))
     .map((rule) => resolveValue(rule.css))
-    .filter(Boolean);
-  rulesCss.push(md3Site.feedLayoutCss(getFeedLayout()));
-  return rulesCss.join('\n');
+    .filter(Boolean)
+    .join('\n');
 }
 
 function enabledShadowCss() {
@@ -831,6 +838,11 @@ const IMPLEMENTATIONS = {
     js: COMMENTS_PANEL_JS,
     cleanupJs: COMMENTS_PANEL_CLEANUP_JS,
   },
+  'user-badges': {
+    css: badges.BADGES_CSS,
+    js: () => badges.badgesScript(),
+    cleanupJs: badges.BADGES_CLEANUP_JS,
+  },
 };
 
 /**
@@ -977,9 +989,14 @@ async function applyNow(wc) {
 }
 
 const scriptRunning = new WeakSet();
+const scriptPending = new WeakSet();
 
 async function runScripts(wc = ctx.view?.webContents) {
-  if (!wc || wc.isDestroyed() || scriptRunning.has(wc)) return;
+  if (!wc || wc.isDestroyed()) return;
+  if (scriptRunning.has(wc)) {
+    scriptPending.add(wc);
+    return;
+  }
 
   const enabled = RULES.filter((rule) => isEnabled(rule.id));
   const scripts = [];
@@ -993,7 +1010,6 @@ async function runScripts(wc = ctx.view?.webContents) {
       if (cleanup) scripts.push(cleanup);
     }
   }
-  scripts.push(md3Site.feedLayoutScript(getFeedLayout()));
 
   if (!scripts.length) return;
 
@@ -1002,6 +1018,10 @@ async function runScripts(wc = ctx.view?.webContents) {
     await evalInPage(wc, scripts);
   } finally {
     scriptRunning.delete(wc);
+    if (scriptPending.has(wc)) {
+      scriptPending.delete(wc);
+      runScripts(wc).catch(() => {});
+    }
   }
 }
 
@@ -1087,18 +1107,6 @@ function applyThemePalette(paletteId) {
   return nextPalette;
 }
 
-function applyFeedLayout(mode) {
-  const nextMode = mode === 'wide' ? 'wide' : 'centered';
-  ctx.feedLayout = nextMode;
-  writeState({ feedLayout: nextMode });
-  apply();
-  const chatWc = ctx.chatView?.webContents;
-  if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
-  pushState();
-  if (onChange) onChange();
-  return nextMode;
-}
-
 function initThemeListener() {
   try {
     nativeTheme.themeSource = getThemeMode();
@@ -1144,7 +1152,6 @@ function menuItems() {
 // Интерфейс получает актуальные галочки сразу при старте.
 ctx.themeMode = getThemeMode();
 ctx.themePalette = getThemePalette();
-ctx.feedLayout = getFeedLayout();
 setCosmeticsState(effectiveSettings());
 
 try {
@@ -1169,8 +1176,6 @@ module.exports = {
   applyThemePalette,
   getThemePalette,
   getThemePayload,
-  applyFeedLayout,
-  getFeedLayout,
   initThemeListener,
   toggle,
   isEnabled,

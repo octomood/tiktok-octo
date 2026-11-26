@@ -270,16 +270,39 @@ test('звук остаётся только у ролика на экране',
         shownPlaying: !shown.control.paused,
       };
 
+      // Новый ролик въезжает снизу (частично в окне), старый на паузе — не ставим новый на паузу.
+      shown.control.paused = true;
+      const incoming = make({ top: Math.max(200, window.innerHeight - 120), paused: false });
+      media.tick();
+      const incomingKeptPlaying = !incoming.control.paused;
+
+      // Оба ролика играют во время плавного скролла — въезжающий в окно не глушится.
+      shown.control.paused = false;
+      media.tick();
+      const transitioningKeptPlaying = !incoming.control.paused;
+
       stale.video.remove();
       shown.video.remove();
+      incoming.video.remove();
       delete document.visibilityState;
-      return { stalePaused, shownPaused, afterResume };
+      return {
+        stalePaused,
+        shownPaused,
+        afterResume,
+        incomingKeptPlaying,
+        transitioningKeptPlaying,
+      };
     });
 
     expect(result.stalePaused, 'старый ролик остался со звуком').toBe(true);
     expect(result.shownPaused, 'ролик на экране не должен вставать на паузу').toBe(false);
     expect(result.afterResume.stalePaused, 'старый звук после возврата окна').toBe(true);
     expect(result.afterResume.shownPlaying, 'видимый ролик не возобновился').toBe(true);
+    expect(result.incomingKeptPlaying, 'входящий ролик не должен ставиться на паузу').toBe(true);
+    expect(
+      result.transitioningKeptPlaying,
+      'переходный ролик в области просмотра не должен ставиться на паузу',
+    ).toBe(true);
   } finally {
     if (app) await app.close();
     fs.rmSync(userData, { recursive: true, force: true });

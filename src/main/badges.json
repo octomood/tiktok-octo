@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "roles": {
     "creator": {
       "icon": "01_code_brackets",
@@ -16,13 +16,13 @@
     "supporter": {
       "icon": "09_heart_pulse",
       "title": "Поддержал проект",
-      "description": "Поддержал развитие проект материально!",
+      "description": "Поддержал развитие проект финансово!",
       "accent": "tertiary"
     },
     "bug_hunter": {
       "icon": "03_bug_radar",
       "title": "Искатель багов",
-      "description": "Выдается за помощь в нахождении багов",
+      "description": "Выдается за активную помощь в нахождении багов",
       "accent": "primary"
     },
     "verified": {
@@ -39,6 +39,9 @@
       "title": "Создатель TikTok Octo",
       "description": "Создатель и разработчик TikTok Octo",
       "accent": "primary"
+    },
+    "masterofdetonators": {
+      "role": "dev"
     }
   }
 }

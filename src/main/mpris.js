@@ -314,9 +314,9 @@ function initMpris() {
     if (!currentWc || currentWc.isLoading()) return;
     positionPending = true;
     playerApi
-      .status()
-      .then((info) => {
-        const time = Number(info?.time);
+      .position()
+      .then((pos) => {
+        const time = Number(pos);
         if (Number.isFinite(time)) lastPosition = Math.max(0, time);
       })
       .catch(() => {})

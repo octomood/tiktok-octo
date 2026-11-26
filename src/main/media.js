@@ -70,22 +70,33 @@ const PAGE_SCRIPT = `(() => {
     return x >= 0 && x <= window.innerWidth && y >= 0 && y <= window.innerHeight;
   };
 
+  const inViewport = (video) => {
+    if (!visible(video)) return false;
+    const rect = video.getBoundingClientRect();
+    return (
+      rect.bottom > 0 &&
+      rect.top < window.innerHeight &&
+      rect.right > 0 &&
+      rect.left < window.innerWidth
+    );
+  };
+
   /**
    * Оставить звук одному ролику. После смены видео TikTok иногда продолжает
    * играть предыдущий <video>: на экране уже другой кадр, а звучит старый.
-   * Если на экране вообще нет ролика, не вмешиваемся — возможно, это не лента.
+   * Если на экране нет активного ролика или играет только один, не
+   * вмешиваемся — иначе можно поставить на паузу новый ролик во время скролла.
    */
   const solePlayer = () => {
     const playing = videos().filter((video) => !video.paused && !video.ended);
-    if (!playing.length) return null;
+    if (playing.length < 2) return null;
     const screen = playing.find(onScreen) || null;
-    const onPage = screen || videos().find(onScreen) || null;
-    if (!onPage) return null;
+    if (!screen) return null;
     let paused = false;
     for (const video of playing) {
       if (video === screen) continue;
-      // Два ролика на экране — не наш случай: не угадываем, какой главный.
-      if (screen && onScreen(video)) continue;
+      // Два ролика на экране или новый ролик уже въезжает в кадр — не мешаем.
+      if (onScreen(video) || inViewport(video)) continue;
       try {
         video.pause();
         paused = true;
@@ -355,7 +366,7 @@ const PAGE_SCRIPT = `(() => {
     const video = event.target;
     if (!(video instanceof HTMLVideoElement) || !visible(video)) return;
     setTimeout(() => {
-      if (video.isConnected && !video.paused) kick(video);
+      if (video.isConnected && !video.paused && inViewport(video)) kick(video);
     }, 180);
   };
 

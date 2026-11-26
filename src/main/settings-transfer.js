@@ -44,7 +44,6 @@ const SETTINGS_KEYS = [
   'cosmetics',
   'themeMode',
   'themePalette',
-  'feedLayout',
   'region',
   'language',
   'siteLanguage',
@@ -230,10 +229,6 @@ function cleanSettings(raw) {
       if (typeof value === 'string') result.themePalette = normalizePaletteId(value);
       continue;
     }
-    if (key === 'feedLayout') {
-      if (value === 'centered' || value === 'wide') result.feedLayout = value;
-      continue;
-    }
     if (key === 'region') {
       const region = cleanRegion(value);
       if (region) result.region = region;
@@ -262,7 +257,6 @@ function liveDefaults() {
     cosmetics: cosmetic,
     themeMode: ctx.themeMode,
     themePalette: ctx.themePalette,
-    feedLayout: ctx.feedLayout,
     // Логин и пароль прокси остаются в профиле, но не в экспорте.
     region: stripRegionCredentials(ctx.region),
     language: ctx.language,
@@ -448,9 +442,6 @@ function refreshLive() {
   }
   if (state.themeMode) {
     call('./cosmetics', 'applyThemeMode', state.themeMode, { reload: false });
-  }
-  if (state.feedLayout) {
-    call('./cosmetics', 'applyFeedLayout', state.feedLayout);
   }
   call('./cosmetics', 'schedule');
   try {

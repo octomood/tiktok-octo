@@ -774,9 +774,6 @@ function handleCommand(command, payload) {
     case 'themePalette':
       if (typeof payload === 'string') cosmetics.applyThemePalette(payload);
       break;
-    case 'feedLayout':
-      if (typeof payload === 'string') cosmetics.applyFeedLayout(payload);
-      break;
     case 'profileSwitch':
       if (typeof payload === 'string') profiles.switchTo(payload);
       break;

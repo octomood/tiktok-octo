@@ -55,6 +55,7 @@ const ads = require('./ads');
 const region = require('./region');
 const welcome = require('./welcome');
 const cosmetics = require('./cosmetics');
+const badges = require('./badges');
 const find = require('./find');
 const plugins = require('./plugins');
 const stickers = require('./stickers');
@@ -175,6 +176,15 @@ if (!gotLock) {
 
     installWebContentsGuards();
     stickers.init();
+    badges.init({
+      onSynced: () => {
+        if (cosmetics.isEnabled('user-badges')) {
+          cosmetics.scheduleScripts(0);
+          const chatWc = ctx.chatView?.webContents;
+          if (chatWc && !chatWc.isDestroyed()) cosmetics.apply(chatWc);
+        }
+      },
+    });
     // Переключатели косметики, региона и языка меняют меню и трей — пересобираем их.
     const rebuildMenus = () => {
       buildAppMenu();
@@ -263,6 +273,7 @@ if (!gotLock) {
 
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();
+    badges.stopSync();
     plugins.dispose();
     destroyTray();
   });
