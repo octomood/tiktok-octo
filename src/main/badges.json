@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "roles": {
+    "creator": {
+      "icon": "01_code_brackets",
+      "title": "Разработчик",
+      "description": "Участвует в разработке TikTok Octo",
+      "accent": "primary"
+    },
+    "dev": {
+      "icon": "05_puzzle_module",
+      "title": "Разработчик плагинов",
+      "description": "Выдается за написание плагинов для клиента",
+      "accent": "secondary"
+    },
+    "supporter": {
+      "icon": "09_heart_pulse",
+      "title": "Поддержал проект",
+      "description": "Поддержал развитие проект материально!",
+      "accent": "tertiary"
+    },
+    "bug_hunter": {
+      "icon": "03_bug_radar",
+      "title": "Искатель багов",
+      "description": "Выдается за помощь в нахождении багов",
+      "accent": "primary"
+    },
+    "verified": {
+      "icon": "15_check_pill",
+      "title": "Оффициальное лицо Octo",
+      "description": "Активный пользователь TikTok Octo. Выдается только популярным личностям, или за сотрудничество от 10к подписчиков",
+      "accent": "primary"
+    }
+  },
+  "users": {
+    "churros_dev": {
+      "role": "creator",
+      "icon": "01_code_brackets",
+      "title": "Создатель TikTok Octo",
+      "description": "Создатель и разработчик TikTok Octo",
+      "accent": "primary"
+    }
+  }
+}
