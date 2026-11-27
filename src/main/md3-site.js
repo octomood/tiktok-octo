@@ -31,6 +31,7 @@ const ACTION_ATTR = 'data-octo-md3-action';
 const SURFACE_ATTR = 'data-octo-md3-surface';
 const FG_ATTR = 'data-octo-md3-fg';
 const CHAT_LAYOUT_ATTR = 'data-octo-md3-chat-layout';
+const PROBE_ATTR = 'data-octo-md3-probe';
 
 const DARK_TOKENS = getPaletteTokens(DEFAULT_PALETTE, true);
 const LIGHT_TOKENS = getPaletteTokens(DEFAULT_PALETTE, false);
@@ -1917,6 +1918,25 @@ const COMPONENT_CSS = `
     color: var(--octo-md-on-secondary-container) !important;
   }
 
+  /* Строка списка, которую сайт подсвечивает светлым :hover (классы не известны
+     заранее — строку находит скрипт по цвету): тональная подсветка MD3. */
+  [${SURFACE_ATTR}="chat-hover"] {
+    background-color: var(--octo-md-surface-container-high) !important;
+    color: var(--octo-md-on-surface) !important;
+  }
+
+  [${SURFACE_ATTR}="chat-hover"] :where(span, p, div, strong, h1, h2, h3, h4):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([class*="Avatar" i]) {
+    color: var(--octo-md-on-surface) !important;
+  }
+
+  /* Замер собственного цвета сайта: на время замера снятой подложки переходы
+     выключены, иначе getComputedStyle вернёт промежуточный цвет, а возврат
+     подложки покажет белую вспышку. */
+  [${PROBE_ATTR}],
+  [${PROBE_ATTR}] * {
+    transition: none !important;
+  }
+
   [${FG_ATTR}="on-surface"] {
     color: var(--octo-md-on-surface) !important;
   }
@@ -2414,6 +2434,7 @@ function syncScript(dark = true) {
     const SURFACE = '${SURFACE_ATTR}';
     const FG = '${FG_ATTR}';
     const CHAT_LAYOUT = '${CHAT_LAYOUT_ATTR}';
+    const PROBE = '${PROBE_ATTR}';
     const MODE = '${mode}';
 
     const setAttrIfDiff = (el, name, value) => {
@@ -3222,9 +3243,10 @@ function syncScript(dark = true) {
       'chat-active',
       'card',
       'chat-input',
+      'chat-hover',
     ]);
 
-    const syncSurfaces = (root) => {
+    const syncSurfacesNow = (root) => {
       findSidebars();
       const nextSurface = new Map();
       const nextFg = new Set();
@@ -3709,7 +3731,7 @@ function syncScript(dark = true) {
           const r = row.getBoundingClientRect();
           if (r.width < 120 || r.height < 36 || r.height > 150) continue;
           if (isLightColor(getComputedStyle(row).backgroundColor)) {
-            nextSurface.set(row, 'chat-active');
+            nextSurface.set(row, row.matches(':hover') ? 'chat-hover' : 'chat-active');
           }
         }
 
@@ -3723,6 +3745,7 @@ function syncScript(dark = true) {
             panel.matches('button, [role="button"], input, textarea, [contenteditable], img, video, svg, [class*="Bubble" i], [class*="MessageContent" i], [class*="Avatar" i], [class*="Badge" i]') ||
             panel.closest('[role="dialog"], [role="menu"], [role="tooltip"]') ||
             hasPlannedAncestor(panel, 'chat-active') ||
+            hasPlannedAncestor(panel, 'chat-hover') ||
             hasPlannedAncestor(panel, 'header')
           ) {
             continue;
@@ -3732,12 +3755,13 @@ function syncScript(dark = true) {
             continue;
           }
           if (isLightColor(getComputedStyle(panel).backgroundColor)) {
-            nextSurface.set(
-              panel,
-              r.height >= window.innerHeight * 0.45 && r.width >= window.innerWidth * 0.45
-                ? 'page'
-                : 'card',
-            );
+            let kind = 'card';
+            if (r.height >= window.innerHeight * 0.45 && r.width >= window.innerWidth * 0.45) {
+              kind = 'page';
+            } else if (isListRow(panel, r)) {
+              kind = panel.matches(':hover') ? 'chat-hover' : 'chat-active';
+            }
+            nextSurface.set(panel, kind);
           }
         }
 
@@ -3763,6 +3787,7 @@ function syncScript(dark = true) {
           if (
             node.id?.startsWith('octo-') ||
             hasPlannedAncestor(node, 'chat-active', true) ||
+            hasPlannedAncestor(node, 'chat-hover', true) ||
             node.closest('[' + ACCENT + '="primary"], [' + ACCENT + '="tonal"], [' + ACCENT + '="badge"], [role="tooltip"], [class*="DivSideNavContainer"]')
           ) {
             continue;
@@ -3797,6 +3822,93 @@ function syncScript(dark = true) {
         if (!nextFg.has(el)) delAttrIfSet(el, FG);
       });
       for (const el of nextFg) setAttrIfDiff(el, FG, 'on-surface');
+    };
+
+    // Подложки, которые ставятся по светлому цвету сайта (шапка, карточка, строка
+    // диалога), сами перекрашивают элемент: при следующем сканировании цвет уже
+    // тёмный, подложка снималась, и элемент мигал белым с белым текстом. Поэтому
+    // перед сканированием снимаем их под «замером» без переходов, читаем цвет
+    // сайта и возвращаем подложку до первой отрисовки.
+    const PROBED_SURFACES = ['header', 'card', 'chat-active', 'chat-hover'];
+    const PROBED_SELECTOR = PROBED_SURFACES.map((v) => '[' + SURFACE + '="' + v + '"]').join(', ');
+
+    const beginProbe = (els) => {
+      for (const el of els) {
+        el.setAttribute(PROBE, '');
+        el.removeAttribute(SURFACE);
+      }
+    };
+
+    const endProbe = (els) => {
+      if (!els.length) return;
+      // Стиль пересчитывается при чтении: подложка уже вернулась, переходы ещё выключены.
+      void getComputedStyle(els[0]).backgroundColor;
+      for (const el of els) el.removeAttribute(PROBE);
+    };
+
+    const syncSurfaces = (root) => {
+      const probed = MODE === 'dark' ? Array.from(root.querySelectorAll(PROBED_SELECTOR)) : [];
+      beginProbe(probed);
+      try {
+        syncSurfacesNow(root);
+      } finally {
+        endProbe(probed);
+      }
+    };
+
+    // Строка списка сообщений: светлая подложка высотой со строку, у которой есть
+    // соседи той же высоты. Выбранная строка — капсула, строка под курсором — hover.
+    const isListRow = (el, r) => {
+      if (r.width < 120 || r.height < 36 || r.height > 150) return false;
+      const parent = el.parentElement;
+      if (!parent) return false;
+      let similar = 0;
+      for (const sibling of parent.children) {
+        if (sibling === el || sibling.tagName !== el.tagName) continue;
+        const sr = sibling.getBoundingClientRect();
+        if (Math.abs(sr.height - r.height) <= 12 && Math.abs(sr.width - r.width) <= 24) {
+          similar += 1;
+          if (similar >= 2) return true;
+        }
+      }
+      return false;
+    };
+
+    // Наведение не меняет DOM, поэтому сканирование его не видит: светлый :hover
+    // сайта оставался белым, а текст строки уже был светлым. Проверяем только
+    // цепочку элементов под курсором.
+    let hoverFrame = 0;
+    const syncChatHover = () => {
+      hoverFrame = 0;
+      if (MODE !== 'dark' || !isMessagesContext()) return;
+      for (const el of document.querySelectorAll('[' + SURFACE + '="chat-hover"]')) {
+        if (!el.matches(':hover')) el.removeAttribute(SURFACE);
+      }
+      const chain = Array.from(document.querySelectorAll(':hover')).reverse();
+      const fresh = [];
+      for (const el of chain) {
+        // Строка уже размечена (выбранная, под курсором) или дошли до карточки списка.
+        if (el === document.body || el === document.documentElement || el.hasAttribute(SURFACE)) break;
+        if (!el.id?.startsWith('octo-')) fresh.push(el);
+      }
+      if (!fresh.length) return;
+      for (const el of fresh) el.setAttribute(PROBE, '');
+      let row = null;
+      for (const el of fresh) {
+        const r = el.getBoundingClientRect();
+        if (r.width < 120 || r.height < 36 || r.height > 150) continue;
+        if (isLightColor(getComputedStyle(el).backgroundColor)) {
+          row = el;
+          break;
+        }
+      }
+      if (row) row.setAttribute(SURFACE, 'chat-hover');
+      endProbe(fresh);
+    };
+
+    const onPointerMove = () => {
+      if (MODE !== 'dark' || hoverFrame) return;
+      hoverFrame = requestAnimationFrame(syncChatHover);
     };
 
     const classify = (el, accentWrites) => {
@@ -4411,6 +4523,9 @@ function syncScript(dark = true) {
         if (timer) clearTimeout(timer);
         window.removeEventListener('popstate', onPopState);
         document.removeEventListener('visibilitychange', onVisibility);
+        document.removeEventListener('pointerover', onPointerMove, true);
+        document.removeEventListener('pointerout', onPointerMove, true);
+        if (hoverFrame) cancelAnimationFrame(hoverFrame);
         if (railObserver) railObserver.disconnect();
         if (state.attrObserver) state.attrObserver.disconnect();
         if (state.domObserver) state.domObserver.disconnect();
@@ -4422,6 +4537,7 @@ function syncScript(dark = true) {
         document.querySelectorAll('[' + ICON + ']').forEach((el) => el.removeAttribute(ICON));
         document.querySelectorAll('[' + ACTION + ']').forEach((el) => el.removeAttribute(ACTION));
         document.querySelectorAll('[' + SURFACE + ']').forEach((el) => el.removeAttribute(SURFACE));
+        document.querySelectorAll('[' + PROBE + ']').forEach((el) => el.removeAttribute(PROBE));
         document.querySelectorAll('[' + FG + ']').forEach((el) => el.removeAttribute(FG));
         document.querySelectorAll('[data-octo-md3-rail]').forEach((el) => el.removeAttribute('data-octo-md3-rail'));
         document.querySelectorAll('[data-octo-md3-logo]').forEach((el) => el.removeAttribute('data-octo-md3-logo'));
@@ -4444,6 +4560,8 @@ function syncScript(dark = true) {
 
     window.addEventListener('popstate', onPopState);
     document.addEventListener('visibilitychange', onVisibility);
+    document.addEventListener('pointerover', onPointerMove, true);
+    document.addEventListener('pointerout', onPointerMove, true);
 
     const root = document.documentElement;
     if (root && typeof MutationObserver !== 'undefined') {
@@ -4566,6 +4684,9 @@ const CLEANUP_JS = `(() => {
   document
     .querySelectorAll('[${CHAT_LAYOUT_ATTR}]')
     .forEach((el) => el.removeAttribute('${CHAT_LAYOUT_ATTR}'));
+  document
+    .querySelectorAll('[${PROBE_ATTR}]')
+    .forEach((el) => el.removeAttribute('${PROBE_ATTR}'));
 })()`;
 
 module.exports = {

@@ -1348,3 +1348,123 @@ test('MD3 дизайн для всего сайта: все элементы, SP
     fs.rmSync(userData, { recursive: true, force: true });
   }
 });
+
+// Страница сообщений с незнакомыми классами (новая вёрстка Business Suite): светлые
+// подложки сайта распознаются по цвету. Повторные сканирования не должны сбрасывать
+// MD3-подложку обратно в белую, а строка под курсором — оставаться белой с белым текстом.
+const MESSAGES_SITE = `<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>Сообщения</title>
+    <style>
+      body { margin: 0; background: #ffffff; color: #161823; font-family: system-ui, sans-serif; }
+      .x1hdr { height: 56px; background: #ffffff; display: flex; align-items: center; }
+      .x1box { width: 400px; background: #ffffff; padding: 8px; }
+      .x1row { display: flex; align-items: center; height: 64px; padding: 0 12px; color: #161823; }
+      .x1row span { color: #161823; }
+      .x1row:hover, .x1row.x1on { background: #f1f1f2; }
+    </style>
+  </head>
+  <body>
+    <div class="x1hdr" id="msgHeader"><span id="msgTitle">Сообщения</span></div>
+    <div class="x1box" id="msgInbox">
+      <div class="x1row x1on" id="rowSelected"><span id="rowSelectedName">вандерюша</span></div>
+      <div class="x1row" id="rowHover"><span id="rowHoverName">Xidintonka</span></div>
+      <div class="x1row" id="rowPlain"><span>hollatrigga</span></div>
+    </div>
+    <div id="msgAway" style="height:200px;"></div>
+  </body>
+</html>`;
+
+test('MD3 на странице сообщений: подложки не мигают при сканировании, строка под курсором читаема', async () => {
+  test.setTimeout(60_000);
+  const server = http.createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    response.end(MESSAGES_SITE);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${server.address().port}/messages`;
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-md3-msg-'));
+  let app;
+
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: {
+        ...process.env,
+        OCTO_E2E: '1',
+        OCTO_USER_DATA: userData,
+        OCTO_HOME_URL: url,
+      },
+    });
+    await app.firstWindow();
+    const site = await waitForWindow(
+      app,
+      (candidate) => candidate.url().startsWith(url),
+      'страница сообщений',
+    );
+    await expect
+      .poll(() => site.evaluate(() => document.documentElement.getAttribute('data-octo-md3')))
+      .toBe('dark');
+
+    const read = () =>
+      site.evaluate(() => {
+        const bg = (id) => getComputedStyle(document.getElementById(id)).backgroundColor;
+        const color = (id) => getComputedStyle(document.getElementById(id)).color;
+        return {
+          header: bg('msgHeader'),
+          inbox: bg('msgInbox'),
+          selected: bg('rowSelected'),
+          selectedName: color('rowSelectedName'),
+        };
+      });
+    const expected = {
+      header: 'rgb(33, 29, 48)', // #211d30 — светлая шапка в MD3
+      inbox: 'rgb(33, 29, 48)', // #211d30 — карточка списка переписок
+      selected: 'rgb(86, 78, 112)', // #564e70 — выбранный диалог, secondary-container
+      selectedName: 'rgb(221, 210, 224)', // #ddd2e0 — читаемое имя на #564e70
+    };
+    await expect.poll(read).toEqual(expected);
+
+    // DOM сайта меняется постоянно (время, «печатает…», подгрузка): каждое изменение
+    // запускает новое сканирование, и подложки не должны возвращаться к белым.
+    const samples = [];
+    for (let i = 0; i < 16; i += 1) {
+      await site.evaluate(() => {
+        const marker = document.createElement('i');
+        document.getElementById('msgAway').appendChild(marker);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      samples.push(await read());
+    }
+    expect(samples.filter((sample) => JSON.stringify(sample) !== JSON.stringify(expected))).toEqual(
+      [],
+    );
+
+    // Наведение не меняет DOM, а сайт красит строку светлым :hover.
+    await site.hover('#rowHover');
+    const hovered = () =>
+      site.evaluate(() => ({
+        bg: getComputedStyle(document.getElementById('rowHover')).backgroundColor,
+        name: getComputedStyle(document.getElementById('rowHoverName')).color,
+      }));
+    await expect.poll(hovered).toEqual({
+      bg: 'rgb(62, 56, 84)', // #3e3854 — surface-container-high при наведении (§16)
+      name: 'rgb(221, 210, 224)', // #ddd2e0
+    });
+
+    // Курсор ушёл — строка снова прозрачная, без «залипшей» подсветки.
+    await site.hover('#msgAway');
+    await expect
+      .poll(() =>
+        site.evaluate(() => getComputedStyle(document.getElementById('rowHover')).backgroundColor),
+      )
+      .toBe('rgba(0, 0, 0, 0)');
+    expect(await read()).toEqual(expected);
+  } finally {
+    if (app) await app.close();
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});

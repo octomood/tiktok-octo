@@ -210,6 +210,10 @@ let fitGeneration = 0;
 let fitTimers = [];
 // Ширину выставили мышью: автоподбор молчит, пока панель не откроют заново.
 let manualWidth = false;
+// Последнее расширение автоподбором: если после него страница просит столько же
+// сверх новой ширины, элемент едет вместе с краем (скрытое меню у правой
+// границы), и расти дальше бессмысленно — только отнимаем место у ленты.
+let lastGrowth = null;
 
 function cancelFit() {
   fitGeneration += 1;
@@ -276,10 +280,22 @@ function scheduleFit(view, { immediate = true } = {}) {
     const need = await measureNeed(wc);
     if (!need || generation !== fitGeneration || wc.isDestroyed() || !ctx.chatOpen) return;
 
+    const prev = lastGrowth && lastGrowth.generation === generation ? lastGrowth : null;
+    if (prev && ctx.chatWidth === prev.to && need - prev.need >= prev.to - prev.from - 4) {
+      // Расширение не помогло: возвращаем ширину до погони и больше не меряем.
+      lastGrowth = null;
+      cancelFit();
+      ctx.chatWidth = prev.from;
+      layoutSoon();
+      pushState();
+      return;
+    }
+
     const limit = Math.min(MAX_WIDTH, chatWidthLimit());
     const next = Math.min(limit, need + FIT_MARGIN);
     if (next <= ctx.chatWidth) return;
 
+    lastGrowth = { generation, from: ctx.chatWidth, to: next, need };
     ctx.chatWidth = next;
     layoutSoon();
     pushState();
