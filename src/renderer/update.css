@@ -18,7 +18,6 @@ body.update {
   gap: 16px;
   min-width: 0;
   padding: 20px 22px 22px;
-  border: 1px solid color-mix(in srgb, var(--md-outline-variant, #47405e) 65%, transparent);
   border-radius: 28px;
   background:
     radial-gradient(
