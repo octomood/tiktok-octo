@@ -244,7 +244,8 @@ function brandScript() {
     return 0;
   }
 
-  const railOf = (anchor) => anchor.closest('[class*="DivSideNavContainer"]');
+  const railOf = (anchor) =>
+    anchor.closest('[class*="DivSideNavContainer"], [data-octo-md3-surface="sidenav"]');
 
   // Широкий слот — развёрнутый рельс; без рельса логотип стоит в шапке.
   function variantOf(anchor) {
@@ -264,8 +265,9 @@ function brandScript() {
 
   function paint(anchor) {
     const variant = variantOf(anchor);
-    const svg = anchor.querySelector('svg');
-    if (svg && svg.style.display !== 'none') svg.style.display = 'none';
+    anchor.querySelectorAll('svg').forEach((svg) => {
+      if (svg.style.display !== 'none') svg.style.display = 'none';
+    });
 
     let img = anchor.querySelector('img[' + IMG + ']');
     if (!img) {
@@ -324,28 +326,39 @@ function brandScript() {
     return anchors.length;
   }
 
-  // Рельс и шапка пересоздаются при смене раскладки — ловим это по контейнерам,
-  // а редкий таймер страхует от замены самого SVG без нового контейнера.
+  // Рельс и шапка пересоздаются при смене раскладки — ловим это сразу на мутации,
+  // чтобы оригинальный SVG TikTok не успевал мигнуть до следующей отрисовки кадра.
+  const isSelfBrandImg = (node) => node.nodeType === 1 && node.hasAttribute(IMG);
+
   const looksLikeBrand = (node) =>
     node.nodeType === 1 &&
-    (node.matches('a[data-e2e="tiktok-logo"]') ||
-      node.matches('[class*="DivSideNavContainer"], [class*="DivHeaderContainer"]'));
+    !isSelfBrandImg(node) &&
+    (node.matches('[data-e2e="tiktok-logo"]') ||
+      Boolean(node.querySelector && node.querySelector('[data-e2e="tiktok-logo"]')) ||
+      node.matches(
+        '[class*="DivSideNavContainer"], [class*="DivHeaderContainer"], [data-octo-md3-surface="sidenav"]',
+      ));
 
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
         if (looksLikeBrand(node)) {
-          schedule();
+          scan();
           return;
         }
       }
       if (mutation.target && mutation.target.closest && mutation.target.closest('[data-e2e="tiktok-logo"]')) {
-        schedule();
-        return;
+        const added = Array.from(mutation.addedNodes);
+        const onlySelfAdded =
+          mutation.removedNodes.length === 0 && added.length > 0 && added.every(isSelfBrandImg);
+        if (!onlySelfAdded) {
+          scan();
+          return;
+        }
       }
     }
   });
-  if (document.body) observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.documentElement || document, { childList: true, subtree: true });
 
   const heartbeat = setInterval(() => {
     if (document.visibilityState !== 'hidden') scan();
@@ -360,8 +373,9 @@ function brandScript() {
       if (timer) clearTimeout(timer);
       document.querySelectorAll('[data-e2e="tiktok-logo"]').forEach((anchor) => {
         anchor.querySelectorAll('img[' + IMG + ']').forEach((img) => img.remove());
-        const svg = anchor.querySelector('svg');
-        if (svg) svg.style.display = '';
+        anchor.querySelectorAll('svg').forEach((svg) => {
+          svg.style.display = '';
+        });
         anchor.removeAttribute(MARK);
       });
       delete window.__octoBrand;
@@ -814,7 +828,7 @@ const COMMENTS_PANEL_CLEANUP_JS = `(() => {
 
 const IMPLEMENTATIONS = {
   'octo-brand': {
-    css: '[data-octo-brand] > svg { display: none !important; }',
+    css: '[data-octo-brand] svg { display: none !important; }',
     js: brandScript(),
     cleanupJs: BRAND_CLEANUP_JS,
   },

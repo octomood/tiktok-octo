@@ -495,7 +495,7 @@ const COMPONENT_CSS = `
     font-weight: 600 !important;
   }
 
-  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) :is(a, button, [role="button"]):where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([class*="Account"]:not([${POS_ATTR}])):not([class*="User"]:not([${POS_ATTR}])):not([class*="Coin"]):not([class*="Recharge"]):not([class*="Promote"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([${SURFACE_ATTR}="sidenav-footer"]):not([id^="octo-"])):not(:is(a, button, [role="button"]) *) {
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) :is(a, button, [role="button"]):where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([class*="Account"]:not([${POS_ATTR}])):not([class*="User"]:not([${POS_ATTR}])):not([class*="Coin"]):not([class*="Recharge"]):not([class*="Promote"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-toggle"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([${SURFACE_ATTR}="sidenav-footer"]):not([id^="octo-"])):not(:is(a, button, [role="button"]) *) {
     display: flex !important;
     align-items: center !important;
     min-height: 36px !important;
@@ -547,9 +547,9 @@ const COMPONENT_CSS = `
     margin-bottom: 0 !important;
   }
 
-  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) a:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])),
-  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) button:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])),
-  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) [role="button"]:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])) {
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) a:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-toggle"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])),
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) button:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-toggle"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])),
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) [role="button"]:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-toggle"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])) {
     max-width: 100% !important;
     box-sizing: border-box !important;
     background-color: var(--octo-md-surface-container) !important;
@@ -582,17 +582,17 @@ const COMPONENT_CSS = `
     border-radius: 16px !important;
   }
 
-  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) a:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])):hover,
-  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) button:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])):hover,
-  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) [role="button"]:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])):hover {
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) a:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-toggle"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])):hover,
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) button:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-toggle"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])):hover,
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) [role="button"]:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-toggle"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])):hover {
     background-color: var(--octo-md-surface-container-high) !important;
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 68%, transparent) !important;
     color: var(--octo-md-on-surface) !important;
   }
 
-  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"])[data-octo-md3-rail="collapsed"] a:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])),
-  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"])[data-octo-md3-rail="collapsed"] button:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])),
-  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"])[data-octo-md3-rail="collapsed"] [role="button"]:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])) {
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"])[data-octo-md3-rail="collapsed"] a:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-toggle"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])),
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"])[data-octo-md3-rail="collapsed"] button:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-toggle"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])),
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"])[data-octo-md3-rail="collapsed"] [role="button"]:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-toggle"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])) {
     width: 44px !important;
     min-width: 44px !important;
     height: 44px !important;
@@ -618,6 +618,75 @@ const COMPONENT_CSS = `
     padding: 0 !important;
     justify-content: center !important;
     border-radius: 24px !important;
+  }
+
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) [${SURFACE_ATTR}="sidenav-toggle"] {
+    background-color: transparent !important;
+    background-image: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: var(--octo-md-on-surface-variant) !important;
+    border-radius: 9999px !important;
+    transition:
+      background-color 0.16s var(--octo-md-ease),
+      color 0.16s var(--octo-md-ease) !important;
+  }
+
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) [${SURFACE_ATTR}="sidenav-toggle"]:hover {
+    background-color: color-mix(in srgb, var(--octo-md-on-surface) 8%, transparent) !important;
+    box-shadow: none !important;
+    color: var(--octo-md-on-surface) !important;
+  }
+
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"])[data-octo-md3-rail="collapsed"] [${SURFACE_ATTR}="sidenav-header"] {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"])[data-octo-md3-rail="collapsed"] [${SURFACE_ATTR}="sidenav-header"] :where(div, span):not([${SURFACE_ATTR}="sidenav-toggle"]):not([${SURFACE_ATTR}="sidenav-toggle"] *):not([data-e2e="tiktok-logo"]):not([data-e2e="tiktok-logo"] *) {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"])[data-octo-md3-rail="collapsed"] [data-e2e="tiktok-logo"],
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"])[data-octo-md3-rail="collapsed"] [data-octo-md3-logo="1"] {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    justify-content: center !important;
+  }
+
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"])[data-octo-md3-rail="collapsed"] [${SURFACE_ATTR}="sidenav-toggle"] {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    border-radius: 9999px !important;
+  }
+
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"])[data-octo-md3-rail="collapsed"] [${SURFACE_ATTR}="sidenav-toggle"][data-octo-md3-toggle-abs="1"] {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
   }
 
   :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) :is(a, button, [role="button"])[${NAV_ATTR}="active"]:not([data-e2e="tiktok-logo"]):not([class*="Account"]):not([id^="octo-"]),
@@ -2538,41 +2607,88 @@ function syncScript(dark = true) {
       return Array.from(result);
     };
 
+    const syncRailState = (sidebar) => {
+      const sRect = sidebar.getBoundingClientRect();
+      if (sRect.width > 0 && sRect.width < 120) {
+        setAttrIfDiff(sidebar, 'data-octo-md3-rail', 'collapsed');
+      } else {
+        delAttrIfSet(sidebar, 'data-octo-md3-rail');
+      }
+      return sRect;
+    };
+
+    const isExplicitSearchItem = (item, itemClass, itemE2e, itemLabel) =>
+      Boolean(item.closest('[data-e2e="search-box"], form[action*="/search"]')) ||
+      /Search/i.test(itemClass) ||
+      /search/i.test(itemE2e) ||
+      /^(?:search|поиск)$/i.test(itemLabel);
+
+    const isExplicitToggleItem = (item, itemClass, itemE2e, itemLabel) => {
+      const toggleHint = (
+        item.getAttribute('aria-label') ||
+        item.getAttribute('title') ||
+        item.getAttribute('data-original-title') ||
+        ''
+      ).trim();
+      return (
+        !itemE2e.startsWith('nav-') &&
+        (/^(?:expand|collapse)\s*sidebar$/i.test(itemLabel) ||
+          /^(?:развернуть|свернуть)\s+боковую\s+панель$/i.test(itemLabel) ||
+          /(?:развернуть|свернуть)\s+боковую|(?:expand|collapse)\s*side\s*bar/i.test(toggleHint) ||
+          /(?:side[-_]?nav|sidebar)[-_]?(?:toggle|collapse|expand)|(?:toggle|collapse|expand)[-_]?(?:side[-_]?nav|sidebar)/i.test(
+            itemClass + ' ' + itemE2e,
+          ))
+      );
+    };
+
     const syncSidebarNav = () => {
       const sidebars = findSidebars();
       const nextLogos = new Set();
       for (const sidebar of sidebars) {
         if (!observedRails.has(sidebar) && typeof ResizeObserver !== 'undefined') {
           observedRails.add(sidebar);
-          if (!railObserver) railObserver = new ResizeObserver(() => scheduleScan());
+          if (!railObserver) {
+            railObserver = new ResizeObserver((entries) => {
+              for (const entry of entries) syncRailState(entry.target);
+              scheduleScan();
+            });
+          }
           railObserver.observe(sidebar);
         }
-        const sRect = sidebar.getBoundingClientRect();
-        if (sRect.width > 0 && sRect.width < 120) {
-          setAttrIfDiff(sidebar, 'data-octo-md3-rail', 'collapsed');
-        } else {
-          delAttrIfSet(sidebar, 'data-octo-md3-rail');
-        }
+        syncRailState(sidebar);
 
-        const firstNavAnchor = sidebar.querySelector(
-          '[data-e2e="nav-foryou"], a[href="/foryou"], a[href="/"]',
-        );
+        const firstNavAnchor =
+          sidebar.querySelector('[data-e2e="nav-foryou"]') ||
+          Array.from(sidebar.querySelectorAll('a[href="/foryou"], a[href="/"]')).find(
+            (el) =>
+              el.getAttribute('data-e2e') !== 'tiktok-logo' &&
+              !el.querySelector('[data-e2e="tiktok-logo"]'),
+          ) ||
+          null;
         const firstNavTop = firstNavAnchor ? firstNavAnchor.getBoundingClientRect().top : Infinity;
 
         const nextSideSurfaces = new Map();
+        const nextToggleAbs = new Set();
         const nextCreatorPos = new Map();
         const nextNavState = new Map();
         const nextPosState = new Map();
         const nextNavIcons = new Map();
+        const headerSeeds = [];
         const items = sidebar.querySelectorAll('a, button, [role="button"]');
+        const itemEntries = [];
+        const explicitSearchRects = [];
         const groupItems = [];
         const creatorItems = [];
         const visualsToCheck = [];
 
         for (const item of items) {
-          if (item.getAttribute('data-e2e') === 'tiktok-logo') continue;
+          if (item.getAttribute('data-e2e') === 'tiktok-logo') {
+            headerSeeds.push(item);
+            continue;
+          }
           if (item.querySelector('[data-e2e="tiktok-logo"]')) {
             nextLogos.add(item);
+            headerSeeds.push(item);
             continue;
           }
           if (item.closest('[' + SURFACE + '="drawer"]')) {
@@ -2587,16 +2703,32 @@ function syncScript(dark = true) {
           const itemClass = typeof item.className === 'string' ? item.className : '';
           const itemE2e = item.getAttribute('data-e2e') || '';
           const itemLabel = (item.getAttribute('aria-label') || item.textContent || '').trim();
+          const explicitSearch = isExplicitSearchItem(item, itemClass, itemE2e, itemLabel);
+          if (explicitSearch && itemRect.height > 0) explicitSearchRects.push(itemRect);
+          itemEntries.push({ item, itemRect, itemClass, itemE2e, itemLabel, explicitSearch });
+        }
+
+        for (const entry of itemEntries) {
+          const { item, itemRect, itemClass, itemE2e, itemLabel, explicitSearch } = entry;
+          const topControlAboveNav =
+            !itemE2e.startsWith('nav-') &&
+            firstNavTop < Infinity &&
+            itemRect.height > 0 &&
+            itemRect.bottom <= firstNavTop + 4;
+          const hasSearchBelow =
+            topControlAboveNav && explicitSearchRects.some((r) => r.top >= itemRect.bottom - 2);
+          const isToggleItem =
+            !explicitSearch &&
+            (isExplicitToggleItem(item, itemClass, itemE2e, itemLabel) || hasSearchBelow);
+          if (isToggleItem) {
+            nextSideSurfaces.set(item, 'sidenav-toggle');
+            headerSeeds.push(item);
+            if (getComputedStyle(item).position === 'absolute') nextToggleAbs.add(item);
+            continue;
+          }
+
           const isSearchItem =
-            Boolean(item.closest('[data-e2e="search-box"], form[action*="/search"]')) ||
-            /Search/i.test(itemClass) ||
-            /search/i.test(itemE2e) ||
-            /^(?:search|поиск)$/i.test(itemLabel) ||
-            (item.tagName === 'BUTTON' &&
-              !item.matches('[data-e2e^="nav-"]') &&
-              firstNavTop < Infinity &&
-              itemRect.height > 0 &&
-              itemRect.bottom <= firstNavTop + 4);
+            explicitSearch || (item.tagName === 'BUTTON' && topControlAboveNav);
           if (isSearchItem) {
             if (!item.closest('[data-e2e="search-box"], form[action*="/search"]')) {
               nextSideSurfaces.set(item, 'sidenav-search');
@@ -2773,15 +2905,53 @@ function syncScript(dark = true) {
           }
         }
 
+        for (const seed of headerSeeds) {
+          let bestHeader = null;
+          let cur = seed.parentElement;
+          while (cur && cur !== sidebar) {
+            if (
+              (firstNavAnchor && cur.contains(firstNavAnchor)) ||
+              cur.querySelector(
+                '[data-e2e^="nav-"], [data-e2e="search-box"], [data-e2e="search-button"], [class*="Search"]',
+              ) ||
+              Array.from(nextSideSurfaces.entries()).some(
+                ([el, role]) => role === 'sidenav-search' && cur.contains(el),
+              )
+            ) {
+              break;
+            }
+            bestHeader = cur;
+            cur = cur.parentElement;
+          }
+          if (bestHeader && bestHeader.getBoundingClientRect().height <= 120) {
+            nextSideSurfaces.set(bestHeader, 'sidenav-header');
+          }
+        }
+
         // Diff-apply all sidebar attributes after reads
         sidebar
           .querySelectorAll(
-            '[' + SURFACE + '="sidenav-search"], [' + SURFACE + '="sidenav-creator"], [' + SURFACE + '="sidenav-footer"]',
+            '[' +
+              SURFACE +
+              '="sidenav-search"], [' +
+              SURFACE +
+              '="sidenav-toggle"], [' +
+              SURFACE +
+              '="sidenav-header"], [' +
+              SURFACE +
+              '="sidenav-creator"], [' +
+              SURFACE +
+              '="sidenav-footer"]',
           )
           .forEach((el) => {
             if (!nextSideSurfaces.has(el)) delAttrIfSet(el, SURFACE);
           });
         for (const [el, val] of nextSideSurfaces) setAttrIfDiff(el, SURFACE, val);
+
+        sidebar.querySelectorAll('[data-octo-md3-toggle-abs]').forEach((el) => {
+          if (!nextToggleAbs.has(el)) delAttrIfSet(el, 'data-octo-md3-toggle-abs');
+        });
+        for (const el of nextToggleAbs) setAttrIfDiff(el, 'data-octo-md3-toggle-abs', '1');
 
         sidebar.querySelectorAll('[data-octo-md3-creator-pos]').forEach((el) => {
           if (!nextCreatorPos.has(el)) delAttrIfSet(el, 'data-octo-md3-creator-pos');
@@ -4256,6 +4426,9 @@ function syncScript(dark = true) {
         document.querySelectorAll('[data-octo-md3-rail]').forEach((el) => el.removeAttribute('data-octo-md3-rail'));
         document.querySelectorAll('[data-octo-md3-logo]').forEach((el) => el.removeAttribute('data-octo-md3-logo'));
         document
+          .querySelectorAll('[data-octo-md3-toggle-abs]')
+          .forEach((el) => el.removeAttribute('data-octo-md3-toggle-abs'));
+        document
           .querySelectorAll('[data-octo-md3-nav-slot]')
           .forEach((el) => el.removeAttribute('data-octo-md3-nav-slot'));
         document
@@ -4378,6 +4551,9 @@ const CLEANUP_JS = `(() => {
   document
     .querySelectorAll('[data-octo-md3-logo]')
     .forEach((el) => el.removeAttribute('data-octo-md3-logo'));
+  document
+    .querySelectorAll('[data-octo-md3-toggle-abs]')
+    .forEach((el) => el.removeAttribute('data-octo-md3-toggle-abs'));
   document
     .querySelectorAll('[data-octo-md3-nav-slot]')
     .forEach((el) => el.removeAttribute('data-octo-md3-nav-slot'));

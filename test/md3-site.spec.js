@@ -1222,6 +1222,126 @@ test('MD3 дизайн для всего сайта: все элементы, SP
       return seen;
     });
     expect(stableAfterMutations).toEqual(['page', 'page', 'page']);
+    // 9. Свёрнутый рельс: кнопка разворота боковой панели центрируется и не ловит плитку nav-пункта,
+    // а при возврате логотипа SVG TikTok скрывается синхронно до отрисовки кадра.
+    const hasBrand = await site.evaluate(() => Boolean(window.__octoBrand));
+    if (!hasBrand) {
+      await page.click('#btnPanel');
+      await page.locator('[data-cat-head="cosmetics"]').click();
+      const brandSwitch = page.locator('#panelCosmetics [data-cosmetic="octo-brand"]');
+      if ((await brandSwitch.getAttribute('aria-checked')) !== 'true') {
+        await brandSwitch.click();
+      }
+      await expect(brandSwitch).toHaveAttribute('aria-checked', 'true');
+      await page.click('#btnPanel');
+    }
+    await expect.poll(() => site.evaluate(() => Boolean(window.__octoBrand))).toBe(true);
+
+    await site.evaluate(() => {
+      const rail = document.createElement('aside');
+      rail.id = 'collapsedRailTest';
+      rail.className = 'DivSideNavContainer';
+      rail.style.cssText =
+        'position:fixed;left:0;top:0;width:72px;height:360px;display:flex;flex-direction:column;align-items:stretch;';
+      rail.innerHTML = `
+        <div id="collapsedHeaderWrap" style="width:100%;padding-left:22px;box-sizing:border-box;">
+          <div id="collapsedHeaderInner" style="display:flex;align-items:center;">
+            <button type="button" id="collapsedToggleBtn" aria-label="Развернуть боковую панель" style="width:32px;height:32px;">T</button>
+          </div>
+        </div>
+        <button type="button" id="collapsedSearchBtn" class="TUXButton--secondary DivSearchButton" aria-label="Поиск" style="height:40px;">S</button>
+        <a href="/foryou" id="collapsedForYou" data-e2e="nav-foryou" style="height:40px;">For You</a>
+      `;
+      document.body.appendChild(rail);
+    });
+
+    await expect
+      .poll(() =>
+        site.evaluate(() => {
+          const rail = document.getElementById('collapsedRailTest');
+          const header = document.getElementById('collapsedHeaderWrap');
+          const toggle = document.getElementById('collapsedToggleBtn');
+          const search = document.getElementById('collapsedSearchBtn');
+          if (!rail || !header || !toggle || !search) return null;
+          const rRect = rail.getBoundingClientRect();
+          const tRect = toggle.getBoundingClientRect();
+          const sRect = search.getBoundingClientRect();
+          return {
+            railAttr: rail.getAttribute('data-octo-md3-rail'),
+            headerSurface: header.getAttribute('data-octo-md3-surface'),
+            toggleSurface: toggle.getAttribute('data-octo-md3-surface'),
+            togglePos: toggle.getAttribute('data-octo-md3-pos'),
+            toggleRadius: getComputedStyle(toggle).borderTopLeftRadius,
+            toggleCenterDelta: Math.abs(
+              tRect.left + tRect.width / 2 - (rRect.left + rRect.width / 2),
+            ),
+            searchCenterDelta: Math.abs(
+              sRect.left + sRect.width / 2 - (tRect.left + tRect.width / 2),
+            ),
+          };
+        }),
+      )
+      .toEqual({
+        railAttr: 'collapsed',
+        headerSurface: 'sidenav-header',
+        toggleSurface: 'sidenav-toggle',
+        togglePos: null,
+        toggleRadius: '9999px',
+        toggleCenterDelta: expect.any(Number),
+        searchCenterDelta: expect.any(Number),
+      });
+
+    const toggleAlign = await site.evaluate(() => {
+      const rail = document.getElementById('collapsedRailTest').getBoundingClientRect();
+      const toggle = document.getElementById('collapsedToggleBtn').getBoundingClientRect();
+      const search = document.getElementById('collapsedSearchBtn').getBoundingClientRect();
+      return {
+        railDelta: Math.abs(toggle.left + toggle.width / 2 - (rail.left + rail.width / 2)),
+        searchDelta: Math.abs(toggle.left + toggle.width / 2 - (search.left + search.width / 2)),
+        width: Math.round(toggle.width),
+      };
+    });
+    expect(toggleAlign.width).toBe(44);
+    expect(toggleAlign.railDelta).toBeLessThanOrEqual(1);
+    expect(toggleAlign.searchDelta).toBeLessThanOrEqual(1);
+
+    // Замена кнопки обратно на логотип: SVG должен быть скрыт уже на следующем кадре без 120мс мигания.
+    const firstFrameBrand = await site.evaluate(
+      () =>
+        new Promise((resolve) => {
+          const inner = document.getElementById('collapsedHeaderInner');
+          inner.innerHTML =
+            '<div id="remountLogoWrap"><a href="/foryou" id="remountedLogo" data-e2e="tiktok-logo" style="display:flex;width:40px;height:40px;"><svg id="remountedSvg" width="28" height="28"><circle cx="14" cy="14" r="10"/></svg></a></div>';
+          window.requestAnimationFrame(() => {
+            const logo = document.getElementById('remountedLogo');
+            const svg = document.getElementById('remountedSvg');
+            resolve({
+              brandAttr: logo.getAttribute('data-octo-brand'),
+              svgDisplay: getComputedStyle(svg).display,
+              hasImg: Boolean(logo.querySelector('img[data-octo-brand-img]')),
+            });
+          });
+        }),
+    );
+    expect(firstFrameBrand).toEqual({
+      brandAttr: 'mark',
+      svgDisplay: 'none',
+      hasImg: true,
+    });
+
+    await site.evaluate(() => {
+      document.getElementById('collapsedRailTest').style.width = '220px';
+    });
+    await expect
+      .poll(() =>
+        site.evaluate(() => ({
+          railAttr: document
+            .getElementById('collapsedRailTest')
+            ?.getAttribute('data-octo-md3-rail'),
+          brandAttr: document.getElementById('remountedLogo')?.getAttribute('data-octo-brand'),
+        })),
+      )
+      .toEqual({ railAttr: null, brandAttr: 'full' });
   } finally {
     if (app) await app.close();
     await new Promise((resolve) => server.close(resolve));
