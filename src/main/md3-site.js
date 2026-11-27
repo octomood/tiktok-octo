@@ -1222,7 +1222,7 @@ const COMPONENT_CSS = `
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-first"] {
-    border-radius: 14px 6px 6px 14px !important;
+    border-radius: 24px 6px 6px 24px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-mid"] {
@@ -1230,11 +1230,11 @@ const COMPONENT_CSS = `
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-last"] {
-    border-radius: 6px 14px 14px 6px !important;
+    border-radius: 6px 24px 24px 6px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-first"] {
-    border-radius: 14px 14px 6px 6px !important;
+    border-radius: 24px 24px 6px 6px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-mid"] {
@@ -1242,28 +1242,28 @@ const COMPONENT_CSS = `
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-last"] {
-    border-radius: 6px 6px 14px 14px !important;
+    border-radius: 6px 6px 24px 24px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-first"]:hover {
-    border-radius: 14px 9px 9px 14px !important;
+    border-radius: 24px 12px 12px 24px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-mid"]:hover,
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-mid"]:hover {
-    border-radius: 9px !important;
+    border-radius: 12px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-last"]:hover {
-    border-radius: 9px 14px 14px 9px !important;
+    border-radius: 12px 24px 24px 12px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-first"]:hover {
-    border-radius: 14px 14px 9px 9px !important;
+    border-radius: 24px 24px 12px 12px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-last"]:hover {
-    border-radius: 9px 9px 14px 14px !important;
+    border-radius: 12px 12px 24px 24px !important;
   }
 
   [class*="TUXButton--primary"]:not([id^="octo-"]):not([class*="DivSideNavContainer"] *):not([${SURFACE_ATTR}="sidenav"] *),

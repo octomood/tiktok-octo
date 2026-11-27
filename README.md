@@ -53,6 +53,8 @@ floating mini player and desktop shortcuts that make sense.
 | **🏅&nbsp; Community badges**         | Animated MD3 vector badges next to usernames in profiles, feeds, comments, and chat. Clicking a badge opens an MD3 card with the role and description; synced from `src/main/badges.json` and toggleable in **Tweaks**.                                        |
 | **♿&nbsp; Accessibility**            | Focus rings on every control, focus containment in dialogs and the command palette, `prefers-reduced-motion`, ARIA roles and an RTL Arabic layout.                                                                                                             |
 
+Joined buttons in the site skin have pill-shaped outer edges and 6px inner corners (12px on hover).
+
 ### Shell, Player & Viewing
 
 |                                         |                                                                                                                                                                                                                   |

@@ -440,7 +440,7 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         moreDrawerBtnShadow: 'none',
         searchRadius: '14px',
         loginBg: 'rgb(140, 132, 169)', // #8c84a9
-        loginRadius: '14px',
+        loginRadius: '24px',
         loginInnerRadius: '6px', // соединённый край пары кнопок в шапке
         editBg: 'rgb(86, 78, 112)', // #564e70
         editInnerRadius: '6px',
@@ -1431,6 +1431,72 @@ test('MD3 скин сайта: переходы учитывают систем�
     await expect
       .poll(async () => (await durations()).button)
       .toBe('0.16s, 0.22s, 0.16s, 0.16s, 0.16s');
+  } finally {
+    if (app) await app.close();
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+const JOINED_SITE = `<!doctype html><html lang="ru"><meta charset="utf-8"><title>MD3</title>
+<style>body{font-family:system-ui;padding:32px}section{display:flex;gap:48px;align-items:flex-start}.group{display:flex;gap:4px}.vertical{flex-direction:column}button{height:44px;min-width:120px;padding:0 20px}</style>
+<section><div class="group" id="horizontal"><button class="TUXButton--secondary">Назад</button><button class="TUXButton--secondary">Сохранить</button><button class="TUXButton--secondary">Далее</button></div>
+<div class="group vertical" id="vertical"><button class="TUXButton--secondary">Создать</button><button class="TUXButton--secondary">Изменить</button><button class="TUXButton--secondary">Отменить</button></div></section></html>`;
+
+test('MD3 соединённые кнопки: определение групп и углы в покое и при наведении', async () => {
+  test.setTimeout(60_000);
+  const server = http.createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    response.end(JOINED_SITE);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${server.address().port}/`;
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-md3-joined-'));
+  let app;
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: { ...process.env, OCTO_E2E: '1', OCTO_USER_DATA: userData, OCTO_HOME_URL: url },
+    });
+    await app.firstWindow();
+    const site = await waitForWindow(app, (candidate) => candidate.url().startsWith(url), 'кнопки');
+    const buttons = site.locator('.group > button');
+    // Атрибуты выставляет настоящий observer скина по геометрии, не тест.
+    await expect
+      .poll(() =>
+        buttons.evaluateAll((els) => els.map((el) => el.getAttribute('data-octo-md3-btn'))),
+      )
+      .toEqual(['h-first', 'h-mid', 'h-last', 'v-first', 'v-mid', 'v-last']);
+    const corners = (i) =>
+      buttons.nth(i).evaluate((el) => {
+        const s = getComputedStyle(el);
+        return [
+          s.borderTopLeftRadius,
+          s.borderTopRightRadius,
+          s.borderBottomRightRadius,
+          s.borderBottomLeftRadius,
+        ];
+      });
+    const resting = [
+      [24, 6, 6, 24],
+      [6, 6, 6, 6],
+      [6, 24, 24, 6],
+      [24, 24, 6, 6],
+      [6, 6, 6, 6],
+      [6, 6, 24, 24],
+    ];
+    const hovered = resting.map((values) => values.map((r) => (r === 6 ? 12 : r)));
+    for (const reducedMotion of ['no-preference', 'reduce']) {
+      await site.emulateMedia({ reducedMotion });
+      await site.mouse.move(0, 0);
+      for (let i = 0; i < resting.length; i++) {
+        await expect.poll(() => corners(i)).toEqual(resting[i].map((r) => `${r}px`));
+        await buttons.nth(i).hover();
+        await expect.poll(() => corners(i)).toEqual(hovered[i].map((r) => `${r}px`));
+        await site.mouse.move(0, 0);
+        await expect.poll(() => corners(i)).toEqual(resting[i].map((r) => `${r}px`));
+      }
+    }
   } finally {
     if (app) await app.close();
     await new Promise((resolve) => server.close(resolve));
