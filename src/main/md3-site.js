@@ -433,17 +433,17 @@ const COMPONENT_CSS = `
   }
 
   [${SURFACE_ATTR}="drawer"] [${SURFACE_ATTR}="drawer-segmented"] > button:first-child {
-    border-radius: 9999px 6px 6px 9999px !important;
+    border-radius: 24px 6px 6px 24px !important;
   }
 
   [${SURFACE_ATTR}="drawer"] [${SURFACE_ATTR}="drawer-segmented"] > button:last-child {
-    border-radius: 6px 9999px 9999px 6px !important;
+    border-radius: 6px 24px 24px 6px !important;
   }
 
   [${SURFACE_ATTR}="drawer"] [${SURFACE_ATTR}="drawer-segmented"] > button:is([aria-pressed="true"], [aria-selected="true"], [data-active="true"], [class*="Active"]) {
     background-color: var(--octo-md-secondary-container) !important;
     color: var(--octo-md-on-secondary-container) !important;
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
   }
 
   [${SURFACE_ATTR}="drawer"] [${SURFACE_ATTR}="chip-bar"] {
@@ -489,7 +489,7 @@ const COMPONENT_CSS = `
   [${SURFACE_ATTR}="drawer"] :is([${SURFACE_ATTR}="chip"], [${SURFACE_ATTR}="chip-active"]):not([id^="octo-"]) {
     display: inline-flex !important;
     align-items: center !important;
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
     margin: 0 !important;
     padding: 6px 12px !important;
   }
@@ -504,7 +504,7 @@ const COMPONENT_CSS = `
   [${SURFACE_ATTR}="drawer"] [${SURFACE_ATTR}="chip"]:not([id^="octo-"]):hover {
     background-color: var(--octo-md-surface-container-highest) !important;
     color: var(--octo-md-on-surface) !important;
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
   }
 
   [${SURFACE_ATTR}="drawer"] [${SURFACE_ATTR}="chip-active"]:not([id^="octo-"]),
@@ -512,7 +512,7 @@ const COMPONENT_CSS = `
     background-color: var(--octo-md-secondary-container) !important;
     color: var(--octo-md-on-secondary-container) !important;
     box-shadow: none !important;
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
     font-weight: 600 !important;
   }
 
@@ -887,7 +887,7 @@ const COMPONENT_CSS = `
   [class*="DivSideNavContainer"] [class*="DivUserContainer"],
   [class*="DivSideNavContainer"] [class*="DivAccountItem"],
   [${SURFACE_ATTR}="sidenav"] [${SURFACE_ATTR}="sidenav-creator"] {
-    border-radius: 5px !important;
+    border-radius: 6px !important;
     margin-bottom: 2px !important;
     background-color: var(--octo-md-surface-container) !important;
     color: var(--octo-md-on-surface) !important;
@@ -1041,7 +1041,7 @@ const COMPONENT_CSS = `
   }
 
   [data-e2e="search-button"] {
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
     border: 0 !important;
     color: var(--octo-md-on-surface-variant) !important;
     background: transparent !important;
@@ -1104,7 +1104,7 @@ const COMPONENT_CSS = `
   [data-e2e="liked-tab"],
   [data-e2e="favorites-tab"],
   [data-e2e="repost-tab"] {
-    border-radius: 5px !important;
+    border-radius: 6px !important;
     color: var(--octo-md-on-surface-variant) !important;
     transition:
       background-color ${motion(0.16)} var(--octo-md-ease),
@@ -1170,7 +1170,7 @@ const COMPONENT_CSS = `
   [class*="FilterChip"],
   [data-e2e*="category"],
   [${SURFACE_ATTR}="chip"] {
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
     background-color: var(--octo-md-surface-container) !important;
     color: var(--octo-md-on-surface-variant) !important;
     border: 0 !important;
@@ -1189,7 +1189,7 @@ const COMPONENT_CSS = `
   [${SURFACE_ATTR}="chip"]:hover {
     background-color: var(--octo-md-surface-container-high) !important;
     color: var(--octo-md-on-surface) !important;
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
   }
 
   [class*="DivCategory"] :is(button, a):is([aria-selected="true"], [aria-pressed="true"], [class*="-Active"], [class*="--active"], [class*="IsActive"], [class*="Selected"]),
@@ -1201,7 +1201,7 @@ const COMPONENT_CSS = `
   [data-e2e*="category"]:is([aria-selected="true"], [aria-pressed="true"], [class*="-Active"], [class*="--active"], [class*="IsActive"], [class*="Selected"]),
   [${SURFACE_ATTR}="chip-active"],
   [${SURFACE_ATTR}="chip-active"]:hover {
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
     background-color: var(--octo-md-secondary-container) !important;
     color: var(--octo-md-on-secondary-container) !important;
     box-shadow: none !important;
@@ -1222,27 +1222,27 @@ const COMPONENT_CSS = `
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-first"] {
-    border-radius: 14px 5px 5px 14px !important;
+    border-radius: 14px 6px 6px 14px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-mid"] {
-    border-radius: 5px !important;
+    border-radius: 6px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-last"] {
-    border-radius: 5px 14px 14px 5px !important;
+    border-radius: 6px 14px 14px 6px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-first"] {
-    border-radius: 14px 14px 5px 5px !important;
+    border-radius: 14px 14px 6px 6px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-mid"] {
-    border-radius: 5px !important;
+    border-radius: 6px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-last"] {
-    border-radius: 5px 5px 14px 14px !important;
+    border-radius: 6px 6px 14px 14px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-first"]:hover {
@@ -1652,7 +1652,7 @@ const COMPONENT_CSS = `
 
   [class*="DivCommentItemContainer"],
   [class*="DivReplyItem"] {
-    border-radius: 5px !important;
+    border-radius: 6px !important;
     transition:
       background-color ${motion(0.14)} var(--octo-md-ease),
       border-radius ${motion(0.2)} var(--octo-md-ease) !important;
@@ -1850,7 +1850,7 @@ const COMPONENT_CSS = `
   [class*="ChatItem"] {
     background-color: transparent !important;
     color: var(--octo-md-on-surface) !important;
-    border-radius: 5px !important;
+    border-radius: 6px !important;
     margin-bottom: 2px !important;
     transition:
       background-color ${motion(0.15)} var(--octo-md-ease),
@@ -2044,7 +2044,7 @@ const COMPONENT_CSS = `
   [role="option"],
   [class*="DivMenuItem"],
   [class*="TUXMenu-item"] {
-    border-radius: 5px !important;
+    border-radius: 6px !important;
     transition:
       background-color ${motion(0.14)} var(--octo-md-ease),
       border-radius ${motion(0.18)} var(--octo-md-ease) !important;

@@ -483,6 +483,18 @@ const BADGES_CSS = `
     from { opacity: 0; transform: translateY(-6px) scale(0.96); }
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
+
+  /* «Уменьшить движение»: значок, кнопка закрытия и окно меняют состояние без
+     пружин и появления. Блок стоит в конце, чтобы перекрыть правила выше. */
+  @media (prefers-reduced-motion: reduce) {
+    button.${BADGE_CLASS}[id^="octo-badge-btn-"],
+    #octo-badge-modal-close {
+      transition: none !important;
+    }
+    #octo-badge-modal[${MODAL_ATTR}] {
+      animation: none !important;
+    }
+  }
 `;
 
 function badgesScript() {

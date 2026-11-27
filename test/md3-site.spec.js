@@ -441,9 +441,9 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         searchRadius: '14px',
         loginBg: 'rgb(140, 132, 169)', // #8c84a9
         loginRadius: '14px',
-        loginInnerRadius: '5px', // соединённый край пары кнопок в шапке
+        loginInnerRadius: '6px', // соединённый край пары кнопок в шапке
         editBg: 'rgb(86, 78, 112)', // #564e70
-        editInnerRadius: '5px',
+        editInnerRadius: '6px',
         tabColor: 'rgb(197, 189, 219)', // #c5bddb
         tabRadius: '12px',
         tabBarBg: expect.not.stringMatching(/^rgb\(0,\s*0,\s*0\)$/),
@@ -557,10 +557,10 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         barRadius: '0px',
         allSurface: 'chip-active',
         allBg: 'rgb(86, 78, 112)', // #564e70 — active secondary-container
-        allRadius: '9999px',
+        allRadius: '24px',
         followersSurface: 'chip',
         followersBg: 'rgb(62, 56, 84)', // #3e3854 — surface-container-high (видимая пилюля)
-        followersRadius: '9999px',
+        followersRadius: '24px',
       });
     await site.evaluate(() => document.getElementById('notifDrawer')?.remove());
 
