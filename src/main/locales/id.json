@@ -1386,5 +1386,8 @@
   "Сохранено (введите новое значение)": "Tersimpan (masukkan nilai baru)",
   "Введите значение…": "Masukkan nilai…",
   "Введите значение секрета": "Masukkan nilai rahasia",
-  "Бейджи сообщества у ников": "Lencana komunitas di sebelah nama"
+  "Бейджи сообщества у ников": "Lencana komunitas di sebelah nama",
+  "{0} Б": "{0} B",
+  "{0} КБ": "{0} KB",
+  "{0} МБ": "{0} MB"
 }

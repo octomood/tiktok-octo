@@ -1386,5 +1386,8 @@
   "Сохранено (введите новое значение)": "Salvo (digite um novo valor)",
   "Введите значение…": "Digite um valor…",
   "Введите значение секрета": "Digite o valor secreto",
-  "Бейджи сообщества у ников": "Emblemas da comunidade ao lado dos nomes"
+  "Бейджи сообщества у ников": "Emblemas da comunidade ao lado dos nomes",
+  "{0} Б": "{0} B",
+  "{0} КБ": "{0} KB",
+  "{0} МБ": "{0} MB"
 }

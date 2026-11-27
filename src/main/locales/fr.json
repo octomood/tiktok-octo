@@ -1386,5 +1386,8 @@
   "Сохранено (введите новое значение)": "Enregistré (saisir une nouvelle valeur)",
   "Введите значение…": "Saisir une valeur…",
   "Введите значение секрета": "Saisir la valeur secrète",
-  "Бейджи сообщества у ников": "Badges de la communauté près des pseudos"
+  "Бейджи сообщества у ников": "Badges de la communauté près des pseudos",
+  "{0} Б": "{0} o",
+  "{0} КБ": "{0} Ko",
+  "{0} МБ": "{0} Mo"
 }

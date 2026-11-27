@@ -1859,6 +1859,14 @@ body.is-downloading .progress {
   font-weight: 600;
 }
 
+/* В светлой теме secondary-container почти совпадает с тоном пунктов
+   (surface-container) во всех палитрах, поэтому капсулу углубляем цветом
+   secondary той же палитры. */
+:root[data-theme='light'] .settings-nav .panel-cat.is-current .panel-cat-head,
+:root[data-theme='light'] .settings-nav .panel-cat.is-current .panel-cat-head:hover {
+  background: color-mix(in srgb, var(--md-secondary-container) 75%, var(--md-secondary));
+}
+
 .panel-cat-icon {
   display: grid;
   flex: none;

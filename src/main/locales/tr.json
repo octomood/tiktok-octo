@@ -1386,5 +1386,8 @@
   "Сохранено (введите новое значение)": "Kaydedildi (yeni değer girin)",
   "Введите значение…": "Değer girin…",
   "Введите значение секрета": "Gizli değeri girin",
-  "Бейджи сообщества у ников": "Kullanıcı adlarının yanında topluluk rozetleri"
+  "Бейджи сообщества у ников": "Kullanıcı adlarının yanında topluluk rozetleri",
+  "{0} Б": "{0} B",
+  "{0} КБ": "{0} KB",
+  "{0} МБ": "{0} MB"
 }

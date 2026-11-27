@@ -65,6 +65,8 @@ test('язык интерфейса и сайта переключается и 
       'true',
     );
     await expect(page.locator('.panel-group').first()).toHaveText('Anzeige');
+    // Размер данных в «Приватности»: единица переводится, без кириллицы «КБ».
+    await expect(page.locator('#privacySize')).toHaveText(/^\d[\d.]* (B|KB|MB)$/);
 
     const menu = await app.evaluate(({ Menu }) =>
       Menu.getApplicationMenu().items.map((item) => item.label),
