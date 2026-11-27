@@ -101,7 +101,7 @@
 по всем разделам.
 
 <div align="center">
-  <img src="docs/settings.png" width="820" alt="Окно настроек TikTok Octo в стиле Material Design 3 Expressive: сгруппированная навигация слева, поиск и 20 цветовых палитр" />
+  <img src="docs/settings.png?v=2" width="820" alt="Окно настроек TikTok Octo в стиле Material Design 3 Expressive: сгруппированная навигация слева, поиск и 20 цветовых палитр" />
   <br />
   <sub><i>Окно настроек в стиле Material Design 3 Expressive: сгруппированное меню разделов, мгновенный поиск, выбор темы и 20 цветовых палитр.</i></sub>
 </div>
