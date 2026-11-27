@@ -75,6 +75,7 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE) {
     --octo-md-elevation-2: ${t.elevation2} !important;
     --octo-md-elevation-3: ${t.elevation3} !important;
     --octo-md-ease: cubic-bezier(0.2, 0, 0, 1);
+    --octo-md-motion-scale: 1 !important;
 
     /* TUX (TikTok UI Kit) — системная перекраска встроенных компонентов */
     --tux-colorBGPrimary: ${t.surface} !important;
@@ -313,6 +314,26 @@ const BASE_CANVAS_CSS = `
   }
 `;
 
+/**
+ * Длительность перехода скина. Умножается на `--octo-md-motion-scale`, который
+ * при системной настройке «Уменьшить движение» становится `0`: правила скина
+ * объявлены с `!important` и высокой специфичностью, поэтому общее правило
+ * `* { transition-duration }` их бы не перекрыло.
+ */
+function motion(seconds) {
+  return `calc(${seconds}s * var(--octo-md-motion-scale, 1))`;
+}
+
+function reducedMotionCss(selector) {
+  return `
+    @media (prefers-reduced-motion: reduce) {
+      ${selector} {
+        --octo-md-motion-scale: 0 !important;
+      }
+    }
+  `;
+}
+
 const COMPONENT_CSS = `
 
   [class*="DivBodyContainer"],
@@ -440,8 +461,8 @@ const COMPONENT_CSS = `
     border-radius: 6px !important;
     margin-bottom: 4px !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      border-radius 0.2s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      border-radius ${motion(0.2)} var(--octo-md-ease) !important;
   }
 
   [${SURFACE_ATTR}="drawer"] :is(a, button, [role="button"], [role="menuitem"]):not([${SURFACE_ATTR}="drawer-segmented"] *):not([${SURFACE_ATTR}="chip"]):not([${SURFACE_ATTR}="chip-active"]):not([role="tab"]):not([id^="octo-"]):first-child {
@@ -560,10 +581,10 @@ const COMPONENT_CSS = `
     border-radius: 6px !important;
     color: var(--octo-md-on-surface-variant) !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      box-shadow 0.16s var(--octo-md-ease),
-      border-radius 0.22s var(--octo-md-ease),
-      color 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      box-shadow ${motion(0.16)} var(--octo-md-ease),
+      border-radius ${motion(0.22)} var(--octo-md-ease),
+      color ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) :is(a, button, [role="button"])[${POS_ATTR}="first"] {
@@ -628,8 +649,8 @@ const COMPONENT_CSS = `
     color: var(--octo-md-on-surface-variant) !important;
     border-radius: 9999px !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      color 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      color ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) [${SURFACE_ATTR}="sidenav-toggle"]:hover {
@@ -872,8 +893,8 @@ const COMPONENT_CSS = `
     color: var(--octo-md-on-surface) !important;
     box-shadow: none !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      border-radius 0.2s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      border-radius ${motion(0.2)} var(--octo-md-ease) !important;
   }
 
   [class*="DivSideNavContainer"] :is([class*="DivUserContainer"], [class*="DivAccountItem"]):first-of-type,
@@ -985,8 +1006,8 @@ const COMPONENT_CSS = `
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 45%, transparent) !important;
     overflow: hidden !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      box-shadow 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      box-shadow ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   [${SURFACE_ATTR}="sidenav-search"]:hover {
@@ -1086,9 +1107,9 @@ const COMPONENT_CSS = `
     border-radius: 5px !important;
     color: var(--octo-md-on-surface-variant) !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      border-radius 0.2s var(--octo-md-ease),
-      color 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      border-radius ${motion(0.2)} var(--octo-md-ease),
+      color ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   :is([role="tablist"], [class*="DivTabList"], [class*="TUXTabBar"]) > :first-child {
@@ -1193,11 +1214,11 @@ const COMPONENT_CSS = `
   [class*="TUXButton"]:where(:not([id^="octo-"])) {
     border-radius: 14px !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      border-radius 0.22s var(--octo-md-ease),
-      color 0.16s var(--octo-md-ease),
-      box-shadow 0.16s var(--octo-md-ease),
-      filter 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      border-radius ${motion(0.22)} var(--octo-md-ease),
+      color ${motion(0.16)} var(--octo-md-ease),
+      box-shadow ${motion(0.16)} var(--octo-md-ease),
+      filter ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-first"] {
@@ -1521,8 +1542,8 @@ const COMPONENT_CSS = `
     background-color: transparent !important;
     border-radius: 9999px !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      color 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      color ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   [${SURFACE_ATTR}="player-controls"] :is(button, [role="button"]):not([class*="PlayOverlay"]):not([class*="VideoMask"]):not([class*="ClickArea"]):not([role="switch"]):hover {
@@ -1633,8 +1654,8 @@ const COMPONENT_CSS = `
   [class*="DivReplyItem"] {
     border-radius: 5px !important;
     transition:
-      background-color 0.14s var(--octo-md-ease),
-      border-radius 0.2s var(--octo-md-ease) !important;
+      background-color ${motion(0.14)} var(--octo-md-ease),
+      border-radius ${motion(0.2)} var(--octo-md-ease) !important;
   }
 
   [class*="DivCommentItemContainer"]:first-child,
@@ -1832,8 +1853,8 @@ const COMPONENT_CSS = `
     border-radius: 5px !important;
     margin-bottom: 2px !important;
     transition:
-      background-color 0.15s var(--octo-md-ease),
-      border-radius 0.2s var(--octo-md-ease) !important;
+      background-color ${motion(0.15)} var(--octo-md-ease),
+      border-radius ${motion(0.2)} var(--octo-md-ease) !important;
   }
 
   [data-e2e="chat-list-item"]:first-child,
@@ -2025,8 +2046,8 @@ const COMPONENT_CSS = `
   [class*="TUXMenu-item"] {
     border-radius: 5px !important;
     transition:
-      background-color 0.14s var(--octo-md-ease),
-      border-radius 0.18s var(--octo-md-ease) !important;
+      background-color ${motion(0.14)} var(--octo-md-ease),
+      border-radius ${motion(0.18)} var(--octo-md-ease) !important;
   }
 
   [role="menuitem"]:first-child,
@@ -2099,8 +2120,8 @@ const COMPONENT_CSS = `
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 55%, transparent) !important;
     overflow: hidden !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      box-shadow 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      box-shadow ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   [${SURFACE_ATTR}="field"]:focus-within {
@@ -2231,8 +2252,8 @@ const COMPONENT_CSS = `
     border-radius: 6px !important;
     margin-bottom: 4px !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      color 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      color ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   [${SURFACE_ATTR}="setting-nav-item"]:first-child {
@@ -2375,8 +2396,7 @@ const COMPONENT_CSS = `
   }
 `;
 
-function siteCss(dark = true, paletteId = DEFAULT_PALETTE) {
-  return `
+const TOKEN_ROOTS = `
     :root,
     html,
     body,
@@ -2384,9 +2404,14 @@ function siteCss(dark = true, paletteId = DEFAULT_PALETTE) {
     [data-tux-theme],
     [data-tux-color-scheme],
     [class*="ThemeProvider"],
-    [${MD3_ATTR}] {
+    [${MD3_ATTR}]`;
+
+function siteCss(dark = true, paletteId = DEFAULT_PALETTE) {
+  return `
+    ${TOKEN_ROOTS} {
       ${tokenDeclarations(dark, paletteId)}
     }
+    ${reducedMotionCss(TOKEN_ROOTS)}
     ${BASE_CANVAS_CSS}
     ${COMPONENT_CSS}
   `;
@@ -2397,6 +2422,7 @@ function shadowCss(dark = true, paletteId = DEFAULT_PALETTE) {
     :host {
       ${tokenDeclarations(dark, paletteId)}
     }
+    ${reducedMotionCss(':host')}
     ${COMPONENT_CSS}
   `;
 }

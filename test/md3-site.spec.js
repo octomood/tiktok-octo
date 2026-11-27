@@ -1348,3 +1348,92 @@ test('MD3 дизайн для всего сайта: все элементы, SP
     fs.rmSync(userData, { recursive: true, force: true });
   }
 });
+
+test('MD3 скин сайта: переходы учитывают системную настройку «Уменьшить движение»', async () => {
+  test.setTimeout(60_000);
+  const server = http.createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    response.end(MOCK_SITE);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${server.address().port}/`;
+
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-md3-motion-'));
+  let app;
+
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: {
+        ...process.env,
+        OCTO_E2E: '1',
+        OCTO_USER_DATA: userData,
+        OCTO_HOME_URL: url,
+      },
+    });
+
+    await app.firstWindow();
+    const site = await waitForWindow(
+      app,
+      (candidate) => candidate.url().startsWith(url),
+      'страница сайта',
+    );
+    await expect
+      .poll(() => site.evaluate(() => document.documentElement.getAttribute('data-octo-md3')))
+      .toBe('dark');
+
+    await site.evaluate(() => {
+      const root = document.getElementById('shadowHost').attachShadow({ mode: 'open' });
+      const btn = document.createElement('button');
+      btn.id = 'shadowBtn';
+      btn.className = 'TUXButton--primary';
+      btn.textContent = 'Shadow MD3';
+      root.append(btn);
+    });
+
+    // Длительности переходов скина: кнопка, пункт сайдбара, подфрейм и shadow root.
+    const durations = () =>
+      site.evaluate(() => {
+        const frameBtn = document
+          .getElementById('studioFrame')
+          ?.contentDocument?.getElementById('frameBtn');
+        const shadowBtn = document
+          .getElementById('shadowHost')
+          .shadowRoot?.getElementById('shadowBtn');
+        const of = (el) => (el ? getComputedStyle(el).transitionDuration : '');
+        return {
+          button: of(document.getElementById('btnLogin')),
+          sideNav: of(document.getElementById('navFollowing')),
+          frame: of(frameBtn),
+          shadow: of(shadowBtn),
+        };
+      });
+
+    // 1. Без настройки скин анимирует смену цвета и формы, как раньше.
+    await expect.poll(durations).toEqual({
+      button: '0.16s, 0.22s, 0.16s, 0.16s, 0.16s',
+      sideNav: '0.16s, 0.16s, 0.22s, 0.16s',
+      frame: '0.16s, 0.22s, 0.16s, 0.16s, 0.16s',
+      shadow: '0.16s, 0.22s, 0.16s, 0.16s, 0.16s',
+    });
+
+    // 2. «Уменьшить движение» обнуляет все переходы скина, включая подфреймы и shadow root.
+    await site.emulateMedia({ reducedMotion: 'reduce' });
+    await expect.poll(durations).toEqual({
+      button: '0s, 0s, 0s, 0s, 0s',
+      sideNav: '0s, 0s, 0s, 0s',
+      frame: '0s, 0s, 0s, 0s, 0s',
+      shadow: '0s, 0s, 0s, 0s, 0s',
+    });
+
+    // 3. Возврат настройки возвращает переходы без перезагрузки страницы.
+    await site.emulateMedia({ reducedMotion: 'no-preference' });
+    await expect
+      .poll(async () => (await durations()).button)
+      .toBe('0.16s, 0.22s, 0.16s, 0.16s, 0.16s');
+  } finally {
+    if (app) await app.close();
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
