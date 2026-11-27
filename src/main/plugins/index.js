@@ -14,6 +14,7 @@ const managerWindow = require('./window');
 const docsWindow = require('./docs-window');
 const { compareVersions, isCompatible, applySettings } = require('./manifest');
 const { installDecision } = require('./security');
+const { trustNotice, needsTrustWarning } = require('./plugin-trust');
 const {
   describePermissions,
   baselinePermissions,
@@ -441,21 +442,14 @@ function confirmDetail(preview, { update = false, addedPermissions = [] } = {}) 
   if (warnings) {
     lines.push('', 'Предупреждения статической проверки:', warnings);
   }
-  if (preview.signature !== 'verified') {
-    lines.push(
-      '',
-      preview.signature === 'unsigned'
-        ? 'Плагин не подписан. Устанавливайте, только если доверяете автору и исходникам.'
-        : 'Подпись недействительна — установка запрещена.',
-    );
-  }
+  lines.push('', ...trustNotice(preview));
 
   return lines.filter((line) => line !== undefined && line !== null).join('\n');
 }
 
 async function confirmInstall(preview, options = {}) {
   const { response } = await showMessage({
-    type: preview.report.verdict === 'safe' ? 'question' : 'warning',
+    type: preview.report.verdict === 'safe' && !needsTrustWarning(preview) ? 'question' : 'warning',
     title: options.update ? 'Обновление плагина' : 'Установка плагина',
     message: options.update
       ? `Обновить «${preview.name}» до ${preview.version}?`

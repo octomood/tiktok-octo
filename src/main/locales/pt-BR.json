@@ -1386,5 +1386,11 @@
   "Сохранено (введите новое значение)": "Salvo (digite um novo valor)",
   "Введите значение…": "Digite um valor…",
   "Введите значение секрета": "Digite o valor secreto",
-  "Бейджи сообщества у ников": "Emblemas da comunidade ao lado dos nomes"
+  "Бейджи сообщества у ников": "Emblemas da comunidade ao lado dos nomes",
+  "Официальный плагин: подпись TikTok Octo проверена.": "Plugin oficial: assinatura do TikTok Octo verificada.",
+  "Пакет подписан ключом, которому приложение не доверяет. Он считается неподписанным.": "O pacote está assinado com uma chave em que o app não confia. Ele é tratado como não assinado.",
+  "Плагин не подписан: нельзя проверить, кто его выпустил и не подменён ли он.": "O plugin não está assinado: não é possível verificar quem o publicou nem se foi adulterado.",
+  "Он получит доступ с высоким риском: {0}.": "Ele terá acesso de alto risco: {0}.",
+  "Устанавливайте, только если скачали его из канала автора и доверяете исходникам.": "Instale apenas se você o baixou do canal do autor e confia no código-fonte.",
+  "официальный": "oficial"
 }

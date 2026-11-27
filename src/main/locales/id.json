@@ -1386,5 +1386,11 @@
   "Сохранено (введите новое значение)": "Tersimpan (masukkan nilai baru)",
   "Введите значение…": "Masukkan nilai…",
   "Введите значение секрета": "Masukkan nilai rahasia",
-  "Бейджи сообщества у ников": "Lencana komunitas di sebelah nama"
+  "Бейджи сообщества у ников": "Lencana komunitas di sebelah nama",
+  "Официальный плагин: подпись TikTok Octo проверена.": "Plugin resmi: tanda tangan TikTok Octo terverifikasi.",
+  "Пакет подписан ключом, которому приложение не доверяет. Он считается неподписанным.": "Paket ditandatangani dengan kunci yang tidak dipercaya aplikasi. Paket dianggap tidak bertanda tangan.",
+  "Плагин не подписан: нельзя проверить, кто его выпустил и не подменён ли он.": "Plugin tidak ditandatangani: tidak bisa dipastikan siapa yang merilisnya atau apakah sudah diubah.",
+  "Он получит доступ с высоким риском: {0}.": "Plugin akan mendapat akses berisiko tinggi: {0}.",
+  "Устанавливайте, только если скачали его из канала автора и доверяете исходникам.": "Pasang hanya jika Anda mengunduhnya dari kanal pembuat dan memercayai kode sumbernya.",
+  "официальный": "resmi"
 }

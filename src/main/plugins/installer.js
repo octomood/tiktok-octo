@@ -13,8 +13,8 @@ const {
 const { scanFiles, installDecision } = require('./security');
 const {
   verifySignature,
-  parseAndVerifySignatureFile,
-  SIGNATURE_FILE,
+  verifyEmbeddedSignature,
+  SIGNATURE_FILES,
   sha256,
 } = require('./signature');
 const { LIMITS } = require('./constants');
@@ -153,19 +153,14 @@ function inspectPackage(buffer, { registryEntry = null, expectedId = '', publicK
 
   const report = scanFiles(files, manifest);
   const hash = sha256(buffer);
-  let signature = 'unsigned';
-  let signatureError = '';
-
-  const embeddedSig = files.get(SIGNATURE_FILE);
-  if (embeddedSig) {
-    const verified = parseAndVerifySignatureFile(
-      embeddedSig,
-      { id: manifest.id, version: manifest.version, files },
-      publicKeys,
-    );
-    signature = verified.status;
-    signatureError = verified.error || '';
-  }
+  const embedded = verifyEmbeddedSignature(
+    files,
+    { id: manifest.id, version: manifest.version },
+    publicKeys,
+  );
+  let signature = embedded.status;
+  let signatureError = embedded.error || '';
+  const signatureNote = embedded.note || '';
 
   if (registryEntry) {
     if (manifest.id !== registryEntry.pluginId || manifest.version !== registryEntry.version) {
@@ -217,6 +212,7 @@ function inspectPackage(buffer, { registryEntry = null, expectedId = '', publicK
     sha256: hash,
     signature,
     signatureError,
+    signatureNote,
     icon: manifest.icon ? dataUriFor(manifest.icon, files.get(manifest.icon)) : '',
     screenshots: (manifest.screenshots || [])
       .map((shot) => screenshotUriFor(files.get(shot)))
@@ -237,7 +233,7 @@ function readDirectoryFiles(
       continue;
     }
     if (entry.name.endsWith('.octoplugin') || entry.name.endsWith('.zip')) continue;
-    if (entry.name === SIGNATURE_FILE && !prefix) continue;
+    if (SIGNATURE_FILES.includes(entry.name) && !prefix) continue;
     const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
     const absolute = path.join(root, entry.name);
     if (entry.isSymbolicLink()) throw new Error('Символические ссылки в плагине запрещены');
@@ -322,6 +318,7 @@ function preview(inspection, { source = 'file', entry = null } = {}) {
     homepage: inspection.manifest.homepage,
     source,
     signature: inspection.signature,
+    signatureNote: inspection.signatureNote || '',
     registryVersion: entry?.version || '',
     permissions: inspection.report.permissions,
     baseline: inspection.report.baseline,

@@ -86,7 +86,7 @@ floating mini player and desktop shortcuts that make sense.
 
 |                                        |                                                                                                                                                                                                                                                                                                          |
 | :------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **🧩&nbsp; Sandboxed plugins**         | Modal **Plugins** manager (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>): local `.octoplugin` installs, permissions, static audit, embedded Ed25519 `SIGNATURE.json`, tamper checks, logs and rollback. SDK with types/mock, ES modules and hot reload. [t.me/octo_plugins](https://t.me/octo_plugins). |
+| **🧩&nbsp; Sandboxed plugins**         | Modal **Plugins** manager (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>): local `.octoplugin` installs, permissions, static audit, Ed25519 signing, "official" label, tamper checks, logs and rollback. SDK with types/mock, ES modules and hot reload. [t.me/octo_plugins](https://t.me/octo_plugins). |
 | **🧪&nbsp; Custom code &amp; filters** | Optional isolated page CSS/JS (off by default with warning and one-click kill switch), plus content filters by words, hashtags and authors.                                                                                                                                                              |
 | **🌐&nbsp; Region, proxy &amp; DPI**   | 12 country presets (`Accept-Language`, `navigator.language`, timezone, geolocation), SOCKS5/HTTP proxy + local VPN proxy discovery, connection latency test and experimental **DPI bypass** (DNS-over-HTTPS + TLS ClientHello SNI splitting).                                                            |
 | **🗣️&nbsp; Language**                  | 12 UI languages (including RTL Arabic) and 22 TikTok site languages via documented `default_lang` cookie, `Accept-Language` and `navigator.language`.                                                                                                                                                    |
@@ -251,7 +251,7 @@ permission.
 
 The **Plugins** manager (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>) opens as
 an MD3 Expressive overlay with local `.octoplugin` installs, per-plugin
-permissions, security reports, embedded Ed25519 `SIGNATURE.json` verification,
+permissions, security reports, embedded Ed25519 `OCTO-SIGNATURE.json` verification,
 tamper detection, logs, DevTools for dev plugins and rollback. The "All plugins"
 tab links to the Telegram channel [t.me/octo_plugins](https://t.me/octo_plugins):
 download a package there and install it with **Install from file**. The puzzle
@@ -261,7 +261,10 @@ actions without opening Settings.
 Before installation the app validates the manifest and ZIP, runs a static audit
 (Node, `eval`, direct network, cookies, native binaries, obfuscation), checks
 SHA-256 and Ed25519 signatures, and shows every requested permission. Updates
-that add permissions always require confirmation.
+that add permissions always require confirmation. A plugin signed with the
+TikTok Octo key is marked "official"; an unsigned plugin with high-risk
+permissions (`page:script`, `network`, `downloads`) opens a warning dialog that
+lists them, and its "without signature" label stands out in the card.
 
 Developer guide: [docs/plugins/README.md](docs/plugins/README.md) ·
 Publishing rules: [docs/plugins/PUBLISHING.md](docs/plugins/PUBLISHING.md) ·
@@ -573,7 +576,7 @@ Small things that took actual work:
 - **Plugins are JavaScript-only.** Native modules, WebAssembly and workers are
   rejected. A plugin with `page:script` shares the DOM with the site and can read
   visible page content — install only sources you trust. Publishing requires
-  source links and signatures for the verified badge.
+  source links, and only the TikTok Octo key earns the "official" label.
 - **Plugins are distributed through the Telegram channel**
   [t.me/octo_plugins](https://t.me/octo_plugins). There is no built-in catalog or
   background update check; installing from a file works offline.

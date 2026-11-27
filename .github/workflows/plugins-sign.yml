@@ -1,0 +1,49 @@
+name: Подпись плагинов
+
+# Собирает и подписывает официальные плагины из plugins/ ключом из секрета
+# OCTO_PLUGIN_SIGNING_KEY. Запускается только вручную; пакеты уходят в
+# артефакт, коммит в plugins/packages/ и пост в канал делает издатель.
+on:
+  workflow_dispatch:
+    inputs:
+      plugin:
+        description: 'id плагина (пусто — все официальные)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Для подписи Electron не нужен: только acorn для статической проверки.
+      - name: Установка зависимостей
+        run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+
+      - name: Сборка и подпись
+        env:
+          OCTO_PLUGIN_SIGNING_KEY: ${{ secrets.OCTO_PLUGIN_SIGNING_KEY }}
+          PLUGIN_ID: ${{ inputs.plugin }}
+        run: |
+          if [ -z "$OCTO_PLUGIN_SIGNING_KEY" ]; then
+            echo "::error::Секрет OCTO_PLUGIN_SIGNING_KEY не задан (Settings → Secrets and variables → Actions)"
+            exit 1
+          fi
+          node scripts/pack-official-plugins.js --out signed-plugins ${PLUGIN_ID:+--only "$PLUGIN_ID"}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-plugins
+          path: signed-plugins/*.octoplugin
+          if-no-files-found: error

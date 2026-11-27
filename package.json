@@ -33,6 +33,8 @@
     "test": "node scripts/run-tests.js",
     "plugin:pack": "node scripts/pack-plugin.js plugins/examples/hello-octo --out plugins/packages --update-registry plugins/registry.json",
     "plugin:keygen": "node scripts/plugin-keygen.js",
+    "plugin:sign": "node scripts/pack-official-plugins.js",
+    "plugin:verify": "node scripts/verify-plugin-packages.js",
     "plugin:new": "node scripts/create-plugin.js",
     "plugin:dev": "node scripts/plugin-dev.js",
     "docs:build": "node scripts/build-plugin-docs.js",

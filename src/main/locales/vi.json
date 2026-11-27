@@ -1386,5 +1386,11 @@
   "Сохранено (введите новое значение)": "Đã lưu (nhập giá trị mới)",
   "Введите значение…": "Nhập giá trị…",
   "Введите значение секрета": "Nhập giá trị bí mật",
-  "Бейджи сообщества у ников": "Huy hiệu cộng đồng cạnh tên người dùng"
+  "Бейджи сообщества у ников": "Huy hiệu cộng đồng cạnh tên người dùng",
+  "Официальный плагин: подпись TikTok Octo проверена.": "Plugin chính thức: đã xác minh chữ ký TikTok Octo.",
+  "Пакет подписан ключом, которому приложение не доверяет. Он считается неподписанным.": "Gói được ký bằng khóa mà ứng dụng không tin cậy. Gói được coi là chưa ký.",
+  "Плагин не подписан: нельзя проверить, кто его выпустил и не подменён ли он.": "Plugin chưa được ký: không thể kiểm tra ai đã phát hành và liệu nó có bị sửa đổi hay không.",
+  "Он получит доступ с высоким риском: {0}.": "Plugin sẽ có quyền truy cập rủi ro cao: {0}.",
+  "Устанавливайте, только если скачали его из канала автора и доверяете исходникам.": "Chỉ cài đặt nếu bạn tải về từ kênh của tác giả và tin tưởng mã nguồn.",
+  "официальный": "chính thức"
 }
