@@ -99,7 +99,7 @@ over the feed: grouped sections live in the left rail for one-click switching,
 setting cards sit on the right, and header search filters every section at once.
 
 <div align="center">
-  <img src="docs/settings.png" width="820" alt="TikTok Octo MD3 Expressive Settings overlay with grouped navigation rail, search bar, and 20 harmonious color palettes" />
+  <img src="docs/settings.png?v=2" width="820" alt="TikTok Octo MD3 Expressive Settings overlay with grouped navigation rail, search bar, and 20 harmonious color palettes" />
   <br />
   <sub><i>Settings overlay in Material Design 3 Expressive: grouped rail, instant search, theme modes and 20 color palettes.</i></sub>
 </div>
