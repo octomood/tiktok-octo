@@ -908,7 +908,7 @@
   "Расписание «не беспокоить» включено": "Zeitplan „Nicht stören“ aktiviert",
   "Расписание «не беспокоить» выключено": "Zeitplan „Nicht stören“ deaktiviert",
   "Расширенный режим: CSS применяется к странице, JavaScript выполняется в изолированном мире. Включайте только свой проверенный код; выключается одной кнопкой.": "Erweiterter Modus: CSS wird auf die Seite angewendet, JavaScript läuft in einer isolierten Welt. Aktivieren Sie nur eigenen geprüften Code; ein Knopf schaltet ihn aus.",
-  "реагировать на события. Не получает доступ к Node, cookie и внутренним объектам сайта.": "auf Ereignisse reagieren. Erhält keinen Zugriff auf Node, Cookies und interne Site-Objekte.",
+  "реагировать на события. Видит всё, что показано на странице, включая сообщения; прямой сети и Node у скрипта нет.": "auf Ereignisse reagieren. Sieht alles, was auf der Seite angezeigt wird, auch Nachrichten; das Skript hat keinen direkten Netzwerk- oder Node-Zugriff.",
   "Регион": "Region",
   "Регион и прокси": "Region und Proxy",
   "Регион: {0}": "Region: {0}",

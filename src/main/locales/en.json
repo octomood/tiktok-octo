@@ -908,7 +908,7 @@
   "Расписание «не беспокоить» включено": "\"Do not disturb\" schedule enabled",
   "Расписание «не беспокоить» выключено": "\"Do not disturb\" schedule disabled",
   "Расширенный режим: CSS применяется к странице, JavaScript выполняется в изолированном мире. Включайте только свой проверенный код; выключается одной кнопкой.": "Advanced mode: CSS is applied to the page, JavaScript runs in an isolated world. Enable only your own trusted code; one button turns it off.",
-  "реагировать на события. Не получает доступ к Node, cookie и внутренним объектам сайта.": "react to events. Does not gain access to Node, cookies and internal site objects.",
+  "реагировать на события. Видит всё, что показано на странице, включая сообщения; прямой сети и Node у скрипта нет.": "react to events. Sees everything shown on the page, including messages; the script has no direct network or Node access.",
   "Регион": "Region",
   "Регион и прокси": "Region and proxy",
   "Регион: {0}": "Region: {0}",

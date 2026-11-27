@@ -345,6 +345,95 @@ const CSS_RULES = [
   },
 ];
 
+/**
+ * Снимает экранирование CSS (`\69`, `\\`, `\"`) и комментарии: иначе
+ * `@\69mport` или `u\72l(https://…)` проходят мимо регулярных выражений.
+ */
+function decodeCss(text) {
+  return String(text)
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(
+      /\\(?:([0-9a-fA-F]{1,6})(?:\r\n|[ \t\n\r\f])?|(\r\n|[\n\r\f])|([\s\S]))/g,
+      (_m, hex, newline, char) => {
+        if (hex) {
+          const code = parseInt(hex, 16);
+          const valid = code > 0 && code <= 0x10ffff && (code < 0xd800 || code > 0xdfff);
+          return valid ? String.fromCodePoint(code) : '\uFFFD';
+        }
+        return newline ? '' : char;
+      },
+    );
+}
+
+/** Адрес из CSS ведёт наружу: схема кроме data:/blob: или `//host`. */
+function isRemoteCssUrl(raw) {
+  // Так же, как парсер URL: убирает табы и переводы строк, ведущие пробелы и
+  // управляющие символы, а `\` считает за `/`.
+  const value = String(raw)
+    .replace(/[\t\n\r]/g, '')
+    .replace(/^[\u0000-\u0020]+/, '')
+    .replace(/\\/g, '/');
+  if (value.startsWith('//')) return true;
+  const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(value);
+  return Boolean(scheme) && !['data', 'blob'].includes(scheme[1].toLowerCase());
+}
+
+/** Все адреса картинок и ресурсов в CSS: url(), src() и строки в image-set(). */
+function cssUrlTargets(decoded) {
+  const targets = [];
+  const urlRe = /(?:^|[^\w-])(?:url|src)\s*\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*))/gi;
+  let match;
+  while ((match = urlRe.exec(decoded)) !== null) {
+    targets.push({ value: match[1] ?? match[2] ?? match[3] ?? '', index: match.index });
+  }
+  const setRe = /(?:-webkit-)?image-set\s*\(/gi;
+  while ((match = setRe.exec(decoded)) !== null) {
+    let depth = 1;
+    let end = setRe.lastIndex;
+    while (end < decoded.length && depth > 0) {
+      if (decoded[end] === '(') depth += 1;
+      else if (decoded[end] === ')') depth -= 1;
+      end += 1;
+    }
+    const body = decoded.slice(setRe.lastIndex, end);
+    const stringRe = /"([^"]*)"|'([^']*)'/g;
+    let item;
+    while ((item = stringRe.exec(body)) !== null) {
+      targets.push({ value: item[1] ?? item[2] ?? '', index: match.index });
+    }
+  }
+  return targets;
+}
+
+/**
+ * Проверка CSS: правила по исходному тексту и по тексту без экранирования,
+ * плюс каждый адрес из url()/src()/image-set() — только data:, blob: или
+ * относительный путь на сайте.
+ */
+function scanCss(text, fileName, findings) {
+  const source = String(text || '');
+  scanText(source, fileName, CSS_RULES, findings);
+  const decoded = decodeCss(source);
+  if (decoded !== source) {
+    const extra = [];
+    scanText(decoded, fileName, CSS_RULES, extra);
+    for (const item of extra) {
+      if (!findings.some((found) => found.rule === item.rule)) findings.push(item);
+    }
+  }
+  const remote = cssUrlTargets(decoded).find((target) => isRemoteCssUrl(target.value));
+  if (remote && !findings.some((found) => found.rule === 'css-remote-url')) {
+    findings.push({
+      severity: 'block',
+      rule: 'css-remote-url',
+      message: 'Внешние адреса в CSS (url(), image-set()) запрещены: используйте data: URI',
+      file: fileName,
+      line: lineOf(decoded, remote.index),
+      snippet: snippetOf(decoded, remote.index, 80),
+    });
+  }
+}
+
 const SVG_RULES = [
   {
     id: 'svg-script',
@@ -965,7 +1054,7 @@ function scanFiles(files, manifest) {
         });
       }
     } else if (extensionOf(name) === '.css') {
-      scanText(buffer.toString('utf8'), name, CSS_RULES, findings);
+      scanCss(buffer.toString('utf8'), name, findings);
     } else if (extensionOf(name) === '.svg') {
       scanText(buffer.toString('utf8'), name, SVG_RULES, findings);
     }
@@ -1065,7 +1154,7 @@ function validateCss(css) {
     return { ok: false, error: `CSS больше ${Math.round(LIMITS.cssBytes / 1024)} КБ` };
   }
   const findings = [];
-  scanText(text, 'inline.css', CSS_RULES, findings);
+  scanCss(text, 'inline.css', findings);
   const blocked = findings.find((item) => item.severity === 'block');
   return blocked ? { ok: false, error: blocked.message, findings } : { ok: true, findings };
 }

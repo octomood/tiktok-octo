@@ -908,7 +908,7 @@
   "Расписание «не беспокоить» включено": "\"Rahatsız etmeyin\" zamanlaması açık",
   "Расписание «не беспокоить» выключено": "\"Rahatsız etmeyin\" zamanlaması kapalı",
   "Расширенный режим: CSS применяется к странице, JavaScript выполняется в изолированном мире. Включайте только свой проверенный код; выключается одной кнопкой.": "Gelişmiş mod: CSS sayfaya uygulanır, JavaScript yalıtılmış dünyada çalışır. Yalnızca kendi güvendiğiniz kodu açın; tek düğmeyle kapanır.",
-  "реагировать на события. Не получает доступ к Node, cookie и внутренним объектам сайта.": "olaylara tepki vermek. Node'a, cookie'lere ve sitenin dahili nesnelerine erişim sağlamaz.",
+  "реагировать на события. Видит всё, что показано на странице, включая сообщения; прямой сети и Node у скрипта нет.": "olaylara tepki verebilir. Mesajlar dahil sayfada gösterilen her şeyi görür; betiğin doğrudan ağ veya Node erişimi yoktur.",
   "Регион": "Bölge",
   "Регион и прокси": "Bölge ve proxy",
   "Регион: {0}": "Bölge: {0}",

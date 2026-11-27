@@ -480,7 +480,8 @@ session, a custom `octo-plugin://` origin, a strict CSP and all network requests
 cancelled at the session level. The plugin sees only the frozen `window.octo`
 bridge; main validates every call against the manifest permissions. Page CSS and
 page scripts are executed against the site from main, the latter in an isolated
-world with runtime scanning. Before anything reaches disk, the package is
+world with its own strict CSP (no network, no `eval`) and locks on cookies,
+site storage, frames and HTML injection. Before anything reaches disk, the package is
 validated, unpacked in memory, statically audited, hash-checked, signature-checked
 and shown to the user with every permission.
 
@@ -571,8 +572,9 @@ Small things that took actual work:
   the next launch until the update is installed. Plugins do not auto-update:
   download a new version from the Telegram channel and install the file.
 - **Plugins are JavaScript-only.** Native modules, WebAssembly and workers are
-  rejected. A plugin with `page:script` shares the DOM with the site and can read
-  visible page content — install only sources you trust. Publishing requires
+  rejected. A plugin with `page:script` shares the DOM with the site, can read
+  visible page content including messages and send it to its allowed hosts —
+  install only sources you trust. Publishing requires
   source links and signatures for the verified badge.
 - **Plugins are distributed through the Telegram channel**
   [t.me/octo_plugins](https://t.me/octo_plugins). There is no built-in catalog or

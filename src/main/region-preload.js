@@ -390,3 +390,51 @@ if (config && config.locale && isTikTok) {
     /* страница уже ушла — патчи не нужны */
   });
 }
+
+// Изолированные миры скриптов плагинов (octo.page.run) получают свою строгую
+// CSP (src/main/plugins/page-world.js). setIsolatedWorldInfo есть только у
+// webFrame, поэтому это делает preload: сразу при загрузке документа — для всех
+// известных миров, до первого кода в них, — и по просьбе main для новых.
+// Странице ничего не отдаётся, миры вне диапазона плагинов не трогаем.
+function applyPluginWorld(info) {
+  const worldId = Number(info?.worldId);
+  if (
+    !Number.isInteger(worldId) ||
+    worldId < 20000 ||
+    worldId >= 80000 ||
+    typeof info.csp !== 'string' ||
+    typeof info.origin !== 'string' ||
+    !info.origin.startsWith('octo-plugin://')
+  ) {
+    return false;
+  }
+  webFrame.setIsolatedWorldInfo(worldId, {
+    securityOrigin: info.origin,
+    csp: info.csp,
+    name: String(info.name || 'octo-plugin'),
+  });
+  return true;
+}
+
+try {
+  const pluginWorlds = ipcRenderer.sendSync('octo:plugin-worlds');
+  for (const info of Array.isArray(pluginWorlds) ? pluginWorlds : []) {
+    try {
+      applyPluginWorld(info);
+    } catch {
+      /* main проверит мир перед запуском и попросит ещё раз */
+    }
+  }
+} catch {
+  /* плагины ещё не запущены */
+}
+
+ipcRenderer.on('octo:plugin-world', (_event, info) => {
+  let ok = false;
+  try {
+    ok = applyPluginWorld(info);
+  } catch {
+    ok = false;
+  }
+  ipcRenderer.send('octo:plugin-world-ready', info?.token, ok);
+});

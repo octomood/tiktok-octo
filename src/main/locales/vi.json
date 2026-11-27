@@ -908,7 +908,7 @@
   "Расписание «не беспокоить» включено": "Đã bật lịch \"không làm phiền\"",
   "Расписание «не беспокоить» выключено": "Đã tắt lịch \"không làm phiền\"",
   "Расширенный режим: CSS применяется к странице, JavaScript выполняется в изолированном мире. Включайте только свой проверенный код; выключается одной кнопкой.": "Chế độ nâng cao: CSS áp dụng cho trang, JavaScript chạy trong thế giới cách ly. Chỉ bật mã của chính bạn mà bạn tin tưởng; một nút để tắt.",
-  "реагировать на события. Не получает доступ к Node, cookie и внутренним объектам сайта.": "phản ứng với các sự kiện. Không truy cập được Node, cookie và các đối tượng nội bộ của trang web.",
+  "реагировать на события. Видит всё, что показано на странице, включая сообщения; прямой сети и Node у скрипта нет.": "phản ứng với các sự kiện. Thấy mọi thứ hiển thị trên trang, kể cả tin nhắn; script không có quyền truy cập mạng trực tiếp hay Node.",
   "Регион": "Khu vực",
   "Регион и прокси": "Khu vực và proxy",
   "Регион: {0}": "Khu vực: {0}",

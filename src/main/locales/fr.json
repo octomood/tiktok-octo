@@ -908,7 +908,7 @@
   "Расписание «не беспокоить» включено": "Horaire « ne pas déranger » activé",
   "Расписание «не беспокоить» выключено": "Horaire « ne pas déranger » désactivé",
   "Расширенный режим: CSS применяется к странице, JavaScript выполняется в изолированном мире. Включайте только свой проверенный код; выключается одной кнопкой.": "Mode avancé : le CSS est appliqué à la page, JavaScript s'exécute dans un monde isolé. N'activez que votre propre code vérifié ; un bouton le désactive.",
-  "реагировать на события. Не получает доступ к Node, cookie и внутренним объектам сайта.": "réagir aux événements. N'accède pas à Node, cookie et aux objets internes du site.",
+  "реагировать на события. Видит всё, что показано на странице, включая сообщения; прямой сети и Node у скрипта нет.": "réagir aux événements. Voit tout ce qui s'affiche sur la page, y compris les messages ; le script n'a pas d'accès direct au réseau ni à Node.",
   "Регион": "Région",
   "Регион и прокси": "Région et proxy",
   "Регион: {0}": "Région : {0}",

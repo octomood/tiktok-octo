@@ -908,7 +908,7 @@
   "Расписание «не беспокоить» включено": "Jadwal \"jangan ganggu\" aktif",
   "Расписание «не беспокоить» выключено": "Jadwal \"jangan ganggu\" nonaktif",
   "Расширенный режим: CSS применяется к странице, JavaScript выполняется в изолированном мире. Включайте только свой проверенный код; выключается одной кнопкой.": "Mode lanjutan: CSS diterapkan ke halaman, JavaScript berjalan di dunia terisolasi. Aktifkan hanya kode Anda yang tepercaya; satu tombol mematikannya.",
-  "реагировать на события. Не получает доступ к Node, cookie и внутренним объектам сайта.": "bereaksi terhadap peristiwa. Tidak mendapatkan akses ke Node, cookie, dan objek internal situs.",
+  "реагировать на события. Видит всё, что показано на странице, включая сообщения; прямой сети и Node у скрипта нет.": "bereaksi terhadap peristiwa. Melihat semua yang ditampilkan di halaman, termasuk pesan; skrip tidak punya akses langsung ke jaringan atau Node.",
   "Регион": "Wilayah",
   "Регион и прокси": "Wilayah dan proxy",
   "Регион: {0}": "Wilayah: {0}",
