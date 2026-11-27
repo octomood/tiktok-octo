@@ -25,6 +25,7 @@ const { isTikTokUrl } = require('./shared');
 const autoTheme = require('./auto-theme');
 const badges = require('./badges');
 const md3Site = require('./md3-site');
+const { EMOJI_SCRIPT } = require('./tiktok-emoji');
 const { getPaletteTokens, listPalettes, normalizePaletteId } = require('./md3-palettes');
 
 const PROMO_MARK = 'data-octo-promo';
@@ -632,6 +633,7 @@ async function injectFrameStyles(wc = ctx.view?.webContents) {
         .executeJavaScript(frameInjectionScript(documentCss, shadowCss), false)
         .catch(() => false);
       await frame.executeJavaScript(frameMd3Script, false).catch(() => false);
+      await frame.executeJavaScript(EMOJI_SCRIPT, false).catch(() => false);
     }),
   );
 }
@@ -1012,7 +1014,8 @@ async function runScripts(wc = ctx.view?.webContents) {
   }
 
   const enabled = RULES.filter((rule) => isEnabled(rule.id));
-  const scripts = [];
+  // Всегда включено, независимо от скина и переключателей косметики.
+  const scripts = [EMOJI_SCRIPT];
 
   for (const rule of RULES) {
     const js = resolveValue(rule.js);

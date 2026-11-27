@@ -234,6 +234,11 @@ window's session, so sign-in, theme and conversations are already there.
   otherwise only a narrow strip would remain for the conversation list. Links
   from a conversation to other TikTok pages open in the main window, external
   links go to the system browser.
+- **Emoji** — known TikTok codes (46 English codes and Russian
+  `[Глаза-сердечки]` → 😍) are always replaced with ordinary Unicode emoji in
+  page text, including messages, reply previews and the side chat, regardless
+  of the MD3 skin. These are approximations, not TikTok artwork; appearance
+  depends on the system font. Unknown codes and input fields are left intact.
 - **Limitation**: this is the same TikTok web client, not a separate chat. If
   the site changes the messages layout, the panel shows what the site renders;
   there are no private requests and no bypassing protections.
