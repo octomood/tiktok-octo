@@ -260,8 +260,12 @@ actions without opening Settings.
 
 Before installation the app validates the manifest and ZIP, runs a static audit
 (Node, `eval`, direct network, cookies, native binaries, obfuscation), checks
-SHA-256 and Ed25519 signatures, and shows every requested permission. Updates
-that add permissions always require confirmation.
+SHA-256 and Ed25519 signatures, and shows every requested permission and network
+host. When updating from a file, the dialog lists added permissions and hosts and
+warns about downgrades. The publisher is remembered on first install (the signing
+key, or the author name for unsigned plugins): if a package with the same `id`
+comes from a different publisher, it needs a separate confirmation and does not
+receive the old version's settings, storage or secrets.
 
 Developer guide: [docs/plugins/README.md](docs/plugins/README.md) ·
 Publishing rules: [docs/plugins/PUBLISHING.md](docs/plugins/PUBLISHING.md) ·

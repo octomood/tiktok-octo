@@ -232,3 +232,115 @@ test('плагин, команды, панель и менеджер', async () 
     fs.rmSync(userData, { recursive: true, force: true });
   }
 });
+
+test('обновление файлом показывает смену издателя, новые права и хосты', async () => {
+  test.setTimeout(60_000);
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-plugin-update-'));
+  const pack = (version, author, extra = {}) => {
+    const file = path.join(userData, `trust-${version}.octoplugin`);
+    fs.writeFileSync(
+      file,
+      createZip(
+        new Map([
+          [
+            'plugin.json',
+            JSON.stringify({
+              id: 'app.octo.update-trust',
+              name: 'Издатель',
+              version,
+              apiVersion: 1,
+              minAppVersion: '0.5.0',
+              description: 'Проверка обновления файлом',
+              author: { name: author },
+              license: 'MIT',
+              main: 'index.js',
+              permissions: ['page:css'],
+              ...extra,
+            }),
+          ],
+          ['index.js', "octo.page.injectCSS('body { outline: 1px solid red; }');"],
+        ]),
+      ),
+    );
+    return file;
+  };
+  const v1 = pack('1.0.0', 'octo');
+  const v2 = pack('1.1.0', 'mallory', {
+    permissions: ['page:css', 'network'],
+    networkHosts: ['api.example.com'],
+  });
+
+  let app;
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: {
+        ...process.env,
+        OCTO_E2E: '1',
+        OCTO_USER_DATA: userData,
+        OCTO_HOME_URL: 'about:blank',
+      },
+    });
+    await app.firstWindow();
+    const page = await waitForWindow(
+      app,
+      (candidate) => candidate.url().startsWith('file://'),
+      'полоса заголовка',
+    );
+
+    // Диалоги подменены: запоминаем каждый и отвечаем по очереди из answers.
+    const install = async (file, answers) => {
+      await app.evaluate(
+        ({ dialog }, { file: picked, answers: queue }) => {
+          global.__octoDialogs = [];
+          dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [picked] });
+          dialog.showMessageBox = async (parentOrOptions, maybeOptions) => {
+            const options = maybeOptions || parentOrOptions || {};
+            global.__octoDialogs.push({
+              title: String(options.title || ''),
+              message: String(options.message || ''),
+              detail: String(options.detail || ''),
+            });
+            return { response: queue.length ? queue.shift() : 1 };
+          };
+        },
+        { file, answers },
+      );
+      // action() ждёт конца установки, поэтому следующие шаги не упрутся в busy.
+      return page.evaluate(() => window.octoPlugins.action('installFile'));
+    };
+    const dialogs = () => app.evaluate(() => global.__octoDialogs);
+    const savedVersion = () => {
+      const file = path.join(userData, 'plugins-state.json');
+      if (!fs.existsSync(file)) return '';
+      const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return saved.plugins?.['app.octo.update-trust']?.version || '';
+    };
+
+    expect(await install(v1, [0])).toMatchObject({ ok: true });
+    expect(savedVersion()).toBe('1.0.0');
+
+    // Чужой автор: сначала отдельное предупреждение, «Отмена» оставляет 1.0.0.
+    expect(await install(v2, [1])).toMatchObject({ cancelled: true });
+    expect(await dialogs()).toHaveLength(1);
+    const [warning] = await dialogs();
+    expect(warning.title).toBe('Другой издатель');
+    expect(warning.detail).toContain('«mallory»');
+    expect(warning.detail).toContain('не передадутся');
+    expect(savedVersion()).toBe('1.0.0');
+
+    // Согласие: второй диалог показывает новые права и хосты, данные не переходят.
+    expect(await install(v2, [0, 0])).toMatchObject({ ok: true });
+    expect(savedVersion()).toBe('1.1.0');
+    const shown = await dialogs();
+    expect(shown).toHaveLength(2);
+    expect(shown[1].detail).toContain('Обновление с версии 1.0.0 до 1.1.0.');
+    expect(shown[1].detail).toContain('Издатель сменился');
+    expect(shown[1].detail).toContain('Новые разрешения:');
+    expect(shown[1].detail).toContain('Новые сетевые хосты:\n• api.example.com');
+    expect(shown[1].detail).toContain('Сетевые хосты:\n• api.example.com');
+  } finally {
+    if (app) await app.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});

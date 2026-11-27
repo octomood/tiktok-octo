@@ -1,6 +1,7 @@
 'use strict';
 
 const { session, nativeImage } = require('electron');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { readZip } = require('./zip');
@@ -19,6 +20,12 @@ const {
 } = require('./signature');
 const { LIMITS } = require('./constants');
 const state = require('./state');
+const {
+  signerFingerprint,
+  publisherOf,
+  recordPublisher,
+  compareUpdate,
+} = require('./update-trust');
 
 /**
  * Установка, проверка и удаление плагинов.
@@ -207,6 +214,17 @@ function inspectPackage(buffer, { registryEntry = null, expectedId = '', publicK
     }
   }
 
+  const signer = signerFingerprint(
+    {
+      files,
+      manifest,
+      sha256: hash,
+      signature,
+      registrySignature: registryEntry?.signature || '',
+    },
+    publicKeys,
+  );
+
   return {
     ok: true,
     buffer,
@@ -217,6 +235,7 @@ function inspectPackage(buffer, { registryEntry = null, expectedId = '', publicK
     sha256: hash,
     signature,
     signatureError,
+    signer,
     icon: manifest.icon ? dataUriFor(manifest.icon, files.get(manifest.icon)) : '',
     screenshots: (manifest.screenshots || [])
       .map((shot) => screenshotUriFor(files.get(shot)))
@@ -325,6 +344,7 @@ function preview(inspection, { source = 'file', entry = null } = {}) {
     registryVersion: entry?.version || '',
     permissions: inspection.report.permissions,
     baseline: inspection.report.baseline,
+    networkHosts: inspection.manifest.networkHosts || [],
     report: inspection.report,
     size: inspection.size,
   };
@@ -355,10 +375,19 @@ function signatureLabel(value) {
   return 'без подписи';
 }
 
-function installRecord(inspection, { source, registryUrl = '', previous = null }) {
+function newDataId() {
+  return `${Date.now().toString(36)}-${crypto.randomBytes(4).toString('hex')}`;
+}
+
+/**
+ * @param {{keepData?: boolean}} options keepData: false — издатель сменился,
+ *   хранилище, секреты и настройки старой версии новой не передаются.
+ */
+function installRecord(inspection, { source, registryUrl = '', previous = null, keepData = true }) {
   const manifest = inspection.manifest;
   const now = new Date().toISOString();
-  const previousSettings = previous?.settings || {};
+  const inherit = previous && keepData !== false ? previous : null;
+  const previousSettings = inherit?.settings || {};
   const values = applySettings(manifest, previousSettings);
 
   return {
@@ -381,11 +410,13 @@ function installRecord(inspection, { source, registryUrl = '', previous = null }
     scan: inspection.report,
     permissions: manifest.permissions,
     networkHosts: manifest.networkHosts,
+    publisher: publisherOf(inspection),
+    // Метка «чьи это данные»: меняется, когда данные начинаются с нуля, чтобы
+    // откат на версию другого издателя вернул её собственные данные.
+    dataId: inherit ? inherit.dataId || '' : previous ? newDataId() : '',
     settings: values,
-    storage:
-      previous?.storage && typeof previous.storage === 'object' ? { ...previous.storage } : {},
-    secrets:
-      previous?.secrets && typeof previous.secrets === 'object' ? { ...previous.secrets } : {},
+    storage: inherit?.storage && typeof inherit.storage === 'object' ? { ...inherit.storage } : {},
+    secrets: inherit?.secrets && typeof inherit.secrets === 'object' ? { ...inherit.secrets } : {},
     files: hashFiles(inspection.files),
     manifest,
     icon: inspection.icon,
@@ -416,6 +447,8 @@ function historyEntry(record) {
     settings: record.settings,
     storage: record.storage,
     secrets: record.secrets,
+    publisher: record.publisher,
+    dataId: record.dataId || '',
   };
 }
 
@@ -498,11 +531,15 @@ function install(inspection, options = {}) {
     }
     if (fs.existsSync(backup)) fs.rmSync(backup, { recursive: true, force: true });
 
-    const record = installRecord(inspection, { ...options, previous: existing });
+    // Издатель сравнивается здесь, а не только в диалоге: так данные не
+    // утекут к чужому пакету ни по какому пути установки.
+    const trust = compareUpdate(existing, inspection);
+    const keepData = options.keepData === false ? false : trust ? trust.keepData : true;
+    const record = installRecord(inspection, { ...options, previous: existing, keepData });
     record.history = history;
     state.set(record);
 
-    return { ok: true, record };
+    return { ok: true, record, trust, dataKept: Boolean(existing) && keepData };
   } catch (err) {
     try {
       fs.rmSync(temp, { recursive: true, force: true });
@@ -570,6 +607,17 @@ function rollback(id, version) {
       lastCrashAt: 0,
     };
     restored.settings = applySettings(entry.manifest || { settings: [] }, record.settings);
+    // Версия другого издателя жила со своими данными: возвращаем их, а данные
+    // текущей версии остаются в её записи истории.
+    if ((entry.dataId || '') !== (record.dataId || '')) {
+      restored.dataId = entry.dataId || '';
+      restored.settings = applySettings(entry.manifest || { settings: [] }, entry.settings || {});
+      restored.storage =
+        entry.storage && typeof entry.storage === 'object' ? { ...entry.storage } : {};
+      restored.secrets =
+        entry.secrets && typeof entry.secrets === 'object' ? { ...entry.secrets } : {};
+    }
+    restored.publisher = recordPublisher(entry);
     restored.history = [
       ...(currentEntry ? [currentEntry] : []),
       ...history.filter((item) => item.version !== version),
