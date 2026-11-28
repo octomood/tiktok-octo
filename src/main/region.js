@@ -228,6 +228,7 @@ async function resetSiteData() {
 
   const options = {
     type: 'warning',
+    destructive: true,
     buttons: ['Отмена', 'Сбросить'],
     defaultId: 0,
     cancelId: 0,

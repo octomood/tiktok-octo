@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:;"
+    />
+    <title>TikTok Octo</title>
+    <link rel="icon" href="assets/octo-logo-mark.png" />
+    <link rel="stylesheet" href="fonts.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="win-chrome.css" />
+    <link rel="stylesheet" href="app-dialog.css" />
+  </head>
+  <body class="dialog-standalone">
+    <div class="app-dialog" id="appDialog">
+      <div class="app-dialog-card" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle">
+        <header class="app-dialog-head">
+          <div class="app-dialog-badge" id="appDialogBadge" aria-hidden="true"></div>
+          <div class="app-dialog-head-copy">
+            <span class="app-dialog-eyebrow" id="appDialogEyebrow"></span>
+            <h2 class="app-dialog-title" id="appDialogTitle"></h2>
+          </div>
+          <button
+            type="button"
+            class="app-dialog-close"
+            id="appDialogClose"
+            title="Закрыть"
+            aria-label="Закрыть"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            >
+              <path d="M6.4 6.4l7.2 7.2M13.6 6.4l-7.2 7.2" />
+            </svg>
+          </button>
+        </header>
+
+        <div class="app-dialog-body" id="appDialogBody"></div>
+
+        <footer class="app-dialog-actions" id="appDialogActions"></footer>
+      </div>
+    </div>
+
+    <script src="i18n-dom.js"></script>
+    <script src="theme-sync.js"></script>
+    <script src="ui-custom-core.js"></script>
+    <script src="win-chrome.js"></script>
+    <script src="app-dialog.js"></script>
+  </body>
+</html>

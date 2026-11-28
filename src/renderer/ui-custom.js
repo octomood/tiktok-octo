@@ -1,677 +1,267 @@
 'use strict';
 
 /**
- * Покомпонентная кастомизация собственного интерфейса и редактор компонентов.
- * Работает в песочнице renderer через window.octo, без Node и inline <style>.
+ * Редактор компонентов, конструктор кнопок верхней полосы и интерактивный
+ * выбор элементов кликом. Работает в песочнице renderer поверх window.octoUiCore.
  */
 (() => {
-  const SVG_NS = 'http://www.w3.org/2000/svg';
-  const $ = (id) => document.getElementById(id);
-  const tr = (text) => (window.octoI18n ? window.octoI18n.translate(text) : text);
+  const core = window.octoUiCore;
+  if (!core) return;
 
-  const ICON_PRESETS = [
+  const $ = (id) => document.getElementById(id);
+  const tr = core.tr;
+
+  const TOPBAR_BUILTIN_ITEMS = [
+    { id: 'brand', label: 'Логотип' },
+    { id: 'btnBack', label: 'Назад' },
+    { id: 'btnForward', label: 'Вперёд' },
+    { id: 'btnReload', label: 'Обновить' },
+    { id: 'btnHome', label: 'Главная' },
+    { id: 'pagePill', label: 'Пилюля страницы' },
+    { id: 'btnPip', label: 'PiP' },
+    { id: 'btnMute', label: 'Звук' },
+    { id: 'btnTop', label: 'Поверх окон' },
+    { id: 'btnStickers', label: 'Стикеры' },
+    { id: 'btnPluginsActive', label: 'Активные плагины' },
+    { id: 'btnChat', label: 'Чат сбоку' },
+    { id: 'btnPanel', label: 'Настройки' },
+    { id: 'btnMin', label: 'Свернуть' },
+    { id: 'btnMax', label: 'Развернуть' },
+    { id: 'btnClose', label: 'Закрыть' },
+  ];
+
+  const TOPBAR_ACTION_GROUPS = [
     {
-      id: 'home',
-      label: 'Дом',
-      paths: [
-        ['path', 'M3 10.5 12 3l9 7.5'],
-        ['path', 'M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5'],
-      ],
-    },
-    { id: 'arrow-left', label: 'Назад', paths: [['path', 'm15 18-6-6 6-6']] },
-    { id: 'arrow-right', label: 'Вперёд', paths: [['path', 'm9 18 6-6-6-6']] },
-    {
-      id: 'refresh',
-      label: 'Обновить',
-      paths: [
-        ['path', 'M21 12a9 9 0 1 1-2.64-6.36'],
-        ['path', 'M21 3v6h-6'],
-      ],
-    },
-    {
-      id: 'star',
-      label: 'Звезда',
-      paths: [
-        ['path', 'm12 2.5 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z'],
-      ],
-    },
-    {
-      id: 'heart',
-      label: 'Сердце',
-      paths: [
-        [
-          'path',
-          'M12 20.5s-7.5-4.8-9.2-9.4C1.6 7.8 3.9 4.5 7.3 4.5c1.9 0 3.6 1 4.7 2.5 1.1-1.5 2.8-2.5 4.7-2.5 3.4 0 5.7 3.3 4.5 6.6-1.7 4.6-9.2 9.4-9.2 9.4z',
-        ],
-      ],
-    },
-    {
-      id: 'sparkle',
-      label: 'Искра',
-      paths: [['path', 'm12 3 2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z']],
-    },
-    { id: 'bolt', label: 'Молния', paths: [['path', 'M13 2 4 14h7l-1 8 10-12h-7z']] },
-    {
-      id: 'flame',
-      label: 'Огонь',
-      paths: [
-        [
-          'path',
-          'M12 2c.5 3.5 3.5 5 3.5 9a4.5 4.5 0 0 1-9 0c0-2.1 1.1-4 2.5-5.3 0 1.8 1.2 2.8 2.2 2.8.8-2 0-4.4.8-6.5z',
-        ],
+      label: 'Навигация и окно',
+      items: [
+        { cmd: 'home', label: 'Главная', icon: 'home' },
+        { cmd: 'back', label: 'Назад', icon: 'arrow-left' },
+        { cmd: 'forward', label: 'Вперёд', icon: 'arrow-right' },
+        { cmd: 'reload', label: 'Обновить', icon: 'refresh' },
+        { cmd: 'hardReload', label: 'Обновить без кэша', icon: 'refresh' },
+        { cmd: 'find', label: 'Поиск по странице', icon: 'search' },
+        { cmd: 'palette', label: 'Палитра команд', icon: 'bolt' },
+        { cmd: 'fullscreen', label: 'Полный экран', icon: 'maximize' },
+        { cmd: 'downloadManager', label: 'Менеджер загрузок', icon: 'download' },
+        { cmd: 'openDownloads', label: 'Папка загрузок', icon: 'folder' },
+        { cmd: 'openInBrowser', label: 'Открыть в браузере', icon: 'globe' },
+        { cmd: 'barOnly', label: 'Режим «только полоса»', icon: 'sliders' },
+        { cmd: 'devtools', label: 'Инструменты разработчика', icon: 'code' },
+        { cmd: 'openUrl', label: 'Открыть раздел / ссылку TikTok…', icon: 'link' },
       ],
     },
     {
-      id: 'crown',
-      label: 'Корона',
-      paths: [
-        ['path', 'm3 18 1.5-10 4.5 4 3-6 3 6 4.5-4L21 18z'],
-        ['path', 'M4 20h16'],
+      label: 'Плеер и видео',
+      items: [
+        { cmd: 'togglePlayback', label: 'Играть / пауза', icon: 'play' },
+        { cmd: 'feedPrev', label: 'Предыдущее видео', icon: 'skip-back' },
+        { cmd: 'feedNext', label: 'Следующее видео', icon: 'skip-next' },
+        { cmd: 'mute', label: 'Звук вкл/выкл', icon: 'music' },
+        { cmd: 'pip', label: 'Картинка в картинке', icon: 'video' },
+        { cmd: 'pictureEnhance', label: 'Улучшить картинку', icon: 'sparkle' },
+        { cmd: 'pictureReset', label: 'Сбросить картинку', icon: 'refresh' },
+        { cmd: 'captionToggle', label: 'Субтитры вкл/выкл', icon: 'message' },
+        { cmd: 'screenshot', label: 'Снимок кадра', icon: 'camera' },
+        { cmd: 'screenshotAnnotate', label: 'Снимок с аннотацией', icon: 'brush' },
+        { cmd: 'qrVideo', label: 'QR-код видео', icon: 'qr' },
+        { cmd: 'gifExport', label: 'Экспорт GIF', icon: 'video' },
+        { cmd: 'ambientToggle', label: 'Амбиентный режим', icon: 'moon' },
       ],
     },
     {
-      id: 'music',
-      label: 'Музыка',
-      paths: [
-        ['path', 'M9 18V5l11-2v13'],
-        ['circle', { cx: 6, cy: 18, r: 3 }],
-        ['circle', { cx: 17, cy: 16, r: 3 }],
-      ],
-    },
-    {
-      id: 'video',
-      label: 'Видео',
-      paths: [
-        ['rect', { x: 2.5, y: 5.5, width: 14, height: 13, rx: 2.5 }],
-        ['path', 'm16.5 10 5-3v10l-5-3z'],
-      ],
-    },
-    {
-      id: 'camera',
-      label: 'Камера',
-      paths: [
-        [
-          'path',
-          'M4 7h3l2-2.5h6L17 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z',
-        ],
-        ['circle', { cx: 12, cy: 13, r: 3.5 }],
-      ],
-    },
-    {
-      id: 'message',
-      label: 'Чат',
-      paths: [['path', 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z']],
-    },
-    {
-      id: 'bell',
-      label: 'Колокол',
-      paths: [
-        ['path', 'M6 8a6 6 0 0 1 12 0c0 7 3 8.5 3 8.5H3s3-1.5 3-8.5'],
-        ['path', 'M10.3 20a1.9 1.9 0 0 0 3.4 0'],
-      ],
-    },
-    {
-      id: 'settings',
-      label: 'Шестерёнка',
-      paths: [
-        ['circle', { cx: 12, cy: 12, r: 3 }],
-        [
-          'path',
-          'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
-        ],
-      ],
-    },
-    {
-      id: 'sliders',
-      label: 'Слайдеры',
-      paths: [['path', 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6']],
-    },
-    {
-      id: 'palette',
-      label: 'Палитра',
-      paths: [
-        [
-          'path',
-          'M12 22a10 10 0 1 1 10-10c0 2.5-1.5 3.5-3.5 3.5h-1.8a1.5 1.5 0 0 0-1.5 1.5c0 .8.8 1.5.8 2.5A2.5 2.5 0 0 1 12 22z',
-        ],
-        ['circle', { cx: 7.5, cy: 10.5, r: 1 }],
-        ['circle', { cx: 10.5, cy: 7, r: 1 }],
-        ['circle', { cx: 14.5, cy: 7.5, r: 1 }],
-        ['circle', { cx: 17, cy: 11, r: 1 }],
-      ],
-    },
-    {
-      id: 'brush',
-      label: 'Кисть',
-      paths: [
-        ['path', 'm9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08'],
-        [
-          'path',
-          'M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z',
-        ],
-      ],
-    },
-    { id: 'code', label: 'Код', paths: [['path', 'm8 6-6 6 6 6M16 6l6 6-6 6']] },
-    {
-      id: 'puzzle',
-      label: 'Пазл',
-      paths: [
-        [
-          'path',
-          'M4 7h3a1 1 0 0 0 1-1V5a2 2 0 0 1 4 0v1a1 1 0 0 0 1 1h3a1 1 0 0 1 1 1v3a1 1 0 0 0 1 1h1a2 2 0 0 1 0 4h-1a1 1 0 0 0-1 1v3a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1v-1a2 2 0 0 0-4 0v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a2 2 0 0 0 0-4H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1',
-        ],
-      ],
-    },
-    {
-      id: 'pin',
-      label: 'Булавка',
-      paths: [
-        ['path', 'M12 17v5'],
-        [
-          'path',
-          'M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z',
-        ],
-      ],
-    },
-    {
-      id: 'eye',
-      label: 'Глаз',
-      paths: [
-        ['path', 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z'],
-        ['circle', { cx: 12, cy: 12, r: 3 }],
-      ],
-    },
-    {
-      id: 'shield',
-      label: 'Щит',
-      paths: [['path', 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z']],
-    },
-    {
-      id: 'search',
-      label: 'Лупа',
-      paths: [
-        ['circle', { cx: 11, cy: 11, r: 7 }],
-        ['path', 'm21 21-4.3-4.3'],
-      ],
-    },
-    {
-      id: 'globe',
-      label: 'Глобус',
-      paths: [
-        ['circle', { cx: 12, cy: 12, r: 9 }],
-        ['path', 'M3 12h18'],
-        [
-          'path',
-          'M12 3a13.5 13.5 0 0 1 3.6 9A13.5 13.5 0 0 1 12 21a13.5 13.5 0 0 1-3.6-9A13.5 13.5 0 0 1 12 3Z',
-        ],
-      ],
-    },
-    {
-      id: 'compass',
-      label: 'Компас',
-      paths: [
-        ['circle', { cx: 12, cy: 12, r: 9 }],
-        ['path', 'm16 8-2.5 5.5L8 16l2.5-5.5z'],
-      ],
-    },
-    {
-      id: 'moon',
-      label: 'Луна',
-      paths: [['path', 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z']],
-    },
-    {
-      id: 'sun',
-      label: 'Солнце',
-      paths: [
-        ['circle', { cx: 12, cy: 12, r: 4 }],
-        [
-          'path',
-          'M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
-        ],
-      ],
-    },
-    {
-      id: 'smile',
-      label: 'Смайл',
-      paths: [
-        ['circle', { cx: 12, cy: 12, r: 9 }],
-        ['path', 'M9 10h.01M15 10h.01'],
-        ['path', 'M8.5 14.5c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2'],
-      ],
-    },
-    {
-      id: 'folder',
-      label: 'Папка',
-      paths: [
-        ['path', 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
-      ],
-    },
-    {
-      id: 'power',
-      label: 'Закрыть',
-      paths: [
-        ['path', 'M12 2v10'],
-        ['path', 'M18.4 6.6a9 9 0 1 1-12.8 0'],
+      label: 'Библиотека, фокус и разделы',
+      items: [
+        { cmd: 'libraryAdd', label: 'Сохранить в библиотеку', icon: 'bookmark' },
+        { cmd: 'libraryQueueAdd', label: 'В «Посмотреть позже»', icon: 'clock' },
+        { cmd: 'libraryPanel', label: 'Библиотека', icon: 'bookmark' },
+        { cmd: 'statsPanel', label: 'Статистика просмотра', icon: 'star' },
+        { cmd: 'focusToggle', label: 'Фокус-режим', icon: 'eye' },
+        { cmd: 'sideNavToggle', label: 'Свернуть / развернуть меню слева', icon: 'sliders' },
+        { cmd: 'chat', label: 'Чат сбоку', icon: 'message' },
+        { cmd: 'stickerPanel', label: 'Картинки в чат', icon: 'smile' },
+        { cmd: 'pluginsActive', label: 'Активные плагины', icon: 'puzzle' },
+        { cmd: 'plugins', label: 'Менеджер плагинов', icon: 'puzzle' },
+        { cmd: 'regionPanel', label: 'Регион и прокси', icon: 'compass' },
+        { cmd: 'languagePanel', label: 'Язык', icon: 'globe' },
+        { cmd: 'panel', label: 'Настройки', icon: 'settings' },
+        { cmd: 'checkUpdates', label: 'Проверить обновления', icon: 'download' },
       ],
     },
   ];
 
-  const ICON_PRESET_MAP = new Map(ICON_PRESETS.map((item) => [item.id, item]));
-  const EMOJI_PRESETS = ['🐙', '✨', '⚡', '❤️', '🔥', '⭐', '🎵', '🎬', '📌', '⚙️', '🎨', '💬'];
+  const TOPBAR_ACTION_MAP = new Map(
+    TOPBAR_ACTION_GROUPS.flatMap((group) => group.items.map((item) => [item.cmd, item])),
+  );
 
-  const FONT_STACKS = {
-    'google-sans-medium':
-      "'Google Sans Medium', 'Google Sans', 'Google Sans Flex', var(--ui-font-fallback)",
-    inter: 'var(--ui-font-fallback)',
-    system:
-      "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-    mono: "'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+  const SLOT_TARGETS = {
+    nav: 'navGroup',
+    actions: 'actionsGroup',
+    tools: 'toolsGroup',
+    extra: 'customToolsGroup',
   };
 
-  function resolveTarget(id) {
-    switch (id) {
-      case 'titlebar':
-        return $('titlebar');
-      case 'brand':
-        return document.querySelector('#titlebar .brand');
-      case 'pagePill':
-        return $('pagePill');
+  function isCommandActive(cmd, appState) {
+    if (!appState) return false;
+    switch (cmd) {
+      case 'pip':
+        return Boolean(appState.pip);
+      case 'mute':
+        return Boolean(appState.muted);
+      case 'onTop':
+        return Boolean(appState.onTop);
+      case 'chat':
+        return Boolean(appState.chat?.open);
       case 'panel':
-        return $('panelDialog');
-      case 'pluginsPanel':
-        return $('pluginsDialog');
-      case 'palette':
-        return document.querySelector('#palette .palette-card');
-      case 'popover':
-        return $('popover');
-      case 'findbar':
-        return $('findbar');
-      case 'pipbar':
-        return $('pipbar');
-      case 'baronly':
-        return $('baronly');
+        return Boolean(appState.panel);
+      case 'plugins':
+        return Boolean(appState.pluginsOpen);
+      case 'focusToggle':
+        return Boolean(appState.focus?.enabled);
+      case 'ambientToggle':
+        return Boolean(appState.ambient);
+      case 'captionToggle':
+        return Boolean(appState.subtitles?.enabled);
+      case 'stickerPanel':
+        return appState.popover === 'stickers';
+      case 'pluginsActive':
+        return appState.popover === 'plugins';
+      case 'find':
+        return Boolean(appState.find?.open);
       default:
-        return $(id);
+        return false;
     }
   }
 
-  function buildSvgIcon(presetId) {
-    const preset = ICON_PRESET_MAP.get(presetId);
-    if (!preset) return null;
-    const svg = document.createElementNS(SVG_NS, 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '1.9');
-    svg.setAttribute('stroke-linecap', 'round');
-    svg.setAttribute('stroke-linejoin', 'round');
-    svg.setAttribute('aria-hidden', 'true');
-    for (const [tag, attrs] of preset.paths) {
-      const node = document.createElementNS(SVG_NS, tag);
-      if (typeof attrs === 'string') {
-        node.setAttribute('d', attrs);
-      } else {
-        for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
-      }
-      svg.append(node);
-    }
-    return svg;
+  function actionDisplayName(btn, appState) {
+    if (btn.cmd === 'openUrl') return btn.payload || tr('Ссылка');
+    const known = TOPBAR_ACTION_MAP.get(btn.cmd);
+    if (known) return tr(known.label);
+    const pluginCmd = appState?.plugins?.commands?.find((item) => item.id === btn.cmd);
+    if (pluginCmd) return `${pluginCmd.title} · ${pluginCmd.pluginName}`;
+    return btn.cmd;
   }
 
-  const originals = new Map();
-  const componentFonts = new Map();
+  let lastTopbarSig = null;
 
-  function captureOriginals(id, target) {
-    if (originals.has(id)) return originals.get(id);
-    const info = {
-      title: target.getAttribute('title') || '',
-      ariaLabel: target.getAttribute('aria-label') || '',
-      labelText: '',
-      placeholder: '',
-    };
-    if (id === 'btnPanel') {
-      info.labelText = target.querySelector('.settings-label')?.textContent || 'Настройки';
-    } else if (id === 'panel') {
-      info.labelText = $('panelHeadTitle')?.textContent || 'Настройки';
-    } else if (id === 'pluginsPanel') {
-      info.labelText = $('pluginsHeadTitle')?.textContent || 'Плагины';
-    } else if (id === 'palette') {
-      info.placeholder = $('paletteInput')?.getAttribute('placeholder') || '';
-    } else if (id === 'findbar') {
-      info.placeholder = $('findInput')?.getAttribute('placeholder') || '';
-    }
-    originals.set(id, info);
-    return info;
+  function topbarButtonSignature(buttons, appState) {
+    if (!buttons.length) return '';
+    return buttons
+      .map(
+        (btn) =>
+          `${btn.id}|${btn.cmd}|${btn.payload || ''}|${btn.slot || ''}|${btn.label || ''}|${btn.tooltip || ''}|${actionDisplayName(btn, appState)}|${btn.iconType || ''}|${btn.iconValue || ''}|${btn.iconDataUrl ? btn.iconDataUrl.length : 0}`,
+      )
+      .join('\n');
   }
 
-  function applyComponentFont(id, target, cfg) {
-    const preset = cfg.fontPreset || 'inherit';
-    if (preset === 'inherit') {
-      target.style.removeProperty('font-family');
-      return;
-    }
-    if (preset === 'custom-name' && cfg.fontFamily) {
-      target.style.fontFamily = `'${cfg.fontFamily}', var(--ui-font-fallback)`;
-      return;
-    }
-    if (preset === 'custom-file' && cfg.fontDataBase64) {
-      const faceName = `OctoCompFont_${id}`;
-      const key = `${cfg.fontFileName || ''}:${cfg.fontDataBase64.length}:${cfg.fontDataBase64.slice(0, 24)}`;
-      const cached = componentFonts.get(id);
-      if (cached && cached.key === key) {
-        target.style.fontFamily = `'${faceName}', var(--ui-font-fallback)`;
-        return;
-      }
-      try {
-        const bin = window.atob(cfg.fontDataBase64);
-        const bytes = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
-        const face = new window.FontFace(faceName, bytes);
-        face
-          .load()
-          .then((ready) => {
-            if (cached && cached.face) document.fonts.delete(cached.face);
-            document.fonts.add(ready);
-            componentFonts.set(id, { key, face: ready });
-            target.style.fontFamily = `'${faceName}', var(--ui-font-fallback)`;
-          })
-          .catch(() => {
-            target.style.removeProperty('font-family');
-          });
-      } catch {
-        target.style.removeProperty('font-family');
+  function renderTopbarButtons(buttons, customMap, appState) {
+    const list = Array.isArray(buttons) ? buttons : [];
+    const sig = topbarButtonSignature(list, appState);
+    if (sig === lastTopbarSig) {
+      for (const btn of list) {
+        const esc = window.CSS && window.CSS.escape ? window.CSS.escape(btn.id) : btn.id;
+        const el = document.querySelector(`[data-custom-btn-id="${esc}"]`);
+        if (!el) continue;
+        const active = isCommandActive(btn.cmd, appState);
+        el.classList.toggle('is-on', active);
+        el.setAttribute('aria-pressed', String(active));
       }
       return;
     }
-    if (FONT_STACKS[preset]) {
-      target.style.fontFamily = FONT_STACKS[preset];
-    } else {
-      target.style.removeProperty('font-family');
-    }
-  }
+    lastTopbarSig = sig;
 
-  function clearCustomIcon(target) {
-    target.classList.remove('has-custom-icon', 'is-icon-none');
-    delete target.dataset.octoIconMode;
-    target.querySelector(':scope > .octo-custom-icon')?.remove();
-    if (target.id === 'palette' || target.classList.contains('palette-card')) {
-      const search = target.querySelector('.palette-search');
-      search?.classList.remove('has-custom-icon', 'is-icon-none');
-      search?.querySelector(':scope > .octo-custom-icon')?.remove();
-    }
-  }
-
-  function applyComponentIcon(id, target, cfg) {
-    const host = id === 'palette' ? target.querySelector('.palette-search') || target : target;
-    const mode = cfg.iconType || 'default';
-    if (mode === 'default') {
-      clearCustomIcon(target);
-      return;
-    }
-
-    host.classList.add('has-custom-icon');
-    host.dataset.octoIconMode = mode;
-    host.classList.toggle('is-icon-none', mode === 'none');
-
-    let customNode = host.querySelector(':scope > .octo-custom-icon');
-    if (mode === 'none') {
-      customNode?.remove();
-      return;
-    }
-
-    if (mode === 'preset') {
-      const svg = buildSvgIcon(cfg.iconValue);
-      if (!svg) {
-        clearCustomIcon(target);
-        return;
+    for (const containerId of Object.values(SLOT_TARGETS)) {
+      const container = $(containerId);
+      if (!container) continue;
+      for (const node of Array.from(container.querySelectorAll('[data-custom-btn-id]'))) {
+        node.remove();
       }
-      if (!customNode || !customNode.classList.contains('octo-custom-icon--svg')) {
-        customNode?.remove();
-        customNode = document.createElement('span');
-        customNode.className = 'octo-custom-icon octo-custom-icon--svg';
-        customNode.setAttribute('aria-hidden', 'true');
-        host.prepend(customNode);
-      }
-      customNode.replaceChildren(svg);
-      return;
     }
 
-    if (mode === 'emoji') {
-      if (!customNode || !customNode.classList.contains('octo-custom-icon--emoji')) {
-        customNode?.remove();
-        customNode = document.createElement('span');
-        customNode.className = 'octo-custom-icon octo-custom-icon--emoji';
-        customNode.setAttribute('aria-hidden', 'true');
-        customNode.setAttribute('data-i18n-skip', '');
-        host.prepend(customNode);
-      }
-      customNode.textContent = cfg.iconValue || '';
-      return;
-    }
+    for (const btn of list) {
+      const containerId = SLOT_TARGETS[btn.slot] || SLOT_TARGETS.extra;
+      const container = $(containerId);
+      if (!container) continue;
 
-    if (mode === 'file' && cfg.iconDataUrl) {
-      if (!customNode || !customNode.classList.contains('octo-custom-icon--img')) {
-        customNode?.remove();
-        customNode = document.createElement('img');
-        customNode.className = 'octo-custom-icon octo-custom-icon--img';
-        customNode.alt = '';
-        customNode.draggable = false;
-        host.prepend(customNode);
-      }
-      if (customNode.getAttribute('src') !== cfg.iconDataUrl) {
-        customNode.setAttribute('src', cfg.iconDataUrl);
-      }
-      return;
-    }
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'icon-btn octo-custom-topbar-btn';
+      el.dataset.customBtnId = btn.id;
+      el.dataset.uiCompId = `customBtn:${btn.id}`;
+      el.dataset.uiPageId = 'titlebar';
+      const defaultTip = btn.tooltip || btn.label || actionDisplayName(btn, appState);
+      el.dataset.customBtnLabel = btn.label || defaultTip;
+      el.title = defaultTip;
+      el.setAttribute('aria-label', defaultTip);
 
-    clearCustomIcon(target);
-  }
+      const active = isCommandActive(btn.cmd, appState);
+      el.classList.toggle('is-on', active);
+      el.setAttribute('aria-pressed', String(active));
 
-  function applyComponentLabel(id, target, cfg, orig) {
-    const label = typeof cfg.label === 'string' ? cfg.label : '';
-
-    if (id === 'brand') {
-      let span = target.querySelector(':scope > .brand-custom-label');
-      if (label) {
-        if (!span) {
-          span = document.createElement('span');
-          span.className = 'brand-custom-label';
-          span.setAttribute('data-i18n-skip', '');
-          target.append(span);
-        }
-        span.textContent = label;
-        target.classList.add('has-brand-label');
-        document.title = label;
-      } else {
-        span?.remove();
-        target.classList.remove('has-brand-label');
-        document.title = 'TikTok Octo';
-      }
-      return;
-    }
-
-    if (id === 'btnPanel') {
-      const span = target.querySelector('.settings-label');
-      if (span) {
-        if (label) {
-          span.setAttribute('data-i18n-skip', '');
-          span.textContent = label;
-        } else if (span.hasAttribute('data-i18n-skip')) {
-          span.removeAttribute('data-i18n-skip');
-          span.textContent = orig.labelText || 'Настройки';
-          window.octoI18n?.refresh?.();
-        }
-      }
-      return;
-    }
-
-    if (id === 'panel') {
-      const titleEl = $('panelHeadTitle');
-      if (titleEl) {
-        if (label) {
-          titleEl.setAttribute('data-i18n-skip', '');
-          titleEl.textContent = label;
-        } else if (titleEl.hasAttribute('data-i18n-skip')) {
-          titleEl.removeAttribute('data-i18n-skip');
-          titleEl.textContent = orig.labelText || 'Настройки';
-          window.octoI18n?.refresh?.();
-        }
-      }
-      return;
-    }
-
-    if (id === 'pluginsPanel') {
-      const titleEl = $('pluginsHeadTitle');
-      if (titleEl) {
-        if (label) {
-          titleEl.setAttribute('data-i18n-skip', '');
-          titleEl.textContent = label;
-        } else if (titleEl.hasAttribute('data-i18n-skip')) {
-          titleEl.removeAttribute('data-i18n-skip');
-          titleEl.textContent = orig.labelText || 'Плагины';
-          window.octoI18n?.refresh?.();
-        }
-      }
-      return;
-    }
-
-    if (id === 'palette') {
-      const input = $('paletteInput');
-      if (input) {
-        if (label) {
-          input.setAttribute('data-octo-custom-tooltip', '1');
-          input.setAttribute('placeholder', label);
-        } else if (input.hasAttribute('data-octo-custom-tooltip')) {
-          input.removeAttribute('data-octo-custom-tooltip');
-          input.setAttribute('placeholder', orig.placeholder || 'Введите команду или имя…');
-          window.octoI18n?.refresh?.();
-        }
-      }
-      return;
-    }
-
-    if (id === 'findbar') {
-      const input = $('findInput');
-      if (input) {
-        if (label) {
-          input.setAttribute('data-octo-custom-tooltip', '1');
-          input.setAttribute('placeholder', label);
-        } else if (input.hasAttribute('data-octo-custom-tooltip')) {
-          input.removeAttribute('data-octo-custom-tooltip');
-          input.setAttribute('placeholder', orig.placeholder || 'Найти на странице');
-          window.octoI18n?.refresh?.();
-        }
-      }
-      return;
-    }
-
-    if (id === 'pagePill' || id === 'pipbar' || id === 'baronly') {
-      return;
-    }
-
-    let badge = target.querySelector(':scope > .octo-comp-label');
-    if (label) {
-      if (!badge) {
-        badge = document.createElement('span');
-        badge.className = 'octo-comp-label';
-        badge.setAttribute('data-i18n-skip', '');
-        target.append(badge);
-      }
-      badge.textContent = label;
-      target.classList.add('has-comp-label');
-    } else {
-      badge?.remove();
-      target.classList.remove('has-comp-label');
-    }
-  }
-
-  function applyComponentTooltip(target, cfg, orig) {
-    const tooltip = typeof cfg.tooltip === 'string' ? cfg.tooltip : '';
-    if (tooltip) {
-      target.setAttribute('data-octo-custom-tooltip', '1');
-      target.setAttribute('title', tooltip);
-      if (orig.ariaLabel) target.setAttribute('aria-label', tooltip);
-    } else if (target.hasAttribute('data-octo-custom-tooltip')) {
-      target.removeAttribute('data-octo-custom-tooltip');
-      if (orig.title) target.setAttribute('title', orig.title);
-      else target.removeAttribute('title');
-      if (orig.ariaLabel) target.setAttribute('aria-label', orig.ariaLabel);
-      window.octoI18n?.refresh?.();
-    }
-  }
-
-  function applyAll(customMap) {
-    const map = customMap && typeof customMap === 'object' ? customMap : {};
-    const list = Array.isArray(window.octo?.uiComponents) ? window.octo.uiComponents : [];
-    const rootStyle = document.documentElement.style;
-
-    for (const meta of list) {
-      const target = resolveTarget(meta.id);
-      if (!target) continue;
-      const orig = captureOriginals(meta.id, target);
-      const cfg = map[meta.id] || {};
-
-      applyComponentLabel(meta.id, target, cfg, orig);
-      applyComponentTooltip(target, cfg, orig);
-      if (meta.supportsIcon) applyComponentIcon(meta.id, target, cfg);
-      applyComponentFont(meta.id, target, cfg);
-
-      if (cfg.fgColor) target.style.color = cfg.fgColor;
-      else target.style.removeProperty('color');
-
-      if (cfg.bgColor) target.style.background = cfg.bgColor;
-      else target.style.removeProperty('background');
-
-      if (cfg.borderColor) {
-        target.style.borderColor = cfg.borderColor;
-        target.classList.add('has-custom-border');
-      } else {
-        target.style.removeProperty('border-color');
-        target.classList.remove('has-custom-border');
+      if (btn.iconType === 'preset') {
+        const svg = core.buildSvgIcon(btn.iconValue || 'sparkle');
+        if (svg) el.append(svg);
+      } else if (btn.iconType === 'emoji' && btn.iconValue) {
+        const emoji = document.createElement('span');
+        emoji.className = 'octo-custom-icon octo-custom-icon--emoji octo-btn-native-emoji';
+        emoji.setAttribute('aria-hidden', 'true');
+        emoji.setAttribute('data-i18n-skip', '');
+        emoji.textContent = btn.iconValue;
+        el.append(emoji);
+      } else if (btn.iconType === 'file' && btn.iconDataUrl) {
+        const img = document.createElement('img');
+        img.className = 'octo-custom-icon octo-custom-icon--img';
+        img.src = btn.iconDataUrl;
+        img.alt = '';
+        img.draggable = false;
+        el.append(img);
       }
 
-      if (cfg.fontSize > 0) target.style.fontSize = `${cfg.fontSize}px`;
-      else target.style.removeProperty('font-size');
-
-      if (cfg.fontWeight) target.style.fontWeight = cfg.fontWeight;
-      else target.style.removeProperty('font-weight');
-
-      if (cfg.iconSize > 0) target.style.setProperty('--octo-comp-icon-size', `${cfg.iconSize}px`);
-      else target.style.removeProperty('--octo-comp-icon-size');
-
-      if (typeof cfg.radius === 'number' && cfg.radius >= 0) {
-        target.style.borderRadius = `${cfg.radius}px`;
-      } else {
-        target.style.removeProperty('border-radius');
+      if (btn.label) {
+        const span = document.createElement('span');
+        span.className = 'octo-custom-label';
+        span.setAttribute('data-i18n-skip', '');
+        span.dataset.customBtnDefault = btn.label;
+        span.textContent = btn.label;
+        el.append(span);
+        el.classList.add('has-comp-label');
       }
 
-      if (cfg.opacity && cfg.opacity < 100) target.style.opacity = String(cfg.opacity / 100);
-      else target.style.removeProperty('opacity');
+      el.addEventListener('click', (event) => {
+        event.stopPropagation();
+        window.octo?.cmd(btn.cmd, btn.payload);
+      });
 
-      if (meta.id === 'titlebar') {
-        if (cfg.height > 0) rootStyle.setProperty('--bar-h', `${cfg.height}px`);
-        else rootStyle.removeProperty('--bar-h');
-      }
-
-      target.classList.toggle('is-comp-hidden', cfg.hidden === true);
+      container.append(el);
     }
-  }
 
-  function getPageTitle(compId, defaultTitle, customMap) {
-    const label = customMap?.[compId]?.label;
-    if (!label) return defaultTitle;
-    return label.includes('{title}') ? label.replaceAll('{title}', defaultTitle) : label;
+    core.syncTopbarGroupVisibility();
+    // Переиндексируем каталог, чтобы свои кнопки сразу были в редакторе.
+    core.collectCatalog(true);
   }
 
   // --- Редактор в настройках -------------------------------------------------
 
+  let selectedPage = 'all';
   let selectedId = 'brand';
+  let compFilterQuery = '';
   let currentMap = {};
+  let currentTopbarButtons = [];
+  let currentAppState = null;
   let editorBound = false;
   let pendingIconType = '';
   let pendingFontPreset = '';
   let activeCompColorRole = 'fgColor';
   let activeColorDefaults = { fg: '#ddd2e0', bg: '#2b263d', border: '#8c84a9' };
+
+  // Состояние конструктора кнопок верхней полосы
+  let editingTopbarId = '';
+  let draftBtnId = `tb_${Date.now().toString(36)}`;
+  let draftBtnIconType = 'preset';
+  let draftBtnIconValue = 'camera';
+
+  // Состояние пипетки выбора элемента кликом
+  let pickerActive = false;
+  let pickerHoveredEl = null;
 
   const THEME_SWATCH_TOKENS = [
     { varName: '--md-primary', label: 'Основной' },
@@ -688,6 +278,38 @@
 
   function editorRefs() {
     return {
+      pageSelect: $('compPageSelect'),
+      searchInput: $('compSearchInput'),
+      pickElementBtn: $('compPickElementBtn'),
+      pickerBar: $('compPickerBar'),
+      pickerStatus: $('compPickerStatus'),
+      pickerTogglePanel: $('compPickerTogglePanel'),
+      pickerCancel: $('compPickerCancel'),
+      pickerHighlight: $('compPickerHighlight'),
+      pickerTag: $('compPickerTag'),
+
+      tbBuiltinChips: $('topbarBuiltinChips'),
+      tbCustomList: $('topbarCustomList'),
+      tbCustomEmpty: $('topbarCustomEmpty'),
+      tbAction: $('topbarBtnAction'),
+      tbUrlRow: $('topbarBtnUrlRow'),
+      tbUrl: $('topbarBtnUrl'),
+      tbLabel: $('topbarBtnLabel'),
+      tbTooltip: $('topbarBtnTooltip'),
+      tbSlot: $('topbarBtnSlot'),
+      tbIconType: $('topbarBtnIconType'),
+      tbIconPresetWrap: $('topbarBtnIconPresetWrap'),
+      tbIconGrid: $('topbarBtnIconGrid'),
+      tbIconEmojiWrap: $('topbarBtnIconEmojiWrap'),
+      tbIconEmoji: $('topbarBtnIconEmoji'),
+      tbEmojiChips: $('topbarBtnEmojiChips'),
+      tbIconFileWrap: $('topbarBtnIconFileWrap'),
+      tbIconFileName: $('topbarBtnIconFileName'),
+      tbIconPickBtn: $('topbarBtnIconPickBtn'),
+      tbSubmit: $('topbarBtnSubmit'),
+      tbCancelEdit: $('topbarBtnCancelEdit'),
+      tbResetAll: $('topbarBtnResetAll'),
+
       select: $('compSelect'),
       chips: $('compModifiedChips'),
       previewBox: $('compPreviewSample'),
@@ -848,17 +470,61 @@
     };
   }
 
-  function populateSelect(refs) {
-    if (!refs.select || refs.select.options.length > 0) return;
-    const list = Array.isArray(window.octo?.uiComponents) ? window.octo.uiComponents : [];
-    const groups = [
-      { id: 'titlebar', label: tr('Верхняя полоса') },
-      { id: 'panels', label: tr('Панели и мини-режимы') },
-    ];
-    for (const group of groups) {
+  function populatePageSelect(refs) {
+    if (!refs.pageSelect || refs.pageSelect.options.length > 0) return;
+    const allOpt = document.createElement('option');
+    allOpt.value = 'all';
+    allOpt.textContent = tr('Все страницы');
+    refs.pageSelect.append(allOpt);
+    for (const page of core.PAGE_LIST) {
+      const opt = document.createElement('option');
+      opt.value = page.id;
+      opt.textContent = tr(page.label);
+      refs.pageSelect.append(opt);
+    }
+    refs.pageSelect.value = selectedPage;
+  }
+
+  function populateComponentSelect(refs) {
+    if (!refs.select) return;
+    const catalog = core.collectCatalog(false);
+    const query = compFilterQuery.trim().toLowerCase();
+    const pagesById = new Map(core.PAGE_LIST.map((p) => [p.id, tr(p.label)]));
+
+    const items = catalog.list.filter((item) => {
+      if (selectedPage !== 'all' && item.page !== selectedPage) return false;
+      if (query) {
+        const label = tr(item.label).toLowerCase();
+        const pageName = (pagesById.get(item.page) || '').toLowerCase();
+        if (
+          !label.includes(query) &&
+          !pageName.includes(query) &&
+          !item.id.toLowerCase().includes(query)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    const sig = `${selectedPage}:${query}:${items.map((i) => i.id).join(',')}`;
+    if (refs.select.dataset.listSig === sig) return;
+    refs.select.dataset.listSig = sig;
+    refs.select.replaceChildren();
+
+    const grouped = new Map();
+    for (const item of items) {
+      const bucket = grouped.get(item.page) || [];
+      bucket.push(item);
+      grouped.set(item.page, bucket);
+    }
+
+    for (const page of core.PAGE_LIST) {
+      const groupItems = grouped.get(page.id);
+      if (!groupItems || !groupItems.length) continue;
       const optgroup = document.createElement('optgroup');
-      optgroup.label = group.label;
-      for (const comp of list.filter((item) => item.group === group.id)) {
+      optgroup.label = tr(page.label);
+      for (const comp of groupItems) {
         const option = document.createElement('option');
         option.value = comp.id;
         option.textContent = tr(comp.label);
@@ -866,39 +532,365 @@
       }
       refs.select.append(optgroup);
     }
-    if (list[0]) selectedId = list[0].id;
-    refs.select.value = selectedId;
+
+    if (items.length && !items.some((item) => item.id === selectedId)) {
+      selectedId = items[0].id;
+    }
+    if (selectedId && items.some((item) => item.id === selectedId)) {
+      refs.select.value = selectedId;
+    }
   }
 
   function populateIconGrids(refs) {
-    if (refs.iconPresetGrid && !refs.iconPresetGrid.children.length) {
-      refs.iconPresetGrid.replaceChildren(
-        ...ICON_PRESETS.map((preset) => {
+    const fillPresetGrid = (grid, attr) => {
+      if (!grid || grid.children.length) return;
+      grid.replaceChildren(
+        ...core.ICON_PRESETS.map((preset) => {
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'comp-icon-btn';
-          btn.dataset.iconPreset = preset.id;
+          btn.dataset[attr] = preset.id;
           btn.title = tr(preset.label);
           btn.setAttribute('aria-label', tr(preset.label));
-          const svg = buildSvgIcon(preset.id);
+          const svg = core.buildSvgIcon(preset.id);
           if (svg) btn.append(svg);
           return btn;
         }),
       );
-    }
-    if (refs.iconEmojiChips && !refs.iconEmojiChips.children.length) {
-      refs.iconEmojiChips.replaceChildren(
-        ...EMOJI_PRESETS.map((emoji) => {
+    };
+
+    const fillEmojiGrid = (grid, attr) => {
+      if (!grid || grid.children.length) return;
+      grid.replaceChildren(
+        ...core.EMOJI_PRESETS.map((emoji) => {
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'comp-emoji-chip';
-          btn.dataset.emoji = emoji;
+          btn.dataset[attr] = emoji;
           btn.setAttribute('data-i18n-skip', '');
           btn.textContent = emoji;
           return btn;
         }),
       );
+    };
+
+    fillPresetGrid(refs.iconPresetGrid, 'iconPreset');
+    fillEmojiGrid(refs.iconEmojiChips, 'emoji');
+    fillPresetGrid(refs.tbIconGrid, 'tbIconPreset');
+    fillEmojiGrid(refs.tbEmojiChips, 'tbEmoji');
+  }
+
+  function populateTopbarActions(refs, appState) {
+    if (!refs.tbAction) return;
+    const pluginCmds = Array.isArray(appState?.plugins?.commands) ? appState.plugins.commands : [];
+    const sig = pluginCmds.map((c) => `${c.id}:${c.title}`).join('|');
+    if (refs.tbAction.dataset.actionSig === sig && refs.tbAction.options.length > 0) return;
+    refs.tbAction.dataset.actionSig = sig;
+    const prev = refs.tbAction.value;
+    refs.tbAction.replaceChildren();
+
+    for (const group of TOPBAR_ACTION_GROUPS) {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = tr(group.label);
+      for (const item of group.items) {
+        const opt = document.createElement('option');
+        opt.value = item.cmd;
+        opt.textContent = tr(item.label);
+        optgroup.append(opt);
+      }
+      refs.tbAction.append(optgroup);
     }
+
+    if (pluginCmds.length) {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = tr('Команды плагинов');
+      for (const cmd of pluginCmds) {
+        const opt = document.createElement('option');
+        opt.value = cmd.id;
+        opt.textContent = `${cmd.title} · ${cmd.pluginName}`;
+        optgroup.append(opt);
+      }
+      refs.tbAction.append(optgroup);
+    }
+
+    refs.tbAction.value = prev || 'screenshot';
+  }
+
+  function syncTopbarDraftForm(refs) {
+    if (!refs.tbAction) return;
+    const cmd = refs.tbAction.value;
+    if (refs.tbUrlRow) refs.tbUrlRow.hidden = cmd !== 'openUrl';
+    if (refs.tbIconType && document.activeElement !== refs.tbIconType) {
+      refs.tbIconType.value = draftBtnIconType;
+    }
+    if (refs.tbIconPresetWrap) refs.tbIconPresetWrap.hidden = draftBtnIconType !== 'preset';
+    if (refs.tbIconEmojiWrap) refs.tbIconEmojiWrap.hidden = draftBtnIconType !== 'emoji';
+    if (refs.tbIconFileWrap) refs.tbIconFileWrap.hidden = draftBtnIconType !== 'file';
+
+    if (refs.tbIconGrid) {
+      for (const btn of refs.tbIconGrid.children) {
+        btn.classList.toggle(
+          'is-active',
+          draftBtnIconType === 'preset' && btn.dataset.tbIconPreset === draftBtnIconValue,
+        );
+      }
+    }
+    if (refs.tbIconEmoji && document.activeElement !== refs.tbIconEmoji) {
+      refs.tbIconEmoji.value = draftBtnIconType === 'emoji' ? draftBtnIconValue : '';
+    }
+
+    const activeId = editingTopbarId || draftBtnId;
+    const pending = currentAppState?.pendingTopbarIcon;
+    const existing = editingTopbarId
+      ? currentTopbarButtons.find((item) => item.id === editingTopbarId)
+      : null;
+    if (refs.tbIconFileName) {
+      const fileLabel =
+        pending && pending.id === activeId
+          ? pending.fileName
+          : existing && existing.iconType === 'file'
+            ? existing.iconValue
+            : tr('Файл не выбран');
+      refs.tbIconFileName.textContent = fileLabel;
+    }
+
+    if (refs.tbSubmit) {
+      refs.tbSubmit.textContent = editingTopbarId ? tr('Сохранить кнопку') : tr('Добавить кнопку');
+    }
+    if (refs.tbCancelEdit) {
+      refs.tbCancelEdit.hidden = !editingTopbarId;
+    }
+  }
+
+  function resetTopbarDraft(refs) {
+    editingTopbarId = '';
+    draftBtnId = `tb_${Date.now().toString(36)}`;
+    draftBtnIconType = 'preset';
+    draftBtnIconValue = TOPBAR_ACTION_MAP.get(refs.tbAction?.value)?.icon || 'camera';
+    if (refs.tbLabel) refs.tbLabel.value = '';
+    if (refs.tbTooltip) refs.tbTooltip.value = '';
+    if (refs.tbUrl) refs.tbUrl.value = '';
+    if (refs.tbSlot) refs.tbSlot.value = 'extra';
+    syncTopbarDraftForm(refs);
+  }
+
+  function renderTopbarManager(refs) {
+    if (refs.tbBuiltinChips) {
+      refs.tbBuiltinChips.replaceChildren(
+        ...TOPBAR_BUILTIN_ITEMS.map((item) => {
+          const isHidden = currentMap[item.id]?.hidden === true;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `tb-builtin-chip${isHidden ? ' is-off' : ' is-on'}`;
+          btn.dataset.tbToggleBuiltin = item.id;
+          btn.setAttribute('aria-pressed', String(!isHidden));
+          btn.textContent = tr(item.label);
+          return btn;
+        }),
+      );
+    }
+
+    if (refs.tbCustomList) {
+      refs.tbCustomList.replaceChildren(
+        ...currentTopbarButtons.map((btn, index) => {
+          const row = document.createElement('div');
+          row.className = 'tb-custom-row';
+          row.dataset.tbRowId = btn.id;
+
+          const iconWrap = document.createElement('span');
+          iconWrap.className = 'tb-custom-ico';
+          if (btn.iconType === 'preset') {
+            const svg = core.buildSvgIcon(btn.iconValue || 'sparkle');
+            if (svg) iconWrap.append(svg);
+          } else if (btn.iconType === 'emoji') {
+            iconWrap.textContent = btn.iconValue || '✨';
+          } else if (btn.iconType === 'file' && btn.iconDataUrl) {
+            const img = document.createElement('img');
+            img.src = btn.iconDataUrl;
+            img.alt = '';
+            iconWrap.append(img);
+          } else {
+            iconWrap.textContent = '•';
+          }
+
+          const info = document.createElement('div');
+          info.className = 'tb-custom-info';
+          const title = document.createElement('span');
+          title.className = 'tb-custom-title';
+          title.textContent = btn.label || btn.tooltip || actionDisplayName(btn, currentAppState);
+          const sub = document.createElement('span');
+          sub.className = 'tb-custom-sub';
+          sub.textContent = actionDisplayName(btn, currentAppState);
+          info.append(title, sub);
+
+          const actions = document.createElement('div');
+          actions.className = 'tb-custom-actions';
+
+          const mkBtn = (text, act, titleText, disabled = false) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'tb-mini-btn';
+            b.dataset.tbAct = act;
+            b.dataset.tbId = btn.id;
+            b.title = tr(titleText);
+            b.setAttribute('aria-label', tr(titleText));
+            b.textContent = text;
+            b.disabled = disabled;
+            return b;
+          };
+
+          actions.append(
+            mkBtn('↑', 'up', 'Выше', index === 0),
+            mkBtn('↓', 'down', 'Ниже', index === currentTopbarButtons.length - 1),
+            mkBtn('✎', 'edit', 'Изменить'),
+            mkBtn('🎨', 'style', 'Оформление'),
+            mkBtn('✕', 'remove', 'Удалить'),
+          );
+
+          row.append(iconWrap, info, actions);
+          return row;
+        }),
+      );
+    }
+
+    if (refs.tbCustomEmpty) refs.tbCustomEmpty.hidden = currentTopbarButtons.length > 0;
+    if (refs.tbResetAll) refs.tbResetAll.disabled = currentTopbarButtons.length === 0;
+    syncTopbarDraftForm(refs);
+  }
+
+  // --- Интерактивный выбор элемента кликом ----------------------------------
+
+  function updatePickerHighlight(target) {
+    const refs = editorRefs();
+    if (!refs.pickerHighlight || !refs.pickerTag) return;
+    if (!target) {
+      refs.pickerHighlight.hidden = true;
+      return;
+    }
+    const rect = target.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) {
+      refs.pickerHighlight.hidden = true;
+      return;
+    }
+    refs.pickerHighlight.hidden = false;
+    refs.pickerHighlight.style.left = `${Math.round(rect.left)}px`;
+    refs.pickerHighlight.style.top = `${Math.round(rect.top)}px`;
+    refs.pickerHighlight.style.width = `${Math.round(rect.width)}px`;
+    refs.pickerHighlight.style.height = `${Math.round(rect.height)}px`;
+
+    const compId = target.dataset.uiCompId || '';
+    const pageId = target.dataset.uiPageId || '';
+    const catalog = core.collectCatalog(false);
+    const meta = catalog.byId.get(compId);
+    const pageTitle = core.PAGE_LIST.find((p) => p.id === pageId)?.label || pageId;
+    const text = meta ? `${tr(pageTitle)} → ${tr(meta.label)}` : compId;
+    refs.pickerTag.textContent = text;
+    if (refs.pickerStatus) refs.pickerStatus.textContent = text;
+  }
+
+  function findPickableTarget(rawTarget) {
+    if (!rawTarget || rawTarget.nodeType !== 1) return null;
+    if (rawTarget.closest('#compPickerBar, #compPickerHighlight')) return null;
+
+    // Если кликнули по кастомному триггеру <select>, сопоставляем со скрытым <select>.
+    const selectWrap = rawTarget.closest('.octo-select');
+    if (selectWrap) {
+      const nativeSelect = selectWrap.querySelector('select[data-ui-comp-id]');
+      if (nativeSelect) return nativeSelect;
+    }
+
+    const hit = rawTarget.closest('[data-ui-comp-id]');
+    if (!hit) return null;
+    return hit;
+  }
+
+  function onPickerPointerMove(event) {
+    if (!pickerActive) return;
+    const target = findPickableTarget(event.target);
+    if (target === pickerHoveredEl) return;
+    pickerHoveredEl = target;
+    updatePickerHighlight(target);
+  }
+
+  function onPickerClick(event) {
+    if (!pickerActive) return;
+    if (event.target.closest('#compPickerBar')) return;
+    if (event.altKey) return;
+
+    const target = findPickableTarget(event.target);
+    if (!target) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const compId = target.dataset.uiCompId;
+    const pageId = target.dataset.uiPageId || 'all';
+    stopPicker(true);
+    if (compId) {
+      selectedPage = pageId;
+      selectedId = compId;
+      compFilterQuery = '';
+      const refs = editorRefs();
+      if (refs.searchInput) refs.searchInput.value = '';
+      if (refs.pageSelect) refs.pageSelect.value = selectedPage;
+      pendingIconType = '';
+      pendingFontPreset = '';
+      renderEditor(currentMap, currentTopbarButtons, currentAppState);
+    }
+  }
+
+  function onPickerKeyDown(event) {
+    if (!pickerActive) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      stopPicker(true);
+    }
+  }
+
+  function startPicker() {
+    if (pickerActive) return;
+    core.collectCatalog(true);
+    pickerActive = true;
+    pickerHoveredEl = null;
+    window.octo?.cmd('uiPickerActive', true);
+
+    const refs = editorRefs();
+    const panel = $('panel');
+    const minimizeByDefault =
+      selectedPage === 'titlebar' ||
+      selectedPage === 'sidenav' ||
+      selectedPage === 'findbar' ||
+      selectedPage === 'minibars';
+    if (panel) panel.classList.toggle('is-picker-minimized', minimizeByDefault);
+    if (refs.pickerBar) refs.pickerBar.hidden = false;
+    if (refs.pickerTogglePanel && panel) {
+      refs.pickerTogglePanel.textContent = panel.classList.contains('is-picker-minimized')
+        ? tr('Показать панель')
+        : tr('Скрыть панель');
+    }
+    if (refs.pickerStatus) {
+      refs.pickerStatus.textContent = tr('Кликните на любой элемент · Alt+клик нажимает кнопку');
+    }
+
+    document.addEventListener('pointermove', onPickerPointerMove, true);
+    document.addEventListener('click', onPickerClick, true);
+    document.addEventListener('keydown', onPickerKeyDown, true);
+  }
+
+  function stopPicker(restorePanel = true) {
+    if (!pickerActive) return;
+    pickerActive = false;
+    pickerHoveredEl = null;
+    window.octo?.cmd('uiPickerActive', false);
+
+    document.removeEventListener('pointermove', onPickerPointerMove, true);
+    document.removeEventListener('click', onPickerClick, true);
+    document.removeEventListener('keydown', onPickerKeyDown, true);
+
+    const refs = editorRefs();
+    if (refs.pickerBar) refs.pickerBar.hidden = true;
+    if (refs.pickerHighlight) refs.pickerHighlight.hidden = true;
+    if (restorePanel) $('panel')?.classList.remove('is-picker-minimized');
   }
 
   function bindEditor() {
@@ -907,24 +899,188 @@
     if (!refs.select) return;
     editorBound = true;
 
-    populateSelect(refs);
+    core.collectCatalog(true);
+    populatePageSelect(refs);
+    populateComponentSelect(refs);
     populateIconGrids(refs);
+    populateTopbarActions(refs, currentAppState);
 
+    // --- Конструктор кнопок верхней полосы ---
+    refs.tbBuiltinChips?.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-tb-toggle-builtin]');
+      if (!btn) return;
+      const id = btn.dataset.tbToggleBuiltin;
+      const nextHidden = !(currentMap[id]?.hidden === true);
+      const nextLocal = { ...(currentMap[id] || {}), hidden: nextHidden };
+      currentMap = { ...currentMap, [id]: nextLocal };
+      window.octo?.cmd('uiCustomSet', { id, patch: { hidden: nextHidden } });
+    });
+
+    refs.tbCustomList?.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-tb-act]');
+      if (!btn) return;
+      const act = btn.dataset.tbAct;
+      const id = btn.dataset.tbId;
+      if (!id) return;
+      if (act === 'up') window.octo?.cmd('topbarButtonMove', { id, dir: -1 });
+      else if (act === 'down') window.octo?.cmd('topbarButtonMove', { id, dir: 1 });
+      else if (act === 'remove') {
+        if (editingTopbarId === id) resetTopbarDraft(refs);
+        window.octo?.cmd('topbarButtonRemove', id);
+      } else if (act === 'style') {
+        selectedPage = 'titlebar';
+        selectedId = `customBtn:${id}`;
+        if (refs.pageSelect) refs.pageSelect.value = 'titlebar';
+        renderEditor(currentMap, currentTopbarButtons, currentAppState);
+      } else if (act === 'edit') {
+        const entry = currentTopbarButtons.find((item) => item.id === id);
+        if (!entry) return;
+        editingTopbarId = id;
+        if (refs.tbAction) refs.tbAction.value = entry.cmd;
+        if (refs.tbUrl) refs.tbUrl.value = entry.cmd === 'openUrl' ? entry.payload || '' : '';
+        if (refs.tbLabel) refs.tbLabel.value = entry.label || '';
+        if (refs.tbTooltip) refs.tbTooltip.value = entry.tooltip || '';
+        if (refs.tbSlot) refs.tbSlot.value = entry.slot || 'extra';
+        draftBtnIconType = entry.iconType || 'preset';
+        draftBtnIconValue = entry.iconValue || 'sparkle';
+        syncTopbarDraftForm(refs);
+      }
+    });
+
+    refs.tbAction?.addEventListener('change', () => {
+      const info = TOPBAR_ACTION_MAP.get(refs.tbAction.value);
+      if (!editingTopbarId && info?.icon && draftBtnIconType === 'preset') {
+        draftBtnIconValue = info.icon;
+      }
+      syncTopbarDraftForm(refs);
+    });
+
+    refs.tbIconType?.addEventListener('change', () => {
+      draftBtnIconType = refs.tbIconType.value;
+      if (draftBtnIconType === 'preset' && !draftBtnIconValue) draftBtnIconValue = 'sparkle';
+      syncTopbarDraftForm(refs);
+    });
+
+    refs.tbIconGrid?.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-tb-icon-preset]');
+      if (!btn) return;
+      draftBtnIconType = 'preset';
+      draftBtnIconValue = btn.dataset.tbIconPreset;
+      syncTopbarDraftForm(refs);
+    });
+
+    refs.tbEmojiChips?.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-tb-emoji]');
+      if (!btn) return;
+      draftBtnIconType = 'emoji';
+      draftBtnIconValue = btn.dataset.tbEmoji;
+      syncTopbarDraftForm(refs);
+    });
+
+    refs.tbIconEmoji?.addEventListener('input', () => {
+      draftBtnIconType = 'emoji';
+      draftBtnIconValue = refs.tbIconEmoji.value.trim();
+    });
+
+    refs.tbIconPickBtn?.addEventListener('click', () => {
+      draftBtnIconType = 'file';
+      const targetId = editingTopbarId || draftBtnId;
+      window.octo?.cmd('topbarButtonIconPick', { id: targetId });
+      syncTopbarDraftForm(refs);
+    });
+
+    refs.tbSubmit?.addEventListener('click', () => {
+      const cmd = refs.tbAction?.value || 'screenshot';
+      const urlVal = refs.tbUrl?.value.trim() || '';
+      if (cmd === 'openUrl' && !urlVal) {
+        refs.tbUrl?.focus();
+        return;
+      }
+      const label = refs.tbLabel?.value.trim() || '';
+      const tooltip = refs.tbTooltip?.value.trim() || '';
+      const slot = refs.tbSlot?.value || 'extra';
+      const iconType = draftBtnIconType;
+      const activeId = editingTopbarId || draftBtnId;
+      const pending = currentAppState?.pendingTopbarIcon;
+      let iconValue = draftBtnIconValue;
+      if (iconType === 'emoji') iconValue = refs.tbIconEmoji?.value.trim() || draftBtnIconValue;
+      else if (iconType === 'file') {
+        iconValue =
+          pending && pending.id === activeId ? pending.fileName : draftBtnIconValue || 'icon.png';
+      }
+
+      const payloadObj = {
+        id: activeId,
+        cmd,
+        payload: cmd === 'openUrl' ? urlVal : undefined,
+        label,
+        tooltip,
+        slot,
+        iconType,
+        iconValue,
+      };
+
+      if (editingTopbarId) {
+        window.octo?.cmd('topbarButtonUpdate', { id: editingTopbarId, patch: payloadObj });
+      } else {
+        window.octo?.cmd('topbarButtonAdd', payloadObj);
+      }
+      resetTopbarDraft(refs);
+    });
+
+    refs.tbCancelEdit?.addEventListener('click', () => resetTopbarDraft(refs));
+    refs.tbResetAll?.addEventListener('click', () => {
+      resetTopbarDraft(refs);
+      window.octo?.cmd('topbarButtonsReset');
+    });
+
+    // --- Выбор страницы, фильтрация и пипетка ---
+    refs.pageSelect?.addEventListener('change', () => {
+      selectedPage = refs.pageSelect.value || 'all';
+      pendingIconType = '';
+      pendingFontPreset = '';
+      renderEditor(currentMap, currentTopbarButtons, currentAppState);
+    });
+
+    refs.searchInput?.addEventListener('input', () => {
+      compFilterQuery = refs.searchInput.value;
+      renderEditor(currentMap, currentTopbarButtons, currentAppState);
+    });
+
+    refs.pickElementBtn?.addEventListener('click', startPicker);
+    refs.pickerCancel?.addEventListener('click', () => stopPicker(true));
+    refs.pickerTogglePanel?.addEventListener('click', () => {
+      const panel = $('panel');
+      if (!panel) return;
+      panel.classList.toggle('is-picker-minimized');
+      if (refs.pickerTogglePanel) {
+        refs.pickerTogglePanel.textContent = panel.classList.contains('is-picker-minimized')
+          ? tr('Показать панель')
+          : tr('Скрыть панель');
+      }
+    });
+
+    // --- Основной редактор выбранного элемента ---
     refs.select.addEventListener('change', () => {
       selectedId = refs.select.value;
       pendingIconType = '';
       pendingFontPreset = '';
-      renderEditor(currentMap);
+      renderEditor(currentMap, currentTopbarButtons, currentAppState);
     });
 
     refs.chips?.addEventListener('click', (event) => {
       const chip = event.target.closest('[data-comp-chip]');
       if (!chip) return;
-      selectedId = chip.dataset.compChip;
+      const targetId = chip.dataset.compChip;
+      const meta = core.collectCatalog(false).byId.get(targetId);
+      if (meta && selectedPage !== 'all' && meta.page !== selectedPage) {
+        selectedPage = meta.page;
+        if (refs.pageSelect) refs.pageSelect.value = selectedPage;
+      }
+      selectedId = targetId;
       pendingIconType = '';
       pendingFontPreset = '';
-      refs.select.value = selectedId;
-      renderEditor(currentMap);
+      renderEditor(currentMap, currentTopbarButtons, currentAppState);
     });
 
     let labelTimer = null;
@@ -960,7 +1116,7 @@
       if (nextType === 'preset') {
         const curVal =
           currentMap[selectedId]?.iconType === 'preset' ? currentMap[selectedId]?.iconValue : '';
-        sendPatch({ iconType: 'preset', iconValue: curVal || ICON_PRESETS[0].id });
+        sendPatch({ iconType: 'preset', iconValue: curVal || core.ICON_PRESETS[0].id });
       } else if (nextType === 'file') {
         if (currentMap[selectedId]?.iconDataUrl) {
           sendPatch({ iconType: 'file' });
@@ -977,7 +1133,7 @@
       } else {
         sendPatch({ iconType: nextType, iconValue: '' });
       }
-      renderEditor(currentMap);
+      renderEditor(currentMap, currentTopbarButtons, currentAppState);
     });
 
     refs.iconPresetGrid?.addEventListener('click', (event) => {
@@ -1012,7 +1168,7 @@
     const bindColorField = (picker, hexInput, resetBtn, fieldKey) => {
       picker?.addEventListener('focus', () => {
         activeCompColorRole = fieldKey;
-        renderEditor(currentMap);
+        renderEditor(currentMap, currentTopbarButtons, currentAppState);
       });
       picker?.addEventListener('input', () => {
         const val = picker.value;
@@ -1022,7 +1178,7 @@
       });
       hexInput?.addEventListener('focus', () => {
         activeCompColorRole = fieldKey;
-        renderEditor(currentMap);
+        renderEditor(currentMap, currentTopbarButtons, currentAppState);
       });
       hexInput?.addEventListener('change', () => {
         const hex = normalizeHexInput(hexInput.value);
@@ -1050,7 +1206,7 @@
       const tab = event.target.closest('[data-comp-color-role]');
       if (!tab) return;
       activeCompColorRole = tab.dataset.compColorRole;
-      renderEditor(currentMap);
+      renderEditor(currentMap, currentTopbarButtons, currentAppState);
     });
 
     const pushHslColor = () => {
@@ -1191,14 +1347,14 @@
     box.style.borderRadius =
       typeof cfg.radius === 'number' && cfg.radius >= 0 ? `${cfg.radius}px` : '';
     box.style.opacity = cfg.opacity && cfg.opacity < 100 ? String(cfg.opacity / 100) : '';
-    applyComponentFont(meta.id, box, cfg);
+    core.applyComponentFont(meta.id, box, cfg);
 
     refs.previewIcon.replaceChildren();
     refs.previewIcon.hidden = false;
     if (!meta.supportsIcon || cfg.iconType === 'none') {
       refs.previewIcon.hidden = true;
     } else if (cfg.iconType === 'preset' && cfg.iconValue) {
-      const svg = buildSvgIcon(cfg.iconValue);
+      const svg = core.buildSvgIcon(cfg.iconValue);
       if (svg) refs.previewIcon.append(svg);
       else refs.previewIcon.textContent = '◆';
     } else if (cfg.iconType === 'emoji' && cfg.iconValue) {
@@ -1210,7 +1366,7 @@
       img.draggable = false;
       refs.previewIcon.append(img);
     } else {
-      const svg = buildSvgIcon('sparkle');
+      const svg = core.buildSvgIcon('sparkle');
       if (svg) refs.previewIcon.append(svg);
     }
     if (cfg.iconSize > 0) {
@@ -1219,23 +1375,34 @@
       refs.previewIcon.style.removeProperty('--octo-comp-icon-size');
     }
 
-    const previewText = cfg.label || meta.defaultLabel || meta.label;
+    const previewText = cfg.label || meta.defaultLabel || tr(meta.label);
     refs.previewLabel.textContent = previewText;
     box.classList.toggle('is-hidden-preview', cfg.hidden === true);
   }
 
-  function renderEditor(customMap) {
+  function renderEditor(customMap, topbarButtons, appState) {
     currentMap = customMap && typeof customMap === 'object' ? customMap : {};
+    if (Array.isArray(topbarButtons)) currentTopbarButtons = topbarButtons;
+    if (appState && typeof appState === 'object') currentAppState = appState;
+    if (currentAppState && currentAppState.panel === false) return;
+
     bindEditor();
     const refs = editorRefs();
     if (!refs.select) return;
 
     readThemeDefaults();
-    const list = Array.isArray(window.octo?.uiComponents) ? window.octo.uiComponents : [];
-    const meta = list.find((item) => item.id === selectedId) || list[0];
+    populateTopbarActions(refs, currentAppState);
+    renderTopbarManager(refs);
+    populateComponentSelect(refs);
+
+    const catalog = core.collectCatalog(false);
+    const meta = catalog.byId.get(selectedId) || catalog.list[0];
     if (!meta) return;
     selectedId = meta.id;
 
+    if (document.activeElement !== refs.pageSelect && refs.pageSelect) {
+      refs.pageSelect.value = selectedPage;
+    }
     if (document.activeElement !== refs.select) {
       refs.select.value = selectedId;
     }
@@ -1247,7 +1414,7 @@
       refs.chips.hidden = modifiedIds.length === 0;
       refs.chips.replaceChildren(
         ...modifiedIds.map((id) => {
-          const itemMeta = list.find((m) => m.id === id);
+          const itemMeta = catalog.byId.get(id);
           const chip = document.createElement('button');
           chip.type = 'button';
           chip.className = `comp-chip${id === selectedId ? ' is-active' : ''}`;
@@ -1273,7 +1440,12 @@
     }
 
     if (refs.hiddenRow) {
-      const canHide = meta.id !== 'titlebar' && meta.id !== 'panel';
+      const canHide =
+        meta.id !== 'titlebar' &&
+        meta.id !== 'panel' &&
+        meta.id !== 'win:downloads:winbar' &&
+        meta.id !== 'win:annotator:winbar' &&
+        meta.id !== 'win:update:card';
       refs.hiddenRow.hidden = !canHide;
       const hidden = cfg.hidden === true;
       refs.hiddenRow.classList.toggle('is-on', hidden);
@@ -1438,7 +1610,7 @@
   }
 
   window.octoUiCustom = {
-    ICON_PRESETS,
+    ICON_PRESETS: core.ICON_PRESETS,
     colorHelpers: {
       normalizeHex: normalizeHexInput,
       hexToHsl,
@@ -1446,8 +1618,10 @@
       paintSlider,
       paintHslSliders,
     },
-    apply: applyAll,
+    apply: core.applyAll,
+    renderTopbarButtons,
     renderEditor,
-    getPageTitle,
+    getPageTitle: core.getPageTitle,
+    isPicking: () => pickerActive,
   };
 })();

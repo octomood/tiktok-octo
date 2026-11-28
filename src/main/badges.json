@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "roles": {
     "creator": {
       "icon": "01_code_brackets",
@@ -7,10 +7,28 @@
       "description": "Участвует в разработке TikTok Octo",
       "accent": "primary"
     },
+    "designer": {
+      "icon": "29_palette_brush",
+      "title": "Дизайнер",
+      "description": "Участвует в оформлении интерфейса, иконок и визуала TikTok Octo",
+      "accent": "tertiary"
+    },
     "dev": {
       "icon": "05_puzzle_module",
       "title": "Разработчик плагинов",
       "description": "Выдается за написание плагинов для клиента",
+      "accent": "secondary"
+    },
+    "contributor": {
+      "icon": "22_git_branch",
+      "title": "Контрибьютор",
+      "description": "Внёс вклад в код, документацию или развитие TikTok Octo",
+      "accent": "secondary"
+    },
+    "translator": {
+      "icon": "45_globe_web",
+      "title": "Переводчик",
+      "description": "Выдается за помощь с локализацией и переводами интерфейса TikTok Octo",
       "accent": "secondary"
     },
     "supporter": {
@@ -24,6 +42,30 @@
       "title": "Искатель багов",
       "description": "Выдается за активную помощь в нахождении багов",
       "accent": "primary"
+    },
+    "tester": {
+      "icon": "06_rocket_launch",
+      "title": "Бета-тестер",
+      "description": "Помогает тестировать ранние сборки и новые функции до релиза",
+      "accent": "primary"
+    },
+    "moderator": {
+      "icon": "14_shield_check",
+      "title": "Модератор",
+      "description": "Следит за порядком и помогает участникам в сообществе TikTok Octo",
+      "accent": "primary"
+    },
+    "helper": {
+      "icon": "20_handshake_collab",
+      "title": "Помощник сообщества",
+      "description": "Активно помогает другим пользователям с настройкой, плагинами и вопросами",
+      "accent": "secondary"
+    },
+    "ambassador": {
+      "icon": "19_megaphone_news",
+      "title": "Амбассадор Octo",
+      "description": "Рассказывает о TikTok Octo и поддерживает развитие сообщества",
+      "accent": "tertiary"
     },
     "verified": {
       "icon": "15_check_pill",

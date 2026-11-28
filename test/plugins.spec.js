@@ -211,17 +211,14 @@ test('плагин, команды, панель и менеджер', async () 
     fs.writeFileSync(tooNewFile, tooNew);
 
     await app.evaluate(({ dialog }, file) => {
-      global.__octoInstallError = '';
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
-      dialog.showMessageBox = async (parentOrOptions, maybeOptions) => {
-        const options = maybeOptions || parentOrOptions || {};
-        global.__octoInstallError = String(options.message || options.title || '');
-        return { response: 0 };
-      };
     }, tooNewFile);
 
     await page.evaluate(() => window.octo.cmd('pluginInstallFile'));
-    await expect.poll(() => app.evaluate(() => global.__octoInstallError)).toContain('99.0.0');
+    await expect(page.locator('#appDialog')).toBeVisible();
+    await expect(page.locator('#appDialogTitle')).toContainText('99.0.0');
+    await page.locator('#appDialogActions button').first().click();
+    await expect(page.locator('#appDialog')).toBeHidden();
     const pluginsStateFile = path.join(userData, 'plugins-state.json');
     const savedPlugins = fs.existsSync(pluginsStateFile)
       ? fs.readFileSync(pluginsStateFile, 'utf8')
@@ -288,28 +285,24 @@ test('обновление файлом показывает смену изда
       'полоса заголовка',
     );
 
-    // Диалоги подменены: запоминаем каждый и отвечаем по очереди из answers.
-    const install = async (file, answers) => {
-      await app.evaluate(
-        ({ dialog }, { file: picked, answers: queue }) => {
-          global.__octoDialogs = [];
-          dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [picked] });
-          dialog.showMessageBox = async (parentOrOptions, maybeOptions) => {
-            const options = maybeOptions || parentOrOptions || {};
-            global.__octoDialogs.push({
-              title: String(options.title || ''),
-              message: String(options.message || ''),
-              detail: String(options.detail || ''),
-            });
-            return { response: queue.length ? queue.shift() : 1 };
-          };
-        },
-        { file, answers },
-      );
-      // action() ждёт конца установки, поэтому следующие шаги не упрутся в busy.
-      return page.evaluate(() => window.octoPlugins.action('installFile'));
+    const capturedDialogs = [];
+    const install = async (file, buttonLabels) => {
+      await app.evaluate(({ dialog }, picked) => {
+        dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [picked] });
+      }, file);
+      const pending = page.evaluate(() => window.octoPlugins.action('installFile'));
+      for (const label of buttonLabels) {
+        await expect(page.locator('#appDialog')).toBeVisible();
+        capturedDialogs.push({
+          eyebrow: await page.locator('#appDialogEyebrow').textContent(),
+          title: await page.locator('#appDialogTitle').textContent(),
+          body: await page.locator('#appDialogBody').textContent(),
+        });
+        await page.locator('#appDialogActions button', { hasText: label }).click();
+      }
+      await expect(page.locator('#appDialog')).toBeHidden();
+      return pending;
     };
-    const dialogs = () => app.evaluate(() => global.__octoDialogs);
     const savedVersion = () => {
       const file = path.join(userData, 'plugins-state.json');
       if (!fs.existsSync(file)) return '';
@@ -317,28 +310,44 @@ test('обновление файлом показывает смену изда
       return saved.plugins?.['app.octo.update-trust']?.version || '';
     };
 
-    expect(await install(v1, [0])).toMatchObject({ ok: true });
+    expect(await install(v1, ['Установить'])).toMatchObject({ ok: true });
     expect(savedVersion()).toBe('1.0.0');
 
     // Чужой автор: сначала отдельное предупреждение, «Отмена» оставляет 1.0.0.
-    expect(await install(v2, [1])).toMatchObject({ cancelled: true });
-    expect(await dialogs()).toHaveLength(1);
-    const [warning] = await dialogs();
-    expect(warning.title).toBe('Другой издатель');
-    expect(warning.detail).toContain('«mallory»');
-    expect(warning.detail).toContain('не передадутся');
+    capturedDialogs.length = 0;
+    expect(await install(v2, ['Отмена'])).toMatchObject({ cancelled: true });
+    expect(capturedDialogs).toHaveLength(1);
+    expect(capturedDialogs[0].eyebrow).toBe('Другой издатель');
+    expect(capturedDialogs[0].body).toContain('«mallory»');
+    expect(capturedDialogs[0].body).toContain('не передадутся');
     expect(savedVersion()).toBe('1.0.0');
 
     // Согласие: второй диалог показывает новые права и хосты, данные не переходят.
-    expect(await install(v2, [0, 0])).toMatchObject({ ok: true });
+    capturedDialogs.length = 0;
+    expect(await install(v2, ['Продолжить без данных', 'Обновить'])).toMatchObject({ ok: true });
     expect(savedVersion()).toBe('1.1.0');
-    const shown = await dialogs();
-    expect(shown).toHaveLength(2);
-    expect(shown[1].detail).toContain('Обновление с версии 1.0.0 до 1.1.0.');
-    expect(shown[1].detail).toContain('Издатель сменился');
-    expect(shown[1].detail).toContain('Новые разрешения:');
-    expect(shown[1].detail).toContain('Новые сетевые хосты:\n• api.example.com');
-    expect(shown[1].detail).toContain('Сетевые хосты:\n• api.example.com');
+    expect(capturedDialogs).toHaveLength(2);
+    expect(capturedDialogs[1].body).toContain('Обновление с версии 1.0.0 до 1.1.0.');
+    expect(capturedDialogs[1].body).toContain('Издатель сменился');
+    expect(capturedDialogs[1].body).toContain('Новые разрешения');
+    expect(capturedDialogs[1].body).toContain('Новые сетевые хосты');
+    expect(capturedDialogs[1].body).toContain('api.example.com');
+
+    // Просмотр кода плагина доступен прямо в диалоге установки/обновления.
+    const v3 = pack('1.2.0', 'mallory');
+    await app.evaluate(({ dialog }, picked) => {
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [picked] });
+    }, v3);
+    const installPending = page.evaluate(() => window.octoPlugins.action('installFile'));
+    await expect(page.locator('#appDialog')).toBeVisible();
+    await page.locator('#appDialogCodeToggle').click();
+    await expect(page.locator('#appDialogCodeBody')).toBeVisible();
+    await expect(page.locator('.app-dialog-code-view')).toContainText('octo.page.injectCSS');
+    await page.locator('.app-dialog-code-tab', { hasText: 'plugin.json' }).click();
+    await expect(page.locator('.app-dialog-code-view')).toContainText('"app.octo.update-trust"');
+    await page.locator('#appDialogActions button', { hasText: 'Отмена' }).click();
+    await expect(page.locator('#appDialog')).toBeHidden();
+    expect(await installPending).toMatchObject({ cancelled: true });
   } finally {
     if (app) await app.close();
     fs.rmSync(userData, { recursive: true, force: true });

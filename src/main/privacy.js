@@ -166,6 +166,7 @@ async function confirmDelete(label) {
   if (process.env.OCTO_E2E === '1') return true;
   const answer = await showMessageBox(ctx.win, {
     type: 'warning',
+    destructive: true,
     title: 'Удаление данных',
     message: `Удалить «${label}»?`,
     detail: 'Это действие необратимо.',

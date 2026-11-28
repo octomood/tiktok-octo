@@ -19,6 +19,8 @@ const windowsMedia = require('./windows-media');
 const uiFont = require('./ui-font');
 const uiCustom = require('./ui-custom');
 const { getPaletteTokens, normalizePaletteId } = require('./md3-palettes');
+const contextMenu = require('./context-menu');
+const { attachContextMenu } = require('./menu');
 
 function saveGeometry(win) {
   // В PiP и в «только полоса» окно маленькое — сохраняем геометрию до режима.
@@ -31,6 +33,7 @@ function createWindow() {
   const bounds = saved.bounds || {};
   const uiScale = clampUiScale(saved.uiScale);
   const initialCustom = uiCustom.normalizeUiCustom(saved.uiCustom);
+  const initialTopbarButtons = uiCustom.normalizeTopbarButtons(saved.topbarButtons);
   const initialBg =
     saved.themeAmoled && saved.themeMode !== 'light'
       ? '#000000'
@@ -52,12 +55,8 @@ function createWindow() {
     backgroundColor: initialBg,
     title: initialTitle,
     icon: path.join(__dirname, '../../build/icon.png'),
+    frame: false,
     autoHideMenuBar: true,
-    // На Linux/Windows прячем системный заголовок, но оставляем рамку —
-    // так работают ресайз краями и тени оконного менеджера.
-    ...(process.platform === 'darwin'
-      ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 15 } }
-      : { titleBarStyle: 'hidden' }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -68,15 +67,18 @@ function createWindow() {
   });
 
   ctx.win = win;
+  win.setMenuBarVisibility(false);
   ctx.uiScale = uiScale;
   ctx.uiFont = uiFont.normalizeUiFont(saved.uiFont);
   ctx.uiCustom = initialCustom;
+  ctx.topbarButtons = initialTopbarButtons;
   ctx.chromeHeightCss = TITLEBAR_H;
   ctx.chromeHeight = Math.round(TITLEBAR_H * uiScale);
   win.webContents.setZoomFactor(uiScale);
   ctx.panelOpen = false;
   ctx.pluginsOpen = false;
   ctx.paletteOpen = false;
+  ctx.sideNavCollapsed = saved.sideNavCollapsed === true;
   ctx.startInTray = saved.startInTray === true;
   setCloseToTray(saved.closeToTray === true);
 
@@ -159,6 +161,7 @@ function createWindow() {
   });
 
   win.on('closed', () => {
+    contextMenu.dispose();
     chat.dispose();
     pip.reset();
     barOnly.reset();
@@ -169,6 +172,7 @@ function createWindow() {
     refreshTrayMenu();
   });
 
+  attachContextMenu(win.webContents, { editableOnly: true });
   win.webContents.on('before-input-event', handleShortcut);
   win.webContents.once('did-finish-load', () => {
     pushState();

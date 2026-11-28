@@ -47,9 +47,9 @@ async function startDownload() {
 
 function restartNow() {
   if (!autoUpdater || phase !== 'ready') return;
-  // isSilent=false: пользователь сам попросил перезапуск, показываем установку.
-  // isForceRunAfter=true: после установки приложение запускается снова.
-  autoUpdater.quitAndInstall(false, true);
+  // isSilent=true: обновляем без окна установщика NSIS на Windows.
+  // isForceRunAfter=true: после тихой установки приложение запускается снова.
+  autoUpdater.quitAndInstall(true, true);
 }
 
 function offer(info, { force = false } = {}) {

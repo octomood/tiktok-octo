@@ -173,3 +173,135 @@ test('произвольный цвет палитры и покомпонент
     fs.rmSync(userData, { recursive: true, force: true });
   }
 });
+
+test('свои кнопки в верхней полосе, все страницы, пипетка и дочернее окно', async () => {
+  test.setTimeout(90_000);
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-topbar-allpages-'));
+  let app;
+
+  try {
+    app = await launch(userData);
+    await app.firstWindow();
+    const page = await waitForFileWindow(app);
+    expect(page, 'окно с полосой заголовка не появилось').toBeTruthy();
+
+    await page.click('#btnPanel');
+    await expect(page.locator('#panel')).toBeVisible();
+    await page.click('[data-cat-head="components"]');
+    await expect(page.locator('#catComponents')).toBeVisible();
+
+    // 1. Добавление своих кнопок в верхнюю полосу и переключение встроенных.
+    await page.selectOption('#topbarBtnAction', 'mute');
+    await page.fill('#topbarBtnLabel', 'Тишина');
+    await page.fill('#topbarBtnTooltip', 'Быстрый звук');
+    await page.selectOption('#topbarBtnSlot', 'extra');
+    await page.click('#topbarBtnSubmit');
+
+    const customMuteBtn = page.locator('#customToolsGroup [data-custom-btn-id]').first();
+    await expect(customMuteBtn).toBeVisible();
+    await expect(customMuteBtn.locator('.octo-custom-label')).toHaveText('Тишина');
+    await expect.poll(() => readState(userData).topbarButtons?.length || 0).toBe(1);
+
+    // Клик по своей кнопке выполняет команду (переключает звук).
+    await customMuteBtn.click();
+    await expect(page.locator('#btnMute')).toHaveAttribute('aria-pressed', 'true');
+    await expect(customMuteBtn).toHaveAttribute('aria-pressed', 'true');
+
+    // Добавим вторую кнопку в левую навигацию и сдвинем её вверх.
+    await page.selectOption('#topbarBtnAction', 'openUrl');
+    await page.fill('#topbarBtnUrl', '/following');
+    await page.fill('#topbarBtnLabel', 'Лента');
+    await page.selectOption('#topbarBtnSlot', 'nav');
+    await page.selectOption('#topbarBtnIconType', 'emoji');
+    await page.locator('#topbarBtnEmojiChips [data-tb-emoji="⭐"]').click();
+    await page.click('#topbarBtnSubmit');
+
+    await expect(page.locator('#navGroup [data-custom-btn-id]')).toHaveCount(1);
+    await expect(page.locator('#topbarCustomList .tb-custom-row')).toHaveCount(2);
+    await page
+      .locator('#topbarCustomList .tb-custom-row')
+      .nth(1)
+      .locator('[data-tb-act="up"]')
+      .click();
+    await expect.poll(() => readState(userData).topbarButtons?.[0]?.label).toBe('Лента');
+
+    // Скрытие встроенной кнопки полосы через чипы.
+    await page.click('#topbarBuiltinChips [data-tb-toggle-builtin="btnTop"]');
+    await expect(page.locator('#btnTop')).toBeHidden();
+
+    // 2. Кастомизация элементов на других страницах («Боковое меню» и «Настройки · Плеер»).
+    await page.selectOption('#compPageSelect', 'sidenav');
+    await page.selectOption('#compSelect', 'sn:foryou');
+    await page.fill('#compLabelInput', 'Для тебя');
+    await page.locator('#compLabelInput').dispatchEvent('change');
+    await page.fill('#compBgHex', '#1b5e20');
+    await page.locator('#compBgHex').dispatchEvent('change');
+
+    await expect(page.locator('#appSideNav [data-sidenav="foryou"] .app-sidenav-label')).toHaveText(
+      'Для тебя',
+    );
+    const snBg = await page.evaluate(
+      () => document.querySelector('#appSideNav [data-sidenav="foryou"]').style.background,
+    );
+    expect(snBg).toContain('27, 94, 32');
+
+    await page.selectOption('#compPageSelect', 'settings:player');
+    await page.selectOption('#compSelect', 'id:rowStartMuted');
+    await page.fill('#compLabelInput', 'Старт без звука');
+    await page.locator('#compLabelInput').dispatchEvent('change');
+    await expect(page.locator('#rowStartMuted .panel-row-label')).toHaveText('Старт без звука');
+
+    // 3. Интерактивная пипетка: клик по элементу выбирает его в редакторе.
+    await page.selectOption('#compPageSelect', 'titlebar');
+    await page.click('#compPickElementBtn');
+    await expect(page.locator('#compPickerBar')).toBeVisible();
+    await page.locator('#appSideNav [data-sidenav="explore"]').click();
+    await expect(page.locator('#compPickerBar')).toBeHidden();
+    await expect(page.locator('#compPageSelect')).toHaveValue('sidenav');
+    await expect(page.locator('#compSelect')).toHaveValue('sn:explore');
+
+    // 4. Кастомизация дочернего окна («Менеджер загрузок») и живая синхронизация.
+    await page.selectOption('#compPageSelect', 'winDownloads');
+    await page.selectOption('#compSelect', 'win:downloads:title');
+    await page.fill('#compLabelInput', 'Мои загрузки');
+    await page.locator('#compLabelInput').dispatchEvent('change');
+
+    await page.evaluate(() => window.octo.cmd('downloadManager'));
+    let dlWin = app.windows().find((w) => w.url().endsWith('/downloads.html'));
+    for (let i = 0; i < 60 && !dlWin; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      dlWin = app.windows().find((w) => w.url().endsWith('/downloads.html'));
+    }
+    expect(dlWin, 'окно загрузок не открылось').toBeTruthy();
+    await expect(dlWin.locator('.manager-title')).toHaveText('Мои загрузки');
+    await dlWin.close();
+
+    // 5. Перезапуск сохраняет свои кнопки и кастомизацию разных страниц, а удаление убирает кнопки.
+    await app.close();
+    app = await launch(userData);
+    await app.firstWindow();
+    const restarted = await waitForFileWindow(app);
+    await expect(restarted.locator('#customToolsGroup [data-custom-btn-id]')).toHaveCount(1);
+    await expect(restarted.locator('#navGroup [data-custom-btn-id]')).toHaveCount(1);
+    await expect(restarted.locator('#btnTop')).toBeHidden();
+    await expect(
+      restarted.locator('#appSideNav [data-sidenav="foryou"] .app-sidenav-label'),
+    ).toHaveText('Для тебя');
+
+    await restarted.click('#btnPanel');
+    await restarted.click('[data-cat-head="components"]');
+    await restarted
+      .locator('#topbarCustomList .tb-custom-row')
+      .first()
+      .locator('[data-tb-act="remove"]')
+      .click();
+    await expect.poll(() => readState(userData).topbarButtons?.length || 0).toBe(1);
+    await restarted.click('#topbarBtnResetAll');
+    await expect.poll(() => readState(userData).topbarButtons?.length || 0).toBe(0);
+    await expect(restarted.locator('#customToolsGroup [data-custom-btn-id]')).toHaveCount(0);
+    await expect(restarted.locator('#navGroup [data-custom-btn-id]')).toHaveCount(0);
+  } finally {
+    await app?.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});

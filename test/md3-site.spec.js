@@ -172,12 +172,13 @@ const MOCK_SITE = `<!doctype html>
         <div class="DivLoginContainer" id="sideLoginWrap">
           <button type="button" data-e2e="nav-login-button" id="sideLoginBtn">Войти</button>
         </div>
-        <div class="DivMoreContainer" id="moreDrawer" style="position: fixed; left: 72px; top: 12px; width: 320px; height: 420px; background: rgba(0, 0, 0, 0.85);">
-          <div class="MoreDrawerItem" id="moreDrawerItem"><a href="/settings">Настройки</a></div>
-          <button type="button" class="TUXCard" id="moreDrawerBtn" style="border: 1px solid #444; box-shadow: 0 2px 6px #000;">Русский</button>
-        </div>
       </div>
     </aside>
+
+    <div class="DivMoreContainer" id="moreDrawer" style="position: fixed; left: 72px; top: 12px; width: 320px; height: 420px; background: rgba(0, 0, 0, 0.85);">
+      <div class="MoreDrawerItem" id="moreDrawerItem"><a href="/settings">Настройки</a></div>
+      <button type="button" class="TUXCard" id="moreDrawerBtn" style="border: 1px solid #444; box-shadow: 0 2px 6px #000;">Русский</button>
+    </div>
 
     <main id="main-content-homepage_hot">
       <div id="profileTabBar" style="background: #000000; width: 640px; height: 48px;">
@@ -325,43 +326,12 @@ test('MD3 дизайн для всего сайта: все элементы, SP
           tuxPrimary: getComputedStyle(document.documentElement)
             .getPropertyValue('--tux-colorPrimary')
             .trim(),
-          navBg: getComputedStyle(document.getElementById('nestedNavWrapper')).backgroundColor,
-          navPaddingTop: getComputedStyle(document.getElementById('nestedNavWrapper')).paddingTop,
-          navPaddingBottom: getComputedStyle(document.getElementById('nestedNavWrapper'))
-            .paddingBottom,
-          navBadgeTextColor: getComputedStyle(document.getElementById('navBadgeText')).color,
-          nestedNavInnerBg: getComputedStyle(document.getElementById('navForYou')).backgroundColor,
-          navFollowingBg: getComputedStyle(document.getElementById('navFollowing')).backgroundColor,
-          navFollowingShadow: getComputedStyle(document.getElementById('navFollowing')).boxShadow,
-          tooltipWrapperBg: getComputedStyle(document.getElementById('tooltipWrapper'))
-            .backgroundColor,
+          sideNavDisplay: getComputedStyle(document.getElementById('sideNav')).display,
           likeWrapperBg: getComputedStyle(document.getElementById('likeTooltipWrapper'))
             .backgroundColor,
           likeBtnBg: getComputedStyle(document.getElementById('likeActionBtn')).backgroundColor,
           likeCircleBg: getComputedStyle(document.getElementById('likeIconCircle')).backgroundColor,
           likeCountColor: getComputedStyle(document.getElementById('likeCount')).color,
-          sideNavScrollBg: getComputedStyle(document.getElementById('sideNavScroll'))
-            .backgroundColor,
-          showMoreBg: getComputedStyle(document.getElementById('showMoreBtn')).backgroundColor,
-          sideLoginBg: getComputedStyle(document.getElementById('sideLoginBtn')).backgroundColor,
-          sideLoginRadius: getComputedStyle(document.getElementById('sideLoginBtn'))
-            .borderTopLeftRadius,
-          navGapBottom: getComputedStyle(document.getElementById('tooltipWrapper')).marginBottom,
-          spanNavGap: Math.round(
-            document.getElementById('navFriends').getBoundingClientRect().top -
-              document.getElementById('navFollowing').getBoundingClientRect().bottom,
-          ),
-          nestedControlNavGap: Math.round(
-            document.getElementById('navLive').getBoundingClientRect().top -
-              document.getElementById('navFriends').getBoundingClientRect().bottom,
-          ),
-          homeIconFill: getComputedStyle(document.getElementById('homeIconPath')).fill,
-          navTopRadius: getComputedStyle(document.getElementById('nestedNavWrapper'))
-            .borderTopLeftRadius,
-          navBottomRadius: getComputedStyle(document.getElementById('nestedNavWrapper'))
-            .borderBottomLeftRadius,
-          navFollowingTopRadius: getComputedStyle(document.getElementById('navFollowing'))
-            .borderTopLeftRadius,
           obfFollowBg: getComputedStyle(document.getElementById('obfFollow')).backgroundColor,
           obfSwitchBg: getComputedStyle(document.getElementById('obfSwitch')).backgroundColor,
           obfSwitchOffBg: getComputedStyle(document.getElementById('obfSwitchOff')).backgroundColor,
@@ -416,29 +386,11 @@ test('MD3 дизайн для всего сайта: все элементы, SP
       .toEqual({
         bodyBg: 'rgb(25, 22, 36)', // #191624
         tuxPrimary: '#8c84a9',
-        navBg: 'rgb(86, 78, 112)', // #564e70
-        navPaddingTop: '5px',
-        navPaddingBottom: '5px',
-        navBadgeTextColor: 'rgb(23, 20, 34)', // #171422 — тёмный текст на кнопке/бейдже #8c84a9
-        nestedNavInnerBg: 'rgba(0, 0, 0, 0)', // вложенная ссылка не рисует второй овал внутри внешнего
-        navFollowingBg: 'rgb(43, 38, 61)', // #2b263d — соединённый неактивный пункт в сайдбаре
-        navFollowingShadow: 'none',
-        tooltipWrapperBg: 'rgba(0, 0, 0, 0)', // TUXTooltip-reference не красится как тултип
+        sideNavDisplay: 'none', // нативное левое меню TikTok полностью скрыто
         likeWrapperBg: 'rgba(0, 0, 0, 0)',
         likeBtnBg: 'rgba(0, 0, 0, 0)',
         likeCircleBg: 'rgba(0, 0, 0, 0)', // без лишнего круга вокруг иконки
         likeCountColor: 'rgb(255, 255, 255)', // чёткий белый счётчик под иконкой
-        sideNavScrollBg: 'rgba(0, 0, 0, 0)', // внутренняя обёртка не остаётся чёрной
-        showMoreBg: 'rgb(43, 38, 61)', // «Показать все» не заливается primary-цветом, использует тональный контейнер MD3 Expressive
-        sideLoginBg: 'rgb(140, 132, 169)',
-        sideLoginRadius: '24px',
-        navGapBottom: '3px',
-        spanNavGap: 3,
-        nestedControlNavGap: 3,
-        homeIconFill: 'rgb(221, 210, 224)', // #ddd2e0 — красный домик перекрашен в тон MD3 Expressive
-        navTopRadius: '24px',
-        navBottomRadius: '24px',
-        navFollowingTopRadius: '6px',
         obfFollowBg: 'rgb(140, 132, 169)', // #8c84a9 — перекрашенный розовый TikTok
         obfSwitchBg: 'rgb(140, 132, 169)', // #8c84a9 — перекрашенный бирюзовый свитч
         obfSwitchOffBg: 'rgb(76, 69, 102)', // #4c4566 — приглушённый свитч выключен
@@ -477,55 +429,9 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         cardRadius: '14px',
       });
 
-    await expect
-      .poll(() =>
-        site.evaluate(() => ({
-          rail: document.getElementById('sideNav').getAttribute('data-octo-md3-rail'),
-          drawerBtnW: document.getElementById('moreDrawerBtn').getBoundingClientRect().width,
-        })),
-      )
-      .toEqual({ rail: null, drawerBtnW: expect.any(Number) });
-
-    // 2.5. Свёрнутый узкий рельс сайдбара не сжимает кнопки внутри шторки «Ещё» до 44px.
     await site.evaluate(() => {
-      document.getElementById('sideNav').style.width = '72px';
-    });
-    await expect
-      .poll(() =>
-        site.evaluate(() => ({
-          rail: document.getElementById('sideNav').getAttribute('data-octo-md3-rail'),
-          navItemW: Math.round(
-            document.getElementById('nestedNavWrapper').getBoundingClientRect().width,
-          ),
-          drawerBtnW: Math.round(
-            document.getElementById('moreDrawerBtn').getBoundingClientRect().width,
-          ),
-          collapsedSpanGap: Math.round(
-            document.getElementById('navFriends').getBoundingClientRect().top -
-              document.getElementById('navFollowing').getBoundingClientRect().bottom,
-          ),
-          collapsedNestedGap: Math.round(
-            document.getElementById('navLive').getBoundingClientRect().top -
-              document.getElementById('navFriends').getBoundingClientRect().bottom,
-          ),
-        })),
-      )
-      .toEqual({
-        rail: 'collapsed',
-        navItemW: 44,
-        drawerBtnW: expect.any(Number),
-        collapsedSpanGap: 3,
-        collapsedNestedGap: 3,
-      });
-    const drawerBtnWidth = await site.evaluate(
-      () => document.getElementById('moreDrawerBtn').getBoundingClientRect().width,
-    );
-    expect(drawerBtnWidth).toBeGreaterThan(48);
-    await site.evaluate(() => {
-      document.getElementById('sideNav').style.width = '';
-
-      // 2.6. Шторка «Уведомления» внутри сайдбара: фильтры с переносом не обрезаются
-      // и оформляются отдельными MD3-чипами.
+      // 2.6. Шторка «Уведомления» с фильтрующими чипами не обрезается
+      // и оформляется отдельными MD3-чипами.
       const notif = document.createElement('div');
       notif.id = 'notifDrawer';
       notif.style.cssText =
@@ -540,7 +446,7 @@ test('MD3 дизайн для всего сайта: все элементы, SP
           <button type="button" id="notifChipFollowers" style="padding:6px 12px;background:#2f2f2f;color:#fff;">Подписчики</button>
         </div>
       `;
-      document.getElementById('sideNavScroll').appendChild(notif);
+      document.body.appendChild(notif);
     });
     await expect
       .poll(() =>
@@ -896,6 +802,102 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         navDownBottomRadius: '20px',
       });
 
+    await expect(site.locator('#feedSeekBar .octo-md3-seek-canvas')).toBeVisible();
+
+    // И внешний полноширинный seekbar (вне DivVideoWrapper) тоже получает волновой canvas.
+    await site.evaluate(() => {
+      const stage = document.getElementById('feedSlide');
+      const outerSeek = document.createElement('div');
+      outerSeek.id = 'outerSeekBar';
+      outerSeek.className = 'DivSeekBar-outer';
+      outerSeek.style.cssText = 'position:relative;width:480px;height:4px;';
+      const bg = document.createElement('div');
+      bg.className = 'DivSeekBarBackground';
+      bg.style.cssText = 'width:100%;height:100%;';
+      const prog = document.createElement('div');
+      prog.className = 'DivSeekBarProgress';
+      prog.style.cssText = 'width:100%;height:100%;transform:translateX(-60%);';
+      const dot = document.createElement('div');
+      dot.className = 'DivSeekBarCircle';
+      dot.style.cssText = 'width:10px;height:10px;';
+      outerSeek.append(bg, prog, dot);
+      stage.appendChild(outerSeek);
+    });
+    await expect(site.locator('#outerSeekBar')).toHaveAttribute('data-octo-md3-seek-wave', '1');
+    await expect(site.locator('#outerSeekBar .octo-md3-seek-canvas')).toBeVisible();
+
+    // Полноширинный fill (width: 100% без translateX) не перебивает реальный прогресс <video>.
+    await site.evaluate(() => {
+      const fullStage = document.createElement('div');
+      fullStage.id = 'fullFillStage';
+      fullStage.style.cssText = 'position:fixed;left:16px;top:16px;width:480px;z-index:50;';
+      const v = document.createElement('video');
+      v.style.cssText = 'width:480px;height:200px;display:block;';
+      Object.defineProperty(v, 'duration', { value: 10, configurable: true });
+      Object.defineProperty(v, 'currentTime', { value: 4, configurable: true });
+      Object.defineProperty(v, 'paused', { value: false, configurable: true });
+
+      const fullWrap = document.createElement('div');
+      fullWrap.id = 'fullFillSeekBar';
+      fullWrap.className = 'DivSeekBar-outer';
+      fullWrap.style.cssText = 'position:relative;width:480px;height:4px;';
+      const bg = document.createElement('div');
+      bg.className = 'DivSeekBarBackground';
+      bg.style.cssText = 'width:100%;height:100%;';
+      const prog = document.createElement('div');
+      prog.className = 'DivSeekBarProgress';
+      prog.style.cssText = 'width:100%;height:100%;';
+      fullWrap.append(bg, prog);
+      fullStage.append(v, fullWrap);
+      document.body.appendChild(fullStage);
+    });
+    await expect(site.locator('#fullFillSeekBar .octo-md3-seek-canvas')).toBeVisible();
+    await expect
+      .poll(() =>
+        site.evaluate(() => {
+          const canvas = document.querySelector('#fullFillSeekBar .octo-md3-seek-canvas');
+          if (!canvas || !canvas.width || !canvas.height) return null;
+          const ctx = canvas.getContext('2d');
+          const dpr = Math.max(1, window.devicePixelRatio || 1);
+          const midY = Math.round(10 * dpr);
+          const midRow = ctx.getImageData(0, midY, canvas.width, 1).data;
+          const x80 = Math.round(canvas.width * 0.8);
+          const peakBand = ctx.getImageData(
+            Math.round(canvas.width * 0.15),
+            0,
+            Math.round(canvas.width * 0.2),
+            Math.round(7 * dpr),
+          ).data;
+          let hasWavePeak = false;
+          for (let i = 3; i < peakBand.length; i += 4) {
+            if (peakBand[i] > 40) {
+              hasWavePeak = true;
+              break;
+            }
+          }
+          // Пилюля-бегунок (40% ширины, высота 14px -> верх на y=3px) должна быть около 40%, а не у правого края.
+          const pillNear40 = ctx.getImageData(
+            Math.round(canvas.width * 0.37),
+            Math.round(3 * dpr),
+            Math.round(canvas.width * 0.06),
+            Math.round(3 * dpr),
+          ).data;
+          let hasPillAt40 = false;
+          for (let i = 3; i < pillNear40.length; i += 4) {
+            if (pillNear40[i] > 40) {
+              hasPillAt40 = true;
+              break;
+            }
+          }
+          return {
+            hasMidPixel: midRow[x80 * 4 + 3] > 0,
+            hasWavePeak,
+            hasPillAt40,
+          };
+        }),
+      )
+      .toEqual({ hasMidPixel: true, hasWavePeak: true, hasPillAt40: true });
+
     await site.evaluate(() => {
       document.body.innerHTML = `
         <div class="DivBodyContainer" style="display:flex;width:100vw;height:100vh;">
@@ -1149,31 +1151,7 @@ test('MD3 дизайн для всего сайта: все элементы, SP
     await expect
       .poll(() =>
         site.evaluate(() => ({
-          sideSurface: document
-            .getElementById('liveSideNav')
-            ?.getAttribute('data-octo-md3-surface'),
-          sideBg: getComputedStyle(document.getElementById('liveSideNav')).backgroundColor,
-          searchSurface: document
-            .getElementById('liveSearchBtn')
-            ?.getAttribute('data-octo-md3-surface'),
-          searchBg: getComputedStyle(document.getElementById('liveSearchBtn')).backgroundColor,
-          forYouBg: getComputedStyle(document.getElementById('liveNavForYou')).backgroundColor,
-          liveActive: document.getElementById('liveNavLive')?.getAttribute('data-octo-md3-nav'),
-          liveBg: getComputedStyle(document.getElementById('liveNavLive')).backgroundColor,
-          profileActive: document
-            .getElementById('liveNavProfile')
-            ?.getAttribute('data-octo-md3-nav'),
-          profileSurface: document
-            .getElementById('liveNavProfile')
-            ?.getAttribute('data-octo-md3-surface'),
-          profilePos: document.getElementById('liveNavProfile')?.getAttribute('data-octo-md3-pos'),
-          coinsSurface: document
-            .getElementById('liveCoinsBtn')
-            ?.getAttribute('data-octo-md3-surface'),
-          coinsBg: getComputedStyle(document.getElementById('liveCoinsBtn')).backgroundColor,
-          creatorSurface: document
-            .getElementById('liveCreatorRow')
-            ?.getAttribute('data-octo-md3-surface'),
+          sideDisplay: getComputedStyle(document.getElementById('liveSideNav')).display,
           rechargeToken: getComputedStyle(document.documentElement)
             .getPropertyValue('--tux-v2-color-live-revenue-recharge-shape-1')
             .trim(),
@@ -1192,19 +1170,7 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         })),
       )
       .toEqual({
-        sideSurface: 'sidenav',
-        sideBg: 'rgb(33, 29, 48)', // #211d30 — сайдбар трансляции в MD3 вместо #000
-        searchSurface: 'sidenav-search',
-        searchBg: 'rgb(62, 56, 84)', // #3e3854 — кнопка поиска в сайдбаре
-        forYouBg: 'rgb(43, 38, 61)', // #2b263d — неактивный пункт меню
-        liveActive: 'active',
-        liveBg: 'rgb(86, 78, 112)', // #564e70 — активная капсула «Трансляция» на /@user/live
-        profileActive: null,
-        profileSurface: null,
-        profilePos: 'last',
-        coinsSurface: 'sidenav-footer',
-        coinsBg: 'rgb(43, 38, 61)', // #2b263d — кнопка монет не заливается ярким primary
-        creatorSurface: 'sidenav-creator',
+        sideDisplay: 'none', // нативное левое меню трансляции тоже полностью скрыто
         rechargeToken: '#3e3854',
         rechargeBg: 'rgb(43, 38, 61)', // #2b263d — донатная панель вместо #392f25
         chatSurface: 'live-chat',
@@ -1294,126 +1260,6 @@ test('MD3 дизайн для всего сайта: все элементы, SP
       return seen;
     });
     expect(stableAfterMutations).toEqual(['page', 'page', 'page']);
-    // 9. Свёрнутый рельс: кнопка разворота боковой панели центрируется и не ловит плитку nav-пункта,
-    // а при возврате логотипа SVG TikTok скрывается синхронно до отрисовки кадра.
-    const hasBrand = await site.evaluate(() => Boolean(window.__octoBrand));
-    if (!hasBrand) {
-      await page.click('#btnPanel');
-      await page.locator('[data-cat-head="cosmetics"]').click();
-      const brandSwitch = page.locator('#panelCosmetics [data-cosmetic="octo-brand"]');
-      if ((await brandSwitch.getAttribute('aria-checked')) !== 'true') {
-        await brandSwitch.click();
-      }
-      await expect(brandSwitch).toHaveAttribute('aria-checked', 'true');
-      await page.click('#btnPanel');
-    }
-    await expect.poll(() => site.evaluate(() => Boolean(window.__octoBrand))).toBe(true);
-
-    await site.evaluate(() => {
-      const rail = document.createElement('aside');
-      rail.id = 'collapsedRailTest';
-      rail.className = 'DivSideNavContainer';
-      rail.style.cssText =
-        'position:fixed;left:0;top:0;width:72px;height:360px;display:flex;flex-direction:column;align-items:stretch;';
-      rail.innerHTML = `
-        <div id="collapsedHeaderWrap" style="width:100%;padding-left:22px;box-sizing:border-box;">
-          <div id="collapsedHeaderInner" style="display:flex;align-items:center;">
-            <button type="button" id="collapsedToggleBtn" aria-label="Развернуть боковую панель" style="width:32px;height:32px;">T</button>
-          </div>
-        </div>
-        <button type="button" id="collapsedSearchBtn" class="TUXButton--secondary DivSearchButton" aria-label="Поиск" style="height:40px;">S</button>
-        <a href="/foryou" id="collapsedForYou" data-e2e="nav-foryou" style="height:40px;">For You</a>
-      `;
-      document.body.appendChild(rail);
-    });
-
-    await expect
-      .poll(() =>
-        site.evaluate(() => {
-          const rail = document.getElementById('collapsedRailTest');
-          const header = document.getElementById('collapsedHeaderWrap');
-          const toggle = document.getElementById('collapsedToggleBtn');
-          const search = document.getElementById('collapsedSearchBtn');
-          if (!rail || !header || !toggle || !search) return null;
-          const rRect = rail.getBoundingClientRect();
-          const tRect = toggle.getBoundingClientRect();
-          const sRect = search.getBoundingClientRect();
-          return {
-            railAttr: rail.getAttribute('data-octo-md3-rail'),
-            headerSurface: header.getAttribute('data-octo-md3-surface'),
-            toggleSurface: toggle.getAttribute('data-octo-md3-surface'),
-            togglePos: toggle.getAttribute('data-octo-md3-pos'),
-            toggleRadius: getComputedStyle(toggle).borderTopLeftRadius,
-            toggleCenterDelta: Math.abs(
-              tRect.left + tRect.width / 2 - (rRect.left + rRect.width / 2),
-            ),
-            searchCenterDelta: Math.abs(
-              sRect.left + sRect.width / 2 - (tRect.left + tRect.width / 2),
-            ),
-          };
-        }),
-      )
-      .toEqual({
-        railAttr: 'collapsed',
-        headerSurface: 'sidenav-header',
-        toggleSurface: 'sidenav-toggle',
-        togglePos: null,
-        toggleRadius: '9999px',
-        toggleCenterDelta: expect.any(Number),
-        searchCenterDelta: expect.any(Number),
-      });
-
-    const toggleAlign = await site.evaluate(() => {
-      const rail = document.getElementById('collapsedRailTest').getBoundingClientRect();
-      const toggle = document.getElementById('collapsedToggleBtn').getBoundingClientRect();
-      const search = document.getElementById('collapsedSearchBtn').getBoundingClientRect();
-      return {
-        railDelta: Math.abs(toggle.left + toggle.width / 2 - (rail.left + rail.width / 2)),
-        searchDelta: Math.abs(toggle.left + toggle.width / 2 - (search.left + search.width / 2)),
-        width: Math.round(toggle.width),
-      };
-    });
-    expect(toggleAlign.width).toBe(44);
-    expect(toggleAlign.railDelta).toBeLessThanOrEqual(1);
-    expect(toggleAlign.searchDelta).toBeLessThanOrEqual(1);
-
-    // Замена кнопки обратно на логотип: SVG должен быть скрыт уже на следующем кадре без 120мс мигания.
-    const firstFrameBrand = await site.evaluate(
-      () =>
-        new Promise((resolve) => {
-          const inner = document.getElementById('collapsedHeaderInner');
-          inner.innerHTML =
-            '<div id="remountLogoWrap"><a href="/foryou" id="remountedLogo" data-e2e="tiktok-logo" style="display:flex;width:40px;height:40px;"><svg id="remountedSvg" width="28" height="28"><circle cx="14" cy="14" r="10"/></svg></a></div>';
-          window.requestAnimationFrame(() => {
-            const logo = document.getElementById('remountedLogo');
-            const svg = document.getElementById('remountedSvg');
-            resolve({
-              brandAttr: logo.getAttribute('data-octo-brand'),
-              svgDisplay: getComputedStyle(svg).display,
-              hasImg: Boolean(logo.querySelector('img[data-octo-brand-img]')),
-            });
-          });
-        }),
-    );
-    expect(firstFrameBrand).toEqual({
-      brandAttr: 'mark',
-      svgDisplay: 'none',
-      hasImg: true,
-    });
-
-    await site.evaluate(() => {
-      document.getElementById('collapsedRailTest').style.width = '220px';
-    });
-    await expect
-      .poll(() =>
-        site.evaluate(() => ({
-          railAttr: document
-            .getElementById('collapsedRailTest')
-            ?.getAttribute('data-octo-md3-rail'),
-          brandAttr: document.getElementById('remountedLogo')?.getAttribute('data-octo-brand'),
-        })),
-      )
-      .toEqual({ railAttr: null, brandAttr: 'full' });
   } finally {
     if (app) await app.close();
     await new Promise((resolve) => server.close(resolve));
@@ -1463,7 +1309,7 @@ test('MD3 скин сайта: переходы учитывают систем�
       root.append(btn);
     });
 
-    // Длительности переходов скина: кнопка, пункт сайдбара, подфрейм и shadow root.
+    // Длительности переходов скина: кнопка, подфрейм и shadow root.
     const durations = () =>
       site.evaluate(() => {
         const frameBtn = document
@@ -1475,7 +1321,6 @@ test('MD3 скин сайта: переходы учитывают систем�
         const of = (el) => (el ? getComputedStyle(el).transitionDuration : '');
         return {
           button: of(document.getElementById('btnLogin')),
-          sideNav: of(document.getElementById('navFollowing')),
           frame: of(frameBtn),
           shadow: of(shadowBtn),
         };
@@ -1484,7 +1329,6 @@ test('MD3 скин сайта: переходы учитывают систем�
     // 1. Без настройки скин анимирует смену цвета и формы, как раньше.
     await expect.poll(durations).toEqual({
       button: '0.16s, 0.22s, 0.16s, 0.16s, 0.16s',
-      sideNav: '0.16s, 0.16s, 0.22s, 0.16s',
       frame: '0.16s, 0.22s, 0.16s, 0.16s, 0.16s',
       shadow: '0.16s, 0.22s, 0.16s, 0.16s, 0.16s',
     });
@@ -1493,7 +1337,6 @@ test('MD3 скин сайта: переходы учитывают систем�
     await site.emulateMedia({ reducedMotion: 'reduce' });
     await expect.poll(durations).toEqual({
       button: '0s, 0s, 0s, 0s, 0s',
-      sideNav: '0s, 0s, 0s, 0s',
       frame: '0s, 0s, 0s, 0s, 0s',
       shadow: '0s, 0s, 0s, 0s, 0s',
     });
@@ -1727,11 +1570,209 @@ test('MD3 на странице сообщений: подложки не миг
         narrowRowBg: 'rgb(86, 78, 112)',
       });
 
-    // 10. Контраст текста и иконок: --const-text-primary, нижняя панель плеера
-    // вне DivBasicPlayerWrapper (пауза, 1.0x, CC-контур, звук), плашка над
-    // автором, карточки/модалки в тёмной и светлой теме.
+    // 9.6. Центрированный /messages со скрытым DivSideNavContainer, белыми полями,
+    // кнопкой «Назад», чёрным логотипом, красным бейджем и белым :hover на вложенном div:
+    // контейнер разворачивается на всю ширину, поля и бейджи стилизованы под MD3,
+    // а наведение на строку остаётся тёмным даже после DOM-мутации внутри строки.
     await site.evaluate(() => {
       document.body.innerHTML = `
+        <style>
+          #obfList .obf-row:hover,
+          #obfList .obf-row:hover .obf-inner {
+            background-color: #ffffff !important;
+          }
+        </style>
+        <div class="DivSideNavContainer" style="display:none;"><a href="/foryou" data-e2e="nav-foryou">F</a></div>
+        <div class="DivHeaderWrapper" id="msgFullHdr" style="height:56px;background:#ffffff;display:flex;align-items:center;gap:12px;padding:0 16px;">
+          <a href="/">
+            <svg id="msgLogoSvg" width="110" height="28" viewBox="0 0 110 28">
+              <path id="msgLogoWord" d="M0 0h80v28H0z" fill="rgb(22, 24, 35)" />
+              <path id="msgLogoCyan" d="M84 0h10v28H84z" fill="rgb(37, 244, 238)" />
+            </svg>
+          </a>
+          <div id="msgHdrBadge" style="width:28px;height:20px;background:rgb(254,44,85);color:#fff;">30</div>
+        </div>
+        <div id="msgShell" style="background:#ffffff;height:420px;padding:0 80px;">
+          <div id="msgCenterBox" style="max-width:720px;margin:0 auto;padding:0 72px;height:100%;background:#ffffff;display:flex;">
+            <div id="msgBackCol" style="width:72px;background:#ffffff;padding:12px;">
+              <button id="msgBackBtn" style="width:36px;height:36px;border-radius:9999px;background:rgb(241,241,242);">←</button>
+            </div>
+            <div id="obfList" class="ConversationList" style="width:280px;height:100%;background:#ffffff;">
+              <div class="obf-row" id="obfRowHover" role="button" tabindex="0" style="height:64px;width:260px;">
+                <div class="obf-inner" id="obfInnerHover" style="height:64px;display:flex;align-items:center;justify-content:space-between;">
+                  <span id="obfRowName" style="color:rgb(22,24,35);">вандерюша</span>
+                  <span id="obfRowBadge" style="width:24px;height:20px;background:rgb(254,44,85);color:#fff;">13</span>
+                </div>
+              </div>
+              <div class="obf-row" role="button" tabindex="0" style="height:64px;width:260px;">B</div>
+              <div class="obf-row" role="button" tabindex="0" style="height:64px;width:260px;">C</div>
+            </div>
+            <div id="obfChatMain" class="DivChatMain" style="flex:1;height:100%;background:#ffffff;">Диалог</div>
+          </div>
+        </div>
+      `;
+    });
+
+    await expect
+      .poll(() =>
+        site.evaluate(() => {
+          const box = document.getElementById('msgCenterBox');
+          return {
+            boxWidth: Math.round(box.getBoundingClientRect().width),
+            winWidth: window.innerWidth,
+            shellBg: getComputedStyle(document.getElementById('msgShell')).backgroundColor,
+            boxBg: getComputedStyle(box).backgroundColor,
+            backColBg: getComputedStyle(document.getElementById('msgBackCol')).backgroundColor,
+            backBtnBg: getComputedStyle(document.getElementById('msgBackBtn')).backgroundColor,
+            logoWordFill: getComputedStyle(document.getElementById('msgLogoWord')).fill,
+            logoCyanFill: getComputedStyle(document.getElementById('msgLogoCyan')).fill,
+            hdrBadgeBg: getComputedStyle(document.getElementById('msgHdrBadge')).backgroundColor,
+            rowBadgeBg: getComputedStyle(document.getElementById('obfRowBadge')).backgroundColor,
+          };
+        }),
+      )
+      .toEqual({
+        boxWidth: expect.any(Number),
+        winWidth: expect.any(Number),
+        shellBg: 'rgba(0, 0, 0, 0)',
+        boxBg: 'rgba(0, 0, 0, 0)',
+        backColBg: 'rgb(33, 29, 48)',
+        backBtnBg: 'rgb(86, 78, 112)',
+        logoWordFill: 'rgb(221, 210, 224)',
+        logoCyanFill: 'rgb(37, 244, 238)',
+        hdrBadgeBg: 'rgb(140, 132, 169)',
+        rowBadgeBg: 'rgb(140, 132, 169)',
+      });
+
+    const boxWidths = await site.evaluate(() => ({
+      box: Math.round(document.getElementById('msgCenterBox').getBoundingClientRect().width),
+      win: window.innerWidth,
+      left: Math.round(document.getElementById('msgCenterBox').getBoundingClientRect().left),
+    }));
+    expect(boxWidths.box).toBeGreaterThanOrEqual(boxWidths.win - 4);
+    expect(boxWidths.left).toBeLessThanOrEqual(2);
+
+    // Проверка устойчивости dark hover при вложенном .obf-inner и мутации (появление кнопки «...»).
+    await site.hover('#obfRowHover');
+    await site.evaluate(() => {
+      const more = document.createElement('button');
+      more.textContent = '…';
+      document.getElementById('obfInnerHover').appendChild(more);
+    });
+    await expect
+      .poll(() =>
+        site.evaluate(() => ({
+          rowBg: getComputedStyle(document.getElementById('obfRowHover')).backgroundColor,
+          innerBg: getComputedStyle(document.getElementById('obfInnerHover')).backgroundColor,
+          nameColor: getComputedStyle(document.getElementById('obfRowName')).color,
+        })),
+      )
+      .toEqual({
+        rowBg: 'rgb(62, 56, 84)',
+        innerBg: 'rgba(0, 0, 0, 0)',
+        nameColor: 'rgb(221, 210, 224)',
+      });
+
+    // 9.7. Полностью обфусцированный /messages в тёмном варианте сайта (без классов
+    // ConversationList / DivChatMain / DivHeaderWrapper): шапка с логотипом,
+    // центрированный блок на 100%, расширение узкого списка, бейдж 13 и белый
+    // ::before-hover на строке переписки.
+    await site.evaluate(() => {
+      document.body.innerHTML = `
+        <style>
+          #pureObfRowHover {
+            position: relative;
+          }
+          #pureObfRowHover:hover::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-color: #ffffff !important;
+          }
+        </style>
+        <div id="pureObfTopBar" style="height:56px;background:rgb(18,27,32);display:flex;align-items:center;padding:0 16px;">
+          <a href="/">
+            <svg width="118" height="28" viewBox="0 0 118 28">
+              <path id="pureObfWord" d="M0 0h80v28H0z" fill="rgb(0, 0, 0)" />
+              <path id="pureObfRed" d="M84 0h12v28H84z" fill="rgb(254, 44, 85)" />
+            </svg>
+          </a>
+        </div>
+        <div id="pureObfCenter" style="max-width:860px;margin:0 auto;height:400px;display:flex;">
+          <div id="pureObfSidebar" style="width:288px;height:100%;background:rgb(18,27,32);">
+            <div style="padding:12px;">Сообщения</div>
+            <div id="pureObfRowHover" style="height:64px;width:270px;display:flex;align-items:center;justify-content:space-between;">
+              <span id="pureObfName" style="color:rgb(230,230,230);">hollatrigga</span>
+              <span id="pureObfBadge" style="width:22px;height:20px;background:rgb(254,44,85);color:#fff;">13</span>
+            </div>
+            <div style="height:64px;width:270px;">вандерюша</div>
+            <div style="height:64px;width:270px;">unnamed user</div>
+          </div>
+          <div id="pureObfThread" style="flex:1;height:100%;background:rgb(15,20,25);">Чат</div>
+        </div>
+      `;
+    });
+
+    await expect
+      .poll(() =>
+        site.evaluate(() => ({
+          wordFill: getComputedStyle(document.getElementById('pureObfWord')).fill,
+          redFill: getComputedStyle(document.getElementById('pureObfRed')).fill,
+          badgeBg: getComputedStyle(document.getElementById('pureObfBadge')).backgroundColor,
+          centerWidth: Math.round(
+            document.getElementById('pureObfCenter').getBoundingClientRect().width,
+          ),
+          winWidth: window.innerWidth,
+          sidebarWidth: Math.round(
+            document.getElementById('pureObfSidebar').getBoundingClientRect().width,
+          ),
+          sidebarBg: getComputedStyle(document.getElementById('pureObfSidebar')).backgroundColor,
+          threadBg: getComputedStyle(document.getElementById('pureObfThread')).backgroundColor,
+        })),
+      )
+      .toEqual({
+        wordFill: 'rgb(221, 210, 224)',
+        redFill: 'rgb(254, 44, 85)',
+        badgeBg: 'rgb(140, 132, 169)',
+        centerWidth: expect.any(Number),
+        winWidth: expect.any(Number),
+        sidebarWidth: 348,
+        sidebarBg: 'rgb(33, 29, 48)',
+        threadBg: 'rgb(25, 22, 36)',
+      });
+
+    const pureDims = await site.evaluate(() => ({
+      center: Math.round(document.getElementById('pureObfCenter').getBoundingClientRect().width),
+      win: window.innerWidth,
+    }));
+    expect(pureDims.center).toBeGreaterThanOrEqual(pureDims.win - 4);
+
+    await site.hover('#pureObfRowHover');
+    await expect
+      .poll(() =>
+        site.evaluate(() => ({
+          rowBg: getComputedStyle(document.getElementById('pureObfRowHover')).backgroundColor,
+          beforeBg: getComputedStyle(document.getElementById('pureObfRowHover'), '::before')
+            .backgroundColor,
+          nameColor: getComputedStyle(document.getElementById('pureObfName')).color,
+        })),
+      )
+      .toEqual({
+        rowBg: 'rgb(62, 56, 84)',
+        beforeBg: 'rgba(0, 0, 0, 0)',
+        nameColor: 'rgb(221, 210, 224)',
+      });
+
+    // 10. Контраст текста и иконок: --const-text-primary, нижняя панель плеера
+    // вне DivBasicPlayerWrapper (пауза, 1.0x, CC-контур, звук, <use>, Animation),
+    // плашка над автором и ИИ-метка с opacity-подложкой, устойчивые к повторному скану.
+    await site.evaluate(() => {
+      document.body.innerHTML = `
+        <svg style="display:none" aria-hidden="true">
+          <symbol id="octoMockPip" viewBox="0 0 20 20">
+            <path id="octoMockPipPath" d="M2 4h16v12H2z" fill="#161823" />
+          </symbol>
+        </svg>
         <div class="DivItemContainerV2" id="contrastSlide" style="position:relative;width:820px;height:520px;background:rgb(25,22,36);">
           <div class="DivBasicPlayerWrapper" id="contrastWrap" style="position:relative;width:360px;height:460px;margin:0 auto;">
             <video id="contrastVideo" style="width:100%;height:100%;"></video>
@@ -1739,16 +1780,23 @@ test('MD3 на странице сообщений: подложки не миг
               <svg id="anchorSvg" width="14" height="14" viewBox="0 0 14 14"><rect id="anchorRect" width="10" height="10" x="2" y="2" fill="var(--const-text-primary)"/></svg>
               <span id="anchorText" style="color:var(--const-text-primary);">Промо</span>
             </div>
+            <div id="aiOpacityPill" aria-disabled="true" style="position:absolute;left:16px;bottom:52px;padding:4px 10px;border-radius:9999px;background:#ffffff;opacity:0.14;display:inline-flex;align-items:center;gap:6px;">
+              <svg id="aiSvg" width="14" height="14" viewBox="0 0 14 14"><path id="aiIconPath" d="M7 1l2 4 4 2-4 2-2 4-2-4-4-2 4-2z" fill="#161823"/></svg>
+              <span id="aiLabelText" style="color:#161823;">Содержит контент, созданный ИИ</span>
+            </div>
           </div>
           <div class="DivVideoControlBottom" id="outerBar" style="position:absolute;left:0;right:0;bottom:0;height:48px;display:flex;align-items:center;gap:12px;padding:0 16px;">
             <button type="button" id="outerPauseBtn" style="width:28px;height:28px;">
               <svg id="outerPauseSvg" width="20" height="20" viewBox="0 0 20 20"><rect id="outerPauseRect" x="4" y="3" width="4" height="14" fill="var(--const-text-primary)"/></svg>
             </button>
             <div id="outerSpeed" style="color:var(--const-text-primary);">1.0x</div>
+            <button type="button" id="outerPipBtn" style="width:28px;height:28px;">
+              <svg id="outerPipSvg" width="20" height="20" viewBox="0 0 20 20"><use href="#octoMockPip"/></svg>
+            </button>
             <button type="button" id="outerCcBtn" style="width:28px;height:28px;">
               <svg id="outerCcSvg" width="20" height="20" viewBox="0 0 20 20"><g fill="none"><path id="outerCcPath" d="M3 5h14v10H3z" stroke="#161823" stroke-width="2"/></g></svg>
             </button>
-            <button type="button" id="outerVolBtn" style="width:28px;height:28px;">
+            <button type="button" id="outerVolBtn" class="DivVolumeAnimation" style="width:28px;height:28px;">
               <svg id="outerVolSvg" width="20" height="20" viewBox="0 0 20 20"><path id="outerVolPath" d="M3 8h4l5-4v12l-5-4H3z" fill="rgba(255,255,255,0.35)"/></svg>
             </button>
           </div>
@@ -1771,8 +1819,11 @@ test('MD3 на странице сообщений: подложки не миг
             .trim(),
           anchorText: getComputedStyle(document.getElementById('anchorText')).color,
           anchorRect: getComputedStyle(document.getElementById('anchorRect')).fill,
+          aiLabelText: getComputedStyle(document.getElementById('aiLabelText')).color,
+          aiIconPath: getComputedStyle(document.getElementById('aiIconPath')).fill,
           pauseRect: getComputedStyle(document.getElementById('outerPauseRect')).fill,
           speedColor: getComputedStyle(document.getElementById('outerSpeed')).color,
+          pipPath: getComputedStyle(document.getElementById('octoMockPipPath')).fill,
           ccStroke: getComputedStyle(document.getElementById('outerCcPath')).stroke,
           ccFill: getComputedStyle(document.getElementById('outerCcPath')).fill,
           volFill: getComputedStyle(document.getElementById('outerVolPath')).fill,
@@ -1784,13 +1835,36 @@ test('MD3 на странице сообщений: подложки не миг
         constPrimary: '#ffffff',
         anchorText: 'rgb(255, 255, 255)',
         anchorRect: 'rgb(255, 255, 255)',
+        aiLabelText: 'rgb(221, 210, 224)',
+        aiIconPath: 'rgb(221, 210, 224)',
         pauseRect: 'rgb(255, 255, 255)',
         speedColor: 'rgb(221, 210, 224)',
+        pipPath: 'rgb(221, 210, 224)',
         ccStroke: 'rgb(221, 210, 224)',
         ccFill: 'none',
         volFill: 'rgb(221, 210, 224)',
         cardText: 'rgb(221, 210, 224)',
         lightPillText: 'rgb(37, 32, 53)',
+      });
+
+    // Повторное сканирование после мутации DOM не сбрасывает иконки нижней панели.
+    await site.evaluate(() => {
+      const marker = document.createElement('span');
+      document.getElementById('contrastSlide').appendChild(marker);
+    });
+    await expect
+      .poll(async () => {
+        await site.waitForTimeout(160);
+        return site.evaluate(() => ({
+          volFill: getComputedStyle(document.getElementById('outerVolPath')).fill,
+          pipPath: getComputedStyle(document.getElementById('octoMockPipPath')).fill,
+          aiLabelText: getComputedStyle(document.getElementById('aiLabelText')).color,
+        }));
+      })
+      .toEqual({
+        volFill: 'rgb(221, 210, 224)',
+        pipPath: 'rgb(221, 210, 224)',
+        aiLabelText: 'rgb(221, 210, 224)',
       });
 
     // 11. Активные лайки, избранное (undefined-icon / favorite-icon) и лайки в комментариях:

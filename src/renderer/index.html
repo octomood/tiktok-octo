@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="fonts.css" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="plugins.css" />
+    <link rel="stylesheet" href="app-dialog.css" />
   </head>
   <body>
     <div class="chrome" id="chrome">
@@ -306,7 +307,7 @@
           <span class="sr-only">TikTok Octo</span>
         </div>
 
-        <nav class="nav" aria-label="Навигация по странице">
+        <nav class="nav" id="navGroup" aria-label="Навигация по странице">
           <button
             type="button"
             class="icon-btn"
@@ -403,7 +404,7 @@
 
         <div class="spacer"></div>
 
-        <div class="actions" aria-label="Режимы">
+        <div class="actions" id="actionsGroup" aria-label="Режимы">
           <button
             type="button"
             class="icon-btn"
@@ -487,7 +488,7 @@
           </button>
         </div>
 
-        <div class="tools" aria-label="Инструменты">
+        <div class="tools" id="toolsGroup" aria-label="Инструменты">
           <button
             type="button"
             class="icon-btn panel-toggle"
@@ -554,6 +555,12 @@
             </svg>
           </button>
         </div>
+
+        <div
+          class="tools custom-tools is-group-empty"
+          id="customToolsGroup"
+          aria-label="Свои кнопки"
+        ></div>
 
         <button
           type="button"
@@ -835,6 +842,268 @@
       </div>
     </div>
 
+    <aside class="app-sidenav" id="appSideNav" aria-label="Навигация">
+      <div class="app-sidenav-head">
+        <div class="app-sidenav-brand">
+          <img class="app-sidenav-logo" src="assets/octo-logo-mark.png" alt="" draggable="false" />
+          <span class="app-sidenav-brand-text" data-i18n-skip>tt-octo</span>
+        </div>
+        <button
+          type="button"
+          class="app-sidenav-toggle"
+          id="btnSideNavToggle"
+          title="Свернуть меню"
+          aria-label="Свернуть меню"
+          aria-expanded="true"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="4" width="18" height="16" rx="3" />
+            <path d="M9 4v16" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="app-sidenav-search" id="sideNavSearchBar">
+        <button
+          type="button"
+          class="app-sidenav-search-trigger"
+          id="btnSideNavSearch"
+          title="Поиск"
+          aria-label="Поиск"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="9" cy="9" r="5.2" />
+            <path d="m13 13 4 4" />
+          </svg>
+        </button>
+        <input
+          id="sideNavSearch"
+          class="app-sidenav-search-input"
+          type="search"
+          placeholder="Поиск…"
+          spellcheck="false"
+          autocomplete="off"
+          aria-label="Поиск"
+        />
+        <button
+          type="button"
+          class="app-sidenav-search-clear"
+          id="btnSideNavSearchClear"
+          title="Очистить поиск"
+          aria-label="Очистить поиск"
+          hidden
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          >
+            <path d="M6 6l8 8M14 6l-8 8" />
+          </svg>
+        </button>
+      </div>
+
+      <nav class="app-sidenav-nav" id="appSideNavList" aria-label="Навигация">
+        <div class="app-sidenav-indicator" id="appSideNavIndicator" aria-hidden="true"></div>
+
+        <p class="app-sidenav-group" data-sidenav-group="feed">Лента</p>
+        <button type="button" class="app-sidenav-item" data-sidenav="foryou" title="Рекомендации">
+          <span class="app-sidenav-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M3 10.5 12 3l9 7.5" />
+              <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5" />
+            </svg>
+          </span>
+          <span class="app-sidenav-label">Рекомендации</span>
+        </button>
+        <button type="button" class="app-sidenav-item" data-sidenav="explore" title="Смотреть">
+          <span class="app-sidenav-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <polygon points="15.6 8.4 13.8 13.8 8.4 15.6 10.2 10.2 15.6 8.4" />
+            </svg>
+          </span>
+          <span class="app-sidenav-label">Смотреть</span>
+        </button>
+        <button type="button" class="app-sidenav-item" data-sidenav="following" title="Подписки">
+          <span class="app-sidenav-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="9.5" cy="7.5" r="3.5" />
+              <path d="M3 19.5c0-3.2 2.9-5 6.5-5s6.5 1.8 6.5 5" />
+              <path d="m16.5 11.5 1.8 1.8 3.2-3.6" />
+            </svg>
+          </span>
+          <span class="app-sidenav-label">Подписки</span>
+        </button>
+        <button type="button" class="app-sidenav-item" data-sidenav="friends" title="Друзья">
+          <span class="app-sidenav-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="8.5" cy="7.5" r="3.2" />
+              <path d="M2.5 19.5c0-3 2.7-4.8 6-4.8s6 1.8 6 4.8" />
+              <circle cx="16.2" cy="8.5" r="2.5" />
+              <path d="M16.5 14.8c2.6.3 4.8 1.8 4.8 4.4" />
+            </svg>
+          </span>
+          <span class="app-sidenav-label">Друзья</span>
+        </button>
+        <button
+          type="button"
+          class="app-sidenav-item"
+          data-sidenav="short-drama"
+          title="Мини-сериалы"
+        >
+          <span class="app-sidenav-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="4.5" width="18" height="15" rx="2.5" />
+              <path d="M7.5 4.5v15M16.5 4.5v15M3 9.5h4.5M3 14.5h4.5M16.5 9.5H21M16.5 14.5H21" />
+            </svg>
+          </span>
+          <span class="app-sidenav-label">Мини-сериалы</span>
+        </button>
+        <button type="button" class="app-sidenav-item" data-sidenav="live" title="Трансляция">
+          <span class="app-sidenav-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="2.2" />
+              <path d="M8.5 8.5a5 5 0 0 0 0 7" />
+              <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+              <path d="M5.6 5.6a9 9 0 0 0 0 12.8" />
+              <path d="M18.4 5.6a9 9 0 0 1 0 12.8" />
+            </svg>
+          </span>
+          <span class="app-sidenav-label">Трансляция</span>
+        </button>
+
+        <p class="app-sidenav-group" data-sidenav-group="account">Аккаунт</p>
+        <button type="button" class="app-sidenav-item" data-sidenav="messages" title="Сообщения">
+          <span class="app-sidenav-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 4 10 15" />
+              <path d="M21 4 14 21l-4-6-6-4z" />
+            </svg>
+          </span>
+          <span class="app-sidenav-label">Сообщения</span>
+          <span class="app-sidenav-badge" id="sideNavUnread" data-i18n-skip hidden></span>
+        </button>
+        <button type="button" class="app-sidenav-item" data-sidenav="upload" title="Загрузить">
+          <span class="app-sidenav-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+              <path d="M12 8v8M8 12h8" />
+            </svg>
+          </span>
+          <span class="app-sidenav-label">Загрузить</span>
+        </button>
+        <button type="button" class="app-sidenav-item" data-sidenav="profile" title="Профиль">
+          <span class="app-sidenav-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <circle cx="12" cy="9.5" r="2.8" />
+              <path d="M6.8 18.4a6.2 6.2 0 0 1 10.4 0" />
+            </svg>
+          </span>
+          <span class="app-sidenav-label">Профиль</span>
+        </button>
+        <button type="button" class="app-sidenav-item" data-sidenav="settings" title="Настройки">
+          <span class="app-sidenav-icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.77 1 1.51 1H21a2 2 0 1 1 0 4h-.09c-.74 0-1.25.4-1.51 1z"
+              />
+            </svg>
+          </span>
+          <span class="app-sidenav-label">Настройки</span>
+        </button>
+      </nav>
+    </aside>
+
     <div
       class="panel"
       id="panel"
@@ -1013,6 +1282,10 @@
               </button>
               <button type="button" class="panel-row" data-cmd="ambientToggle">
                 <span class="panel-row-label">Амбиентный режим</span>
+              </button>
+              <button type="button" class="panel-row" id="btnOpenTopbarSettings">
+                <span class="panel-row-label">Настройка кнопок верхней полосы</span>
+                <span class="panel-row-hint">Добавить, убрать, скрыть</span>
               </button>
               <div class="panel-row panel-row--static">
                 <span class="panel-row-label">Масштаб</span>
@@ -2317,6 +2590,17 @@
                 <span class="panel-row-label">AMOLED-режим</span>
                 <span class="switch" aria-hidden="true"></span>
               </button>
+              <button
+                type="button"
+                class="panel-row"
+                id="rowThemeRandomOnStart"
+                role="switch"
+                aria-checked="false"
+                data-cmd="themeRandomOnStart"
+              >
+                <span class="panel-row-label">Новая тема при каждом запуске</span>
+                <span class="switch" aria-hidden="true"></span>
+              </button>
               <div class="panel-field" id="themePaletteField">
                 <div class="theme-palette-head">
                   <span class="panel-field-label" id="themePaletteLabel">Цветовая палитра</span>
@@ -2659,13 +2943,179 @@
               aria-labelledby="catComponentsHead"
               hidden
             >
-              <div class="panel-row panel-row--static">
-                <label class="panel-row-label" for="compSelect">Компонент</label>
-                <select
-                  id="compSelect"
-                  class="panel-select panel-select--wide"
-                  aria-label="Выбор компонента интерфейса"
-                ></select>
+              <div class="panel-field panel-field--card" id="topbarBuilderCard">
+                <div class="comp-builder-head">
+                  <span class="panel-field-label">Кнопки верхней полосы</span>
+                  <button
+                    type="button"
+                    class="panel-inline-btn"
+                    id="topbarBtnResetAll"
+                    title="Удалить все свои кнопки"
+                  >
+                    Очистить свои
+                  </button>
+                </div>
+
+                <div class="tb-subsection">
+                  <span class="theme-color-sub">Встроенные элементы полосы (показ / скрытие)</span>
+                  <div class="tb-builtin-chips" id="topbarBuiltinChips"></div>
+                </div>
+
+                <div class="tb-subsection" id="topbarCustomWrap">
+                  <span class="theme-color-sub">Ваши кнопки</span>
+                  <div class="tb-custom-list" id="topbarCustomList"></div>
+                  <p class="panel-note tb-empty-note" id="topbarCustomEmpty">
+                    Своих кнопок пока нет — добавьте любую команду или ссылку ниже.
+                  </p>
+                </div>
+
+                <div class="tb-add-form" id="topbarAddForm">
+                  <div class="panel-row panel-row--static comp-subrow">
+                    <label class="panel-row-label" for="topbarBtnAction">Действие</label>
+                    <select
+                      id="topbarBtnAction"
+                      class="panel-select panel-select--wide"
+                      aria-label="Действие своей кнопки"
+                    ></select>
+                  </div>
+                  <div class="panel-field-row" id="topbarBtnUrlRow" hidden>
+                    <input
+                      id="topbarBtnUrl"
+                      class="panel-input"
+                      type="text"
+                      maxlength="400"
+                      placeholder="/following или https://www.tiktok.com/..."
+                      spellcheck="false"
+                      autocomplete="off"
+                      aria-label="Адрес или раздел TikTok"
+                    />
+                  </div>
+                  <div class="tb-form-grid">
+                    <div class="theme-color-cell">
+                      <label class="theme-color-sub" for="topbarBtnLabel"
+                        >Подпись (необязательно)</label
+                      >
+                      <input
+                        id="topbarBtnLabel"
+                        class="panel-input"
+                        type="text"
+                        maxlength="40"
+                        placeholder="Только иконка"
+                        spellcheck="false"
+                        autocomplete="off"
+                      />
+                    </div>
+                    <div class="theme-color-cell">
+                      <label class="theme-color-sub" for="topbarBtnTooltip">Подсказка</label>
+                      <input
+                        id="topbarBtnTooltip"
+                        class="panel-input"
+                        type="text"
+                        maxlength="100"
+                        placeholder="Как у действия"
+                        spellcheck="false"
+                        autocomplete="off"
+                      />
+                    </div>
+                  </div>
+                  <div class="panel-row panel-row--static comp-subrow">
+                    <label class="panel-row-label" for="topbarBtnSlot">Место в полосе</label>
+                    <select
+                      id="topbarBtnSlot"
+                      class="panel-select"
+                      aria-label="Место в верхней полосе"
+                    >
+                      <option value="extra">Свои кнопки (справа)</option>
+                      <option value="nav">Навигация (слева)</option>
+                      <option value="actions">Режимы (PiP / звук)</option>
+                      <option value="tools">Инструменты (стикеры / чат)</option>
+                    </select>
+                  </div>
+                  <div class="panel-row panel-row--static comp-subrow">
+                    <label class="panel-row-label" for="topbarBtnIconType">Иконка кнопки</label>
+                    <select
+                      id="topbarBtnIconType"
+                      class="panel-select"
+                      aria-label="Иконка своей кнопки"
+                    >
+                      <option value="preset">Из набора</option>
+                      <option value="emoji">Эмодзи / символ</option>
+                      <option value="file">Своя картинка</option>
+                      <option value="none">Без иконки (только текст)</option>
+                    </select>
+                  </div>
+                  <div id="topbarBtnIconPresetWrap">
+                    <div class="comp-icon-grid" id="topbarBtnIconGrid"></div>
+                  </div>
+                  <div class="comp-emoji-wrap" id="topbarBtnIconEmojiWrap" hidden>
+                    <input
+                      id="topbarBtnIconEmoji"
+                      class="panel-input"
+                      type="text"
+                      maxlength="12"
+                      placeholder="Например, 🎬 или ★"
+                      spellcheck="false"
+                      autocomplete="off"
+                    />
+                    <div class="comp-emoji-chips" id="topbarBtnEmojiChips"></div>
+                  </div>
+                  <div
+                    class="panel-row panel-row--static comp-subrow"
+                    id="topbarBtnIconFileWrap"
+                    hidden
+                  >
+                    <span class="panel-row-label" id="topbarBtnIconFileName">Файл не выбран</span>
+                    <button type="button" class="panel-inline-btn" id="topbarBtnIconPickBtn">
+                      Выбрать файл…
+                    </button>
+                  </div>
+                  <div class="comp-actions">
+                    <button type="button" class="panel-inline-btn" id="topbarBtnCancelEdit" hidden>
+                      Отмена
+                    </button>
+                    <button
+                      type="button"
+                      class="panel-inline-btn panel-inline-btn--primary"
+                      id="topbarBtnSubmit"
+                    >
+                      Добавить кнопку
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-field panel-field--card">
+                <div class="comp-builder-head">
+                  <span class="panel-field-label">Выбор элемента на любой странице</span>
+                  <button type="button" class="panel-inline-btn" id="compPickElementBtn">
+                    Выбрать кликом
+                  </button>
+                </div>
+                <div class="panel-row panel-row--static comp-subrow">
+                  <label class="panel-row-label" for="compPageSelect">Страница</label>
+                  <select
+                    id="compPageSelect"
+                    class="panel-select panel-select--wide"
+                    aria-label="Выбор страницы интерфейса"
+                  ></select>
+                </div>
+                <input
+                  id="compSearchInput"
+                  class="panel-input"
+                  type="search"
+                  placeholder="Найти элемент по названию…"
+                  spellcheck="false"
+                  autocomplete="off"
+                  aria-label="Фильтр элементов"
+                />
+                <div class="panel-row panel-row--static comp-subrow">
+                  <label class="panel-row-label" for="compSelect">Элемент</label>
+                  <select
+                    id="compSelect"
+                    class="panel-select panel-select--wide"
+                    aria-label="Выбор компонента интерфейса"
+                  ></select>
+                </div>
               </div>
               <div class="comp-chips" id="compModifiedChips" hidden></div>
 
@@ -4474,6 +4924,52 @@
       </div>
     </div>
 
+    <div class="app-dialog" id="appDialog" hidden>
+      <div class="app-dialog-backdrop" id="appDialogBackdrop" aria-hidden="true"></div>
+      <div class="app-dialog-card" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle">
+        <header class="app-dialog-head">
+          <div class="app-dialog-badge" id="appDialogBadge" aria-hidden="true"></div>
+          <div class="app-dialog-head-copy">
+            <span class="app-dialog-eyebrow" id="appDialogEyebrow" hidden></span>
+            <h2 class="app-dialog-title" id="appDialogTitle"></h2>
+          </div>
+          <button
+            type="button"
+            class="app-dialog-close"
+            id="appDialogClose"
+            title="Закрыть"
+            aria-label="Закрыть"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            >
+              <path d="M6.4 6.4l7.2 7.2M13.6 6.4l-7.2 7.2" />
+            </svg>
+          </button>
+        </header>
+        <div class="app-dialog-body" id="appDialogBody"></div>
+        <footer class="app-dialog-actions" id="appDialogActions"></footer>
+      </div>
+    </div>
+
+    <div class="loading-screen" id="loadingScreen" aria-hidden="true" hidden>
+      <div class="loading-stage">
+        <div class="loading-halo"></div>
+        <div class="loading-ring"></div>
+        <img
+          class="loading-logo"
+          src="assets/octo-logo-mark.png"
+          alt=""
+          width="60"
+          height="60"
+          draggable="false"
+        />
+      </div>
+    </div>
+
     <div class="offline-screen" id="offlineScreen" role="alert" aria-live="assertive" hidden>
       <div class="offline-card">
         <div class="offline-icon-wrap" aria-hidden="true">
@@ -4615,6 +5111,21 @@
       </div>
     </div>
 
+    <div class="comp-picker-highlight" id="compPickerHighlight" hidden>
+      <span class="comp-picker-tag" id="compPickerTag" data-i18n-skip></span>
+    </div>
+    <div class="comp-picker-bar" id="compPickerBar" hidden>
+      <span class="comp-picker-status" id="compPickerStatus"
+        >Кликните на любой элемент · Alt+клик нажимает кнопку</span
+      >
+      <div class="comp-picker-actions">
+        <button type="button" class="panel-inline-btn" id="compPickerTogglePanel">
+          Скрыть панель
+        </button>
+        <button type="button" class="panel-inline-btn" id="compPickerCancel">Отмена (Esc)</button>
+      </div>
+    </div>
+
     <div class="chat-resize" id="chatResize" hidden></div>
 
     <script src="i18n-dom.js"></script>
@@ -4622,7 +5133,10 @@
     <script src="md3-select.js"></script>
     <script src="welcome.js"></script>
     <script src="plugins.js"></script>
+    <script src="app-dialog.js"></script>
+    <script src="ui-custom-core.js"></script>
     <script src="ui-custom.js"></script>
+    <script src="md3-progress.js"></script>
     <script src="titlebar.js"></script>
   </body>
 </html>

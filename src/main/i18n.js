@@ -139,6 +139,7 @@ function broadcast() {
       /* окно закрывается */
     }
   }
+  require('./context-menu').syncI18n?.(data);
 }
 
 function menuItems() {

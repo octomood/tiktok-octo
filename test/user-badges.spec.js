@@ -28,6 +28,7 @@ const MOCK_BADGES = {
     supporter_test: {
       role: 'supporter',
       description: 'Поддержал развитие клиента на старте. Огромное спасибо!',
+      since: 'с 2025',
     },
   },
 };
@@ -141,6 +142,10 @@ test('бейджи сообщества отображаются у ников �
     await expect(modal.locator('#octo-badge-modal-handle')).toHaveText('@churros_dev');
     await expect(modal.locator('#octo-badge-modal-title')).toHaveText('Создатель TikTok Octo');
     await expect(modal.locator('#octo-badge-modal-desc')).toContainText('TikTok Octo');
+    await expect(modal.locator('#octo-badge-modal-emblem-shape')).toBeVisible();
+    await expect(modal.locator('#octo-badge-modal-since')).toHaveCount(0);
+    const modalBorder = await modal.evaluate((el) => getComputedStyle(el).borderTopWidth);
+    expect(modalBorder).toBe('0px');
     await site.keyboard.press('Escape');
     await expect(modal).toHaveCount(0);
 
@@ -149,8 +154,13 @@ test('бейджи сообщества отображаются у ников �
     await supporterBadge.click();
     await expect(modal).toBeVisible();
     await expect(modal.locator('#octo-badge-modal-handle')).toHaveText('@supporter_test');
+    await expect(modal.locator('#octo-badge-modal-since')).toHaveText('с 2025');
     await expect(modal.locator('#octo-badge-modal-title')).toHaveText('Поддержал проект');
     await expect(modal.locator('#octo-badge-modal-desc')).toContainText('Поддержал развитие');
+    const supporterAccent = await modal.evaluate((el) =>
+      el.style.getPropertyValue('--octo-badge-accent'),
+    );
+    expect(supporterAccent).toContain('--octo-md-tertiary');
     expect(site.url()).toBe(urlBefore);
     await modal.locator('#octo-badge-modal-close').click();
     await expect(modal).toHaveCount(0);

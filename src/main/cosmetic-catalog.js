@@ -14,6 +14,7 @@ const COSMETIC_RULES = [
   {
     id: 'rainbow-theme',
     label: 'Переливание цветов интерфейса',
+    hint: 'Сильно нагружает процессор и видеокарту',
     default: false,
     experimental: true,
   },

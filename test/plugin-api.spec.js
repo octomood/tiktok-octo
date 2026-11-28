@@ -490,7 +490,9 @@ octo.onActivate(async () => {
       page.evaluate((command) => window.octo.cmd(command), `plugin:app.octo.ext:${id}`);
 
     // Ждём завершения onActivate плагина (появления строки панели).
+    await page.waitForLoadState('load');
     await page.click('#btnPanel');
+    await expect(page.locator('#panel')).toBeVisible();
     await page.locator('[data-cat-head="plugins"]').click();
     await expect(page.locator('#panelPluginActions')).toContainText('Строка Ext');
 

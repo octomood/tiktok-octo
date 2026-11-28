@@ -30,6 +30,8 @@ const ACCENTS = new Set(['primary', 'secondary', 'tertiary']);
 const BADGE_ATTR = 'data-octo-badged';
 const BADGE_CLASS = 'octo-user-badge';
 const MODAL_ATTR = 'data-octo-badge-modal';
+const SCALLOP_PATH =
+  'M50.0 4.0 C53.7 4.0 59.1 11.9 62.1 12.9 C65.0 13.9 74.1 10.6 77.0 12.8 C80.0 14.9 79.7 24.6 81.6 27.1 C83.4 29.6 92.6 32.3 93.7 35.8 C94.9 39.3 89.0 46.9 89.0 50.0 C89.0 53.1 94.9 60.7 93.7 64.2 C92.6 67.7 83.4 70.4 81.6 72.9 C79.7 75.4 80.0 85.1 77.0 87.2 C74.1 89.4 65.0 86.1 62.1 87.1 C59.1 88.1 53.7 96.0 50.0 96.0 C46.3 96.0 40.9 88.1 37.9 87.1 C35.0 86.1 25.9 89.4 23.0 87.2 C20.0 85.1 20.3 75.4 18.4 72.9 C16.6 70.4 7.4 67.7 6.3 64.2 C5.1 60.7 11.0 53.1 11.0 50.0 C11.0 46.9 5.1 39.3 6.3 35.8 C7.4 32.3 16.6 29.6 18.4 27.1 C20.3 24.6 20.0 14.9 23.0 12.8 C25.9 10.6 35.0 13.9 37.9 12.9 C40.9 11.9 46.3 4.0 50.0 4.0 Z';
 
 let netSession = null;
 let cachedConfig = null;
@@ -309,7 +311,7 @@ const BADGES_CSS = `
     border-radius: 6px !important;
   }
   .${BADGE_CLASS} svg,
-  #octo-badge-modal-emblem svg {
+  #octo-badge-modal-emblem-icon svg {
     width: 100% !important;
     height: 100% !important;
     display: block !important;
@@ -383,44 +385,98 @@ const BADGES_CSS = `
     }
   }
 
-  /* Компактное всплывающее окно сверху поверх страницы (MD3 Expressive) */
+  /* Выразительное всплывающее окно сверху поверх страницы (MD3 Expressive) */
   #octo-badge-modal[${MODAL_ATTR}] {
     position: fixed !important;
     z-index: 2147483646 !important;
-    width: min(352px, calc(100vw - 24px)) !important;
-    border-radius: 24px !important;
-    padding: 16px 18px !important;
+    width: min(364px, calc(100vw - 24px)) !important;
+    border-radius: 28px !important;
+    padding: 18px 18px 16px !important;
     box-sizing: border-box !important;
-    background-color: var(--octo-md-surface-container-high, #2b2930) !important;
+    overflow: hidden !important;
+    isolation: isolate !important;
+    background:
+      radial-gradient(
+        148px 148px at 44px 44px,
+        color-mix(in srgb, var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) 26%, transparent),
+        transparent 72%
+      ),
+      radial-gradient(
+        210px 150px at 100% 100%,
+        color-mix(in srgb, var(--octo-md-tertiary, var(--octo-badge-accent, #efb8c8)) 14%, transparent),
+        transparent 72%
+      ),
+      color-mix(in srgb, var(--octo-md-surface-container-high, #24212e) 94%, transparent) !important;
+    backdrop-filter: blur(18px) saturate(1.25) !important;
     color: var(--octo-md-on-surface, #f2ecf8) !important;
-    border: 1px solid color-mix(in srgb, var(--octo-md-outline-variant, #49454f) 70%, transparent) !important;
+    border: 0 !important;
     box-shadow:
-      0 18px 44px rgba(0, 0, 0, 0.42),
-      0 4px 12px rgba(0, 0, 0, 0.24) !important;
+      0 22px 52px rgba(0, 0, 0, 0.48),
+      0 6px 20px color-mix(in srgb, var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) 18%, transparent) !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important;
+    gap: 14px !important;
     font-family: var(--octo-font, 'Google Sans', 'Inter', system-ui, sans-serif) !important;
-    animation: octo-badge-pop 0.22s cubic-bezier(0.34, 1.45, 0.64, 1) !important;
+    animation: octo-badge-pop 0.28s cubic-bezier(0.34, 1.45, 0.64, 1) !important;
+  }
+  #octo-badge-modal-watermark {
+    position: absolute !important;
+    inset-inline-end: -22px !important;
+    top: -22px !important;
+    width: 112px !important;
+    height: 112px !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+    color: var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) !important;
+    opacity: 0.085 !important;
+    transform: rotate(14deg) !important;
   }
   #octo-badge-modal-head {
+    position: relative !important;
+    z-index: 1 !important;
     display: flex !important;
     align-items: center !important;
-    gap: 12px !important;
+    gap: 14px !important;
     background: transparent !important;
   }
   #octo-badge-modal-emblem {
-    width: 48px !important;
-    height: 48px !important;
-    flex: 0 0 48px !important;
-    border-radius: 16px !important;
-    padding: 10px !important;
+    position: relative !important;
+    width: 56px !important;
+    height: 56px !important;
+    flex: 0 0 56px !important;
+    padding: 0 !important;
     box-sizing: border-box !important;
-    background-color: var(--octo-md-primary-container, rgba(154, 193, 252, 0.2)) !important;
-    color: var(--octo-badge-modal-color, var(--octo-md-on-primary-container, #d3e3fd)) !important;
+    background: transparent !important;
+    display: grid !important;
+    place-items: center !important;
+    filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) 28%, transparent)) !important;
+  }
+  #octo-badge-modal-emblem-shape {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+    fill: color-mix(
+      in srgb,
+      var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) 24%,
+      var(--octo-badge-container, var(--octo-md-primary-container, rgba(154, 193, 252, 0.22)))
+    ) !important;
+    stroke: color-mix(in srgb, var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) 52%, transparent) !important;
+    stroke-width: 2.2 !important;
+    animation: octo-badge-scallop-spin 28s linear infinite !important;
+  }
+  #octo-badge-modal-emblem-icon {
+    position: relative !important;
+    z-index: 1 !important;
+    width: 28px !important;
+    height: 28px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    color: var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) !important;
   }
   #octo-badge-modal-meta {
     flex: 1 1 auto !important;
@@ -428,62 +484,144 @@ const BADGES_CSS = `
     display: flex !important;
     flex-direction: column !important;
     align-items: flex-start !important;
-    gap: 3px !important;
+    gap: 6px !important;
     background: transparent !important;
   }
   #octo-badge-modal-title {
     margin: 0 !important;
-    font-size: 15px !important;
+    font-size: 16px !important;
     font-weight: 700 !important;
-    line-height: 1.25 !important;
+    letter-spacing: -0.015em !important;
+    line-height: 1.22 !important;
     color: var(--octo-md-on-surface, #f2ecf8) !important;
+  }
+  #octo-badge-modal-chips {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    background: transparent !important;
   }
   #octo-badge-modal-handle {
     display: inline-flex !important;
     align-items: center !important;
-    padding: 2px 9px !important;
+    padding: 3px 10px !important;
+    border-radius: 9999px !important;
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.01em !important;
+    background: color-mix(
+      in srgb,
+      var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) 18%,
+      var(--octo-badge-container, var(--octo-md-secondary-container, rgba(255, 255, 255, 0.1)))
+    ) !important;
+    border: 1px solid color-mix(in srgb, var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) 36%, transparent) !important;
+    color: var(--octo-badge-on-container, var(--octo-md-on-secondary-container, #e6e0e9)) !important;
+  }
+  #octo-badge-modal-handle::before {
+    content: '' !important;
+    width: 6px !important;
+    height: 6px !important;
+    border-radius: 9999px !important;
+    margin-inline-end: 6px !important;
+    flex: none !important;
+    background: var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) !important;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) 75%, transparent) !important;
+  }
+  #octo-badge-modal-since {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 3px 9px !important;
     border-radius: 9999px !important;
     font-size: 11px !important;
-    font-weight: 600 !important;
-    background-color: var(--octo-md-secondary-container, rgba(255, 255, 255, 0.1)) !important;
-    color: var(--octo-md-on-secondary-container, #e6e0e9) !important;
+    font-weight: 500 !important;
+    background: color-mix(in srgb, var(--octo-md-surface-container-highest, rgba(255, 255, 255, 0.08)) 86%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--octo-md-outline-variant, #49454f) 50%, transparent) !important;
+    color: var(--octo-md-on-surface-variant, #cbc2da) !important;
   }
   #octo-badge-modal-close {
     all: unset !important;
-    flex: 0 0 30px !important;
-    width: 30px !important;
-    height: 30px !important;
+    flex: 0 0 32px !important;
+    width: 32px !important;
+    height: 32px !important;
     align-self: flex-start !important;
+    box-sizing: border-box !important;
     border-radius: 9999px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     cursor: pointer !important;
-    font-size: 16px !important;
-    line-height: 1 !important;
-    background-color: var(--octo-md-surface-container-highest, rgba(255, 255, 255, 0.1)) !important;
+    background-color: color-mix(in srgb, var(--octo-md-surface-container-highest, rgba(255, 255, 255, 0.1)) 82%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--octo-md-outline-variant, #49454f) 45%, transparent) !important;
     color: var(--octo-md-on-surface-variant, #cbc2da) !important;
     transition: background-color 0.14s ease, transform 0.14s ease !important;
+  }
+  #octo-badge-modal-close svg {
+    width: 14px !important;
+    height: 14px !important;
+    display: block !important;
+    flex: none !important;
   }
   #octo-badge-modal-close:hover {
     background-color: var(--octo-md-primary, #9ac1fc) !important;
     color: var(--octo-md-on-primary, #1f1f1f) !important;
+    border-color: transparent !important;
     transform: scale(1.06) !important;
   }
+  #octo-badge-modal-close:focus-visible {
+    outline: 2px solid var(--octo-md-primary, #9ac1fc) !important;
+    outline-offset: 2px !important;
+  }
   #octo-badge-modal-desc {
+    position: relative !important;
+    z-index: 1 !important;
     margin: 0 !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    padding: 11px 13px !important;
-    border-radius: 14px !important;
-    font-size: 13px !important;
-    line-height: 1.45 !important;
-    background-color: var(--octo-md-surface-container, rgba(255, 255, 255, 0.06)) !important;
-    color: var(--octo-md-on-surface-variant, #cbc2da) !important;
+    padding: 12px 14px 12px 18px !important;
+    border-radius: 16px !important;
+    font-size: 13.5px !important;
+    line-height: 1.48 !important;
+    background:
+      linear-gradient(
+        135deg,
+        color-mix(
+          in srgb,
+          var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) 10%,
+          var(--octo-md-surface-container, rgba(255, 255, 255, 0.06))
+        ),
+        color-mix(in srgb, var(--octo-md-surface-container-low, rgba(255, 255, 255, 0.03)) 90%, transparent)
+      ) !important;
+    border: 1px solid color-mix(
+      in srgb,
+      var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) 18%,
+      var(--octo-md-outline-variant, #49454f)
+    ) !important;
+    color: color-mix(in srgb, var(--octo-md-on-surface, #f2ecf8) 90%, var(--octo-md-on-surface-variant, #cbc2da)) !important;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--octo-md-on-surface, #ffffff) 6%, transparent) !important;
+  }
+  #octo-badge-modal-desc::before {
+    content: '' !important;
+    position: absolute !important;
+    inset-inline-start: 7px !important;
+    top: 10px !important;
+    bottom: 10px !important;
+    width: 3px !important;
+    border-radius: 9999px !important;
+    background: linear-gradient(
+      180deg,
+      var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)),
+      color-mix(in srgb, var(--octo-badge-accent, var(--octo-md-primary, #9ac1fc)) 45%, var(--octo-md-tertiary, #efb8c8))
+    ) !important;
+    opacity: 0.9 !important;
   }
   @keyframes octo-badge-pop {
-    from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+    from { opacity: 0; transform: translateY(-8px) scale(0.94); }
     to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes octo-badge-scallop-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   /* «Уменьшить движение»: значок, кнопка закрытия и окно меняют состояние без
@@ -539,6 +677,37 @@ function badgesScript() {
     return 'var(--octo-md-primary, #9ac1fc)';
   };
 
+  const applyModalTone = (card, badge) => {
+    if (badge.color) {
+      card.style.setProperty('--octo-badge-accent', badge.color);
+      card.style.setProperty(
+        '--octo-badge-container',
+        'color-mix(in srgb, ' + badge.color + ' 22%, var(--octo-md-surface-container-highest, #36343b))',
+      );
+      card.style.setProperty(
+        '--octo-badge-on-container',
+        'color-mix(in srgb, ' + badge.color + ' 78%, var(--octo-md-on-surface, #f2ecf8))',
+      );
+      return;
+    }
+    const role = badge.accent === 'secondary' || badge.accent === 'tertiary' ? badge.accent : 'primary';
+    const fallback =
+      role === 'secondary'
+        ? { accent: '#ccc2dc', container: 'rgba(204, 194, 220, 0.22)', on: '#e8def8' }
+        : role === 'tertiary'
+          ? { accent: '#efb8c8', container: 'rgba(239, 184, 200, 0.22)', on: '#ffd8e4' }
+          : { accent: '#9ac1fc', container: 'rgba(154, 193, 252, 0.22)', on: '#d3e3fd' };
+    card.style.setProperty('--octo-badge-accent', 'var(--octo-md-' + role + ', ' + fallback.accent + ')');
+    card.style.setProperty(
+      '--octo-badge-container',
+      'var(--octo-md-' + role + '-container, ' + fallback.container + ')',
+    );
+    card.style.setProperty(
+      '--octo-badge-on-container',
+      'var(--octo-md-on-' + role + '-container, ' + fallback.on + ')',
+    );
+  };
+
   const closeModal = () => {
     const existing = document.getElementById('octo-badge-modal');
     if (existing) existing.remove();
@@ -549,7 +718,7 @@ function badgesScript() {
     const vw = window.innerWidth || 1280;
     const vh = window.innerHeight || 720;
     const cardRect = card.getBoundingClientRect();
-    const cw = cardRect.width || 352;
+    const cw = cardRect.width || 364;
     const ch = cardRect.height || 180;
 
     let left = Math.round((vw - cw) / 2);
@@ -573,17 +742,31 @@ function badgesScript() {
     card.id = 'octo-badge-modal';
     card.setAttribute(MODAL_MARK, '1');
     card.setAttribute('aria-label', badge.title || '@' + handle);
+    applyModalTone(card, badge);
+
+    const watermark = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    watermark.id = 'octo-badge-modal-watermark';
+    watermark.setAttribute('viewBox', '0 0 100 100');
+    watermark.setAttribute('aria-hidden', 'true');
+    watermark.innerHTML = '<path fill="currentColor" d="${SCALLOP_PATH}"/>';
 
     const head = document.createElement('div');
     head.id = 'octo-badge-modal-head';
 
     const emblem = document.createElement('div');
     emblem.id = 'octo-badge-modal-emblem';
-    if (badge.color) emblem.style.setProperty('--octo-badge-modal-color', badge.color);
-    else if (badge.accent === 'tertiary') {
-      emblem.style.setProperty('--octo-badge-modal-color', 'var(--octo-md-tertiary, #efb8c8)');
-    }
-    emblem.innerHTML = currentData.icons[badge.icon] || '';
+
+    const emblemShape = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    emblemShape.id = 'octo-badge-modal-emblem-shape';
+    emblemShape.setAttribute('viewBox', '0 0 100 100');
+    emblemShape.setAttribute('aria-hidden', 'true');
+    emblemShape.innerHTML = '<path d="${SCALLOP_PATH}"/>';
+
+    const emblemIcon = document.createElement('div');
+    emblemIcon.id = 'octo-badge-modal-emblem-icon';
+    emblemIcon.innerHTML = currentData.icons[badge.icon] || '';
+
+    emblem.append(emblemShape, emblemIcon);
 
     const meta = document.createElement('div');
     meta.id = 'octo-badge-modal-meta';
@@ -592,22 +775,34 @@ function badgesScript() {
     title.id = 'octo-badge-modal-title';
     title.textContent = badge.title || '';
 
+    const chips = document.createElement('div');
+    chips.id = 'octo-badge-modal-chips';
+
     const handlePill = document.createElement('span');
     handlePill.id = 'octo-badge-modal-handle';
     handlePill.textContent = '@' + handle;
+    chips.appendChild(handlePill);
 
-    meta.append(title, handlePill);
+    if (badge.since) {
+      const sincePill = document.createElement('span');
+      sincePill.id = 'octo-badge-modal-since';
+      sincePill.textContent = badge.since;
+      chips.appendChild(sincePill);
+    }
+
+    meta.append(title, chips);
 
     const closeBtn = document.createElement('button');
     closeBtn.id = 'octo-badge-modal-close';
     closeBtn.type = 'button';
     closeBtn.className = 'octo-badge-modal-close';
     closeBtn.setAttribute('aria-label', currentData.labels?.close || 'Закрыть');
-    closeBtn.textContent = '✕';
+    closeBtn.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg>';
     closeBtn.addEventListener('click', closeModal);
 
     head.append(emblem, meta, closeBtn);
-    card.appendChild(head);
+    card.append(watermark, head);
 
     if (badge.description) {
       const desc = document.createElement('p');

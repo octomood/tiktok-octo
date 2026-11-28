@@ -121,11 +121,83 @@ function hexToRgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+function rgbToHex(r, g, b) {
+  const ch = (v) =>
+    Math.round(clamp(v, 0, 1) * 255)
+      .toString(16)
+      .padStart(2, '0');
+  return `#${ch(r)}${ch(g)}${ch(b)}`;
+}
+
+function srgbToLinear(c) {
+  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+}
+
+function linearToSrgb(c) {
+  return c <= 0.0031308 ? 12.92 * c : 1.055 * clamp(c, 0, 1) ** (1 / 2.4) - 0.055;
+}
+
+function linearRgbToOklab(r, g, b) {
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return {
+    l: 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    a: 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    b: 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  };
+}
+
+function oklabToLinearRgb(L, a, b) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  return [
+    +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ];
+}
+
+function hexToOklch(hex) {
+  const [r, g, b] = hexToRgb(normalizeHex(hex, '#8c84a9')).map((v) => srgbToLinear(v / 255));
+  const lab = linearRgbToOklab(r, g, b);
+  const c = Math.hypot(lab.a, lab.b);
+  const h = c < 1e-4 ? 0 : ((Math.atan2(lab.b, lab.a) * 180) / Math.PI + 360) % 360;
+  return { l: lab.l, c, h };
+}
+
+function inGamut(r, g, b) {
+  return r >= -1e-4 && r <= 1.0001 && g >= -1e-4 && g <= 1.0001 && b >= -1e-4 && b <= 1.0001;
+}
+
+function oklchToHex(l, c, h) {
+  const L = clamp(l, 0, 1);
+  const rad = (((h % 360) + 360) % 360) * (Math.PI / 180);
+  const cosH = Math.cos(rad);
+  const sinH = Math.sin(rad);
+  const targetC = Math.max(0, c);
+  let rgb = oklabToLinearRgb(L, targetC * cosH, targetC * sinH);
+  if (!inGamut(rgb[0], rgb[1], rgb[2])) {
+    let lo = 0;
+    let hi = targetC;
+    for (let i = 0; i < 16; i += 1) {
+      const mid = (lo + hi) * 0.5;
+      const cand = oklabToLinearRgb(L, mid * cosH, mid * sinH);
+      if (inGamut(cand[0], cand[1], cand[2])) {
+        lo = mid;
+        rgb = cand;
+      } else {
+        hi = mid;
+      }
+    }
+    rgb = oklabToLinearRgb(L, lo * cosH, lo * sinH);
+  }
+  return rgbToHex(linearToSrgb(rgb[0]), linearToSrgb(rgb[1]), linearToSrgb(rgb[2]));
+}
+
 function luminance(hex) {
-  const [r, g, b] = hexToRgb(hex).map((c) => {
-    const v = c / 255;
-    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  });
+  const [r, g, b] = hexToRgb(hex).map((c) => srgbToLinear(c / 255));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
@@ -135,16 +207,22 @@ function contrastRatio(a, b) {
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 }
 
-function fitLightness(hue, sat, startLight, fgHex, step, minRatio = 4.8, minL = 14, maxL = 88) {
-  let l = startLight;
+function fitOklchLightness(startL, c, h, fgHex, step, minRatio = 4.8, minL = 0.14, maxL = 0.94) {
+  let l = startL;
   for (let i = 0; i < 60; i += 1) {
-    const candidate = hslToHex(hue, sat, l);
+    const candidate = oklchToHex(l, c, h);
     if (contrastRatio(candidate, fgHex) >= minRatio) return candidate;
     const next = clamp(l + step, minL, maxL);
     if (next === l) break;
     l = next;
   }
-  return hslToHex(hue, sat, l);
+  return oklchToHex(l, c, h);
+}
+
+function specToOklch(h, s, mono) {
+  if (mono || s <= 0) return { h: 260, c: 0 };
+  const parsed = hexToOklch(hslToHex(h, s, 54));
+  return { h: parsed.h, c: clamp(parsed.c, 0.04, 0.18) };
 }
 
 function rgba(hex, alpha) {
@@ -154,125 +232,180 @@ function rgba(hex, alpha) {
 
 function buildScheme(spec) {
   const { h, s, secH, secS, terH, terS, surfS, mono } = spec;
-  const neutralS = mono ? 0 : Math.max(6, Math.min(26, surfS));
-  const variantS = mono ? 0 : Math.max(8, Math.min(34, Math.round(s * 0.42)));
+  const pOk = specToOklch(h, s, mono);
+  const secOk = specToOklch(secH, secS, mono);
+  const terOk = specToOklch(terH, terS, mono);
 
-  const darkOnPrimary = hslToHex(h, clamp(s * 0.65, 0, 48), 11);
-  const darkPrimary = fitLightness(h, s, 68, darkOnPrimary, 1.5);
-  const darkOnSecondary = hslToHex(secH, clamp(secS * 0.55, 0, 42), 14);
-  const darkSecondary = fitLightness(secH, secS, 80, darkOnSecondary, 1.5);
-  const darkOnTertiary = hslToHex(terH, clamp(terS * 0.55, 0, 42), 16);
-  const darkTertiary = fitLightness(terH, terS, 83, darkOnTertiary, 1.5);
-  const darkSurface = hslToHex(h, neutralS, 11);
+  const pChromaDark = mono ? 0 : clamp(pOk.c * 0.96, 0.055, 0.148);
+  const pChromaLight = mono ? 0 : clamp(pOk.c * 1.06, 0.065, 0.165);
+  const secChromaDark = mono ? 0 : clamp(secOk.c * 0.88, 0.045, 0.115);
+  const secChromaLight = mono ? 0 : clamp(secOk.c * 0.96, 0.055, 0.13);
+  const terChromaDark = mono ? 0 : clamp(terOk.c * 0.94, 0.05, 0.13);
+  const terChromaLight = mono ? 0 : clamp(terOk.c * 1.02, 0.06, 0.145);
 
-  const lightOnPrimary = hslToHex(h, mono ? 0 : 28, 97);
-  const lightPrimary = fitLightness(h, clamp(s + 8, 0, 74), 39, lightOnPrimary, -1.5);
-  const lightOnSecondary = hslToHex(secH, mono ? 0 : 28, 97);
-  const lightSecondary = fitLightness(secH, clamp(secS + 4, 0, 62), 40, lightOnSecondary, -1.5);
-  const lightOnTertiary = hslToHex(terH, mono ? 0 : 28, 97);
-  const lightTertiary = fitLightness(terH, clamp(terS + 4, 0, 64), 38, lightOnTertiary, -1.5);
-  const lightPrimaryBase = hslToHex(h, clamp(s + 6, 0, 70), 31);
+  const surfC = mono ? 0 : clamp((surfS / 100) * 0.16, 0.012, 0.042);
+  const varC = mono ? 0 : clamp(pOk.c * 0.28, 0.014, 0.046);
+  const hue = pOk.h;
 
-  const darkPrimaryContainer = hslToHex(h, clamp(s * 0.62, 0, 42), 27);
-  const darkOnPrimaryContainer = fitLightness(
-    h,
-    clamp(s * 0.55, 0, 48),
-    89,
+  const darkOnPrimary = oklchToHex(0.18, mono ? 0 : clamp(pChromaDark * 0.42, 0.012, 0.045), hue);
+  const darkPrimary = fitOklchLightness(0.76, pChromaDark, hue, darkOnPrimary, 0.015);
+  const darkOnSecondary = oklchToHex(
+    0.19,
+    mono ? 0 : clamp(secChromaDark * 0.38, 0.01, 0.04),
+    secOk.h,
+  );
+  const darkSecondary = fitOklchLightness(0.8, secChromaDark, secOk.h, darkOnSecondary, 0.015);
+  const darkOnTertiary = oklchToHex(
+    0.2,
+    mono ? 0 : clamp(terChromaDark * 0.38, 0.01, 0.042),
+    terOk.h,
+  );
+  const darkTertiary = fitOklchLightness(0.82, terChromaDark, terOk.h, darkOnTertiary, 0.015);
+
+  const lightOnPrimary = oklchToHex(0.985, mono ? 0 : 0.012, hue);
+  const lightPrimary = fitOklchLightness(0.47, pChromaLight, hue, lightOnPrimary, -0.015);
+  const lightOnSecondary = oklchToHex(0.985, mono ? 0 : 0.012, secOk.h);
+  const lightSecondary = fitOklchLightness(0.48, secChromaLight, secOk.h, lightOnSecondary, -0.015);
+  const lightOnTertiary = oklchToHex(0.985, mono ? 0 : 0.012, terOk.h);
+  const lightTertiary = fitOklchLightness(0.46, terChromaLight, terOk.h, lightOnTertiary, -0.015);
+  const lightPrimaryBase = fitOklchLightness(0.39, pChromaLight, hue, lightOnPrimary, -0.015);
+
+  const darkPrimaryContainer = oklchToHex(
+    0.32,
+    mono ? 0 : clamp(pChromaDark * 0.66, 0.032, 0.095),
+    hue,
+  );
+  const darkOnPrimaryContainer = fitOklchLightness(
+    0.9,
+    mono ? 0 : clamp(pChromaDark * 0.38, 0.018, 0.055),
+    hue,
     darkPrimaryContainer,
-    1.5,
+    0.015,
     4.8,
-    8,
-    95,
+    0.12,
+    0.96,
   );
-  const darkSecondaryContainer = hslToHex(secH, clamp(secS * 0.55, 0, 38), 37);
-  const darkOnSecondaryContainer = fitLightness(
-    secH,
-    clamp(secS * 0.55, 0, 48),
-    90,
+  const darkSecondaryContainer = oklchToHex(
+    0.37,
+    mono ? 0 : clamp(secChromaDark * 0.68, 0.028, 0.082),
+    secOk.h,
+  );
+  const darkOnSecondaryContainer = fitOklchLightness(
+    0.91,
+    mono ? 0 : clamp(secChromaDark * 0.36, 0.016, 0.048),
+    secOk.h,
     darkSecondaryContainer,
-    1.5,
+    0.015,
     4.8,
-    8,
-    95,
+    0.12,
+    0.96,
   );
-  const darkTertiaryContainer = hslToHex(terH, clamp(terS * 0.58, 0, 40), 33);
-  const darkOnTertiaryContainer = fitLightness(
-    terH,
-    clamp(terS * 0.55, 0, 48),
-    90,
+  const darkTertiaryContainer = oklchToHex(
+    0.35,
+    mono ? 0 : clamp(terChromaDark * 0.68, 0.03, 0.09),
+    terOk.h,
+  );
+  const darkOnTertiaryContainer = fitOklchLightness(
+    0.91,
+    mono ? 0 : clamp(terChromaDark * 0.38, 0.016, 0.052),
+    terOk.h,
     darkTertiaryContainer,
-    1.5,
+    0.015,
     4.8,
-    8,
-    95,
+    0.12,
+    0.96,
   );
-  const darkSurfaceContainerHighest = hslToHex(h, neutralS, 34);
-  const darkOnSurfaceVariant = fitLightness(
-    h,
-    variantS,
-    73,
-    darkSurfaceContainerHighest,
-    1.5,
-    4.6,
-    8,
-    94,
-  );
-  const darkInverseSurface = hslToHex(h, mono ? 0 : 22, 88);
-  const darkInverseOnSurface = fitLightness(h, neutralS, 16, darkInverseSurface, -1.5, 4.8, 6, 94);
 
-  const lightPrimaryContainer = hslToHex(h, clamp(s * 0.72, 0, 56), 86);
-  const lightOnPrimaryContainer = fitLightness(
-    h,
-    clamp(s * 0.72, 0, 52),
-    18,
-    lightPrimaryContainer,
-    -1.5,
-    4.8,
-    6,
-    92,
-  );
-  const lightSecondaryContainer = hslToHex(secH, clamp(secS * 0.72, 0, 54), 88);
-  const lightOnSecondaryContainer = fitLightness(
-    secH,
-    clamp(secS * 0.72, 0, 50),
-    20,
-    lightSecondaryContainer,
-    -1.5,
-    4.8,
-    6,
-    92,
-  );
-  const lightTertiaryContainer = hslToHex(terH, clamp(terS * 0.76, 0, 56), 86);
-  const lightOnTertiaryContainer = fitLightness(
-    terH,
-    clamp(terS * 0.74, 0, 50),
-    19,
-    lightTertiaryContainer,
-    -1.5,
-    4.8,
-    6,
-    92,
-  );
-  const lightSurfaceContainerHighest = hslToHex(h, mono ? 0 : 22, 85);
-  const lightOnSurfaceVariant = fitLightness(
-    h,
-    variantS,
-    36,
-    lightSurfaceContainerHighest,
-    -1.5,
+  const darkSurfaceContainerHighest = oklchToHex(0.365, clamp(surfC * 1.35, 0, 0.054), hue);
+  const darkOnSurfaceVariant = fitOklchLightness(
+    0.77,
+    varC,
+    hue,
+    darkSurfaceContainerHighest,
+    0.015,
     4.6,
-    6,
-    92,
+    0.12,
+    0.95,
   );
-  const lightInverseOnSurface = fitLightness(
-    h,
-    mono ? 0 : 24,
-    92,
-    lightPrimaryBase,
-    1.5,
+  const darkInverseSurface = oklchToHex(0.9, mono ? 0 : 0.024, hue);
+  const darkInverseOnSurface = fitOklchLightness(
+    0.22,
+    surfC,
+    hue,
+    darkInverseSurface,
+    -0.015,
     4.8,
-    10,
-    97,
+    0.1,
+    0.94,
+  );
+
+  const lightPrimaryContainer = oklchToHex(
+    0.885,
+    mono ? 0 : clamp(pChromaLight * 0.56, 0.035, 0.088),
+    hue,
+  );
+  const lightOnPrimaryContainer = fitOklchLightness(
+    0.22,
+    mono ? 0 : clamp(pChromaLight * 0.52, 0.025, 0.075),
+    hue,
+    lightPrimaryContainer,
+    -0.015,
+    4.8,
+    0.1,
+    0.92,
+  );
+  const lightSecondaryContainer = oklchToHex(
+    0.895,
+    mono ? 0 : clamp(secChromaLight * 0.54, 0.032, 0.076),
+    secOk.h,
+  );
+  const lightOnSecondaryContainer = fitOklchLightness(
+    0.23,
+    mono ? 0 : clamp(secChromaLight * 0.48, 0.022, 0.068),
+    secOk.h,
+    lightSecondaryContainer,
+    -0.015,
+    4.8,
+    0.1,
+    0.92,
+  );
+  const lightTertiaryContainer = oklchToHex(
+    0.885,
+    mono ? 0 : clamp(terChromaLight * 0.56, 0.034, 0.084),
+    terOk.h,
+  );
+  const lightOnTertiaryContainer = fitOklchLightness(
+    0.22,
+    mono ? 0 : clamp(terChromaLight * 0.5, 0.024, 0.072),
+    terOk.h,
+    lightTertiaryContainer,
+    -0.015,
+    4.8,
+    0.1,
+    0.92,
+  );
+
+  const lightSurfaceC = mono ? 0 : clamp(surfC * 0.72, 0.01, 0.028);
+  const lightSurfaceContainerHighest = oklchToHex(0.855, clamp(lightSurfaceC * 1.3, 0, 0.038), hue);
+  const lightOnSurfaceVariant = fitOklchLightness(
+    0.41,
+    varC,
+    hue,
+    lightSurfaceContainerHighest,
+    -0.015,
+    4.6,
+    0.1,
+    0.92,
+  );
+  const lightInverseOnSurface = fitOklchLightness(
+    0.95,
+    mono ? 0 : 0.016,
+    hue,
+    lightPrimaryBase,
+    0.015,
+    4.8,
+    0.14,
+    0.97,
   );
 
   return {
@@ -294,22 +427,22 @@ function buildScheme(spec) {
       onError: '#601410',
       errorContainer: '#8c1d18',
       onErrorContainer: '#f9dedc',
-      surfaceDim: hslToHex(h, neutralS, 8.5),
-      surface: darkSurface,
-      surfaceContainerLowest: hslToHex(h, neutralS, 7.5),
-      surfaceContainerLow: hslToHex(h, neutralS, 15),
-      surfaceContainer: hslToHex(h, neutralS, 19),
-      surfaceContainerHigh: hslToHex(h, neutralS, 27),
+      surfaceDim: oklchToHex(0.155, clamp(surfC * 0.85, 0, 0.034), hue),
+      surface: oklchToHex(0.185, clamp(surfC * 0.95, 0, 0.038), hue),
+      surfaceContainerLowest: oklchToHex(0.135, clamp(surfC * 0.8, 0, 0.032), hue),
+      surfaceContainerLow: oklchToHex(0.215, clamp(surfC * 1.02, 0, 0.042), hue),
+      surfaceContainer: oklchToHex(0.255, clamp(surfC * 1.12, 0, 0.046), hue),
+      surfaceContainerHigh: oklchToHex(0.305, clamp(surfC * 1.24, 0, 0.05), hue),
       surfaceContainerHighest: darkSurfaceContainerHighest,
-      onSurface: hslToHex(h, mono ? 0 : 22, 88),
+      onSurface: oklchToHex(0.9, mono ? 0 : 0.024, hue),
       onSurfaceVariant: darkOnSurfaceVariant,
-      outline: hslToHex(h, variantS, 58),
-      outlineVariant: hslToHex(h, variantS, 31),
+      outline: oklchToHex(0.62, mono ? 0 : clamp(varC * 1.4, 0.02, 0.068), hue),
+      outlineVariant: oklchToHex(0.35, mono ? 0 : clamp(varC * 1.05, 0.014, 0.046), hue),
       inverseSurface: darkInverseSurface,
       inverseOnSurface: darkInverseOnSurface,
       stateHover: rgba(darkPrimary, 0.16),
       statePressed: rgba(darkPrimary, 0.24),
-      scrim: rgba(hslToHex(h, neutralS, 6), 0.78),
+      scrim: rgba(oklchToHex(0.12, surfC, hue), 0.78),
       elevation1: '0 2px 8px rgba(8, 6, 16, 0.36)',
       elevation2: '0 8px 24px rgba(8, 6, 16, 0.46)',
       elevation3: '0 20px 44px rgba(8, 6, 16, 0.58)',
@@ -332,22 +465,22 @@ function buildScheme(spec) {
       onError: '#ffffff',
       errorContainer: '#f9dedc',
       onErrorContainer: '#410e0b',
-      surfaceDim: hslToHex(h, mono ? 0 : 20, 86),
-      surface: hslToHex(h, mono ? 0 : 32, 96),
+      surfaceDim: oklchToHex(0.895, clamp(lightSurfaceC * 1.1, 0, 0.032), hue),
+      surface: oklchToHex(0.965, lightSurfaceC, hue),
       surfaceContainerLowest: '#ffffff',
-      surfaceContainerLow: hslToHex(h, mono ? 0 : 28, 93.5),
-      surfaceContainer: hslToHex(h, mono ? 0 : 26, 91),
-      surfaceContainerHigh: hslToHex(h, mono ? 0 : 24, 88),
+      surfaceContainerLow: oklchToHex(0.94, clamp(lightSurfaceC * 1.05, 0, 0.03), hue),
+      surfaceContainer: oklchToHex(0.915, clamp(lightSurfaceC * 1.1, 0, 0.032), hue),
+      surfaceContainerHigh: oklchToHex(0.885, clamp(lightSurfaceC * 1.2, 0, 0.035), hue),
       surfaceContainerHighest: lightSurfaceContainerHighest,
-      onSurface: hslToHex(h, mono ? 0 : 24, 18),
+      onSurface: oklchToHex(0.22, mono ? 0 : 0.03, hue),
       onSurfaceVariant: lightOnSurfaceVariant,
-      outline: hslToHex(h, variantS, 51),
-      outlineVariant: hslToHex(h, variantS, 78),
+      outline: oklchToHex(0.54, mono ? 0 : clamp(varC * 1.3, 0.018, 0.06), hue),
+      outlineVariant: oklchToHex(0.78, mono ? 0 : clamp(varC * 0.95, 0.014, 0.04), hue),
       inverseSurface: lightPrimaryBase,
       inverseOnSurface: lightInverseOnSurface,
       stateHover: rgba(lightPrimaryBase, 0.08),
       statePressed: rgba(lightPrimaryBase, 0.14),
-      scrim: rgba(hslToHex(h, neutralS, 18), 0.44),
+      scrim: rgba(oklchToHex(0.24, surfC, hue), 0.44),
       elevation1: '0 1px 4px rgba(24, 20, 36, 0.1)',
       elevation2: '0 6px 18px rgba(24, 20, 36, 0.14)',
       elevation3: '0 16px 36px rgba(24, 20, 36, 0.2)',
@@ -669,8 +802,8 @@ function mixHex(aHex, bHex, weightA = 0.5) {
   return `#${ch(ar, br)}${ch(ag, bg)}${ch(ab, bb)}`;
 }
 
-function bestOnColor(bgHex, h, s, mono) {
-  const darkCandidate = hslToHex(h, mono ? 0 : clamp(s * 0.45, 0, 36), 7);
+function bestOnColor(bgHex, h, c, mono) {
+  const darkCandidate = oklchToHex(0.16, mono ? 0 : clamp(c * 0.35, 0.01, 0.036), h);
   const lightCandidate = '#ffffff';
   const darkRatio = contrastRatio(bgHex, darkCandidate);
   const lightRatio = contrastRatio(bgHex, lightCandidate);
@@ -680,23 +813,24 @@ function bestOnColor(bgHex, h, s, mono) {
   return contrastRatio(bgHex, '#000000') >= lightRatio ? '#000000' : lightCandidate;
 }
 
-function resolveAccentPair(customHex, h, s, defaultLight, mono, isDark) {
+function resolveAccentPair(customHex, okH, okC, defaultL, mono, isDark) {
   if (customHex) {
-    const ch = hexToHsl(customHex);
-    const cMono = ch.s < 4;
+    const ch = hexToOklch(customHex);
+    const cMono = ch.c < 0.02;
     const color = customHex;
-    const onColor = bestOnColor(color, ch.h, ch.s, cMono);
-    const containerL = isDark ? 28 : 87;
-    const container = hslToHex(ch.h, cMono ? 0 : clamp(ch.s * 0.65, 10, 46), containerL);
-    const onContainer = fitLightness(
+    const onColor = bestOnColor(color, ch.h, ch.c, cMono);
+    const containerL = isDark ? 0.32 : 0.885;
+    const containerC = cMono ? 0 : clamp(ch.c * 0.56, 0.028, 0.09);
+    const container = oklchToHex(containerL, containerC, ch.h);
+    const onContainer = fitOklchLightness(
+      isDark ? 0.91 : 0.22,
+      cMono ? 0 : clamp(ch.c * 0.42, 0.018, 0.068),
       ch.h,
-      cMono ? 0 : clamp(ch.s * 0.65, 8, 52),
-      isDark ? 90 : 18,
       container,
-      isDark ? 1.5 : -1.5,
+      isDark ? 0.015 : -0.015,
       4.8,
-      6,
-      96,
+      0.1,
+      0.96,
     );
     return {
       color,
@@ -706,122 +840,132 @@ function resolveAccentPair(customHex, h, s, defaultLight, mono, isDark) {
     };
   }
   const on = isDark
-    ? hslToHex(h, mono ? 0 : clamp(s * 0.58, 0, 44), 13)
-    : hslToHex(h, mono ? 0 : 28, 97);
-  const color = fitLightness(
-    h,
-    isDark ? s : clamp(s + 6, 0, 72),
-    defaultLight,
+    ? oklchToHex(0.19, mono ? 0 : clamp(okC * 0.38, 0.01, 0.042), okH)
+    : oklchToHex(0.985, mono ? 0 : 0.012, okH);
+  const color = fitOklchLightness(
+    defaultL,
+    mono ? 0 : clamp(okC, 0.045, 0.145),
+    okH,
     on,
-    isDark ? 1.5 : -1.5,
+    isDark ? 0.015 : -0.015,
   );
-  const container = hslToHex(h, mono ? 0 : clamp(s * 0.6, 0, 46), isDark ? 29 : 87);
+  const container = oklchToHex(
+    isDark ? 0.34 : 0.89,
+    mono ? 0 : clamp(okC * 0.58, 0.028, 0.085),
+    okH,
+  );
   return {
     color,
     onColor: on,
     container,
-    onContainer: fitLightness(
-      h,
-      mono ? 0 : clamp(s * 0.6, 0, 50),
-      isDark ? 90 : 19,
+    onContainer: fitOklchLightness(
+      isDark ? 0.91 : 0.22,
+      mono ? 0 : clamp(okC * 0.42, 0.018, 0.065),
+      okH,
       container,
-      isDark ? 1.5 : -1.5,
+      isDark ? 0.015 : -0.015,
       4.8,
-      6,
-      96,
+      0.1,
+      0.96,
     ),
   };
 }
 
 function buildCustomScheme(customRaw) {
   const custom = normalizeCustomTheme(customRaw);
-  const p = hexToHsl(custom.primary);
-  const mono = p.s < 4;
-  const secHsl = custom.secondary
-    ? hexToHsl(custom.secondary)
-    : { h: (p.h + 24) % 360, s: mono ? 0 : clamp(p.s * 0.72, 16, 48), l: 55 };
-  const terHsl = custom.tertiary
-    ? hexToHsl(custom.tertiary)
-    : { h: (p.h + 58) % 360, s: mono ? 0 : clamp(p.s * 0.84, 18, 56), l: 58 };
-  const surfHsl = custom.surface ? hexToHsl(custom.surface) : p;
-  const surfMono = custom.surface ? surfHsl.s < 4 : mono;
-  const neutralS = surfMono ? 0 : clamp(custom.surface ? surfHsl.s : p.s * 0.34, 6, 30);
-  const variantS = surfMono ? 0 : clamp(Math.round(p.s * 0.42), 8, 34);
+  const p = hexToOklch(custom.primary);
+  const mono = p.c < 0.02;
+  const secOk = custom.secondary
+    ? hexToOklch(custom.secondary)
+    : { h: (p.h + 34) % 360, c: mono ? 0 : clamp(p.c * 0.72, 0.04, 0.115), l: 0.65 };
+  const terOk = custom.tertiary
+    ? hexToOklch(custom.tertiary)
+    : { h: (p.h + 78) % 360, c: mono ? 0 : clamp(p.c * 0.84, 0.045, 0.13), l: 0.65 };
+  const surfOk = custom.surface ? hexToOklch(custom.surface) : p;
+  const surfHsl = custom.surface ? hexToHsl(custom.surface) : hexToHsl(custom.primary);
+  const surfMono = custom.surface ? surfOk.c < 0.016 : mono;
+  const neutralC = surfMono ? 0 : clamp(custom.surface ? surfOk.c : p.c * 0.26, 0.012, 0.044);
+  const varC = surfMono ? 0 : clamp(p.c * 0.3, 0.014, 0.048);
 
-  const darkPrimaryPair = resolveAccentPair(custom.primary, p.h, p.s, 68, mono, true);
+  const darkPrimaryPair = resolveAccentPair(custom.primary, p.h, p.c, 0.76, mono, true);
   const darkSecondaryPair = resolveAccentPair(
     custom.secondary,
-    secHsl.h,
-    secHsl.s,
-    80,
-    secHsl.s < 4,
+    secOk.h,
+    secOk.c,
+    0.8,
+    secOk.c < 0.02,
     true,
   );
   const darkTertiaryPair = resolveAccentPair(
     custom.tertiary,
-    terHsl.h,
-    terHsl.s,
-    83,
-    terHsl.s < 4,
+    terOk.h,
+    terOk.c,
+    0.82,
+    terOk.c < 0.02,
     true,
   );
 
-  const lightPrimaryPair = resolveAccentPair(custom.primary, p.h, p.s, 39, mono, false);
+  const lightPrimaryPair = resolveAccentPair(custom.primary, p.h, p.c, 0.47, mono, false);
   const lightSecondaryPair = resolveAccentPair(
     custom.secondary,
-    secHsl.h,
-    secHsl.s,
-    40,
-    secHsl.s < 4,
+    secOk.h,
+    secOk.c,
+    0.48,
+    secOk.c < 0.02,
     false,
   );
   const lightTertiaryPair = resolveAccentPair(
     custom.tertiary,
-    terHsl.h,
-    terHsl.s,
-    38,
-    terHsl.s < 4,
+    terOk.h,
+    terOk.c,
+    0.46,
+    terOk.c < 0.02,
     false,
   );
 
   const useExactDarkSurface = Boolean(custom.surface) && surfHsl.l <= 24;
-  const darkBaseL = useExactDarkSurface ? surfHsl.l : 11;
+  const darkBaseL = useExactDarkSurface ? clamp(surfOk.l, 0.06, 0.34) : 0.185;
   const darkSurface = useExactDarkSurface
     ? custom.surface
-    : hslToHex(surfHsl.h, neutralS, darkBaseL);
+    : oklchToHex(darkBaseL, neutralC, surfOk.h);
 
   const useExactLightSurface = Boolean(custom.surface) && surfHsl.l >= 80;
-  const lightBaseL = useExactLightSurface ? surfHsl.l : 96;
+  const lightBaseL = useExactLightSurface ? clamp(surfOk.l, 0.86, 0.99) : 0.965;
+  const lightSurfaceC = surfMono ? 0 : clamp(neutralC * 0.75, 0.01, 0.03);
   const lightSurface = useExactLightSurface
     ? custom.surface
-    : hslToHex(surfHsl.h, surfMono ? 0 : clamp(neutralS + 4, 8, 32), lightBaseL);
+    : oklchToHex(lightBaseL, lightSurfaceC, surfOk.h);
 
-  const darkSurfaceContainerHighest = hslToHex(surfHsl.h, neutralS, clamp(darkBaseL + 21, 23, 44));
-  const lightSurfaceContainerHighest = hslToHex(
-    surfHsl.h,
-    surfMono ? 0 : 18,
-    clamp(lightBaseL - 11, 73, 89),
+  const darkSurfaceContainerHighest = oklchToHex(
+    clamp(darkBaseL + 0.18, 0.28, 0.44),
+    clamp(neutralC * 1.3, 0, 0.052),
+    surfOk.h,
+  );
+  const lightSurfaceContainerHighest = oklchToHex(
+    clamp(lightBaseL - 0.11, 0.78, 0.9),
+    clamp(lightSurfaceC * 1.3, 0, 0.038),
+    surfOk.h,
   );
 
-  const defaultDarkText = fitLightness(
-    surfHsl.h,
-    surfMono ? 0 : 22,
-    89,
+  const defaultDarkText = fitOklchLightness(
+    0.9,
+    surfMono ? 0 : 0.024,
+    surfOk.h,
     darkSurfaceContainerHighest,
-    1.5,
+    0.015,
     5.5,
-    8,
-    96,
+    0.12,
+    0.96,
   );
-  const defaultLightText = fitLightness(
-    surfHsl.h,
-    surfMono ? 0 : 24,
-    18,
+  const defaultLightText = fitOklchLightness(
+    0.22,
+    surfMono ? 0 : 0.03,
+    surfOk.h,
     lightSurfaceContainerHighest,
-    -1.5,
+    -0.015,
     5.5,
-    6,
-    94,
+    0.1,
+    0.94,
   );
   const darkOnSurface =
     custom.text && contrastRatio(custom.text, darkSurfaceContainerHighest) >= 4.5
@@ -835,32 +979,50 @@ function buildCustomScheme(customRaw) {
   const darkOnSurfaceVariant =
     darkVarCandidate && contrastRatio(darkVarCandidate, darkSurfaceContainerHighest) >= 4.5
       ? darkVarCandidate
-      : fitLightness(surfHsl.h, variantS, 73, darkSurfaceContainerHighest, 1.5, 4.6, 8, 94);
+      : fitOklchLightness(
+          0.77,
+          varC,
+          surfOk.h,
+          darkSurfaceContainerHighest,
+          0.015,
+          4.6,
+          0.12,
+          0.95,
+        );
   const lightVarCandidate = custom.text ? mixHex(lightOnSurface, lightSurface, 0.78) : '';
   const lightOnSurfaceVariant =
     lightVarCandidate && contrastRatio(lightVarCandidate, lightSurfaceContainerHighest) >= 4.5
       ? lightVarCandidate
-      : fitLightness(surfHsl.h, variantS, 36, lightSurfaceContainerHighest, -1.5, 4.6, 6, 92);
-  const lightPrimaryBase = hslToHex(p.h, mono ? 0 : clamp(p.s + 6, 0, 70), 31);
-  const darkInverseOnSurface = fitLightness(
-    surfHsl.h,
-    neutralS,
-    16,
+      : fitOklchLightness(
+          0.41,
+          varC,
+          surfOk.h,
+          lightSurfaceContainerHighest,
+          -0.015,
+          4.6,
+          0.1,
+          0.92,
+        );
+  const lightPrimaryBase = oklchToHex(0.39, mono ? 0 : clamp(p.c * 1.05, 0.045, 0.15), p.h);
+  const darkInverseOnSurface = fitOklchLightness(
+    0.22,
+    neutralC,
+    surfOk.h,
     darkOnSurface,
-    -1.5,
+    -0.015,
     4.8,
-    6,
-    94,
+    0.1,
+    0.94,
   );
-  const lightInverseOnSurface = fitLightness(
-    surfHsl.h,
-    surfMono ? 0 : 24,
-    92,
+  const lightInverseOnSurface = fitOklchLightness(
+    0.95,
+    surfMono ? 0 : 0.018,
+    surfOk.h,
     lightPrimaryBase,
-    1.5,
+    0.015,
     4.8,
-    10,
-    97,
+    0.14,
+    0.97,
   );
 
   return {
@@ -882,22 +1044,22 @@ function buildCustomScheme(customRaw) {
       onError: '#601410',
       errorContainer: '#8c1d18',
       onErrorContainer: '#f9dedc',
-      surfaceDim: hslToHex(surfHsl.h, neutralS, clamp(darkBaseL - 2.5, 4, 18)),
+      surfaceDim: oklchToHex(clamp(darkBaseL - 0.03, 0.05, 0.24), neutralC, surfOk.h),
       surface: darkSurface,
-      surfaceContainerLowest: hslToHex(surfHsl.h, neutralS, clamp(darkBaseL - 3.5, 3, 16)),
-      surfaceContainerLow: hslToHex(surfHsl.h, neutralS, clamp(darkBaseL + 4, 8, 28)),
-      surfaceContainer: hslToHex(surfHsl.h, neutralS, clamp(darkBaseL + 8, 12, 32)),
-      surfaceContainerHigh: hslToHex(surfHsl.h, neutralS, clamp(darkBaseL + 14, 17, 38)),
+      surfaceContainerLowest: oklchToHex(clamp(darkBaseL - 0.05, 0.04, 0.22), neutralC, surfOk.h),
+      surfaceContainerLow: oklchToHex(clamp(darkBaseL + 0.035, 0.1, 0.34), neutralC, surfOk.h),
+      surfaceContainer: oklchToHex(clamp(darkBaseL + 0.07, 0.14, 0.37), neutralC, surfOk.h),
+      surfaceContainerHigh: oklchToHex(clamp(darkBaseL + 0.12, 0.19, 0.41), neutralC, surfOk.h),
       surfaceContainerHighest: darkSurfaceContainerHighest,
       onSurface: darkOnSurface,
       onSurfaceVariant: darkOnSurfaceVariant,
-      outline: hslToHex(surfHsl.h, variantS, 58),
-      outlineVariant: hslToHex(surfHsl.h, variantS, 31),
+      outline: oklchToHex(0.62, surfMono ? 0 : clamp(varC * 1.35, 0.02, 0.068), surfOk.h),
+      outlineVariant: oklchToHex(0.35, varC, surfOk.h),
       inverseSurface: darkOnSurface,
       inverseOnSurface: darkInverseOnSurface,
       stateHover: rgba(darkPrimaryPair.color, 0.16),
       statePressed: rgba(darkPrimaryPair.color, 0.24),
-      scrim: rgba(hslToHex(surfHsl.h, neutralS, 6), 0.78),
+      scrim: rgba(oklchToHex(0.12, neutralC, surfOk.h), 0.78),
       elevation1: '0 2px 8px rgba(8, 6, 16, 0.36)',
       elevation2: '0 8px 24px rgba(8, 6, 16, 0.46)',
       elevation3: '0 20px 44px rgba(8, 6, 16, 0.58)',
@@ -920,22 +1082,34 @@ function buildCustomScheme(customRaw) {
       onError: '#ffffff',
       errorContainer: '#f9dedc',
       onErrorContainer: '#410e0b',
-      surfaceDim: hslToHex(surfHsl.h, surfMono ? 0 : 20, clamp(lightBaseL - 10, 74, 90)),
+      surfaceDim: oklchToHex(clamp(lightBaseL - 0.07, 0.8, 0.92), lightSurfaceC, surfOk.h),
       surface: lightSurface,
       surfaceContainerLowest: '#ffffff',
-      surfaceContainerLow: hslToHex(surfHsl.h, surfMono ? 0 : 24, clamp(lightBaseL - 2.5, 82, 97)),
-      surfaceContainer: hslToHex(surfHsl.h, surfMono ? 0 : 22, clamp(lightBaseL - 5, 79, 95)),
-      surfaceContainerHigh: hslToHex(surfHsl.h, surfMono ? 0 : 20, clamp(lightBaseL - 8, 76, 92)),
+      surfaceContainerLow: oklchToHex(
+        clamp(lightBaseL - 0.025, 0.85, 0.97),
+        lightSurfaceC,
+        surfOk.h,
+      ),
+      surfaceContainer: oklchToHex(
+        clamp(lightBaseL - 0.05, 0.82, 0.95),
+        clamp(lightSurfaceC * 1.1, 0, 0.032),
+        surfOk.h,
+      ),
+      surfaceContainerHigh: oklchToHex(
+        clamp(lightBaseL - 0.08, 0.79, 0.92),
+        clamp(lightSurfaceC * 1.2, 0, 0.035),
+        surfOk.h,
+      ),
       surfaceContainerHighest: lightSurfaceContainerHighest,
       onSurface: lightOnSurface,
       onSurfaceVariant: lightOnSurfaceVariant,
-      outline: hslToHex(surfHsl.h, variantS, 51),
-      outlineVariant: hslToHex(surfHsl.h, variantS, 78),
+      outline: oklchToHex(0.54, surfMono ? 0 : clamp(varC * 1.25, 0.018, 0.06), surfOk.h),
+      outlineVariant: oklchToHex(0.78, varC, surfOk.h),
       inverseSurface: lightPrimaryBase,
       inverseOnSurface: lightInverseOnSurface,
       stateHover: rgba(lightPrimaryBase, 0.08),
       statePressed: rgba(lightPrimaryBase, 0.14),
-      scrim: rgba(hslToHex(surfHsl.h, neutralS, 18), 0.44),
+      scrim: rgba(oklchToHex(0.24, neutralC, surfOk.h), 0.44),
       elevation1: '0 1px 4px rgba(24, 20, 36, 0.1)',
       elevation2: '0 6px 18px rgba(24, 20, 36, 0.14)',
       elevation3: '0 16px 36px rgba(24, 20, 36, 0.2)',

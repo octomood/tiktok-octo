@@ -96,17 +96,25 @@ test('чат: ширина, док, ручка и сохранение', async (
     const page = await waitForWindow(app, (candidate) => candidate.url().startsWith('file://'));
     await waitForWindow(app, (candidate) => candidate.url() === 'about:blank');
 
+    // Расширяем окно, чтобы поместились боковое меню (240 px), 900 px чат и минимум ленты.
+    await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find((w) =>
+        w.webContents.getURL().startsWith('file://'),
+      );
+      if (win) win.setSize(1540, 840);
+    });
+
     await page.evaluate(() => window.octo.cmd('chat'));
     await waitForWindow(app, (candidate) => candidate.url().startsWith('http://127.0.0.1'));
 
-    // По умолчанию чат поджимает ленту: она начинается после чата и ручки.
+    // По умолчанию слева стоит кастомное меню (240 px), а чат поджимает ленту.
     await expect
       .poll(async () => {
         const views = await viewLayout(app);
         const feed = views.find((item) => item.url === 'about:blank');
         return feed ? feed.bounds.x : -1;
       })
-      .toBe(426);
+      .toBe(240 + 426);
 
     // Ширина тянется командой (её шлёт ручка) и запоминается.
     await page.evaluate(() => window.octo.cmd('chatResize', 520));
@@ -116,14 +124,14 @@ test('чат: ширина, док, ручка и сохранение', async (
         const feed = views.find((item) => item.url === 'about:blank');
         return feed ? feed.bounds.x : -1;
       })
-      .toBe(526);
+      .toBe(240 + 526);
 
     const handle = page.locator('#chatResize');
     await expect(handle).toBeVisible();
     const box = await handle.boundingBox();
-    expect(Math.round(box.x)).toBe(520);
+    expect(Math.round(box.x)).toBe(240 + 520);
 
-    // Отключённый док возвращает прежнее поведение: чат поверх ленты.
+    // Отключённый док возвращает прежнее поведение: чат поверх ленты (лента сразу после бокового меню).
     await page.evaluate(() => window.octo.cmd('chatDock'));
     await expect
       .poll(async () => {
@@ -131,7 +139,7 @@ test('чат: ширина, док, ручка и сохранение', async (
         const feed = views.find((item) => item.url === 'about:blank');
         return feed ? feed.bounds.x : -1;
       })
-      .toBe(0);
+      .toBe(240);
 
     const saved = JSON.parse(fs.readFileSync(path.join(userData, 'octo-state.json'), 'utf8'));
     expect(saved.chatWidth).toBe(520);
@@ -185,6 +193,14 @@ test('чат: панель подстраивается под ширину ст
       return chat ? chat.bounds : null;
     };
 
+    // Расширяем окно, чтобы поместились боковое меню (240 px), 900 px чат и минимум ленты.
+    await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find((w) =>
+        w.webContents.getURL().startsWith('file://'),
+      );
+      if (win) win.setSize(1540, 840);
+    });
+
     await page.evaluate(() => window.octo.cmd('chat'));
     await waitForWindow(app, (candidate) => candidate.url().startsWith('http://127.0.0.1'));
 
@@ -200,7 +216,7 @@ test('чат: панель подстраивается под ширину ст
 
     const views = await viewLayout(app);
     const feed = views.find((item) => item.url === 'about:blank');
-    expect(feed.bounds.x).toBe(grown.width + 6);
+    expect(feed.bounds.x).toBe(240 + grown.width + 6);
 
     // Ручная ширина важнее автоподбора: панель больше не растягивается.
     await page.evaluate(() => window.octo.cmd('chatResize', 500));
@@ -250,6 +266,14 @@ test('чат: кнопка за правым краем тоже расширя�
     await app.firstWindow();
     const page = await waitForWindow(app, (candidate) => candidate.url().startsWith('file://'));
     await waitForWindow(app, (candidate) => candidate.url() === 'about:blank');
+
+    // Расширяем окно, чтобы поместились боковое меню (240 px), 900 px чат и минимум ленты.
+    await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find((w) =>
+        w.webContents.getURL().startsWith('file://'),
+      );
+      if (win) win.setSize(1540, 840);
+    });
 
     await page.evaluate(() => window.octo.cmd('chat'));
     await waitForWindow(app, (candidate) => candidate.url().startsWith('http://127.0.0.1'));
@@ -301,6 +325,14 @@ test('чат: меню, спрятанное за правым краем, не 
     const page = await waitForWindow(app, (candidate) => candidate.url().startsWith('file://'));
     await waitForWindow(app, (candidate) => candidate.url() === 'about:blank');
 
+    // Расширяем окно, чтобы поместились боковое меню (240 px), 900 px чат и минимум ленты.
+    await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find((w) =>
+        w.webContents.getURL().startsWith('file://'),
+      );
+      if (win) win.setSize(1540, 840);
+    });
+
     await page.evaluate(() => window.octo.cmd('chat'));
     await waitForWindow(app, (candidate) => candidate.url().startsWith('http://127.0.0.1'));
 
@@ -348,6 +380,14 @@ test('чат: открытие переписки внутри страницы 
     await app.firstWindow();
     const page = await waitForWindow(app, (candidate) => candidate.url().startsWith('file://'));
     await waitForWindow(app, (candidate) => candidate.url() === 'about:blank');
+
+    // Расширяем окно, чтобы поместились боковое меню (240 px), 900 px чат и минимум ленты.
+    await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find((w) =>
+        w.webContents.getURL().startsWith('file://'),
+      );
+      if (win) win.setSize(1540, 840);
+    });
 
     await page.evaluate(() => window.octo.cmd('chat'));
     const chat = await waitForWindow(app, (candidate) =>
@@ -415,6 +455,14 @@ test('чат: панель просит страницу пересобрать 
     await app.firstWindow();
     const page = await waitForWindow(app, (candidate) => candidate.url().startsWith('file://'));
     await waitForWindow(app, (candidate) => candidate.url() === 'about:blank');
+
+    // Расширяем окно, чтобы поместились боковое меню (240 px), 900 px чат и минимум ленты.
+    await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find((w) =>
+        w.webContents.getURL().startsWith('file://'),
+      );
+      if (win) win.setSize(1540, 840);
+    });
 
     await page.evaluate(() => window.octo.cmd('chat'));
     const chat = await waitForWindow(app, (candidate) =>

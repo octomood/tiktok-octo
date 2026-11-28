@@ -11,6 +11,14 @@ const $ = (id) => document.getElementById(id);
 
 let state = { phase: 'available', version: '', percent: 0 };
 let lastPhase = '';
+const updateBarProgress = window.octoProgress?.attachLinear($('updateBar'), {
+  mode: 'determinate',
+  value: 0,
+  active: false,
+  strokeWidth: 4,
+  amplitude: 2.8,
+  wavelength: 26,
+});
 
 const PHASES = {
   available: {
@@ -59,8 +67,14 @@ function render() {
   $('updateProgress').hidden = !phase.progress;
   if (phase.progress) {
     $('updateFill').style.width = `${percent}%`;
+    updateBarProgress?.set({
+      value: percent / 100,
+      active: state.phase === 'downloading',
+    });
     $('updateBar').setAttribute('aria-valuenow', String(percent));
     $('updatePercent').textContent = `${percent} %`;
+  } else {
+    updateBarProgress?.set({ active: false });
   }
 
   // Фокус ставим один раз на состояние, чтобы прогресс не перебивал кнопку.

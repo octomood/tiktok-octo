@@ -10,13 +10,27 @@
     <link rel="icon" href="assets/octo-logo-mark.png" />
     <link rel="stylesheet" href="fonts.css" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="win-chrome.css" />
     <link rel="stylesheet" href="update.css" />
   </head>
   <body class="update">
     <main class="update-card" aria-labelledby="updateTitle">
       <header class="update-head">
-        <h1 class="update-title" id="updateTitle">Обновление приложения</h1>
-        <button type="button" class="update-close" id="btnClose" aria-label="Закрыть">×</button>
+        <div class="update-brand">
+          <img class="octo-winbar-icon" src="assets/octo-logo-mark.png" alt="" draggable="false" />
+          <h1 class="update-title" id="updateTitle">Обновление приложения</h1>
+        </div>
+        <button type="button" class="update-close" id="btnClose" aria-label="Закрыть">
+          <svg
+            viewBox="0 0 20 20"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M6.4 6.4l7.2 7.2M13.6 6.4l-7.2 7.2" />
+          </svg>
+        </button>
       </header>
 
       <div class="update-body">
@@ -47,6 +61,9 @@
 
     <script src="i18n-dom.js"></script>
     <script src="theme-sync.js"></script>
+    <script src="ui-custom-core.js"></script>
+    <script src="win-chrome.js"></script>
+    <script src="md3-progress.js"></script>
     <script src="update.js"></script>
   </body>
 </html>

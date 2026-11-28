@@ -34,6 +34,7 @@ const SURFACE_ATTR = 'data-octo-md3-surface';
 const FG_ATTR = 'data-octo-md3-fg';
 const CHAT_LAYOUT_ATTR = 'data-octo-md3-chat-layout';
 const PROBE_ATTR = 'data-octo-md3-probe';
+const RIPPLE_ATTR = 'data-octo-md3-ripple';
 
 const DARK_TOKENS = getPaletteTokens(DEFAULT_PALETTE, true);
 const LIGHT_TOKENS = getPaletteTokens(DEFAULT_PALETTE, false);
@@ -289,9 +290,35 @@ function tokenDeclarations(
   `;
 }
 
-const EXPRESSIVE_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 900' fill='none'%3E%3Crect x='250' y='96' width='220' height='98' rx='49' transform='rotate(-18 360 145)' fill='%233e3854' fill-opacity='0.34'/%3E%3Cpath d='M335 560c22-40 78-40 100 0 18 32 58 39 85 15 34-30 90-2 85 45-4 36 25 66 60 63 46-4 75 50 45 85-24 28-16 68 15 85 40 22 40 78 0 100-32 18-39 58-15 85 30 34 2 90-45 85-36-4-66 25-63 60 4 46-50 75-85 45-28-24-68-16-85 15-22 40-78 40-100 0-18-32-58-39-85-15-34 30-90 2-85-45 4-36-25-66-60-63-46 4-75-50-45-85 24-28 16-68-15-85-40-22-40-78 0-100 32-18 39-58 15-85-30-34-2-90 45-85 36 4 66-25 63-60-4-46 50-75 85-45 28 24 68 16 85-15Z' fill='%238c84a9' fill-opacity='0.065'/%3E%3Cpath d='M1040 110q11 58 69 69-58 11-69 69-11-58-69-69 58-11 69-69Z' fill='%23ddd2e0' fill-opacity='0.065'/%3E%3Crect x='1100' y='240' width='200' height='200' rx='58' transform='rotate(22 1200 340)' fill='%233e3854' fill-opacity='0.24'/%3E%3Cpath d='M1190 610c14-26 50-26 64 0 12 21 38 25 56 10 22-20 59-1 55 29-3 24 16 43 40 41 30-3 49 33 29 56-16 18-11 44 10 55 26 14 26 50 0 64-21 12-25 38-10 56 20 22 1 59-29 55-24-3-43 16-41 40 3 30-33 49-56 29-18-16-44-11-55 10-14 26-50 26-64 0-12-21-38-25-56-10-22 20-59 1-55-29 3-24-16-43-40-41-30 3-49-33-29-56 16-18 11-44-10-55-26-14-26-50 0-64 21-12 25-38 10-56-20-22-1-59 29-55 24 3 43-16 41-40-3-30 33-49 56-29 18 16 44 11 55-10Z' fill='%238c84a9' fill-opacity='0.075'/%3E%3Crect x='230' y='340' width='90' height='42' rx='21' transform='rotate(32 275 361)' stroke='%238c84a9' stroke-opacity='0.14' stroke-width='2'/%3E%3Cpath d='M950 510q7 34 41 41-34 7-41 41-7-34-41-41 34-7 41-41Z' fill='%238c84a9' fill-opacity='0.1'/%3E%3C/svg%3E")`;
+function expressiveBg(
+  dark = true,
+  paletteId = DEFAULT_PALETTE,
+  customTheme = null,
+  amoled = false,
+  rainbow = false,
+) {
+  if (rainbow) {
+    return `
+      radial-gradient(520px 360px at 18% 22%, color-mix(in srgb, var(--octo-md-primary) 13%, transparent), transparent 70%),
+      radial-gradient(460px 340px at 84% 76%, color-mix(in srgb, var(--octo-md-primary-container) 36%, transparent), transparent 72%)
+    `;
+  }
+  const t = getPaletteTokens(paletteId, dark, customTheme, { amoled: Boolean(dark && amoled) });
+  const c1 = encodeURIComponent(t.primaryContainer);
+  const c2 = encodeURIComponent(t.primary);
+  const c3 = encodeURIComponent(t.tertiary);
+  return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 900' fill='none'%3E%3Crect x='250' y='96' width='220' height='98' rx='49' transform='rotate(-18 360 145)' fill='${c1}' fill-opacity='0.34'/%3E%3Cpath d='M335 560c22-40 78-40 100 0 18 32 58 39 85 15 34-30 90-2 85 45-4 36 25 66 60 63 46-4 75 50 45 85-24 28-16 68 15 85 40 22 40 78 0 100-32 18-39 58-15 85 30 34 2 90-45 85-36-4-66 25-63 60 4 46-50 75-85 45-28-24-68-16-85 15-22 40-78 40-100 0-18-32-58-39-85-15-34 30-90 2-85-45 4-36-25-66-60-63-46 4-75-50-45-85 24-28 16-68-15-85-40-22-40-78 0-100 32-18 39-58 15-85-30-34-2-90 45-85 36 4 66-25 63-60-4-46 50-75 85-45 28 24 68 16 85-15Z' fill='${c2}' fill-opacity='0.065'/%3E%3Cpath d='M1040 110q11 58 69 69-58 11-69 69-11-58-69-69 58-11 69-69Z' fill='${c3}' fill-opacity='0.065'/%3E%3Crect x='1100' y='240' width='200' height='200' rx='58' transform='rotate(22 1200 340)' fill='${c1}' fill-opacity='0.24'/%3E%3Cpath d='M1190 610c14-26 50-26 64 0 12 21 38 25 56 10 22-20 59-1 55 29-3 24 16 43 40 41 30-3 49 33 29 56-16 18-11 44 10 55 26 14 26 50 0 64-21 12-25 38-10 56 20 22 1 59-29 55-24-3-43 16-41 40 3 30-33 49-56 29-18-16-44-11-55 10-14 26-50 26-64 0-12-21-38-25-56-10-22 20-59 1-55-29 3-24-16-43-40-41-30 3-49-33-29-56 16-18 11-44-10-55-26-14-26-50 0-64 21-12 25-38 10-56-20-22-1-59 29-55 24 3 43-16 41-40-3-30 33-49 56-29 18 16 44 11 55-10Z' fill='${c2}' fill-opacity='0.075'/%3E%3Crect x='230' y='340' width='90' height='42' rx='21' transform='rotate(32 275 361)' stroke='${c2}' stroke-opacity='0.14' stroke-width='2'/%3E%3Cpath d='M950 510q7 34 41 41-34 7-41 41-7-34-41-41 34-7 41-41Z' fill='${c2}' fill-opacity='0.1'/%3E%3C/svg%3E")`;
+}
 
-const BASE_CANVAS_CSS = `
+function baseCanvasCss(
+  dark = true,
+  paletteId = DEFAULT_PALETTE,
+  customTheme = null,
+  amoled = false,
+  rainbow = false,
+) {
+  const bgLayer = expressiveBg(dark, paletteId, customTheme, amoled, rainbow);
+  return `
   /* --- Базовый холст, MD3 Expressive фигуры фона и выделение --------------- */
   :where(html, body) {
     background-color: var(--octo-md-surface) !important;
@@ -312,7 +339,7 @@ const BASE_CANVAS_CSS = `
 
   body {
     background-image:
-      ${EXPRESSIVE_BG},
+      ${bgLayer},
       radial-gradient(640px 440px at 26% 14%, color-mix(in srgb, var(--octo-md-primary) 12%, transparent), transparent 70%),
       radial-gradient(580px 420px at 76% 84%, color-mix(in srgb, var(--octo-md-primary-container) 34%, transparent), transparent 72%) !important;
     background-repeat: no-repeat, no-repeat, no-repeat !important;
@@ -322,7 +349,7 @@ const BASE_CANVAS_CSS = `
 
   [${MD3_ATTR}="light"] body {
     background-image:
-      ${EXPRESSIVE_BG},
+      ${bgLayer},
       radial-gradient(640px 440px at 26% 14%, color-mix(in srgb, var(--octo-md-primary) 14%, transparent), transparent 70%),
       radial-gradient(580px 420px at 76% 84%, color-mix(in srgb, var(--octo-md-primary-container) 55%, transparent), transparent 72%) !important;
   }
@@ -337,6 +364,7 @@ const BASE_CANVAS_CSS = `
     background-image: none !important;
   }
 `;
+}
 
 /**
  * Длительность перехода скина. Умножается на `--octo-md-motion-scale`, который
@@ -801,7 +829,7 @@ const COMPONENT_CSS = `
   :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) :is(a, button, [role="button"], [data-e2e^="nav-"]):not([data-e2e="tiktok-logo"]):not([class*="Search"]):not([${SURFACE_ATTR}="sidenav-search"]) :is(div, span, p, a, button, [role="button"], [role="menuitem"], [data-e2e^="nav-"]):not([class*="Badge"]):not([class*="Sup"]):not([${ACCENT_ATTR}="badge"]):not([class*="Avatar"]):not([role="img"]),
   :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) :is(a, button, [role="button"], [data-e2e^="nav-"]):not([data-e2e="tiktok-logo"]):not([class*="Search"]):not([${SURFACE_ATTR}="sidenav-search"]) :is(div, span, p, a, button, [role="button"], [role="menuitem"], [data-e2e^="nav-"]):not([class*="Badge"]):not([class*="Sup"]):not([${ACCENT_ATTR}="badge"]):not([class*="Avatar"]):not([role="img"]):hover,
   :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) :is(a, button, [role="button"], [data-e2e^="nav-"]):not([data-e2e="tiktok-logo"]):not([class*="Search"]):not([${SURFACE_ATTR}="sidenav-search"])::before,
-  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) :is(a, button, [role="button"], [data-e2e^="nav-"]):not([data-e2e="tiktok-logo"]):not([class*="Search"]):not([${SURFACE_ATTR}="sidenav-search"])::after {
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) :is(a, button, [role="button"], [data-e2e^="nav-"]):not([data-e2e="tiktok-logo"]):not([class*="Search"]):not([${SURFACE_ATTR}="sidenav-search"]):not([${RIPPLE_ATTR}])::after {
     background-color: transparent !important;
     background-image: none !important;
     border: 0 !important;
@@ -1020,7 +1048,7 @@ const COMPONENT_CSS = `
     [class*="HeaderBar"]:not([id^="octo-"]),
     header[class*="Header"],
     [${SURFACE_ATTR}="header"]
-  ) :where(div, nav, section, ul, li):not([${SURFACE_ATTR}="header"]):not([data-e2e="search-box"]):not([class*="Search"]):not([role="button"]):not(button):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="tonal"]):not([class*="TUXButton"]):not([role="menu"]):not([role="menu"] *):not([role="listbox"]):not([role="listbox"] *):not([role="dialog"]):not([role="dialog"] *):not([role="tooltip"]):not([role="tooltip"] *):not([data-e2e="search-transfer-list"]):not([data-e2e="search-transfer-list"] *):not([class*="TUXPopover"]):not([class*="TUXPopover"] *):not([class*="DivPopupContainer"]):not([class*="DivPopupContainer"] *):not([class*="DivDropdown"]):not([class*="DivDropdown"] *):not([class*="DivMenuContainer"]):not([class*="DivMenuContainer"] *):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([class*="Avatar" i]):not([id^="octo-"]) {
+  ) :where(div, nav, section, ul, li):not([${PROBE_ATTR}]):not([${PROBE_ATTR}] *):not([${SURFACE_ATTR}="header"]):not([data-e2e="search-box"]):not([class*="Search"]):not([role="button"]):not(button):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="tonal"]):not([class*="TUXButton"]):not([role="menu"]):not([role="menu"] *):not([role="listbox"]):not([role="listbox"] *):not([role="dialog"]):not([role="dialog"] *):not([role="tooltip"]):not([role="tooltip"] *):not([data-e2e="search-transfer-list"]):not([data-e2e="search-transfer-list"] *):not([class*="TUXPopover"]):not([class*="TUXPopover"] *):not([class*="DivPopupContainer"]):not([class*="DivPopupContainer"] *):not([class*="DivDropdown"]):not([class*="DivDropdown"] *):not([class*="DivMenuContainer"]):not([class*="DivMenuContainer"] *):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([class*="Avatar" i]):not([id^="octo-"]) {
     background-color: transparent !important;
     background-image: none !important;
   }
@@ -1037,7 +1065,7 @@ const COMPONENT_CSS = `
     [class*="NavBar"]:not([id^="octo-"]),
     [class*="HeaderBar"]:not([id^="octo-"]),
     [${SURFACE_ATTR}="header"]
-  ) :where(a, span, p, div, h1, h2, h3, h4, label, button, svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([class*="TUXButton--primary"]):not([class*="TUXButton--primary"] *):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([role="tooltip"]):not([role="tooltip"] *):not([${ICON_ATTR}="inverse"]):not([${ICON_ATTR}="inverse"] *):not([${FG_ATTR}="inverse"]):not([${FG_ATTR}="inverse"] *):not([${ICON_ATTR}="active"]):not([${ICON_ATTR}="active"] *):not([${ACTION_ATTR}="active"]):not([${ACTION_ATTR}="active"] *):not([${PROBE_ATTR}]) {
+  ) :where(a, span, p, div, h1, h2, h3, h4, label, button, svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="badge"] *):not([data-e2e="inbox-badge"]):not([data-e2e="inbox-badge"] *):not([class*="TUXButton--primary"]):not([class*="TUXButton--primary"] *):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([role="tooltip"]):not([role="tooltip"] *):not([${ICON_ATTR}="inverse"]):not([${ICON_ATTR}="inverse"] *):not([${FG_ATTR}="inverse"]):not([${FG_ATTR}="inverse"] *):not([${ICON_ATTR}="active"]):not([${ICON_ATTR}="active"] *):not([${ACTION_ATTR}="active"]):not([${ACTION_ATTR}="active"] *):not([${PROBE_ATTR}]) {
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -1581,6 +1609,31 @@ const COMPONENT_CSS = `
     opacity: 1 !important;
   }
 
+  [${SURFACE_ATTR}="player-seekbar"][data-octo-md3-seek-wave="1"] {
+    overflow: visible !important;
+  }
+
+  [${SURFACE_ATTR}="player-seekbar"][data-octo-md3-seek-rel="1"] {
+    position: relative !important;
+  }
+
+  [${SURFACE_ATTR}="player-seekbar"][data-octo-md3-seek-wave="1"] *:not(.octo-md3-seek-canvas) {
+    opacity: 0 !important;
+  }
+
+  .octo-md3-seek-canvas {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 50% !important;
+    width: 100% !important;
+    height: 20px !important;
+    transform: translateY(-50%) !important;
+    pointer-events: none !important;
+    z-index: 3 !important;
+    display: block !important;
+  }
+
   [${SURFACE_ATTR}="player-seekbar"] [class*="Track"],
   [${SURFACE_ATTR}="player-seekbar"] > div:first-child:not([${ACCENT_ATTR}="progress"]):not([${SURFACE_ATTR}="player-seekbar-thumb"]) {
     background-color: color-mix(in srgb, var(--octo-md-on-surface) 24%, transparent) !important;
@@ -1636,7 +1689,7 @@ const COMPONENT_CSS = `
     [class*="DivMediaControl"],
     [class*="DivControlBottom"],
     [${SURFACE_ATTR}="player-controls"]
-  ) :where(div, span, p, label, time, a, strong, button, [role="button"], svg):not([${ACCENT_ATTR}="switch"]):not([${ACCENT_ATTR}="switch"] *):not([${ACCENT_ATTR}="switch-off"]):not([${ACCENT_ATTR}="switch-off"] *):not([${ACCENT_ATTR}="progress"]):not([${SURFACE_ATTR}="player-seekbar"]):not([${SURFACE_ATTR}="player-seekbar"] *):not([${SURFACE_ATTR}="player-seekbar-thumb"]):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ICON_ATTR}="active"]):not([${ICON_ATTR}="active"] *):not([${ACTION_ATTR}="active"]):not([${ACTION_ATTR}="active"] *):not([${PROBE_ATTR}]) {
+  ) :where(div, span, p, label, time, a, strong, button, [role="button"], svg, g, path, circle, rect, line, polyline, polygon, ellipse, use):not([${ACCENT_ATTR}="switch"]):not([${ACCENT_ATTR}="switch"] *):not([${ACCENT_ATTR}="switch-off"]):not([${ACCENT_ATTR}="switch-off"] *):not([${ACCENT_ATTR}="progress"]):not([${SURFACE_ATTR}="player-seekbar"]):not([${SURFACE_ATTR}="player-seekbar"] *):not([${SURFACE_ATTR}="player-seekbar-thumb"]):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ICON_ATTR}="active"]):not([${ICON_ATTR}="active"] *):not([${ACTION_ATTR}="active"]):not([${ACTION_ATTR}="active"] *):not([${PROBE_ATTR}]):not([${PROBE_ATTR}] *) {
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -1908,16 +1961,36 @@ const COMPONENT_CSS = `
     border: 0 !important;
   }
 
-  [${CHAT_LAYOUT_ATTR}="host"] {
+  :is([${CHAT_LAYOUT_ATTR}="host"], [${CHAT_LAYOUT_ATTR}="host-flush"]) {
     flex: 1 1 auto !important;
     width: 100% !important;
     max-width: none !important;
     min-width: 0 !important;
+    margin-inline: 0 !important;
   }
 
-  [${CHAT_LAYOUT_ATTR}="flush"] {
-    margin-inline-start: 0 !important;
-    padding-inline-start: 0 !important;
+  :is([${CHAT_LAYOUT_ATTR}="flush"], [${CHAT_LAYOUT_ATTR}="host-flush"]) {
+    margin-inline: 0 !important;
+    padding-inline: 0 !important;
+  }
+
+  [${CHAT_LAYOUT_ATTR}="sidebar"] {
+    min-width: 348px !important;
+    width: 348px !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+    background-color: var(--octo-md-surface-container-low) !important;
+    color: var(--octo-md-on-surface) !important;
+    border-inline-end: 1px solid color-mix(in srgb, var(--octo-md-outline-variant) 42%, transparent) !important;
+  }
+
+  [${CHAT_LAYOUT_ATTR}="main"] {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    background-color: var(--octo-md-surface) !important;
+    color: var(--octo-md-on-surface) !important;
   }
 
   [class*="DivConversationList"],
@@ -1942,19 +2015,35 @@ const COMPONENT_CSS = `
     color: var(--octo-md-on-surface) !important;
   }
 
+  :is([${CHAT_LAYOUT_ATTR}="host"], [${CHAT_LAYOUT_ATTR}="host-flush"]) :is(
+    [class*="DivChatMain"],
+    [class*="DivMessageContainer"],
+    [class*="DivChatBox"],
+    [class*="ChatDetail"],
+    [class*="MessageDetail"],
+    [class*="ConversationDetail"],
+    [class*="ChatArea"]
+  ) {
+    flex: 1 1 auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+
   [${SURFACE_ATTR}="card"][${SURFACE_ATTR}="card"][${SURFACE_ATTR}="card"] {
     background-color: var(--octo-md-surface-container-low) !important;
     color: var(--octo-md-on-surface) !important;
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 40%, transparent) !important;
   }
 
-  [data-e2e="chat-list-item"],
-  [class*="DivConversationItem"],
-  [class*="DivChatItem"],
-  [class*="SessionItem"],
-  [class*="ContactItem"],
-  [class*="ConversationItem"],
-  [class*="ChatItem"] {
+  :is(
+    [data-e2e="chat-list-item"],
+    [class*="DivConversationItem"],
+    [class*="DivChatItem"],
+    [class*="SessionItem"],
+    [class*="ContactItem"],
+    [class*="ConversationItem"],
+    [class*="ChatItem"]
+  ):not([${PROBE_ATTR}]) {
     background-color: transparent !important;
     color: var(--octo-md-on-surface) !important;
     border-radius: 6px !important;
@@ -2002,7 +2091,7 @@ const COMPONENT_CSS = `
     [class*="ConversationList"],
     [class*="ChatList"],
     [${SURFACE_ATTR}="card"]
-  ) :where(span, p, div, strong, label, h1, h2, h3, h4):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([class*="Avatar" i]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *) {
+  ) :where(span, p, div, strong, label, h1, h2, h3, h4):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="badge"] *):not([data-e2e="inbox-badge"]):not([data-e2e="inbox-badge"] *):not([class*="Avatar" i]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *) {
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -2047,12 +2136,28 @@ const COMPONENT_CSS = `
 
   /* Строка списка, которую сайт подсвечивает светлым :hover (классы не известны
      заранее — строку находит скрипт по цвету): тональная подсветка MD3. */
+  html[${MD3_ATTR}] [${SURFACE_ATTR}="chat-hover"][${SURFACE_ATTR}="chat-hover"][${SURFACE_ATTR}="chat-hover"],
   [${SURFACE_ATTR}="chat-hover"][${SURFACE_ATTR}="chat-hover"][${SURFACE_ATTR}="chat-hover"] {
+    border-radius: 14px !important;
     background-color: var(--octo-md-surface-container-high) !important;
+    background-image: none !important;
     color: var(--octo-md-on-surface) !important;
   }
 
-  [${SURFACE_ATTR}="chat-hover"] :where(span, p, div, strong, h1, h2, h3, h4):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([class*="Avatar" i]) {
+  [${SURFACE_ATTR}="chat-hover"]::before,
+  [${SURFACE_ATTR}="chat-hover"]:not([${RIPPLE_ATTR}])::after,
+  [${SURFACE_ATTR}="chat-hover"] :where(div, section, li, a):not(button):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="badge"] *):not([data-e2e="inbox-badge"]):not([data-e2e="inbox-badge"] *):not([class*="Avatar" i]):not([data-e2e*="more" i]):not([aria-haspopup])::before,
+  [${SURFACE_ATTR}="chat-hover"] :where(div, section, li, a):not(button):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="badge"] *):not([data-e2e="inbox-badge"]):not([data-e2e="inbox-badge"] *):not([class*="Avatar" i]):not([data-e2e*="more" i]):not([aria-haspopup]):not([${RIPPLE_ATTR}])::after {
+    background-color: transparent !important;
+    background-image: none !important;
+  }
+
+  [${SURFACE_ATTR}="chat-hover"] :where(div, section, li, a):not(button):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="badge"] *):not([data-e2e="inbox-badge"]):not([data-e2e="inbox-badge"] *):not([class*="Avatar" i]):not([data-e2e*="more" i]):not([aria-haspopup]) {
+    background-color: transparent !important;
+    background-image: none !important;
+  }
+
+  [${SURFACE_ATTR}="chat-hover"] :where(span, p, div, strong, h1, h2, h3, h4):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="badge"] *):not([data-e2e="inbox-badge"]):not([data-e2e="inbox-badge"] *):not([class*="Avatar" i]) {
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -2550,6 +2655,44 @@ const COMPONENT_CSS = `
     outline-offset: 2px !important;
   }
 
+  [${RIPPLE_ATTR}="rel"] {
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  [${RIPPLE_ATTR}="1"] {
+    overflow: hidden !important;
+  }
+
+  :is([${RIPPLE_ATTR}="1"], [${RIPPLE_ATTR}="rel"])::after {
+    content: '' !important;
+    position: absolute !important;
+    left: var(--octo-rx, 50%) !important;
+    top: var(--octo-ry, 50%) !important;
+    width: var(--octo-rd, 72px) !important;
+    height: var(--octo-rd, 72px) !important;
+    border-radius: 50% !important;
+    background-color: currentColor !important;
+    background-image: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+    pointer-events: none !important;
+    animation: octo-md3-site-ripple ${motion(0.44)} var(--octo-md-ease) forwards !important;
+  }
+
+  @keyframes octo-md3-site-ripple {
+    0% {
+      opacity: 0.16;
+      transform: translate(-50%, -50%) scale(0.18);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(1.15);
+    }
+  }
+
   ::-webkit-scrollbar {
     width: 8px !important;
     height: 8px !important;
@@ -2579,13 +2722,19 @@ const TOKEN_ROOTS = `
     [class*="ThemeProvider"],
     [${MD3_ATTR}]`;
 
-function rainbowPerformanceCss() {
+function rainbowPerformanceCss(
+  dark = true,
+  paletteId = DEFAULT_PALETTE,
+  customTheme = null,
+  amoled = false,
+) {
+  const bgLayer = expressiveBg(dark, paletteId, customTheme, amoled, true);
   return `
     html[${RAINBOW_ATTR}="true"] {
       --octo-md-motion-scale: 0 !important;
     }
     html[${RAINBOW_ATTR}="true"] body {
-      background-image: ${EXPRESSIVE_BG} !important;
+      background-image: ${bgLayer} !important;
     }
     html[${RAINBOW_ATTR}="true"][${AMOLED_ATTR}="true"] body {
       background-image: none !important;
@@ -2605,8 +2754,8 @@ function siteCss(
       ${tokenDeclarations(dark, paletteId, customTheme, amoled, rainbow)}
     }
     ${reducedMotionCss(TOKEN_ROOTS)}
-    ${BASE_CANVAS_CSS}
-    ${rainbow ? rainbowPerformanceCss() : ''}
+    ${baseCanvasCss(dark, paletteId, customTheme, amoled, rainbow)}
+    ${rainbow ? rainbowPerformanceCss(dark, paletteId, customTheme, amoled) : ''}
     ${COMPONENT_CSS}
   `;
 }
@@ -2667,12 +2816,82 @@ function syncScript(dark = true, amoled = false) {
       return re.test(fill) || re.test(stroke);
     };
 
+    const parseAlpha = (raw) => {
+      if (raw === undefined || raw === null || raw === '') return 1;
+      const s = String(raw).trim();
+      const num = parseFloat(s);
+      if (!Number.isFinite(num)) return 1;
+      return Math.max(0, Math.min(1, s.endsWith('%') ? num / 100 : num));
+    };
+
+    const clampByte = (v) => Math.max(0, Math.min(255, Math.round(v)));
+
+    const linearToByte = (c) => {
+      const clamped = Math.max(0, Math.min(1, c));
+      const srgb = clamped <= 0.0031308 ? 12.92 * clamped : 1.055 * Math.pow(clamped, 1 / 2.4) - 0.055;
+      return clampByte(srgb * 255);
+    };
+
+    const oklabToRgb = (L, a, b, alpha) => {
+      const l = Math.pow(L + 0.3963377774 * a + 0.2158037573 * b, 3);
+      const m = Math.pow(L - 0.1055613458 * a - 0.0638541728 * b, 3);
+      const s = Math.pow(L - 0.0894841775 * a - 1.291485548 * b, 3);
+      return {
+        r: linearToByte(+4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+        g: linearToByte(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+        b: linearToByte(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
+        a: alpha,
+      };
+    };
+
     const parseRgb = (value) => {
-      const m = String(value || '').match(/rgba?\\(\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)(?:\\s*,\\s*([\\d.]+))?\\s*\\)/i);
-      if (!m) return null;
-      const alpha = m[4] === undefined ? 1 : Number(m[4]);
-      if (!alpha) return null;
-      return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]), a: alpha };
+      const str = String(value || '').trim();
+      if (!str || str === 'none' || str === 'transparent') return null;
+      const m = str.match(/^rgba?\\(\\s*([\\d.]+)\\s*,\\s*([\\d.]+)\\s*,\\s*([\\d.]+)(?:\\s*,\\s*([\\d.%]+))?\\s*\\)$/i);
+      if (m) {
+        const alpha = parseAlpha(m[4]);
+        if (!alpha) return null;
+        return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]), a: alpha };
+      }
+      const m4 = str.match(/^rgba?\\(\\s*([\\d.%]+)\\s+([\\d.%]+)\\s+([\\d.%]+)(?:\\s*\\/\\s*([\\d.%]+))?\\s*\\)$/i);
+      if (m4) {
+        const alpha = parseAlpha(m4[4]);
+        if (!alpha) return null;
+        const ch = (s) => (s.endsWith('%') ? (parseFloat(s) / 100) * 255 : parseFloat(s));
+        return { r: ch(m4[1]), g: ch(m4[2]), b: ch(m4[3]), a: alpha };
+      }
+      const cs = str.match(/^color\\(\\s*srgb\\s+([-\\d.]+)\\s+([-\\d.]+)\\s+([-\\d.]+)(?:\\s*\\/\\s*([\\d.%]+))?\\s*\\)$/i);
+      if (cs) {
+        const alpha = parseAlpha(cs[4]);
+        if (!alpha) return null;
+        return {
+          r: clampByte(parseFloat(cs[1]) * 255),
+          g: clampByte(parseFloat(cs[2]) * 255),
+          b: clampByte(parseFloat(cs[3]) * 255),
+          a: alpha,
+        };
+      }
+      const lch = str.match(/^oklch\\(\\s*([\\d.%]+)\\s+([\\d.%]+)\\s+([-\\d.]+(?:deg|rad|turn)?)(?:\\s*\\/\\s*([\\d.%]+))?\\s*\\)$/i);
+      if (lch) {
+        const alpha = parseAlpha(lch[4]);
+        if (!alpha) return null;
+        const L = lch[1].endsWith('%') ? parseFloat(lch[1]) / 100 : parseFloat(lch[1]);
+        const C = lch[2].endsWith('%') ? (parseFloat(lch[2]) / 100) * 0.4 : parseFloat(lch[2]);
+        let hDeg = parseFloat(lch[3]);
+        if (lch[3].endsWith('rad')) hDeg = (hDeg * 180) / Math.PI;
+        else if (lch[3].endsWith('turn')) hDeg *= 360;
+        const rad = (hDeg * Math.PI) / 180;
+        return oklabToRgb(L, C * Math.cos(rad), C * Math.sin(rad), alpha);
+      }
+      const lab = str.match(/^oklab\\(\\s*([\\d.%]+)\\s+([-\\d.%]+)\\s+([-\\d.%]+)(?:\\s*\\/\\s*([\\d.%]+))?\\s*\\)$/i);
+      if (lab) {
+        const alpha = parseAlpha(lab[4]);
+        if (!alpha) return null;
+        const L = lab[1].endsWith('%') ? parseFloat(lab[1]) / 100 : parseFloat(lab[1]);
+        const ab = (s) => (s.endsWith('%') ? (parseFloat(s) / 100) * 0.4 : parseFloat(s));
+        return oklabToRgb(L, ab(lab[2]), ab(lab[3]), alpha);
+      }
+      return null;
     };
 
     const parseCssColor = (value) => {
@@ -2690,12 +2909,12 @@ function syncScript(dark = true, amoled = false) {
     const colorDist = (a, b) => Math.abs(a.r - b.r) + Math.abs(a.g - b.g) + Math.abs(a.b - b.b);
 
     const isLightColor = (value) => {
-      const c = parseRgb(value);
+      const c = typeof value === 'object' && value ? value : parseRgb(value);
       return Boolean(c && c.a >= 0.7 && c.r >= 200 && c.g >= 200 && c.b >= 200);
     };
 
     const isDarkColor = (value) => {
-      const c = parseRgb(value);
+      const c = typeof value === 'object' && value ? value : parseRgb(value);
       return Boolean(c && c.a >= 0.5 && c.r <= 115 && c.g <= 115 && c.b <= 115);
     };
 
@@ -2792,15 +3011,22 @@ function syncScript(dark = true, amoled = false) {
           base = plannedSurfaceBg(planned);
           break;
         }
-        const c = parseRgb(getComputedStyle(cur).backgroundColor);
-        if (c && c.a > 0.02) {
-          if (c.a >= 0.96) {
+        const cs = getComputedStyle(cur);
+        const opRaw = parseFloat(cs.opacity);
+        const op = Number.isFinite(opRaw) ? Math.max(0, Math.min(1, opRaw)) : 1;
+        if (op < 1 && layers.length > 0) {
+          for (const layer of layers) layer.a *= op;
+        }
+        const c = parseRgb(cs.backgroundColor);
+        if (c && c.a * op > 0.02) {
+          const effA = c.a * op;
+          if (effA >= 0.96) {
             base = { r: c.r, g: c.g, b: c.b, a: 1 };
             break;
           }
-          layers.push(c);
+          layers.push({ r: c.r, g: c.g, b: c.b, a: effA });
         }
-        cur = cur.parentElement;
+        cur = cur.parentElement || (cur.parentNode && cur.parentNode.host ? cur.parentNode.host : null);
       }
       if (cur == null || cur.nodeType !== 1) {
         if (overlapsMedia(el, mediaRects)) {
@@ -2819,13 +3045,26 @@ function syncScript(dark = true, amoled = false) {
 
     const effectiveBgLum = (el, lumCache = null) => effectiveBgInfo(el, lumCache).lum255;
 
-    const isMessagesTopPage = () => /^\\/messages(?:\\/|$)/i.test(location.pathname || '');
+    const isMessagesTopPage = () => /^\\/(?:messages|inbox)(?:\\/|$)/i.test(location.pathname || '');
+
+    const topPathIsMessages = () => {
+      try {
+        return Boolean(
+          window.top &&
+            window.top !== window &&
+            /^\\/(?:messages|inbox)(?:\\/|$)/i.test(window.top.location?.pathname || ''),
+        );
+      } catch {
+        return false;
+      }
+    };
 
     const isMessagesRoute = () =>
       isMessagesTopPage() ||
-      /^\\/(?:business-suite|tiktokstudio|creator-center)(?:\\/|$)/i.test(location.pathname || '') ||
+      topPathIsMessages() ||
+      /^\\/(?:business-suite|tiktokstudio|creator-center|web[-_]?dm)(?:\\/|$)/i.test(location.pathname || '') ||
       /business\\.tiktok\\.com/i.test(location.hostname || '') ||
-      /\\/(?:messages|business-suite)(?:\\/|$)/i.test(document.referrer || '');
+      /\\/(?:messages|inbox|business-suite)(?:\\/|$)/i.test(document.referrer || '');
 
     const isMessagesContext = () =>
       isMessagesRoute() ||
@@ -3415,8 +3654,10 @@ function syncScript(dark = true, amoled = false) {
       for (const [el, role] of nextBtnGroup) setAttrIfDiff(el, BTN_GROUP, role);
     };
 
+    let lastLayoutFallbackAt = 0;
     const syncMessagesLayout = () => {
       if (!isMessagesTopPage()) {
+        lastLayoutFallbackAt = 0;
         if (document.querySelector('[' + CHAT_LAYOUT + ']')) {
           document.querySelectorAll('[' + CHAT_LAYOUT + ']').forEach((el) => delAttrIfSet(el, CHAT_LAYOUT));
         }
@@ -3429,23 +3670,33 @@ function syncScript(dark = true, amoled = false) {
       const hasRealNav = (el) =>
         el.matches('[class*="DivSideNavContainer"], nav') &&
         Boolean(el.querySelector('[data-e2e^="nav-"], a[href]'));
-      let workspace = null;
-      let isBusinessFrame = false;
-      for (const frame of document.querySelectorAll('iframe')) {
-        const src = frame.getAttribute('src') || '';
-        if (/(?:recaptcha|hcaptcha|turnstile|arkoselabs|stripe|paypal|accounts\\.)/i.test(src)) {
-          continue;
-        }
-        const r = frame.getBoundingClientRect();
-        if (frame.getAttribute(CHAT_LAYOUT) === 'frame' || (r.width >= 240 && r.height >= 200)) {
-          workspace = frame;
-          isBusinessFrame = /(?:business-suite|business\\.tiktok)/i.test(src);
-          break;
+      let workspace = document.querySelector(
+        '[' + CHAT_LAYOUT + '="frame"], [' + CHAT_LAYOUT + '="sidebar"], [' + CHAT_LAYOUT + '="list"]',
+      );
+      if (workspace && (!workspace.isConnected || workspace.clientHeight < 200)) {
+        workspace = null;
+      }
+      let isBusinessFrame =
+        workspace?.tagName === 'IFRAME' &&
+        /(?:business-suite|business\\.tiktok)/i.test(workspace.getAttribute('src') || '');
+      if (!workspace) {
+        for (const frame of document.querySelectorAll('iframe')) {
+          const src = frame.getAttribute('src') || '';
+          if (/(?:recaptcha|hcaptcha|turnstile|arkoselabs|stripe|paypal|accounts\\.)/i.test(src)) {
+            continue;
+          }
+          const r = frame.getBoundingClientRect();
+          if (frame.getAttribute(CHAT_LAYOUT) === 'frame' || (r.width >= 240 && r.height >= 200)) {
+            workspace = frame;
+            isBusinessFrame = /(?:business-suite|business\\.tiktok)/i.test(src);
+            break;
+          }
         }
       }
 
       const isEmptyPane = (el) => {
         if (!el || el.id?.startsWith('octo-')) return false;
+        if (el.matches('header, [role="banner"], [' + SURFACE + '="header"]')) return false;
         if (
           hasRealNav(el) ||
           el.querySelector('[class*="DivSideNavContainer"] [data-e2e^="nav-"], [class*="DivSideNavContainer"] a[href], nav a[href]')
@@ -3464,8 +3715,15 @@ function syncScript(dark = true, amoled = false) {
         if (isBusinessFrame && !el.querySelector('[data-e2e="chat-list-item"], [class*="DivConversationItem"]')) {
           return true;
         }
-        return (el.innerText || '').trim().length === 0;
+        return (el.textContent || '').trim().length === 0;
       };
+
+      const hasVisibleSideNav = Array.from(
+        document.querySelectorAll('[class*="DivSideNavContainer"]'),
+      ).some((nav) => {
+        const nr = nav.getBoundingClientRect();
+        return nr.width >= 48 && nr.height >= 200 && Boolean(nav.querySelector('[data-e2e^="nav-"], a[href]'));
+      });
 
       if (!workspace) {
         for (const candidate of document.querySelectorAll(
@@ -3473,9 +3731,79 @@ function syncScript(dark = true, amoled = false) {
         )) {
           const r = candidate.getBoundingClientRect();
           const inManaged = Boolean(
-            candidate.closest('[' + CHAT_LAYOUT + '="host"], [' + CHAT_LAYOUT + '="flush"]'),
+            candidate.closest('[' + CHAT_LAYOUT + '="host"], [' + CHAT_LAYOUT + '="host-flush"], [' + CHAT_LAYOUT + '="flush"]'),
           );
-          if ((r.left >= 180 || inManaged) && r.width >= 200 && r.height >= 240 && (candidate.innerText || '').trim()) {
+          if ((r.left >= 180 || !hasVisibleSideNav || inManaged) && r.width >= 200 && r.height >= 240 && (candidate.textContent || '').trim()) {
+            workspace = candidate;
+            break;
+          }
+        }
+      }
+
+      if (!workspace) {
+        const firstChatRow = document.querySelector('[data-e2e="chat-list-item"]');
+        const listWrap = firstChatRow?.parentElement?.closest('div, ul, section, aside');
+        if (listWrap) {
+          const r = listWrap.getBoundingClientRect();
+          if (r.width >= 200 && r.height >= 240) workspace = listWrap;
+        }
+      }
+
+      if (!workspace) {
+        for (const candidate of document.querySelectorAll(
+          '[class*="DivChatMain" i], [class*="DivMessageContainer" i], [class*="ChatArea" i]',
+        )) {
+          const r = candidate.getBoundingClientRect();
+          if (r.width >= 240 && r.height >= 240) {
+            workspace = candidate;
+            break;
+          }
+        }
+      }
+
+      if (!workspace && Date.now() - lastLayoutFallbackAt >= 1200) {
+        lastLayoutFallbackAt = Date.now();
+        for (const candidate of document.querySelectorAll('div, section, aside, ul')) {
+          if (
+            candidate.childElementCount < 2 ||
+            candidate.clientWidth < 200 ||
+            candidate.clientWidth > 460 ||
+            candidate.clientHeight < 260 ||
+            candidate.id?.startsWith('octo-') ||
+            candidate.matches(
+              'header, [role="banner"], [class*="DivSideNavContainer"], [' +
+                SURFACE +
+                '="sidenav"], [role="dialog"], [role="menu"]',
+            ) ||
+            candidate.closest(
+              'header, [role="banner"], [class*="DivSideNavContainer"], [' +
+                SURFACE +
+                '="sidenav"], [role="dialog"], [role="menu"]',
+            )
+          ) {
+            continue;
+          }
+          const r = candidate.getBoundingClientRect();
+          if (r.top < 36 || !(candidate.textContent || '').trim()) continue;
+          const hasRightPane = Boolean(
+            candidate.parentElement &&
+              Array.from(candidate.parentElement.children).some((sib) => {
+                if (sib === candidate || sib.id?.startsWith('octo-')) return false;
+                if (sib.clientWidth < 200 || sib.clientHeight < 220) return false;
+                const sr = sib.getBoundingClientRect();
+                return sr.left >= r.right - 20;
+              }),
+          );
+          if (hasRightPane) {
+            workspace = candidate;
+            break;
+          }
+          let rowCount = 0;
+          for (const ch of candidate.children) {
+            if (ch.clientWidth >= 180 && ch.clientHeight >= 36 && ch.clientHeight <= 140) rowCount += 1;
+            if (rowCount >= 3) break;
+          }
+          if (rowCount >= 3) {
             workspace = candidate;
             break;
           }
@@ -3487,27 +3815,63 @@ function syncScript(dark = true, amoled = false) {
         const isFrame = workspace.tagName === 'IFRAME';
         const alreadyManaged =
           workspace.getAttribute(CHAT_LAYOUT) === 'frame' ||
-          Boolean(workspace.closest('[' + CHAT_LAYOUT + '="host"], [' + CHAT_LAYOUT + '="flush"]'));
-        if (wsRect.left >= 180 || alreadyManaged) {
+          Boolean(
+            workspace.closest(
+              '[' +
+                CHAT_LAYOUT +
+                '="host"], [' +
+                CHAT_LAYOUT +
+                '="host-flush"], [' +
+                CHAT_LAYOUT +
+                '="flush"], [' +
+                CHAT_LAYOUT +
+                '="sidebar"]',
+            ),
+          );
+        let constrainedAncestor = !hasVisibleSideNav && wsRect.left >= 12;
+        if (!constrainedAncestor && !hasVisibleSideNav) {
+          let probe = workspace.parentElement;
+          while (probe && probe !== document.body && probe !== document.documentElement) {
+            const pr = probe.getBoundingClientRect();
+            const pst = getComputedStyle(probe);
+            if (
+              pr.width < window.innerWidth - 20 ||
+              (pst.maxWidth && pst.maxWidth !== 'none') ||
+              parseFloat(pst.marginLeft) >= 16 ||
+              parseFloat(pst.marginRight) >= 16 ||
+              parseFloat(pst.paddingLeft) >= 48 ||
+              parseFloat(pst.paddingRight) >= 48
+            ) {
+              constrainedAncestor = true;
+              break;
+            }
+            probe = probe.parentElement;
+          }
+        }
+
+        if (wsRect.left >= 180 || alreadyManaged || constrainedAncestor) {
           const ancestors = [];
           let anyHidden = false;
           let anyFlushed = false;
           let cur = workspace;
-          while (cur && cur.parentElement && cur.parentElement !== document.documentElement) {
+          while (cur && cur !== document.body && cur !== document.documentElement) {
             const parent = cur.parentElement;
+            if (!parent) break;
             for (const sibling of parent.children) {
               if (sibling === cur || sibling.id?.startsWith('octo-')) continue;
               const wasHidden = sibling.getAttribute(CHAT_LAYOUT) === 'hidden';
               if (!wasHidden) {
                 const sr = sibling.getBoundingClientRect();
-                if (sr.width < 40 || sr.height < 200 || sr.right > wsRect.left + 20) continue;
+                const onLeft = sr.right <= wsRect.left + 20;
+                const onRight = cur !== workspace && sr.left >= wsRect.right - 20;
+                if (sr.width < 32 || sr.height < 200 || (!onLeft && !onRight)) continue;
               }
               if (isEmptyPane(sibling)) {
                 nextLayout.set(sibling, 'hidden');
                 anyHidden = true;
               }
             }
-            if (cur !== workspace && parent !== document.body) {
+            if (cur !== workspace) {
               ancestors.push(cur);
             }
             cur = parent;
@@ -3515,24 +3879,40 @@ function syncScript(dark = true, amoled = false) {
 
           if (isFrame) {
             nextLayout.set(workspace, 'frame');
+          } else {
+            let sidebarSet = false;
+            if (window.innerWidth >= 820 && wsRect.width >= 240 && wsRect.width < 460 && workspace.parentElement) {
+              const rightPane = Array.from(workspace.parentElement.children).find((sib) => {
+                if (sib === workspace || sib.id?.startsWith('octo-') || nextLayout.get(sib) === 'hidden') return false;
+                const sr = sib.getBoundingClientRect();
+                return sr.left >= wsRect.right - 20 && sr.width >= 200 && sr.height >= 200;
+              });
+              if (rightPane) {
+                if (wsRect.width < 348) {
+                  nextLayout.set(workspace, 'sidebar');
+                  sidebarSet = true;
+                }
+                nextLayout.set(rightPane, 'main');
+              }
+            }
+            if (!sidebarSet) nextLayout.set(workspace, 'list');
           }
-
-          const hasVisibleSideNav = Array.from(
-            document.querySelectorAll('[class*="DivSideNavContainer"]'),
-          ).some((nav) => {
-            const nr = nav.getBoundingClientRect();
-            return nr.width >= 48 && nr.height >= 200 && Boolean(nav.querySelector('[data-e2e^="nav-"], a[href]'));
-          });
 
           if (!hasVisibleSideNav) {
             let node = workspace.parentElement;
             while (node && node !== document.body && node !== document.documentElement) {
-              if (node.getAttribute(CHAT_LAYOUT) === 'flush') {
+              const prevLayout = node.getAttribute(CHAT_LAYOUT);
+              if (prevLayout === 'flush' || prevLayout === 'host-flush') {
                 nextLayout.set(node, 'flush');
                 anyFlushed = true;
               } else {
                 const st = getComputedStyle(node);
-                if (parseFloat(st.marginLeft) >= 120 || parseFloat(st.paddingLeft) >= 120) {
+                if (
+                  parseFloat(st.marginLeft) >= 24 ||
+                  parseFloat(st.marginRight) >= 24 ||
+                  parseFloat(st.paddingLeft) >= 48 ||
+                  parseFloat(st.paddingRight) >= 48
+                ) {
                   nextLayout.set(node, 'flush');
                   anyFlushed = true;
                 }
@@ -3541,8 +3921,10 @@ function syncScript(dark = true, amoled = false) {
             }
           }
 
-          if (isFrame || anyHidden || anyFlushed) {
-            for (const el of ancestors) nextLayout.set(el, 'host');
+          if (isFrame || anyHidden || anyFlushed || constrainedAncestor) {
+            for (const el of ancestors) {
+              nextLayout.set(el, nextLayout.get(el) === 'flush' ? 'host-flush' : 'host');
+            }
           }
         }
       }
@@ -3582,7 +3964,7 @@ function syncScript(dark = true, amoled = false) {
     ]);
 
     const syncSurfacesNow = (root) => {
-      findSidebars();
+      if (root === document) findSidebars();
       const nextSurface = new Map();
       const nextFg = new Map();
       const lumCache = new WeakMap();
@@ -3615,15 +3997,19 @@ function syncScript(dark = true, amoled = false) {
           continue;
         }
         if (hasPlannedAncestor(el, 'drawer')) continue;
-        const style = getComputedStyle(el);
         const rect = el.getBoundingClientRect();
         if (
+          rect.left > 340 ||
+          rect.width < 200 ||
+          rect.width > 480 ||
+          rect.height < 260 ||
+          rect.height > window.innerHeight
+        ) {
+          continue;
+        }
+        const style = getComputedStyle(el);
+        if (
           (style.position === 'fixed' || style.position === 'absolute') &&
-          rect.left <= 340 &&
-          rect.width >= 200 &&
-          rect.width <= 480 &&
-          rect.height >= 260 &&
-          rect.height <= window.innerHeight &&
           el.querySelector('a, button, [role="button"], [role="menuitem"]')
         ) {
           nextSurface.set(el, 'drawer');
@@ -3791,13 +4177,17 @@ function syncScript(dark = true, amoled = false) {
         ) {
           continue;
         }
-        const btns = Array.from(parent.children).filter((el) => {
-          if (!el.matches('button, a, [role="tab"], [role="button"]')) return false;
+        const btnsWithRect = [];
+        for (const el of parent.children) {
+          if (!el.matches('button, a, [role="tab"], [role="button"]')) continue;
           const r = el.getBoundingClientRect();
-          return r.width >= 24 && r.width <= 320 && r.height >= 20 && r.height <= 44;
-        });
-        if (btns.length < 3) continue;
-        const rects = btns.map((el) => el.getBoundingClientRect());
+          if (r.width >= 24 && r.width <= 320 && r.height >= 20 && r.height <= 44) {
+            btnsWithRect.push({ el, rect: r });
+          }
+        }
+        if (btnsWithRect.length < 3) continue;
+        const btns = btnsWithRect.map((entry) => entry.el);
+        const rects = btnsWithRect.map((entry) => entry.rect);
         const sameRowCount = rects.filter((r) => Math.abs(r.top - rects[0].top) <= 6).length;
         const parentStyle = getComputedStyle(parent);
         const hasSharedRow = rects.some((a, i) =>
@@ -3999,6 +4389,7 @@ function syncScript(dark = true, amoled = false) {
       for (const anchor of root.querySelectorAll('[data-e2e*="comment"], [class*="Comment"]')) {
         let cur = anchor;
         for (let depth = 0; depth < 6 && cur && cur !== root && cur !== document.body; depth += 1) {
+          if (commentCandidates.has(cur)) break;
           if (cur.id === 'app' || cur.id === 'root' || cur.matches('main, [role="main"], [id^="main-content-"]')) {
             break;
           }
@@ -4061,25 +4452,35 @@ function syncScript(dark = true, amoled = false) {
 
       if (MODE === 'dark' && msgCtx) {
         const chatRows = root.querySelectorAll(
-          '[data-e2e="chat-list-item"], [class*="ConversationItem" i], [class*="ChatItem" i], [class*="SessionItem" i], [class*="ContactItem" i], [class*="SessionList" i] > div, [class*="SessionList" i] li, [class*="ConversationList" i] > div, [class*="ConversationList" i] li, [class*="ChatList" i] > div, [class*="ChatList" i] li, [class*="InboxList" i] > div, [class*="InboxList" i] li',
+          '[data-e2e="chat-list-item"], [role="listitem"], [class*="ConversationItem" i], [class*="ChatItem" i], [class*="SessionItem" i], [class*="ContactItem" i], [class*="ListItem" i], [class*="SessionList" i] > div, [class*="SessionList" i] li, [class*="ConversationList" i] > div, [class*="ConversationList" i] li, [class*="ChatList" i] > div, [class*="ChatList" i] li, [class*="InboxList" i] > div, [class*="InboxList" i] li',
         );
+        const rowProbes = [];
         for (const row of chatRows) {
-          if (row.id?.startsWith('octo-')) continue;
-          const r = row.getBoundingClientRect();
-          if (r.width < 44 || r.height < 36 || r.height > 150) continue;
-          if (isLightColor(getComputedStyle(row).backgroundColor)) {
-            nextSurface.set(row, row.matches(':hover') ? 'chat-hover' : 'chat-active');
+          if (row.id?.startsWith('octo-') || row.hasAttribute(PROBE)) continue;
+          row.setAttribute(PROBE, '');
+          rowProbes.push(row);
+        }
+        try {
+          for (const row of chatRows) {
+            if (row.id?.startsWith('octo-')) continue;
+            const r = row.getBoundingClientRect();
+            if (r.width < 44 || r.height < 36 || r.height > 150) continue;
+            if (isLightColor(getComputedStyle(row).backgroundColor)) {
+              nextSurface.set(row, row.matches(':hover') ? 'chat-hover' : 'chat-active');
+            }
           }
+        } finally {
+          endProbe(rowProbes);
         }
 
         const msgPanels = root.querySelectorAll(
-          'div, section, aside, nav, ul, li',
+          'div, section, aside, nav, ul, li, [role="button"]',
         );
         for (const panel of msgPanels) {
           if (
             panel.id?.startsWith('octo-') ||
             nextSurface.has(panel) ||
-            panel.matches('button, [role="button"], input, textarea, [contenteditable], img, video, svg, [class*="Bubble" i], [class*="MessageContent" i], [class*="Avatar" i], [class*="Badge" i]') ||
+            panel.matches('button, input, textarea, [contenteditable], img, video, svg, [class*="Bubble" i], [class*="MessageContent" i], [class*="Avatar" i], [class*="Badge" i]') ||
             panel.closest('[role="dialog"], [role="menu"], [role="tooltip"]') ||
             hasPlannedAncestor(panel, 'chat-active') ||
             hasPlannedAncestor(panel, 'chat-hover') ||
@@ -4092,11 +4493,13 @@ function syncScript(dark = true, amoled = false) {
             continue;
           }
           if (isLightColor(getComputedStyle(panel).backgroundColor)) {
-            if (r.height >= window.innerHeight * 0.45 && r.width >= window.innerWidth * 0.45) {
+            const listRow = isListRow(panel, r);
+            if (panel.matches('[role="button"]') && !listRow) continue;
+            if (!panel.matches('[role="button"]') && r.height >= window.innerHeight * 0.45 && r.width >= window.innerWidth * 0.45) {
               nextSurface.set(panel, 'page');
-            } else if (isListRow(panel, r)) {
+            } else if (listRow) {
               nextSurface.set(panel, panel.matches(':hover') ? 'chat-hover' : 'chat-active');
-            } else if (r.width >= 120 || r.height >= 200) {
+            } else if (r.width >= 64 || r.height >= 120) {
               nextSurface.set(panel, 'card');
             }
           }
@@ -4120,15 +4523,28 @@ function syncScript(dark = true, amoled = false) {
       }
 
       for (const node of root.querySelectorAll(
-        'span, p, div, a, strong, em, label, time, button, h1, h2, h3, h4, li, td, th, input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"]',
+        'span, p, div, a, strong, em, b, i, small, label, time, button, h1, h2, h3, h4, h5, h6, li, td, th, input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"]',
       )) {
+        if (node.id?.startsWith('octo-')) continue;
+        const tag = node.tagName;
+        const ce = tag === 'INPUT' || tag === 'TEXTAREA' ? '' : node.getAttribute('contenteditable');
+        const isField = tag === 'INPUT' || tag === 'TEXTAREA' || ce === 'true' || ce === 'plaintext-only';
+        if (!isField) {
+          let hasDirectText = false;
+          for (const child of node.childNodes) {
+            if (child.nodeType === 3 && child.textContent.trim()) {
+              hasDirectText = true;
+              break;
+            }
+          }
+          if (!hasDirectText) continue;
+        }
         if (
-          node.id?.startsWith('octo-') ||
           hasPlannedAncestor(node, 'chat-active', true) ||
           hasPlannedAncestor(node, 'chat-hover', true) ||
-          node.matches(':disabled, [aria-disabled="true"], video, img, svg') ||
+          node.matches(':disabled, [role="button"][aria-disabled="true"]:not([class*="Player"] *), video, img, svg') ||
           node.closest(
-            'button:disabled, [aria-disabled="true"], [' +
+            'button:disabled, [role="button"][aria-disabled="true"]:not([class*="Player"] *), [' +
               ACCENT +
               '="primary"], [' +
               ACCENT +
@@ -4147,17 +4563,6 @@ function syncScript(dark = true, amoled = false) {
         ) {
           continue;
         }
-        const isField = node.matches('input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"]');
-        if (!isField) {
-          let hasDirectText = false;
-          for (const child of node.childNodes) {
-            if (child.nodeType === 3 && child.textContent.trim()) {
-              hasDirectText = true;
-              break;
-            }
-          }
-          if (!hasDirectText) continue;
-        }
         const style = getComputedStyle(node);
         const fgColor = parseRgb(style.color);
         const bgInfo = effectiveBgInfo(node, lumCache, mediaRects, nextSurface);
@@ -4165,7 +4570,7 @@ function syncScript(dark = true, amoled = false) {
           !fgColor ||
           fgColor.a < 0.45 ||
           contrastRatioRgb(fgColor, bgInfo.rgb) < 2.8 ||
-          (MODE === 'dark' && msgCtx && isDarkColor(style.color) && bgInfo.lum255 < 105)
+          (MODE === 'dark' && isDarkColor(fgColor) && bgInfo.lum255 < 105)
         ) {
           if (bgInfo.lum < 0.22) {
             nextFg.set(node, bgInfo.onMedia && MODE === 'light' ? 'const-white' : 'on-surface');
@@ -4194,7 +4599,7 @@ function syncScript(dark = true, amoled = false) {
     // тёмный, подложка снималась, и элемент мигал белым с белым текстом. Поэтому
     // перед сканированием снимаем их под «замером» без переходов, читаем цвет
     // сайта и возвращаем подложку до первой отрисовки.
-    const PROBED_SURFACES = ['header', 'card', 'chat-active', 'chat-hover'];
+    const PROBED_SURFACES = ['header', 'page', 'card', 'chat-active', 'chat-hover'];
     const PROBED_SELECTOR = PROBED_SURFACES.map((v) => '[' + SURFACE + '="' + v + '"]').join(', ');
 
     const beginProbe = (els, fgEls = []) => {
@@ -4224,6 +4629,7 @@ function syncScript(dark = true, amoled = false) {
       } finally {
         endProbe(probed.concat(probedFg));
       }
+      if (MODE === 'dark' && isMessagesContext()) syncChatHover();
     };
 
     // Строка списка сообщений: светлая подложка высотой со строку, у которой есть
@@ -4248,6 +4654,35 @@ function syncScript(dark = true, amoled = false) {
     // сайта оставался белым, а текст строки уже был светлым. Проверяем только
     // цепочку элементов под курсором.
     let hoverFrame = 0;
+    let hoverRetryTimer = null;
+    let lastHoverTarget = null;
+    const hasLightHoverPaint = (el, r) => {
+      if (
+        isLightColor(getComputedStyle(el).backgroundColor) ||
+        isLightColor(getComputedStyle(el, '::before').backgroundColor) ||
+        isLightColor(getComputedStyle(el, '::after').backgroundColor)
+      ) {
+        return true;
+      }
+      if (el.childElementCount <= 6) {
+        for (const ch of el.children) {
+          if (ch.id?.startsWith('octo-') || ch.matches('img, video, canvas, svg, [class*="Avatar" i], [class*="Badge" i]')) {
+            continue;
+          }
+          if (ch.clientWidth >= r.width * 0.65 && ch.clientHeight >= r.height * 0.65) {
+            if (
+              isLightColor(getComputedStyle(ch).backgroundColor) ||
+              isLightColor(getComputedStyle(ch, '::before').backgroundColor) ||
+              isLightColor(getComputedStyle(ch, '::after').backgroundColor)
+            ) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    };
+
     const syncChatHover = () => {
       hoverFrame = 0;
       if (MODE !== 'dark' || !isMessagesContext()) return;
@@ -4255,30 +4690,81 @@ function syncScript(dark = true, amoled = false) {
         if (!el.matches(':hover')) el.removeAttribute(SURFACE);
       }
       const chain = Array.from(document.querySelectorAll(':hover')).reverse();
-      const fresh = [];
+      if (!chain.length) return;
+      const candidates = [];
       for (const el of chain) {
-        // Строка уже размечена (выбранная, под курсором) или дошли до карточки списка.
-        if (el === document.body || el === document.documentElement || el.hasAttribute(SURFACE)) break;
-        if (!el.id?.startsWith('octo-')) fresh.push(el);
+        if (el === document.body || el === document.documentElement) break;
+        const surf = el.getAttribute(SURFACE);
+        if (surf && surf !== 'chat-hover') {
+          if (
+            surf === 'header' ||
+            surf === 'page' ||
+            surf === 'card' ||
+            surf === 'live-chat' ||
+            surf === 'sidenav' ||
+            surf === 'chat-active'
+          ) {
+            break;
+          }
+        }
+        if (!el.id?.startsWith('octo-')) candidates.push(el);
       }
-      if (!fresh.length) return;
-      for (const el of fresh) el.setAttribute(PROBE, '');
-      let row = null;
-      for (const el of fresh) {
-        const r = el.getBoundingClientRect();
-        if (r.width < 44 || r.height < 36 || r.height > 150) continue;
-        if (isLightColor(getComputedStyle(el).backgroundColor)) {
-          row = el;
-          break;
+      if (!candidates.length) return;
+      const existingHover = candidates.find((el) => el.getAttribute(SURFACE) === 'chat-hover');
+      if (existingHover && !existingHover.hasAttribute(PROBE)) {
+        return;
+      }
+      const toProbe = [];
+      const hadHover = [];
+      for (const el of candidates) {
+        if (el.getAttribute(SURFACE) === 'chat-hover') {
+          hadHover.push(el);
+          el.removeAttribute(SURFACE);
+          el.setAttribute(PROBE, '');
+          toProbe.push(el);
         }
       }
-      if (row) row.setAttribute(SURFACE, 'chat-hover');
-      endProbe(fresh);
+      let row = null;
+      for (const el of candidates) {
+        if (el.clientHeight < 36 || el.clientHeight > 150 || el.clientWidth < 44) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 44 || r.height < 36 || r.height > 150) continue;
+        if (hasLightHoverPaint(el, r)) {
+          row = el;
+        }
+      }
+      for (const el of document.querySelectorAll('[' + SURFACE + '="chat-hover"]')) {
+        if (el !== row) el.removeAttribute(SURFACE);
+      }
+      if (row) {
+        row.setAttribute(SURFACE, 'chat-hover');
+      } else {
+        for (const el of hadHover) el.removeAttribute(SURFACE);
+      }
+      if (toProbe.length) endProbe(toProbe);
     };
 
-    const onPointerMove = () => {
-      if (MODE !== 'dark' || hoverFrame) return;
-      hoverFrame = requestAnimationFrame(syncChatHover);
+    const onPointerMove = (event) => {
+      if (event?.type === 'pointerover' && event.target instanceof Element) {
+        const player = event.target.closest(
+          '[class*="DivBasicPlayerWrapper"], [class*="DivVideoWrapper"], [data-e2e="feed-video"]',
+        );
+        if (player && !player.dataset.octoHoverScanned) {
+          player.dataset.octoHoverScanned = '1';
+          scheduleScan();
+        }
+      }
+      if (MODE !== 'dark' || !isMessagesContext()) return;
+      if (event?.type === 'pointermove' && event.target === lastHoverTarget) return;
+      if (event?.target instanceof Element) lastHoverTarget = event.target;
+      if (!hoverFrame) hoverFrame = requestAnimationFrame(syncChatHover);
+      if (event?.type === 'pointerover') {
+        clearTimeout(hoverRetryTimer);
+        hoverRetryTimer = setTimeout(() => {
+          hoverRetryTimer = null;
+          syncChatHover();
+        }, 120);
+      }
     };
 
     const classify = (el, accentWrites) => {
@@ -4379,15 +4865,28 @@ function syncScript(dark = true, amoled = false) {
       const red = isTikTokRed(bg);
       const cyan = isTikTokCyan(bg);
       if (!red && !cyan) {
-        if (
-          MODE === 'dark' &&
-          el.matches('button, [role="button"]') &&
-          !el.matches(':disabled, [aria-disabled="true"]') &&
-          !el.closest('[class*="DivSideNavContainer"], [' + SURFACE + '="sidenav"], [' + SURFACE + '="drawer"], [class*="Player"], [class*="DivVideoWrapper"]') &&
-          !el.matches('[class*="PlayOverlay"], [class*="VideoMask"], [class*="ClickArea"], [class*="ButtonActionItem"], [data-e2e="search-button"], [data-e2e="comment-post"], [data-e2e="feed-navigation-next"], [data-e2e="feed-navigation-prev"], [data-e2e="arrow-down"], [data-e2e="arrow-up"]') &&
-          isLightColor(bg)
-        ) {
-          accentWrites.set.set(el, 'tonal');
+        if (MODE === 'dark' && isLightColor(bg)) {
+          const isCtrl = el.matches('button, [role="button"]');
+          const rect = el.getBoundingClientRect();
+          const isMsgCompactBtn =
+            !isCtrl &&
+            isMessagesContext() &&
+            ((el.matches('a') && rect.width <= 120 && rect.height <= 64) ||
+              (rect.width >= 24 &&
+                rect.width <= 56 &&
+                rect.height >= 24 &&
+                rect.height <= 56 &&
+                Boolean(el.querySelector('svg')) &&
+                !el.querySelector('img, video, canvas') &&
+                !(el.innerText || '').trim()));
+          if (
+            (isCtrl || isMsgCompactBtn) &&
+            !el.matches(':disabled, [aria-disabled="true"]') &&
+            !el.closest('[class*="DivSideNavContainer"], [' + SURFACE + '="sidenav"], [' + SURFACE + '="drawer"], [class*="Player"], [class*="DivVideoWrapper"]') &&
+            !el.matches('[class*="PlayOverlay"], [class*="VideoMask"], [class*="ClickArea"], [class*="ButtonActionItem"], [data-e2e="search-button"], [data-e2e="comment-post"], [data-e2e="feed-navigation-next"], [data-e2e="feed-navigation-prev"], [data-e2e="arrow-down"], [data-e2e="arrow-up"]')
+          ) {
+            accentWrites.set.set(el, 'tonal');
+          }
         }
         return;
       }
@@ -4416,7 +4915,7 @@ function syncScript(dark = true, amoled = false) {
         accentWrites.set.set(el, 'progress');
         return;
       }
-      if (rect.width > 0 && rect.width <= 36 && rect.height > 0 && rect.height <= 28) {
+      if (rect.width > 0 && rect.width <= 48 && rect.height > 0 && rect.height <= 32) {
         accentWrites.set.set(el, 'badge');
       }
     };
@@ -4440,8 +4939,31 @@ function syncScript(dark = true, amoled = false) {
       return false;
     };
 
+    const HDR_ANCESTOR_SELECTOR =
+      'header, [role="banner"], [class*="DivHeaderContainer"], [class*="DivHeaderWrapper"], [class*="NavHeader"], [class*="BusinessHeader"], [class*="LayoutHeader"], [class*="TopBar"], [class*="NavBar"], [class*="HeaderBar"], [' +
+      SURFACE +
+      '="header"]';
+
+    const isTopHeaderSvg = (svg, r = svg.getBoundingClientRect()) =>
+      Boolean(svg.closest(HDR_ANCESTOR_SELECTOR)) ||
+      (r.top >= -4 &&
+        r.top <= 110 &&
+        r.bottom <= 145 &&
+        r.width <= 240 &&
+        r.height <= 64 &&
+        !svg.closest('main, [role="main"], [class*="Video"], [class*="Player"], [class*="Card"], [class*="Item"]'));
+
     const checkSvgContrast = (svg, iconWrites, bgCache, mediaRects, strictPlayer = false) => {
       if (!(svg instanceof Element) || svg.id?.startsWith('octo-')) return;
+      const inPlayerCtrl =
+        strictPlayer ||
+        Boolean(
+          svg.closest(
+            'button, [role="button"], [' +
+              SURFACE +
+              '="player-controls"], [class*="DivVideoControlBottom"], [class*="DivPlayerControls"], [class*="DivBottomControls"], [class*="DivMediaControl"], [class*="DivControlBottom"]',
+          ),
+        );
       if (
         svg.closest(
           '[' +
@@ -4456,10 +4978,12 @@ function syncScript(dark = true, amoled = false) {
             ACCENT +
             '="tonal"], [' +
             ACCENT +
-            '="badge"], [role="tooltip"], [data-e2e="tiktok-logo"], [data-octo-brand], [class*="Avatar" i], [class*="Emoji" i], [class*="Sticker" i], [class*="Animation" i], [class*="Lottie" i], [class*="DivSideNavContainer"], [' +
+            '="badge"], [role="tooltip"], [data-octo-md3-logo="1"], [data-octo-brand], [class*="Avatar" i], [class*="Emoji" i], [class*="Sticker" i], [class*="Lottie" i], [class*="DivSideNavContainer"], [' +
             SURFACE +
             '="sidenav"]',
-        )
+        ) ||
+        (!inPlayerCtrl && svg.closest('[class*="Animation" i]')) ||
+        (svg.closest('[data-e2e="tiktok-logo"]') && !isTopHeaderSvg(svg))
       ) {
         return;
       }
@@ -4467,21 +4991,36 @@ function syncScript(dark = true, amoled = false) {
       const bgInfo = effectiveBgInfo(svg, bgCache, mediaRects);
       const prefix = iconTonePrefix(bgInfo);
       const st = getComputedStyle(svg);
-      if (!isTikTokRed(st.color) && !isTikTokYellow(st.color) && isLowContrastPaint(st.color, bgInfo, strictPlayer)) {
+      const svgBadFill =
+        st.fill !== 'none' &&
+        !isTikTokRed(st.fill) &&
+        !isTikTokYellow(st.fill) &&
+        !isTikTokCyan(st.fill) &&
+        isLowContrastPaint(st.fill, bgInfo, strictPlayer);
+      if (svgBadFill) {
+        iconWrites.set(svg, prefix + 'fill');
+      } else if (
+        !isTikTokRed(st.color) &&
+        !isTikTokYellow(st.color) &&
+        !isTikTokCyan(st.color) &&
+        isLowContrastPaint(st.color, bgInfo, strictPlayer)
+      ) {
         iconWrites.set(svg, prefix ? prefix.slice(0, -1) : 'on-surface');
       }
-      for (const p of svg.querySelectorAll('path, circle, rect, line, polyline, polygon, ellipse')) {
-        if (p.getAttribute(ICON) === 'active') continue;
+      const checkShape = (p) => {
+        if (p.getAttribute(ICON) === 'active') return;
         const ps = getComputedStyle(p);
         const badFill =
           ps.fill !== 'none' &&
           !isTikTokRed(ps.fill) &&
           !isTikTokYellow(ps.fill) &&
+          !isTikTokCyan(ps.fill) &&
           isLowContrastPaint(ps.fill, bgInfo, strictPlayer);
         const badStroke =
           ps.stroke !== 'none' &&
           !isTikTokRed(ps.stroke) &&
           !isTikTokYellow(ps.stroke) &&
+          !isTikTokCyan(ps.stroke) &&
           isLowContrastPaint(ps.stroke, bgInfo, strictPlayer);
         if (badFill && badStroke) {
           iconWrites.set(p, prefix + 'fill-stroke');
@@ -4490,14 +5029,423 @@ function syncScript(dark = true, amoled = false) {
         } else if (badStroke) {
           iconWrites.set(p, prefix + 'stroke');
         }
+      };
+      for (const p of svg.querySelectorAll('g, path, circle, rect, line, polyline, polygon, ellipse, use')) {
+        checkShape(p);
+        if (p.tagName && p.tagName.toLowerCase() === 'use') {
+          const ref = (p.getAttribute('href') || p.getAttribute('xlink:href') || '').trim();
+          if (ref.startsWith('#') && ref.length > 1) {
+            const rootNode = svg.getRootNode();
+            const target =
+              (rootNode && typeof rootNode.getElementById === 'function'
+                ? rootNode.getElementById(ref.slice(1))
+                : null) || document.getElementById(ref.slice(1));
+            if (target) {
+              if (target.matches('g, path, circle, rect, line, polyline, polygon, ellipse')) {
+                checkShape(target);
+              }
+              for (const tp of target.querySelectorAll('g, path, circle, rect, line, polyline, polygon, ellipse')) {
+                checkShape(tp);
+              }
+            }
+          }
+        }
       }
+    };
+
+    const SEEK_WAVE_ATTR = 'data-octo-md3-seek-wave';
+    const SEEK_REL_ATTR = 'data-octo-md3-seek-rel';
+    const activeSeekbars = new Set();
+    const seekbarState = new WeakMap();
+    const SEEK_FRAME_MS = 32;
+    let seekSeq = 0;
+    let seekRafId = 0;
+    let seekLastTime = performance.now();
+    let seekLastDrawAt = 0;
+    let seekWakeBound = false;
+    let seekScrollTimer = null;
+
+    const seekSmoothstep = (edge0, edge1, x) => {
+      const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0 || 1)));
+      return t * t * (3 - 2 * t);
+    };
+
+    const pickBestVideo = (videos) => {
+      if (!videos || !videos.length) return null;
+      if (videos.length === 1) return videos[0];
+      const vh = window.innerHeight || 900;
+      let visibleFallback = null;
+      for (const v of videos) {
+        const vr = v.getBoundingClientRect();
+        if (vr.width > 80 && vr.height > 80 && vr.bottom > 0 && vr.top < vh) {
+          if (!v.paused && !v.ended) return v;
+          if (!visibleFallback) visibleFallback = v;
+        }
+      }
+      for (const v of videos) {
+        if (!v.paused && !v.ended) return v;
+      }
+      return visibleFallback || videos[0];
+    };
+
+    const findSeekVideo = (sb) => {
+      let cur = sb.parentElement;
+      for (let depth = 0; depth < 7 && cur && cur !== document.body; depth += 1) {
+        const videos = cur.querySelectorAll('video');
+        if (videos.length) return pickBestVideo(videos);
+        cur = cur.parentElement;
+      }
+      return pickBestVideo(document.querySelectorAll('video'));
+    };
+
+    const readSeekProgress = (sb, cachedVideo) => {
+      const sbRect = sb.getBoundingClientRect();
+      if (!sbRect.width) return 0;
+      const thumb = sb.querySelector('[' + SURFACE + '="player-seekbar-thumb"]');
+      const readThumb = () => {
+        if (!thumb) return null;
+        const tr = thumb.getBoundingClientRect();
+        if (tr.width > 0 && tr.width <= 28) {
+          const cx = tr.left + tr.width / 2;
+          return Math.min(1, Math.max(0, (cx - sbRect.left) / sbRect.width));
+        }
+        return null;
+      };
+      const vmax = Number(sb.getAttribute('aria-valuemax'));
+      const vnow = Number(sb.getAttribute('aria-valuenow'));
+      if (sb.matches(':active')) {
+        const tp = readThumb();
+        if (tp !== null) return tp;
+        if (vmax > 0 && Number.isFinite(vnow)) return Math.min(1, Math.max(0, vnow / vmax));
+      }
+      const video = cachedVideo && cachedVideo.isConnected ? cachedVideo : findSeekVideo(sb);
+      if (video && Number.isFinite(video.duration) && video.duration > 0) {
+        return Math.min(1, Math.max(0, video.currentTime / video.duration));
+      }
+      if (vmax > 0 && Number.isFinite(vnow)) return Math.min(1, Math.max(0, vnow / vmax));
+      const tp = readThumb();
+      if (tp !== null) return tp;
+      const fill = sb.querySelector('[' + ACCENT + '="progress"]');
+      if (fill) {
+        const fr = fill.getBoundingClientRect();
+        if (fr.left < sbRect.left - 1) {
+          return Math.min(1, Math.max(0, (fr.right - sbRect.left) / sbRect.width));
+        }
+        if (fr.width >= 0 && fr.width < sbRect.width - 1) {
+          return Math.min(1, Math.max(0, fr.width / sbRect.width));
+        }
+      }
+      return 0;
+    };
+
+    const drawSeekbar = (sb, dt, reduced, themeColors, vh) => {
+      const meta = seekbarState.get(sb);
+      if (!meta || !meta.canvas.isConnected) return { keep: false, animating: false };
+      const rect = sb.getBoundingClientRect();
+      if (rect.width < 40 || rect.bottom < -20 || rect.top > vh + 20) {
+        return { keep: true, animating: false };
+      }
+
+      if (meta.drawnOnce && typeof sb.checkVisibility === 'function') {
+        if (!sb.checkVisibility({ opacityProperty: true, visibilityProperty: true })) {
+          return { keep: true, animating: false };
+        }
+      }
+
+      if (!meta.video || !meta.video.isConnected || meta.video.paused) {
+        meta.video = findSeekVideo(sb);
+      }
+      const video = meta.video;
+      const isPlaying = Boolean(video && !video.paused && !video.ended);
+      const hovered =
+        sb.matches(':hover') ||
+        sb.matches(':active') ||
+        Boolean(sb.closest('[' + SURFACE + '="player-controls-wrap"]:hover'));
+      const progress = readSeekProgress(sb, video);
+      const width = Math.round(rect.width);
+      const { primary, onSurface } = themeColors;
+
+      const sameColors = meta.lastPrimary === primary && meta.lastOnSurface === onSurface;
+      const sameProgress = Math.abs(progress - meta.lastProgress) < 0.0004;
+      const sameStatic =
+        meta.drawnOnce &&
+        !meta.dirty &&
+        !isPlaying &&
+        hovered === meta.lastHovered &&
+        width === meta.lastWidth &&
+        sameProgress &&
+        sameColors;
+      if (sameStatic) {
+        return { keep: true, animating: false };
+      }
+
+      const height = 20;
+      const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+      const targetW = Math.round(width * dpr);
+      const targetH = Math.round(height * dpr);
+      if (meta.canvas.width !== targetW || meta.canvas.height !== targetH) {
+        meta.canvas.width = targetW;
+        meta.canvas.height = targetH;
+      }
+      const ctx = meta.canvas.getContext('2d');
+      if (!ctx) return { keep: false, animating: false };
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+
+      const wavelength = 26;
+      if (!reduced && isPlaying) {
+        meta.phase = (meta.phase + dt * 32) % wavelength;
+      }
+
+      const strokeW = hovered ? 5.0 : 4.4;
+      const pad = 5;
+      const usable = Math.max(0, width - pad * 2);
+      const handleX = pad + usable * progress;
+      const midY = height / 2;
+      const gap = hovered ? 7.5 : 6.5;
+      const amp = reduced
+        ? 0
+        : (hovered ? 3.5 : 3.0) *
+          seekSmoothstep(0.003, 0.025, progress) *
+          seekSmoothstep(0.997, 0.975, progress);
+
+      // Неактивная дорожка справа с точкой-ограничителем на конце
+      const trackStart = progress > 0.004 ? handleX + gap : pad;
+      if (width - pad > trackStart + 1) {
+        ctx.save();
+        ctx.globalAlpha = 0.28;
+        ctx.strokeStyle = onSurface;
+        ctx.lineWidth = strokeW;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(trackStart, midY);
+        ctx.lineTo(width - pad, midY);
+        ctx.stroke();
+        ctx.restore();
+
+        if (progress < 0.985) {
+          ctx.fillStyle = primary;
+          ctx.beginPath();
+          ctx.arc(width - pad, midY, Math.max(1.8, strokeW * 0.45), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Активный волновой сегмент
+      const activeEnd = Math.max(pad, handleX - gap);
+      if (progress > 0.004 && activeEnd > pad + 0.5) {
+        ctx.strokeStyle = primary;
+        ctx.lineWidth = strokeW;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        if (amp <= 0.08) {
+          ctx.moveTo(pad, midY);
+          ctx.lineTo(activeEnd, midY);
+        } else {
+          const twoPiOverL = (Math.PI * 2) / wavelength;
+          const yAt = (x) => midY + amp * Math.sin((x - meta.phase) * twoPiOverL);
+          ctx.moveTo(pad, yAt(pad));
+          for (let x = pad + 1.5; x < activeEnd; x += 1.5) {
+            ctx.lineTo(x, yAt(x));
+          }
+          ctx.lineTo(activeEnd, yAt(activeEnd));
+        }
+        ctx.stroke();
+      }
+
+      // Вертикальная пилюля-бегунок в текущей точке воспроизведения
+      const handleW = hovered ? 4.8 : 4.0;
+      const handleH = hovered ? 18 : 14;
+      const hx = Math.max(pad, Math.min(width - pad, handleX));
+      ctx.fillStyle = primary;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(hx - handleW / 2, midY - handleH / 2, handleW, handleH, handleW / 2);
+      } else {
+        ctx.rect(hx - handleW / 2, midY - handleH / 2, handleW, handleH);
+      }
+      ctx.fill();
+
+      meta.drawnOnce = true;
+      meta.dirty = false;
+      meta.lastWidth = width;
+      meta.lastProgress = progress;
+      meta.lastHovered = hovered;
+      meta.lastPrimary = primary;
+      meta.lastOnSurface = onSurface;
+
+      return { keep: true, animating: isPlaying && !reduced };
+    };
+
+    const tickSeekbars = (now) => {
+      seekRafId = 0;
+      if (document.visibilityState === 'hidden' || !activeSeekbars.size) return;
+      let anyDirty = false;
+      for (const sb of activeSeekbars) {
+        if (seekbarState.get(sb)?.dirty) {
+          anyDirty = true;
+          break;
+        }
+      }
+      if (!anyDirty && now - seekLastDrawAt < SEEK_FRAME_MS) {
+        seekRafId = requestAnimationFrame(tickSeekbars);
+        return;
+      }
+      seekLastDrawAt = now;
+      const dt = Math.min(0.1, Math.max(0, (now - seekLastTime) / 1000));
+      seekLastTime = now;
+      const reduced =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const vh = window.innerHeight || 900;
+      const rootStyle = getComputedStyle(document.documentElement);
+      const themeColors = {
+        primary: rootStyle.getPropertyValue('--octo-md-primary').trim() || '#9ac1fc',
+        onSurface: rootStyle.getPropertyValue('--octo-md-on-surface').trim() || '#f2ecf8',
+      };
+
+      let anyAnimating = false;
+      for (const sb of Array.from(activeSeekbars)) {
+        if (!sb.isConnected || sb.getAttribute(SURFACE) !== 'player-seekbar') {
+          activeSeekbars.delete(sb);
+          continue;
+        }
+        const res = drawSeekbar(sb, dt, reduced, themeColors, vh);
+        if (!res.keep) {
+          activeSeekbars.delete(sb);
+        } else if (res.animating) {
+          anyAnimating = true;
+        }
+      }
+      if (anyAnimating && activeSeekbars.size > 0) {
+        seekRafId = requestAnimationFrame(tickSeekbars);
+      }
+    };
+
+    const scheduleSeekLoop = (markDirty = false) => {
+      if (markDirty) {
+        for (const sb of activeSeekbars) {
+          const meta = seekbarState.get(sb);
+          if (meta) meta.dirty = true;
+        }
+      }
+      if (seekRafId || !activeSeekbars.size || document.visibilityState === 'hidden') return;
+      seekLastTime = performance.now();
+      seekRafId = requestAnimationFrame(tickSeekbars);
+    };
+
+    const onSeekVideoEvent = () => {
+      if (activeSeekbars.size) scheduleSeekLoop(true);
+    };
+
+    const onSeekPointerEvent = (event) => {
+      if (!activeSeekbars.size) return;
+      const t = event?.target;
+      if (
+        t instanceof Element &&
+        t.closest('[' + SURFACE + '="player-seekbar"], [' + SURFACE + '="player-controls-wrap"]')
+      ) {
+        scheduleSeekLoop(true);
+      }
+    };
+
+    const onSeekScrollOrResize = () => {
+      if (!activeSeekbars.size) return;
+      clearTimeout(seekScrollTimer);
+      seekScrollTimer = setTimeout(() => {
+        seekScrollTimer = null;
+        scheduleSeekLoop(true);
+      }, 90);
+    };
+
+    const bindSeekWakeEvents = () => {
+      if (seekWakeBound) return;
+      seekWakeBound = true;
+      document.addEventListener('play', onSeekVideoEvent, true);
+      document.addEventListener('playing', onSeekVideoEvent, true);
+      document.addEventListener('pause', onSeekVideoEvent, true);
+      document.addEventListener('ended', onSeekVideoEvent, true);
+      document.addEventListener('seeked', onSeekVideoEvent, true);
+      document.addEventListener('timeupdate', onSeekVideoEvent, true);
+      document.addEventListener('pointerover', onSeekPointerEvent, true);
+      document.addEventListener('pointerout', onSeekPointerEvent, true);
+      window.addEventListener('scroll', onSeekScrollOrResize, { passive: true, capture: true });
+      window.addEventListener('resize', onSeekScrollOrResize, { passive: true });
+    };
+
+    const unbindSeekWakeEvents = () => {
+      if (!seekWakeBound) return;
+      seekWakeBound = false;
+      clearTimeout(seekScrollTimer);
+      seekScrollTimer = null;
+      document.removeEventListener('play', onSeekVideoEvent, true);
+      document.removeEventListener('playing', onSeekVideoEvent, true);
+      document.removeEventListener('pause', onSeekVideoEvent, true);
+      document.removeEventListener('ended', onSeekVideoEvent, true);
+      document.removeEventListener('seeked', onSeekVideoEvent, true);
+      document.removeEventListener('timeupdate', onSeekVideoEvent, true);
+      document.removeEventListener('pointerover', onSeekPointerEvent, true);
+      document.removeEventListener('pointerout', onSeekPointerEvent, true);
+      window.removeEventListener('scroll', onSeekScrollOrResize, { capture: true });
+      window.removeEventListener('resize', onSeekScrollOrResize);
+    };
+
+    const ensureSeekbarWave = (sb) => {
+      bindSeekWakeEvents();
+      let meta = seekbarState.get(sb);
+      if (!meta || !meta.canvas.isConnected) {
+        let canvas = sb.querySelector(':scope > canvas.octo-md3-seek-canvas');
+        if (!canvas) {
+          seekSeq += 1;
+          canvas = document.createElement('canvas');
+          canvas.id = 'octo-md3-seek-' + seekSeq;
+          canvas.className = 'octo-md3-seek-canvas';
+          canvas.setAttribute('aria-hidden', 'true');
+          sb.appendChild(canvas);
+        }
+        meta = {
+          canvas,
+          phase: 0,
+          video: null,
+          drawnOnce: false,
+          dirty: true,
+          lastWidth: -1,
+          lastProgress: -1,
+          lastHovered: false,
+          lastPrimary: '',
+          lastOnSurface: '',
+        };
+        seekbarState.set(sb, meta);
+      } else {
+        meta.dirty = true;
+      }
+      if (getComputedStyle(sb).position === 'static') {
+        setAttrIfDiff(sb, SEEK_REL_ATTR, '1');
+      } else {
+        delAttrIfSet(sb, SEEK_REL_ATTR);
+      }
+      setAttrIfDiff(sb, SEEK_WAVE_ATTR, '1');
+      activeSeekbars.add(sb);
+      scheduleSeekLoop();
+    };
+
+    const stopSeekbars = () => {
+      if (seekRafId) {
+        cancelAnimationFrame(seekRafId);
+        seekRafId = 0;
+      }
+      unbindSeekWakeEvents();
+      activeSeekbars.clear();
+      document.querySelectorAll('canvas.octo-md3-seek-canvas').forEach((el) => el.remove());
+      document.querySelectorAll('[' + SEEK_WAVE_ATTR + ']').forEach((el) => el.removeAttribute(SEEK_WAVE_ATTR));
+      document.querySelectorAll('[' + SEEK_REL_ATTR + ']').forEach((el) => el.removeAttribute(SEEK_REL_ATTR));
     };
 
     const syncPlayerControls = (root, bgCache, mediaRects) => {
       const nextPlayerSurfaces = new Map();
       const nextNavBtns = new Map();
       const nextProgress = new Set();
-      const playerIcons = new Map();
       const markPlayerSurface = (el, value) => {
         nextPlayerSurfaces.set(el, value);
       };
@@ -4596,6 +5544,13 @@ function syncScript(dark = true, amoled = false) {
             'time, span, div, [class*="AutoScroll"], [class*="PlaybackRate"], [data-e2e*="video-play"]',
           )) {
             if (leaf.id?.startsWith('octo-')) continue;
+            const isTime =
+              leaf.children.length === 0 &&
+              /^\\s*\\d{1,2}:\\d{2}\\s*\\/\\s*\\d{1,2}:\\d{2}\\s*$/.test(leaf.textContent || '');
+            const isKnownCtrl =
+              !isTime &&
+              leaf.matches('[class*="AutoScroll"], [class*="PlaybackRate"], [data-e2e*="video-play"]');
+            if (!isTime && !isKnownCtrl) continue;
             let inMarkedBar = false;
             for (const b of localBars) {
               if (b.contains(leaf)) {
@@ -4604,11 +5559,6 @@ function syncScript(dark = true, amoled = false) {
               }
             }
             if (inMarkedBar) continue;
-            const isTime =
-              leaf.children.length === 0 &&
-              /^\\s*\\d{1,2}:\\d{2}\\s*\\/\\s*\\d{1,2}:\\d{2}\\s*$/.test(leaf.textContent || '');
-            const isKnownCtrl = leaf.matches('[class*="AutoScroll"], [class*="PlaybackRate"], [data-e2e*="video-play"]');
-            if (!isTime && !isKnownCtrl) continue;
             let cur = leaf.parentElement;
             let picked = null;
             while (cur && cur !== scope && cur !== document.body) {
@@ -4648,36 +5598,71 @@ function syncScript(dark = true, amoled = false) {
           }
         }
 
-        // Прогресс-бар (seekbar) и ползунок внутри плеера
-        for (const sb of scope.querySelectorAll('[class*="SeekBar"], [class*="ProgressBar"], [role="slider"]')) {
-          if (sb.id?.startsWith('octo-') || sb.querySelector('video')) continue;
-          const r = sb.getBoundingClientRect();
-          if (r.width < 80 || r.height < 2 || r.height > 36) continue;
-          markPlayerSurface(sb, 'player-seekbar');
-          if (sb.parentElement && !sb.parentElement.querySelector('video, [data-e2e*="author"], [data-e2e*="desc"]')) {
-            if (
-              sb.parentElement.getAttribute(SURFACE) === 'player-controls-wrap' ||
-              parseFloat(getComputedStyle(sb.parentElement).opacity) < 0.85
-            ) {
-              markPlayerSurface(sb.parentElement, 'player-controls-wrap');
-            }
+        // Прогресс-бар (seekbar) и ползунок внутри плеера (внутри scope и вне его)
+      }
+
+      const SEEKBAR_CHILD_NOISE =
+        '[class*="Track" i], [class*="Background" i], [class*="Played" i], [class*="Fill" i], [class*="Buffer" i], [class*="Thumb" i], [class*="Circle" i], [class*="Dot" i]';
+      for (const sb of root.querySelectorAll(
+        '[class*="SeekBar"], [class*="ProgressBar"], [class*="DivSlider"], [role="slider"]',
+      )) {
+        if (
+          sb.id?.startsWith('octo-') ||
+          sb.querySelector('video') ||
+          sb.closest('[class*="DivSideNavContainer"], [' + SURFACE + '="drawer"], [role="dialog"], nav')
+        ) {
+          continue;
+        }
+        if (
+          sb.matches(SEEKBAR_CHILD_NOISE) ||
+          (sb.matches('[class*="Progress" i]') && !sb.matches('[class*="ProgressBar" i]'))
+        ) {
+          continue;
+        }
+        let parentHasSeek = false;
+        for (const [el, val] of nextPlayerSurfaces) {
+          if (val === 'player-seekbar' && el !== sb && el.contains(sb)) {
+            parentHasSeek = true;
+            break;
           }
-          for (const child of sb.querySelectorAll('div, span')) {
-            const cr = child.getBoundingClientRect();
-            const isThumb =
-              child.matches('[class*="Circle"], [class*="Dot"], [class*="Thumb"]') ||
-              (cr.width >= 6 && cr.width <= 20 && cr.height >= 6 && cr.height <= 20 && Math.abs(cr.width - cr.height) <= 3);
-            if (isThumb) {
-              markPlayerSurface(child, 'player-seekbar-thumb');
-              continue;
-            }
-            const inlineStyle = child.getAttribute('style') || '';
-            const isFill =
-              child.matches('[class*="Progress"], [class*="Played"], [class*="Fill"]') ||
-              (cr.height >= 1 && cr.height <= 10 && /(?:width\\s*:\\s*[\\d.]+%|scaleX\\()/i.test(inlineStyle));
-            if (isFill) {
-              nextProgress.add(child);
-            }
+        }
+        if (parentHasSeek) continue;
+        const r = sb.getBoundingClientRect();
+        if (r.width < 80 || r.height < 1 || r.height > 48) continue;
+        markPlayerSurface(sb, 'player-seekbar');
+        if (
+          sb.parentElement &&
+          !sb.parentElement.querySelector('video, [data-e2e*="author"], [data-e2e*="desc"]')
+        ) {
+          if (
+            sb.parentElement.getAttribute(SURFACE) === 'player-controls-wrap' ||
+            parseFloat(getComputedStyle(sb.parentElement).opacity) < 0.85
+          ) {
+            markPlayerSurface(sb.parentElement, 'player-controls-wrap');
+          }
+        }
+        for (const child of sb.querySelectorAll('div, span')) {
+          if (child.classList?.contains('octo-md3-seek-canvas')) continue;
+          const cr = child.getBoundingClientRect();
+          const isThumb =
+            child.matches('[class*="Circle"], [class*="Dot"], [class*="Thumb"]') ||
+            (cr.width >= 6 &&
+              cr.width <= 20 &&
+              cr.height >= 6 &&
+              cr.height <= 20 &&
+              Math.abs(cr.width - cr.height) <= 3);
+          if (isThumb) {
+            markPlayerSurface(child, 'player-seekbar-thumb');
+            continue;
+          }
+          const inlineStyle = child.getAttribute('style') || '';
+          const isFill =
+            child.matches('[class*="Progress"], [class*="Played"], [class*="Fill"]') ||
+            (cr.height >= 1 &&
+              cr.height <= 10 &&
+              /(?:width\\s*:\\s*[\\d.]+%|scaleX\\(|translateX\\()/i.test(inlineStyle));
+          if (isFill) {
+            nextProgress.add(child);
           }
         }
       }
@@ -4749,6 +5734,9 @@ function syncScript(dark = true, amoled = false) {
       for (const el of nextProgress) {
         setAttrIfDiff(el, ACCENT, 'progress');
       }
+      for (const [el, val] of nextPlayerSurfaces) {
+        if (val === 'player-seekbar') ensureSeekbarWave(el);
+      }
       root
         .querySelectorAll('[' + BTN_GROUP + '="v-first"], [' + BTN_GROUP + '="v-last"]')
         .forEach((el) => {
@@ -4760,19 +5748,22 @@ function syncScript(dark = true, amoled = false) {
         setAttrIfDiff(el, BTN_GROUP, val);
       }
 
+      const strictSvgs = new Set();
       for (const bar of globalBars) {
-        for (const svg of bar.querySelectorAll('svg')) {
-          checkSvgContrast(svg, playerIcons, bgCache, mediaRects, true);
-        }
+        for (const svg of bar.querySelectorAll('svg')) strictSvgs.add(svg);
+      }
+      for (const bar of root.querySelectorAll(
+        '[class*="DivVideoControlBottom"], [class*="DivPlayerControls"], [class*="DivBottomControls"], [class*="DivMediaControl"], [class*="DivControlBottom"]',
+      )) {
+        if (bar.id?.startsWith('octo-') || bar.querySelector('video')) continue;
+        for (const svg of bar.querySelectorAll('svg')) strictSvgs.add(svg);
       }
       for (const [el, val] of nextPlayerSurfaces) {
-        if (val === 'player-more') {
-          for (const svg of el.querySelectorAll('svg')) {
-            checkSvgContrast(svg, playerIcons, bgCache, mediaRects, true);
-          }
+        if (val === 'player-more' || val === 'player-controls') {
+          for (const svg of el.querySelectorAll('svg')) strictSvgs.add(svg);
         }
       }
-      return playerIcons;
+      return strictSvgs;
     };
 
     const REACTION_CONTROL_SELECTOR = [
@@ -4795,7 +5786,7 @@ function syncScript(dark = true, amoled = false) {
     const REACTION_EXCLUDE_E2E =
       '[data-e2e*="comment-icon"], [data-e2e*="share-icon"], [data-e2e*="more"], [data-e2e*="follow"], [data-e2e*="arrow"], [data-e2e*="feed-navigation"]';
 
-    const syncActionIcons = (root, extraIcons = null, bgCache = new WeakMap(), mediaRects = null) => {
+    const syncActionIcons = (root, strictSvgs = null, bgCache = new WeakMap(), mediaRects = null) => {
       const rootStyle = getComputedStyle(document.documentElement);
       const primaryRgb = parseCssColor(rootStyle.getPropertyValue('--octo-md-primary'));
       const onSurfaceRgb = parseCssColor(rootStyle.getPropertyValue('--octo-md-on-surface'));
@@ -4952,15 +5943,24 @@ function syncScript(dark = true, amoled = false) {
       }
       const nextContrastIcons = new Map();
       try {
-        if (extraIcons) {
-          for (const [el, val] of extraIcons) nextContrastIcons.set(el, val);
+        if (strictSvgs) {
+          for (const svg of strictSvgs) {
+            if (!svg.isConnected || svg.id?.startsWith('octo-')) continue;
+            if (svg.closest('defs, symbol')) continue;
+            checkSvgContrast(svg, nextContrastIcons, bgCache, mediaRects, true);
+          }
         }
+        const SVG_QUICK_SKIP =
+          '[role="tooltip"], [data-octo-md3-logo="1"], [data-octo-brand], [class*="Avatar" i], [class*="Emoji" i], [class*="Sticker" i], [class*="Lottie" i], [class*="DivSideNavContainer"], [' +
+          SURFACE +
+          '="sidenav"]';
         for (const svg of root.querySelectorAll('svg')) {
-          if (svg.id?.startsWith('octo-')) continue;
+          if (svg.id?.startsWith('octo-') || (strictSvgs && strictSvgs.has(svg))) continue;
+          if (svg.closest(SVG_QUICK_SKIP)) continue;
           const r = svg.getBoundingClientRect();
           if (r.width <= 0 || r.height <= 0) continue;
-          const inHdr = Boolean(svg.closest('header, [' + SURFACE + '="header"]'));
-          if (inHdr ? (r.width > 180 || r.height > 56) : (r.width > 72 || r.height > 72)) {
+          const inHdr = isTopHeaderSvg(svg, r);
+          if (inHdr ? (r.width > 240 || r.height > 64) : (r.width > 72 || r.height > 72)) {
             continue;
           }
           checkSvgContrast(svg, nextContrastIcons, bgCache, mediaRects, false);
@@ -4974,6 +5974,130 @@ function syncScript(dark = true, amoled = false) {
       } finally {
         endProbe(probedIcons);
       }
+    };
+
+    const knownShadowHosts = new Set();
+    let shadowScanAt = 0;
+    let shadowDirty = true;
+
+    const collectShadowSubtree = (root, out = []) => {
+      if (!root || !root.querySelectorAll) return out;
+      if (root instanceof Element && root.shadowRoot) {
+        knownShadowHosts.add(root);
+        out.push(root.shadowRoot);
+        collectShadowSubtree(root.shadowRoot, out);
+      }
+      for (const el of root.querySelectorAll('*')) {
+        if (el.shadowRoot) {
+          knownShadowHosts.add(el);
+          out.push(el.shadowRoot);
+          collectShadowSubtree(el.shadowRoot, out);
+        }
+      }
+      return out;
+    };
+
+    const collectShadowRoots = (root, out = []) => {
+      if (!root || !root.querySelectorAll) return out;
+      if (root === document) {
+        const now = Date.now();
+        if (shadowDirty || now - shadowScanAt >= 5000) {
+          shadowDirty = false;
+          shadowScanAt = now;
+          knownShadowHosts.clear();
+          return collectShadowSubtree(document, out);
+        }
+        for (const host of Array.from(knownShadowHosts)) {
+          if (!host.isConnected || !host.shadowRoot) {
+            knownShadowHosts.delete(host);
+            continue;
+          }
+          out.push(host.shadowRoot);
+          collectShadowSubtree(host.shadowRoot, out);
+        }
+        return out;
+      }
+      return collectShadowSubtree(root, out);
+    };
+
+    const observedShadows = new WeakSet();
+    let observerOpts = null;
+
+    const CLASSIFY_SELECTOR =
+      'button, [role="button"], [role="switch"], [class*="Switch"], [class*="Toggle"], [class*="AutoScroll"] div, [class*="DivPlayerControls"] > div, [class*="DivBottomControls"] > div, [' +
+      SURFACE +
+      '="player-controls"] div, [class*="Progress"], [class*="SeekBar"] div, [class*="Badge" i], [class*="Unread" i], sup, [' +
+      SURFACE +
+      '="comments"] a, [class*="DivComment"] a, [' +
+      SURFACE +
+      '="live-chat"] [data-e2e], [' +
+      SURFACE +
+      '="live-chat"] [class*="Like" i], [' +
+      SURFACE +
+      '="live-chat"] [class*="Heart" i]';
+
+    const scanFragment = (frag) => {
+      if (!frag || !frag.isConnected || !frag.querySelectorAll) return;
+      const bgCache = new WeakMap();
+      const mediaRects = collectMediaRects(frag);
+      for (const node of frag.querySelectorAll(
+        'span, p, div, a, strong, em, b, i, small, label, time, button, h1, h2, h3, h4, h5, h6, li',
+      )) {
+        if (node.id?.startsWith('octo-')) continue;
+        let hasDirectText = false;
+        for (const child of node.childNodes) {
+          if (child.nodeType === 3 && child.textContent.trim()) {
+            hasDirectText = true;
+            break;
+          }
+        }
+        if (!hasDirectText) continue;
+        if (
+          node.closest(
+            'button:disabled, [role="button"][aria-disabled="true"], [' +
+              ACCENT +
+              '="primary"], [' +
+              ACCENT +
+              '="tonal"], [' +
+              ACCENT +
+              '="badge"], [' +
+              ACCENT +
+              '="primary-text"], [' +
+              ACCENT +
+              '="switch"], [' +
+              ACCENT +
+              '="switch-off"], [data-e2e="inbox-badge"], [role="tooltip"], [class*="Avatar" i], [class*="Emoji" i], [class*="Sticker" i]',
+          )
+        ) {
+          continue;
+        }
+        const style = getComputedStyle(node);
+        const fgColor = parseRgb(style.color);
+        const bgInfo = effectiveBgInfo(node, bgCache, mediaRects, null);
+        if (
+          !fgColor ||
+          fgColor.a < 0.45 ||
+          contrastRatioRgb(fgColor, bgInfo.rgb) < 2.8 ||
+          (MODE === 'dark' && isDarkColor(fgColor) && bgInfo.lum255 < 105)
+        ) {
+          setAttrIfDiff(
+            node,
+            FG,
+            bgInfo.lum < 0.22
+              ? bgInfo.onMedia && MODE === 'light'
+                ? 'const-white'
+                : 'on-surface'
+              : MODE === 'light'
+                ? 'on-surface'
+                : 'inverse',
+          );
+        }
+      }
+      syncActionIcons(frag, null, bgCache, mediaRects);
+      const accentWrites = { set: new Map(), del: new Set() };
+      for (const el of frag.querySelectorAll(CLASSIFY_SELECTOR)) classify(el, accentWrites);
+      for (const el of accentWrites.del) delAttrIfSet(el, ACCENT);
+      for (const [el, val] of accentWrites.set) setAttrIfDiff(el, ACCENT, val);
     };
 
     const scan = (root = document) => {
@@ -5010,29 +6134,67 @@ function syncScript(dark = true, amoled = false) {
         }
       }
 
-      syncMessagesLayout();
-      syncSurfaces(root);
-      syncSidebarNav();
-      syncButtonGroups(root);
+      if (root === document) syncMessagesLayout();
+      const shadowRoots = root === document ? collectShadowRoots(document) : [];
+      if (state.domObserver && observerOpts) {
+        for (const sr of shadowRoots) {
+          if (!observedShadows.has(sr)) {
+            observedShadows.add(sr);
+            state.domObserver.observe(sr, observerOpts);
+          }
+        }
+      }
+      const allRoots = root === document ? [document, ...shadowRoots] : [root];
       const bgCache = new WeakMap();
       const mediaRects = collectMediaRects(root);
-      const playerIcons = syncPlayerControls(root, bgCache, mediaRects);
-      syncActionIcons(root, playerIcons, bgCache, mediaRects);
-      const candidates = root.querySelectorAll(
-        'button, [role="button"], [role="switch"], [class*="Switch"], [class*="Toggle"], [class*="AutoScroll"] div, [class*="DivPlayerControls"] > div, [class*="DivBottomControls"] > div, [' +
-          SURFACE +
-          '="player-controls"] div, [class*="Progress"], [class*="SeekBar"] div, [class*="Badge" i], [class*="Unread" i], sup, [' +
-          SURFACE +
-          '="comments"] a, [class*="DivComment"] a, [' +
-          SURFACE +
-          '="live-chat"] [data-e2e], [' +
-          SURFACE +
-          '="live-chat"] [class*="Like" i], [' +
-          SURFACE +
-          '="live-chat"] [class*="Heart" i]',
-      );
+      for (const scopeRoot of allRoots) {
+        syncSurfaces(scopeRoot);
+      }
+      if (root === document) syncSidebarNav();
+      for (const scopeRoot of allRoots) {
+        syncButtonGroups(scopeRoot);
+        const strictSvgs = syncPlayerControls(scopeRoot, bgCache, mediaRects);
+        syncActionIcons(scopeRoot, strictSvgs, bgCache, mediaRects);
+      }
+      const candidates = root.querySelectorAll(CLASSIFY_SELECTOR);
       const accentWrites = { set: new Map(), del: new Set() };
       for (const el of candidates) classify(el, accentWrites);
+      if (isMessagesContext()) {
+        const hdrProbes = Array.from(root.querySelectorAll(HDR_ANCESTOR_SELECTOR)).filter(
+          (h) => !h.id?.startsWith('octo-'),
+        );
+        const hdrCand = [];
+        const listScope =
+          root.querySelector('[' + CHAT_LAYOUT + '="sidebar"], [' + CHAT_LAYOUT + '="list"]') || root;
+        for (const h of hdrProbes) {
+          for (const el of h.querySelectorAll('span, div, b, strong, a')) {
+            if (el.children.length > 2 || el.id?.startsWith('octo-') || el.hasAttribute(ACCENT)) continue;
+            const tc = (el.textContent || '').trim();
+            if ((tc.length > 0 && tc.length <= 6) || el.querySelector('svg')) hdrCand.push(el);
+          }
+        }
+        if (hdrCand.length) {
+          for (const h of hdrProbes) h.setAttribute(PROBE, '');
+          for (const el of hdrCand) el.setAttribute(PROBE, '');
+          try {
+            for (const el of hdrCand) classify(el, accentWrites);
+          } finally {
+            endProbe(hdrProbes.concat(hdrCand));
+          }
+        }
+        for (const el of listScope.querySelectorAll('span, div, b, strong')) {
+          if (
+            el.children.length > 0 ||
+            el.id?.startsWith('octo-') ||
+            el.hasAttribute(ACCENT) ||
+            el.matches('[class*="Emoji" i], [class*="Sticker" i], [class*="Avatar" i]')
+          ) {
+            continue;
+          }
+          const tc = (el.textContent || '').trim();
+          if (tc.length >= 1 && tc.length <= 4) classify(el, accentWrites);
+        }
+      }
 
       for (const el of accentWrites.del) delAttrIfSet(el, ACCENT);
       for (const [el, val] of accentWrites.set) setAttrIfDiff(el, ACCENT, val);
@@ -5061,31 +6223,113 @@ function syncScript(dark = true, amoled = false) {
     let timer = null;
     let lastScanAt = 0;
     let dirtyWhileHidden = false;
+    let scrolling = false;
+    let scrollScanTimer = null;
+    let fullScanPending = true;
+    const pendingFragments = new Set();
     const runScan = () => {
       if (document.visibilityState === 'hidden') {
         dirtyWhileHidden = true;
         return;
       }
+      if (scrolling) {
+        scheduleScan();
+        return;
+      }
       dirtyWhileHidden = false;
       lastScanAt = Date.now();
-      scan(document);
+      if (fullScanPending || pendingFragments.size === 0 || pendingFragments.size > 8) {
+        fullScanPending = false;
+        pendingFragments.clear();
+        scan(document);
+        return;
+      }
+      const list = Array.from(pendingFragments);
+      pendingFragments.clear();
+      for (const frag of list) {
+        scanFragment(frag);
+      }
     };
-    const scheduleScan = () => {
+    const scheduleScan = (forceImmediate = false) => {
+      if (forceImmediate) {
+        shadowDirty = true;
+        fullScanPending = true;
+        pendingFragments.clear();
+        clearTimeout(timer);
+        timer = null;
+        runScan();
+        return;
+      }
       if (timer) return;
       const elapsed = Date.now() - lastScanAt;
-      const delay = elapsed < 400 ? Math.max(150, 400 - elapsed) : 150;
+      const delay = elapsed < 800 ? Math.max(220, 800 - elapsed) : 220;
       timer = setTimeout(() => {
         timer = null;
         runScan();
       }, delay);
     };
 
+    const onScroll = () => {
+      scrolling = true;
+      clearTimeout(scrollScanTimer);
+      scrollScanTimer = setTimeout(() => {
+        scrolling = false;
+      }, 180);
+    };
+
     const onVisibility = () => {
-      if (document.visibilityState !== 'hidden' && dirtyWhileHidden) {
-        scheduleScan();
+      if (document.visibilityState !== 'hidden') {
+        if (dirtyWhileHidden) scheduleScan();
+        scheduleSeekLoop(true);
       }
     };
-    const onPopState = () => scheduleScan();
+    const onPopState = () => scheduleScan(true);
+    const RIPPLE = '${RIPPLE_ATTR}';
+    const motionReduce =
+      typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-reduced-motion: reduce)')
+        : null;
+    const RIPPLE_TARGET_SELECTOR =
+      'button, [role="button"], [role="tab"], [' +
+      SURFACE +
+      '="sidenav"] a, [' +
+      SURFACE +
+      '="drawer"] a, [' +
+      SURFACE +
+      '="chip"], [' +
+      SURFACE +
+      '="chip-active"]';
+
+    const onPointerDown = (event) => {
+      if (event.button !== 0 || motionReduce?.matches) return;
+      if (document.documentElement?.hasAttribute('${RAINBOW_ATTR}')) return;
+      const raw = event.target;
+      if (!(raw instanceof Element)) return;
+      if (raw.closest('#octo-badge-modal, .octo-user-badge, video, input, textarea, select, [contenteditable]')) {
+        return;
+      }
+      const target = raw.closest(RIPPLE_TARGET_SELECTOR);
+      if (!target || target.id?.startsWith('octo-') || target.disabled) return;
+      if (target.getAttribute('aria-disabled') === 'true') return;
+      if (target.matches('[data-e2e="tiktok-logo"], [data-octo-md3-logo="1"]')) return;
+      const rect = target.getBoundingClientRect();
+      if (!rect.width || !rect.height || rect.width > 480 || rect.height > 160) return;
+      const pos = getComputedStyle(target).position;
+      const attrVal = pos === 'static' ? 'rel' : '1';
+      const rx = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+      const ry = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
+      const diameter = Math.ceil(Math.hypot(rect.width, rect.height) * 2);
+      target.style.setProperty('--octo-rx', rx.toFixed(1) + 'px');
+      target.style.setProperty('--octo-ry', ry.toFixed(1) + 'px');
+      target.style.setProperty('--octo-rd', diameter + 'px');
+      target.removeAttribute(RIPPLE);
+      void target.offsetWidth;
+      target.setAttribute(RIPPLE, attrVal);
+      clearTimeout(target._octoSiteRippleTimer);
+      target._octoSiteRippleTimer = setTimeout(() => {
+        target.removeAttribute(RIPPLE);
+      }, 460);
+    };
 
     const state = {
       mode: MODE,
@@ -5094,11 +6338,17 @@ function syncScript(dark = true, amoled = false) {
       domObserver: null,
       stop() {
         if (timer) clearTimeout(timer);
+        if (scrollScanTimer) clearTimeout(scrollScanTimer);
         window.removeEventListener('popstate', onPopState);
+        window.removeEventListener('scroll', onScroll, { capture: true });
         document.removeEventListener('visibilitychange', onVisibility);
         document.removeEventListener('pointerover', onPointerMove, true);
+        document.removeEventListener('pointermove', onPointerMove, true);
         document.removeEventListener('pointerout', onPointerMove, true);
+        document.removeEventListener('pointerdown', onPointerDown, true);
         if (hoverFrame) cancelAnimationFrame(hoverFrame);
+        if (hoverRetryTimer) clearTimeout(hoverRetryTimer);
+        stopSeekbars();
         if (railObserver) railObserver.disconnect();
         if (state.attrObserver) state.attrObserver.disconnect();
         if (state.domObserver) state.domObserver.disconnect();
@@ -5106,15 +6356,18 @@ function syncScript(dark = true, amoled = false) {
           document.documentElement.removeAttribute(ATTR);
           document.documentElement.removeAttribute(AMOLED_ATTR);
         }
-        document.querySelectorAll('[' + ACCENT + ']').forEach((el) => el.removeAttribute(ACCENT));
-        document.querySelectorAll('[' + NAV + ']').forEach((el) => el.removeAttribute(NAV));
-        document.querySelectorAll('[' + POS + ']').forEach((el) => el.removeAttribute(POS));
-        document.querySelectorAll('[' + BTN_GROUP + ']').forEach((el) => el.removeAttribute(BTN_GROUP));
-        document.querySelectorAll('[' + ICON + ']').forEach((el) => el.removeAttribute(ICON));
-        document.querySelectorAll('[' + ACTION + ']').forEach((el) => el.removeAttribute(ACTION));
-        document.querySelectorAll('[' + SURFACE + ']').forEach((el) => el.removeAttribute(SURFACE));
-        document.querySelectorAll('[' + PROBE + ']').forEach((el) => el.removeAttribute(PROBE));
-        document.querySelectorAll('[' + FG + ']').forEach((el) => el.removeAttribute(FG));
+        for (const scopeRoot of [document, ...collectShadowRoots(document)]) {
+          scopeRoot.querySelectorAll('[' + ACCENT + ']').forEach((el) => el.removeAttribute(ACCENT));
+          scopeRoot.querySelectorAll('[' + NAV + ']').forEach((el) => el.removeAttribute(NAV));
+          scopeRoot.querySelectorAll('[' + POS + ']').forEach((el) => el.removeAttribute(POS));
+          scopeRoot.querySelectorAll('[' + BTN_GROUP + ']').forEach((el) => el.removeAttribute(BTN_GROUP));
+          scopeRoot.querySelectorAll('[' + ICON + ']').forEach((el) => el.removeAttribute(ICON));
+          scopeRoot.querySelectorAll('[' + ACTION + ']').forEach((el) => el.removeAttribute(ACTION));
+          scopeRoot.querySelectorAll('[' + SURFACE + ']').forEach((el) => el.removeAttribute(SURFACE));
+          scopeRoot.querySelectorAll('[' + PROBE + ']').forEach((el) => el.removeAttribute(PROBE));
+          scopeRoot.querySelectorAll('[' + FG + ']').forEach((el) => el.removeAttribute(FG));
+          scopeRoot.querySelectorAll('[' + RIPPLE + ']').forEach((el) => el.removeAttribute(RIPPLE));
+        }
         document.querySelectorAll('[data-octo-md3-rail]').forEach((el) => el.removeAttribute('data-octo-md3-rail'));
         document.querySelectorAll('[data-octo-md3-logo]').forEach((el) => el.removeAttribute('data-octo-md3-logo'));
         document
@@ -5135,9 +6388,12 @@ function syncScript(dark = true, amoled = false) {
     };
 
     window.addEventListener('popstate', onPopState);
+    window.addEventListener('scroll', onScroll, { passive: true, capture: true });
     document.addEventListener('visibilitychange', onVisibility);
     document.addEventListener('pointerover', onPointerMove, true);
+    document.addEventListener('pointermove', onPointerMove, true);
     document.addEventListener('pointerout', onPointerMove, true);
+    document.addEventListener('pointerdown', onPointerDown, true);
 
     const root = document.documentElement;
     if (root && typeof MutationObserver !== 'undefined') {
@@ -5159,43 +6415,95 @@ function syncScript(dark = true, amoled = false) {
       const ACTION_TARGET_SELECTOR =
         '[class*="ButtonActionItem"], [class*="ButtonActionItem"] *, [class*="DivActionItemContainer"] *, [class*="ActionBar"] *, [data-e2e*="like"], [data-e2e*="like"] *, [data-e2e*="favorite"], [data-e2e*="favorite"] *, [data-e2e="undefined-icon"], [data-e2e="undefined-icon"] *, [data-e2e*="collect"], [data-e2e*="collect"] *, [data-e2e*="bookmark"], [data-e2e*="bookmark"] *, [data-e2e*="repost"], [data-e2e*="repost"] *, [class*="DivComment"] [class*="Like" i], [class*="DivComment"] [class*="Like" i] *';
 
+      const PLAYER_MUTATION_SCOPE =
+        '[' +
+        SURFACE +
+        '="player-controls"], [class*="DivVideoControlBottom"], [class*="DivPlayerControls"], [class*="DivBottomControls"], [class*="DivMediaControl"], [class*="DivControlBottom"]';
+      const SEEKBAR_SCOPE =
+        '[class*="SeekBar"], [class*="ProgressBar"], [role="slider"], [' + SURFACE + '="player-seekbar"]';
+
+      const SCOPED_CONTENT_CONTAINER =
+        '[' + SURFACE + '="live-chat"], [' + SURFACE + '="comments"], [class*="DivCommentList"]';
+      const SCOPED_INPUT_GUARD =
+        '[' + SURFACE + '="live-chat-input"], [' + SURFACE + '="comment-input"], [contenteditable], textarea, input';
+
       state.domObserver = new MutationObserver((mutations) => {
+        let shouldSchedule = false;
         for (const mutation of mutations) {
           const t = mutation.target;
           if (t instanceof Element) {
             if (t.id?.startsWith('octo-') || t.closest('#octo-badge-modal, .octo-user-badge')) continue;
             if (mutation.type === 'attributes') {
-              if (
-                mutation.attributeName === 'style' ||
-                mutation.attributeName === 'fill' ||
-                mutation.attributeName === 'stroke'
-              ) {
-                if (!t.matches(ACTION_TARGET_SELECTOR)) continue;
+              if (mutation.attributeName === 'fill' || mutation.attributeName === 'stroke') {
+                if (
+                  !t.matches(ACTION_TARGET_SELECTOR) &&
+                  !t.closest('[class*="DivSideNavContainer"], [' + SURFACE + '="sidenav"], ' + PLAYER_MUTATION_SCOPE)
+                ) {
+                  continue;
+                }
+                fullScanPending = true;
+                shouldSchedule = true;
+                continue;
+              }
+              if (mutation.attributeName === 'style') {
+                if (t.closest(SEEKBAR_SCOPE)) continue;
+                if (!t.matches(ACTION_TARGET_SELECTOR) && !t.closest(PLAYER_MUTATION_SCOPE)) continue;
               } else if (mutation.attributeName === 'class') {
-                if (!t.matches(CLASS_TARGET_SELECTOR) && !t.matches(ACTION_TARGET_SELECTOR)) {
+                if (
+                  !t.matches(CLASS_TARGET_SELECTOR) &&
+                  !t.matches(ACTION_TARGET_SELECTOR) &&
+                  !t.closest(PLAYER_MUTATION_SCOPE) &&
+                  !t.closest('[class*="DivVideoInfo"], [class*="DivDescription"], [data-e2e="video-desc"]')
+                ) {
                   continue;
                 }
               }
-              scheduleScan();
-              return;
+              fullScanPending = true;
+              shouldSchedule = true;
+              continue;
             }
           }
           if (mutation.addedNodes.length > 0) {
-            let relevant = false;
+            const hostEl = t instanceof Element ? t : null;
+            const inTimerOrSeek = Boolean(hostEl && hostEl.closest(SEEKBAR_SCOPE + ', time'));
+            const scopedHost =
+              hostEl &&
+              !hostEl.closest(SCOPED_INPUT_GUARD) &&
+              hostEl.closest(SCOPED_CONTENT_CONTAINER);
             for (const n of mutation.addedNodes) {
               if (n.nodeType === 1 && !n.id?.startsWith('octo-') && !n.classList?.contains('octo-user-badge')) {
-                relevant = true;
-                break;
+                if (n.shadowRoot || (n.tagName && n.tagName.includes('-')) || n.childElementCount > 0) {
+                  shadowDirty = true;
+                }
+                if (scopedHost && !n.matches('[role="dialog"], [aria-modal="true"]')) {
+                  pendingFragments.add(n);
+                } else {
+                  fullScanPending = true;
+                }
+                shouldSchedule = true;
+                if (fullScanPending) break;
+              } else if (
+                n.nodeType === 3 &&
+                !inTimerOrSeek &&
+                n.textContent &&
+                n.textContent.trim() &&
+                !/^\\d{1,2}:\\d{2}/.test(n.textContent.trim())
+              ) {
+                if (scopedHost && hostEl) {
+                  pendingFragments.add(hostEl);
+                } else {
+                  fullScanPending = true;
+                }
+                shouldSchedule = true;
+                if (fullScanPending) break;
               }
             }
-            if (relevant) {
-              scheduleScan();
-              return;
-            }
           }
+          if (fullScanPending) break;
         }
+        if (shouldSchedule) scheduleScan();
       });
-      state.domObserver.observe(root, {
+      observerOpts = {
         childList: true,
         subtree: true,
         attributes: true,
@@ -5212,7 +6520,8 @@ function syncScript(dark = true, amoled = false) {
           'fill',
           'stroke',
         ],
-      });
+      };
+      state.domObserver.observe(root, observerOpts);
     }
 
     window.__octoMd3 = state;
@@ -5278,6 +6587,16 @@ const CLEANUP_JS = `(() => {
   document
     .querySelectorAll('[${PROBE_ATTR}]')
     .forEach((el) => el.removeAttribute('${PROBE_ATTR}'));
+  document
+    .querySelectorAll('[${RIPPLE_ATTR}]')
+    .forEach((el) => el.removeAttribute('${RIPPLE_ATTR}'));
+  document.querySelectorAll('canvas.octo-md3-seek-canvas').forEach((el) => el.remove());
+  document
+    .querySelectorAll('[data-octo-md3-seek-wave]')
+    .forEach((el) => el.removeAttribute('data-octo-md3-seek-wave'));
+  document
+    .querySelectorAll('[data-octo-md3-seek-rel]')
+    .forEach((el) => el.removeAttribute('data-octo-md3-seek-rel'));
 })()`;
 
 module.exports = {

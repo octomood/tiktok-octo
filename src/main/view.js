@@ -49,14 +49,17 @@ const windowsMedia = require('./windows-media');
 const profiles = require('./profiles');
 const history = require('./history');
 
-/** Окно OAuth: то же persistent-хранилище, но без Node и preload. */
+/** Окно OAuth: то же persistent-хранилище, без системной рамки, Node и preload. */
 function authWindowOptions() {
   return {
     width: 520,
     height: 760,
     parent: ctx.win ?? undefined,
+    frame: false,
     autoHideMenuBar: true,
-    backgroundColor: '#0b0b0f',
+    minimizable: false,
+    maximizable: false,
+    backgroundColor: ctx.themeTokens?.surface || '#191624',
     webPreferences: {
       session: session.fromPartition(profiles.activePartition() || PARTITION),
       contextIsolation: true,
@@ -64,6 +67,132 @@ function authWindowOptions() {
       sandbox: true,
     },
   };
+}
+
+function attachOAuthChrome(childWin) {
+  if (!childWin || childWin.isDestroyed()) return;
+  try {
+    childWin.setMenuBarVisibility(false);
+  } catch {
+    /* окно закрывается */
+  }
+  const cwc = childWin.webContents;
+  if (!cwc || cwc.isDestroyed()) return;
+
+  cwc.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return;
+    if (input.key === 'Escape' && !input.control && !input.meta && !input.alt) {
+      event.preventDefault();
+      childWin.close();
+      return;
+    }
+    if ((input.control || input.meta) && !input.alt && input.key?.toLowerCase() === 'w') {
+      event.preventDefault();
+      childWin.close();
+    }
+  });
+
+  const injectBar = () => {
+    if (childWin.isDestroyed() || cwc.isDestroyed()) return;
+    const tokens = ctx.themeTokens || {};
+    const bg = tokens.surfaceContainerLow || '#211d30';
+    const fg = tokens.onSurface || '#ddd2e0';
+    const muted = tokens.onSurfaceVariant || '#b8aec8';
+    const border = tokens.outlineVariant || '#47405e';
+    const errBg = tokens.errorContainer || '#601410';
+    const errFg = tokens.onErrorContainer || '#f9dedc';
+    const css = `
+      html { padding-top: 34px !important; }
+      #octo-oauth-bar {
+        position: fixed !important;
+        inset: 0 0 auto 0 !important;
+        z-index: 2147483647 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        height: 34px !important;
+        padding: 0 6px 0 12px !important;
+        background: ${bg} !important;
+        color: ${fg} !important;
+        border-bottom: 1px solid ${border} !important;
+        font: 600 12px/1 'Inter', system-ui, sans-serif !important;
+        user-select: none !important;
+        -webkit-app-region: drag !important;
+        box-sizing: border-box !important;
+      }
+      #octo-oauth-bar-title {
+        overflow: hidden !important;
+        color: ${muted} !important;
+        white-space: nowrap !important;
+        text-overflow: ellipsis !important;
+      }
+      #octo-oauth-bar-close {
+        display: grid !important;
+        place-items: center !important;
+        width: 26px !important;
+        height: 24px !important;
+        padding: 0 !important;
+        border: 0 !important;
+        border-radius: 9999px !important;
+        background: transparent !important;
+        color: ${muted} !important;
+        cursor: pointer !important;
+        -webkit-app-region: no-drag !important;
+      }
+      #octo-oauth-bar-close:hover {
+        background: ${errBg} !important;
+        color: ${errFg} !important;
+      }
+    `;
+    cwc.insertCSS(css, { cssOrigin: 'user' }).catch(() => {});
+    const hostText = (() => {
+      try {
+        return new URL(cwc.getURL()).hostname || 'Вход';
+      } catch {
+        return 'Вход';
+      }
+    })();
+    cwc
+      .executeJavaScript(
+        `(() => {
+          const root = document.documentElement;
+          if (!root) return;
+          let bar = document.getElementById('octo-oauth-bar');
+          if (!bar) {
+            bar = document.createElement('div');
+            bar.id = 'octo-oauth-bar';
+            const title = document.createElement('span');
+            title.id = 'octo-oauth-bar-title';
+            const btn = document.createElement('button');
+            btn.id = 'octo-oauth-bar-close';
+            btn.type = 'button';
+            btn.setAttribute('aria-label', 'Закрыть');
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('viewBox', '0 0 20 20');
+            svg.setAttribute('width', '14');
+            svg.setAttribute('height', '14');
+            svg.setAttribute('stroke', 'currentColor');
+            svg.setAttribute('stroke-width', '1.7');
+            svg.setAttribute('stroke-linecap', 'round');
+            const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            p.setAttribute('d', 'M6.4 6.4l7.2 7.2M13.6 6.4l-7.2 7.2');
+            svg.appendChild(p);
+            btn.appendChild(svg);
+            btn.addEventListener('click', () => window.close());
+            bar.append(title, btn);
+            root.appendChild(bar);
+          }
+          const titleEl = document.getElementById('octo-oauth-bar-title');
+          if (titleEl) titleEl.textContent = ${JSON.stringify(hostText)};
+        })()`,
+        false,
+      )
+      .catch(() => {});
+  };
+
+  cwc.on('dom-ready', injectBar);
+  cwc.on('did-navigate', injectBar);
+  cwc.on('did-navigate-in-page', injectBar);
 }
 
 function startUrl() {
@@ -109,6 +238,14 @@ function createView(urlOverride) {
     syncViewVisibility();
     pushState();
   };
+  const setViewLoading = (next) => {
+    const value = Boolean(next);
+    if (ctx.viewLoading === value) return;
+    ctx.viewLoading = value;
+    syncViewVisibility();
+    pushState();
+  };
+  setViewLoading(true);
 
   wc.setUserAgent(CHROME_UA);
   // Непрозрачный фон: полупрозрачный WebContentsView на Linux заставляет
@@ -141,13 +278,14 @@ function createView(urlOverride) {
       wc.loadURL(url);
       return { action: 'deny' };
     }
-    // Окна OAuth (Google/Apple/Facebook/X) — нативные popup'ы поверх приложения.
+    // Окна OAuth (Google/Apple/Facebook/X) — безрамочные popup'ы поверх приложения.
     if (isAuthUrl(url)) {
       return { action: 'allow', overrideBrowserWindowOptions: authWindowOptions() };
     }
     openExternal(url);
     return { action: 'deny' };
   });
+  wc.on('did-create-window', (childWin) => attachOAuthChrome(childWin));
 
   // --- Состояние -----------------------------------------------------------
   const refresh = () => pushState();
@@ -250,8 +388,16 @@ function createView(urlOverride) {
   let retryTimer = null;
   let crashTimer = null;
 
+  wc.on('did-start-navigation', (details) => {
+    if (details && details.isMainFrame && !details.isSameDocument) {
+      setViewLoading(true);
+    }
+  });
+
   wc.on('did-fail-load', (_event, code, description, url, isMainFrame) => {
-    if (!isMainFrame || code === -3 /* ERR_ABORTED */) return;
+    if (!isMainFrame) return;
+    setViewLoading(false);
+    if (code === -3 /* ERR_ABORTED */) return;
 
     loadFailed = true;
     setOffline(true);
@@ -298,6 +444,7 @@ function createView(urlOverride) {
         true,
       )
         .then((empty) => {
+          setViewLoading(false);
           if (empty) {
             setOffline(true);
             return;
@@ -310,11 +457,15 @@ function createView(urlOverride) {
           cosmetics.injectFrameStyles().catch(() => {});
           pushState();
         })
-        .catch(() => setOffline(true));
+        .catch(() => {
+          setViewLoading(false);
+          setOffline(true);
+        });
       return;
     }
     loadFailures = 0;
     crashCount = 0;
+    setViewLoading(false);
     setOffline(false);
     autoTheme.sync(wc).catch(() => {});
     cosmetics.injectFrameStyles().catch(() => {});
@@ -371,7 +522,10 @@ function createView(urlOverride) {
     cosmetics.scheduleScripts();
     plugins.onPageNavigate({ url: wc.getURL(), title: wc.getTitle() });
   });
-  wc.on('did-stop-loading', () => cosmetics.schedule(600));
+  wc.on('did-stop-loading', () => {
+    setViewLoading(false);
+    cosmetics.schedule(600);
+  });
 
   // --- Поиск по странице ---------------------------------------------------
   wc.on('found-in-page', (_event, result) => find.onFound(result));

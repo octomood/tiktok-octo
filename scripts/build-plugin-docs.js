@@ -356,6 +356,27 @@ function layout({ title, description, body, headings, active, output }) {
     <script src="site.js" defer></script>
   </head>
   <body>
+    <div class="octo-winbar" id="octoWinbar" hidden>
+      <div class="octo-winbar-brand">
+        <span class="octo-winbar-dot" aria-hidden="true">◈</span>
+        <span class="octo-winbar-title">${escapeHtml(title)} — TikTok Octo</span>
+      </div>
+      <div class="octo-winbar-controls">
+        <button type="button" class="octo-winbar-btn" data-win-act="minimize" title="Свернуть" aria-label="Свернуть">
+          <svg viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 10h10" /></svg>
+        </button>
+        <button type="button" class="octo-winbar-btn" data-win-act="maximize" title="Развернуть" aria-label="Развернуть">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect class="ico-max" x="5.6" y="5.6" width="8.8" height="8.8" rx="1.6" />
+            <g class="ico-restore" stroke-linecap="round"><path d="M7.6 7.4V5.9h6.5v6.5h-1.5" /><rect x="5.9" y="7.9" width="6.2" height="6.2" rx="1.2" /></g>
+          </svg>
+        </button>
+        <button type="button" class="octo-winbar-btn octo-winbar-btn--close" data-win-act="close" title="Закрыть" aria-label="Закрыть">
+          <svg viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6.4 6.4l7.2 7.2M13.6 6.4l-7.2 7.2" /></svg>
+        </button>
+      </div>
+    </div>
+
     <header class="topbar">
       <a class="brand" href="index.html">
         <span class="brand-mark" aria-hidden="true">◈</span>
@@ -433,6 +454,9 @@ html[data-theme='light'] {
 }
 
 * { box-sizing: border-box; }
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track, *::-webkit-scrollbar-corner { background: transparent; }
+*::-webkit-scrollbar-thumb { border-radius: 9999px; background: var(--line); }
 
 html { scroll-behavior: smooth; }
 
@@ -449,6 +473,39 @@ body {
 
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
+
+.octo-winbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 36px;
+  padding: 0 8px 0 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  user-select: none;
+  -webkit-app-region: drag;
+}
+.octo-winbar[hidden] { display: none; }
+.octo-winbar-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.octo-winbar-dot { color: var(--accent); font-size: 14px; line-height: 1; }
+.octo-winbar-title { overflow: hidden; color: var(--fg); font-size: 12.5px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.octo-winbar-controls { display: flex; align-items: center; gap: 2px; padding: 2px; border-radius: 9999px; background: var(--panel-2); -webkit-app-region: no-drag; }
+.octo-winbar-btn { display: grid; place-items: center; width: 28px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted-2); cursor: pointer; transition: background 0.14s ease, color 0.14s ease, border-radius 0.2s ease; }
+.octo-winbar-btn:first-child { border-radius: 24px 6px 6px 24px; }
+.octo-winbar-btn:last-child { border-radius: 6px 24px 24px 6px; }
+.octo-winbar-btn svg { width: 15px; height: 15px; }
+.octo-winbar-btn:hover { background: var(--accent-soft); color: var(--fg); border-radius: 10px; }
+.octo-winbar-btn--close:hover { background: rgba(229, 72, 77, 0.22); color: #ffb4ab; border-radius: 24px; }
+.octo-winbar .ico-restore { display: none; }
+body.is-maximized .octo-winbar .ico-max { display: none; }
+body.is-maximized .octo-winbar .ico-restore { display: inline; }
+body.octo-frameless { box-shadow: inset 0 0 0 1px var(--line); }
+body.octo-frameless.is-maximized { box-shadow: none; }
+body.octo-frameless .topbar { top: 36px; }
 
 .topbar {
   position: sticky;
@@ -750,7 +807,40 @@ html[data-theme='light'] .theme-light { display: inline; }
 }
 
 @media (max-width: 560px) {
-  .topbar { height: 58px; padding: 0 14px; gap: 10px; }
+  .octo-winbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 36px;
+  padding: 0 8px 0 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  user-select: none;
+  -webkit-app-region: drag;
+}
+.octo-winbar[hidden] { display: none; }
+.octo-winbar-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.octo-winbar-dot { color: var(--accent); font-size: 14px; line-height: 1; }
+.octo-winbar-title { overflow: hidden; color: var(--fg); font-size: 12.5px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.octo-winbar-controls { display: flex; align-items: center; gap: 2px; padding: 2px; border-radius: 9999px; background: var(--panel-2); -webkit-app-region: no-drag; }
+.octo-winbar-btn { display: grid; place-items: center; width: 28px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted-2); cursor: pointer; transition: background 0.14s ease, color 0.14s ease, border-radius 0.2s ease; }
+.octo-winbar-btn:first-child { border-radius: 24px 6px 6px 24px; }
+.octo-winbar-btn:last-child { border-radius: 6px 24px 24px 6px; }
+.octo-winbar-btn svg { width: 15px; height: 15px; }
+.octo-winbar-btn:hover { background: var(--accent-soft); color: var(--fg); border-radius: 10px; }
+.octo-winbar-btn--close:hover { background: rgba(229, 72, 77, 0.22); color: #ffb4ab; border-radius: 24px; }
+.octo-winbar .ico-restore { display: none; }
+body.is-maximized .octo-winbar .ico-max { display: none; }
+body.is-maximized .octo-winbar .ico-restore { display: inline; }
+body.octo-frameless { box-shadow: inset 0 0 0 1px var(--line); }
+body.octo-frameless.is-maximized { box-shadow: none; }
+body.octo-frameless .topbar { top: 36px; }
+
+.topbar { height: 58px; padding: 0 14px; gap: 10px; }
   .brand-text > span { display: none; }
   .doc h1 { font-size: 28px; }
   .doc h2 { font-size: 21px; }
@@ -760,7 +850,46 @@ html[data-theme='light'] .theme-light { display: inline; }
 `;
 
 const SCRIPT = `(() => {
+  const winApi = window.octoWindow;
+  const winbar = document.getElementById('octoWinbar');
+  if (winApi && winbar) {
+    winbar.hidden = false;
+    document.body.classList.add('octo-frameless');
+    const syncMax = (state) => {
+      document.body.classList.toggle('is-maximized', Boolean(state && state.maximized));
+    };
+    if (typeof winApi.state === 'function') syncMax(winApi.state());
+    if (typeof winApi.onState === 'function') winApi.onState(syncMax);
+    winbar.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-win-act]');
+      if (btn) winApi.control(btn.dataset.winAct);
+    });
+    winbar.addEventListener('dblclick', (event) => {
+      if (!event.target.closest('button')) winApi.control('maximize');
+    });
+  }
+
   const root = document.documentElement;
+  const applyAppTheme = (theme) => {
+    if (!theme || typeof theme !== 'object') return;
+    const t = theme.tokens || {};
+    root.dataset.theme = theme.dark === false ? 'light' : 'dark';
+    if (t.surface) root.style.setProperty('--bg', theme.amoled ? '#000000' : t.surface);
+    if (t.surfaceContainerLow) root.style.setProperty('--panel', t.surfaceContainerLow);
+    if (t.surfaceContainer) root.style.setProperty('--panel-2', t.surfaceContainer);
+    if (t.onSurface) root.style.setProperty('--fg', t.onSurface);
+    if (t.onSurfaceVariant) {
+      root.style.setProperty('--muted', t.onSurfaceVariant);
+      root.style.setProperty('--muted-2', t.onSurfaceVariant);
+    }
+    if (t.outlineVariant) root.style.setProperty('--line', t.outlineVariant);
+    if (t.primary) root.style.setProperty('--accent', t.primary);
+    if (t.primaryContainer) root.style.setProperty('--accent-soft', t.primaryContainer);
+  };
+  if (window.octo && window.octo.theme) {
+    applyAppTheme(window.octo.theme);
+    if (typeof window.octo.onTheme === 'function') window.octo.onTheme(applyAppTheme);
+  }
   const storage = (() => {
     try { return window.localStorage; } catch { return null; }
   })();

@@ -39,6 +39,10 @@ function handleShortcut(event, input) {
     if (ctx.keymapCapturing) {
       return run(() => {});
     }
+    // Пипетка компонентов сама обрабатывает Esc в renderer.
+    if (ctx.uiPickerActive) {
+      return undefined;
+    }
     // Амбиентный режим и перерыв Focus выходят по Esc первыми.
     if (ctx.ambient) return run(() => handleCommand('ambientExit'));
     if (ctx.focus && ctx.focus.phase === 'break') {
@@ -57,6 +61,8 @@ function handleShortcut(event, input) {
         }
       });
     }
+    if (require('./context-menu').isOpen()) return run(() => require('./context-menu').close());
+    if (ctx.appDialogOpen) return run(() => require('./dialogs').cancelActive());
     if (ctx.pluginDialogOpen) return run(() => plugins.cancelDialog());
     if (ctx.paletteOpen) return run(() => handleCommand('palette'));
     if (ctx.find.open) return run(() => handleCommand('findClose'));

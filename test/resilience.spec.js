@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('node:fs');
+const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const { test, expect, _electron: electron } = require('@playwright/test');
@@ -252,6 +253,49 @@ test('сторож памяти не перезагружает страницу
     expect(fs.readFileSync(memoryLog, 'utf8').trim().length).toBeGreaterThan(0);
   } finally {
     if (app) await app.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+test('во время загрузки страницы показывается экран с вращающимся логотипом', async () => {
+  test.setTimeout(60_000);
+  let releaseResponse = null;
+  const server = http.createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    releaseResponse = () => response.end('<!doctype html><title>Loaded</title><h1>OK</h1>');
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const baseUrl = `http://127.0.0.1:${server.address().port}/`;
+
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-loading-'));
+  let app;
+
+  try {
+    app = await launch(userData, { OCTO_HOME_URL: baseUrl });
+    await app.firstWindow();
+    const page = await waitForWindow(
+      app,
+      (candidate) => candidate.url().endsWith('/index.html'),
+      'полоса заголовка',
+    );
+
+    await expect(page.locator('#loadingScreen')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#loadingScreen .loading-logo')).toBeVisible();
+    await expect(page.locator('#loadingScreen .loading-ring .md3-progress-canvas')).toBeVisible();
+    const animName = await page
+      .locator('#loadingScreen .loading-logo')
+      .evaluate((el) => getComputedStyle(el).animationName);
+    expect(animName).toBe('loading-logo-spin');
+
+    await expect.poll(() => typeof releaseResponse).toBe('function');
+    releaseResponse();
+
+    await expect(page.locator('#loadingScreen')).toBeHidden({ timeout: 15000 });
+  } finally {
+    if (releaseResponse) releaseResponse();
+    if (app) await app.close();
+    if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
     fs.rmSync(userData, { recursive: true, force: true });
   }
 });

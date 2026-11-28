@@ -53,6 +53,9 @@
   let rainbowCfg = { hueFrom: 0, hueTo: 360, speed: 1 };
   let hueTimer = null;
   let lastHue = '';
+  let lastRainbowKey = '';
+  let lastThemeAttrs = '';
+  const lastTokensByVar = new Map();
 
   function stepMsForSpeed() {
     const speed = Math.min(4, Math.max(0.2, Number(rainbowCfg.speed) || 1));
@@ -118,23 +121,36 @@
     const dark = payload.dark !== false;
     const amoled = dark && payload.amoled === true;
     const rainbow = payload.rainbow === true;
-    root.dataset.theme = dark ? 'dark' : 'light';
-    root.dataset.amoled = amoled ? 'true' : 'false';
-    root.dataset.rainbow = rainbow ? 'true' : 'false';
-    if (payload.palette) root.dataset.palette = String(payload.palette);
-    root.style.setProperty('--md-scheme', dark ? 'dark' : 'light');
+    const palette = payload.palette ? String(payload.palette) : '';
+    const themeAttrs = `${dark ? 'dark' : 'light'}|${amoled ? '1' : '0'}|${rainbow ? '1' : '0'}|${palette}`;
+    if (themeAttrs !== lastThemeAttrs) {
+      lastThemeAttrs = themeAttrs;
+      root.dataset.theme = dark ? 'dark' : 'light';
+      root.dataset.amoled = amoled ? 'true' : 'false';
+      root.dataset.rainbow = rainbow ? 'true' : 'false';
+      if (palette) root.dataset.palette = palette;
+      root.style.setProperty('--md-scheme', dark ? 'dark' : 'light');
+    }
 
     rainbowActive = rainbow;
     if (payload.rainbowConfig && typeof payload.rainbowConfig === 'object') {
       rainbowCfg = payload.rainbowConfig;
     }
-    syncHueLoop();
+    const rainbowKey = rainbow
+      ? `1:${Number(rainbowCfg.hueFrom) || 0}:${rainbowCfg.hueTo === undefined ? 360 : Number(rainbowCfg.hueTo)}:${Number(rainbowCfg.speed) || 1}`
+      : '0';
+    if (rainbowKey !== lastRainbowKey) {
+      lastRainbowKey = rainbowKey;
+      syncHueLoop();
+    }
 
     const tokens = rainbow && payload.rainbowTokens ? payload.rainbowTokens : payload.tokens;
     if (tokens && typeof tokens === 'object') {
       for (const [key, cssVar] of Object.entries(TOKEN_CSS_MAP)) {
-        if (typeof tokens[key] === 'string') {
-          root.style.setProperty(cssVar, tokens[key]);
+        const val = tokens[key];
+        if (typeof val === 'string' && lastTokensByVar.get(cssVar) !== val) {
+          lastTokensByVar.set(cssVar, val);
+          root.style.setProperty(cssVar, val);
         }
       }
     }

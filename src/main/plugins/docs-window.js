@@ -7,7 +7,7 @@ const { fileURLToPath } = require('node:url');
 const { ctx } = require('../app-context');
 const { openExternal } = require('../links');
 const { t } = require('../i18n');
-const { keyFromInput } = require('../key-input');
+const windowChrome = require('../window-chrome');
 
 /**
  * Встроенная документация.
@@ -44,28 +44,30 @@ function openPage(page = 'index.html') {
     return true;
   }
 
-  win = new BrowserWindow({
-    width: 1080,
-    height: 800,
-    minWidth: 760,
-    minHeight: 520,
-    show: false,
-    parent: (() => {
-      const focused = BrowserWindow.getFocusedWindow();
-      if (focused && !focused.isDestroyed()) return focused;
-      if (ctx.win && !ctx.win.isDestroyed() && ctx.win.isVisible()) return ctx.win;
-      return undefined;
-    })(),
-    backgroundColor: '#0d1117',
-    title: t('Документация — TikTok Octo'),
-    autoHideMenuBar: true,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      spellcheck: false,
-    },
-  });
+  win = new BrowserWindow(
+    windowChrome.framelessOptions({
+      width: 1080,
+      height: 800,
+      minWidth: 760,
+      minHeight: 520,
+      show: false,
+      parent: (() => {
+        const focused = BrowserWindow.getFocusedWindow();
+        if (focused && !focused.isDestroyed()) return focused;
+        if (ctx.win && !ctx.win.isDestroyed() && ctx.win.isVisible()) return ctx.win;
+        return undefined;
+      })(),
+      title: t('Документация — TikTok Octo'),
+      webPreferences: {
+        preload: path.join(__dirname, 'docs-preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+        spellcheck: false,
+      },
+    }),
+  );
+  windowChrome.attach(win);
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https:\/\//i.test(url)) openExternal(url);
@@ -76,15 +78,6 @@ function openPage(page = 'index.html') {
     if (docsUrl(url)) return;
     event.preventDefault();
     if (/^https:\/\//i.test(url)) openExternal(url);
-  });
-
-  win.webContents.on('before-input-event', (event, input) => {
-    if (input.type !== 'keyDown') return;
-    const mod = input.control || input.meta;
-    if (mod && keyFromInput(input).toLowerCase() === 'w') {
-      event.preventDefault();
-      win.close();
-    }
   });
 
   win.once('ready-to-show', () => {

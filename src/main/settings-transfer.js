@@ -36,7 +36,7 @@ const MAX_IMPORT_BYTES = 512 * 1024;
 const MAX_BACKUP_BYTES = 16 * 1024 * 1024;
 const MAX_BACKUPS = 8;
 const BLOCKED_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
-const LIMITS = { depth: 5, keys: 300, array: 300, string: 4000 };
+const LIMITS = { depth: 5, keys: 800, array: 300, string: 4000 };
 
 /** Что считается настройками: остальное (библиотека, статистика, cookies) — нет. */
 const SETTINGS_KEYS = [
@@ -44,6 +44,7 @@ const SETTINGS_KEYS = [
   'cosmetics',
   'themeMode',
   'themeAmoled',
+  'themeRandomOnStart',
   'themePalette',
   'themeCustom',
   'themeRainbow',
@@ -61,6 +62,7 @@ const SETTINGS_KEYS = [
   'uiScale',
   'uiFont',
   'uiCustom',
+  'topbarButtons',
   'alwaysOnTop',
   'closeToTray',
   'startInTray',
@@ -75,6 +77,7 @@ const SETTINGS_KEYS = [
 
 const BOOLEAN_KEYS = new Set([
   'themeAmoled',
+  'themeRandomOnStart',
   'feedKeys',
   'alwaysOnTop',
   'closeToTray',
@@ -216,6 +219,10 @@ function cleanSettings(raw) {
       result.uiCustom = require('./ui-custom').normalizeUiCustom(value);
       continue;
     }
+    if (key === 'topbarButtons') {
+      result.topbarButtons = require('./ui-custom').normalizeTopbarButtons(value);
+      continue;
+    }
     if (key === 'language') {
       const language = APP_LANGUAGES.find((item) => item.id === value);
       if (language) result.language = language.id;
@@ -281,6 +288,7 @@ function liveDefaults() {
     cosmetics: cosmetic,
     themeMode: ctx.themeMode,
     themeAmoled: Boolean(ctx.themeAmoled),
+    themeRandomOnStart: Boolean(ctx.themeRandomOnStart),
     themePalette: ctx.themePalette,
     themeCustom: ctx.themeCustom,
     themeRainbow: ctx.themeRainbow,
@@ -305,6 +313,7 @@ function liveDefaults() {
     uiScale: ctx.uiScale || 1,
     uiFont: ctx.uiFont || { preset: 'google-sans-medium', family: '', fileName: '' },
     uiCustom: ctx.uiCustom || {},
+    topbarButtons: ctx.topbarButtons || [],
     alwaysOnTop: false,
     closeToTray: ctx.closeToTray,
     startInTray: ctx.startInTray,
@@ -448,9 +457,15 @@ function refreshLive() {
   if (state.uiCustom !== undefined) {
     const nextCustom = require('./ui-custom').normalizeUiCustom(state.uiCustom);
     require('./app-context').ctx.uiCustom = nextCustom;
+    require('./ui-custom').broadcastUiCustom(nextCustom);
     if (ctx.win && !ctx.win.isDestroyed()) {
       ctx.win.setTitle(nextCustom.brand?.label || 'TikTok Octo');
     }
+  }
+  if (state.topbarButtons !== undefined) {
+    require('./app-context').ctx.topbarButtons = require('./ui-custom').normalizeTopbarButtons(
+      state.topbarButtons,
+    );
   }
   call('./i18n', 'sync');
   call('./i18n', 'broadcast');
@@ -474,6 +489,9 @@ function refreshLive() {
   setCosmeticsState(state.cosmetics || {});
   if ('themeAmoled' in state) {
     call('./cosmetics', 'applyThemeAmoled', state.themeAmoled === true);
+  }
+  if ('themeRandomOnStart' in state) {
+    call('./cosmetics', 'applyThemeRandomOnStart', state.themeRandomOnStart === true);
   }
   if (state.themeCustom) {
     call('./cosmetics', 'applyThemeCustom', state.themeCustom, {

@@ -76,6 +76,16 @@ test('интерфейс: поиск настроек, масштаб, фоку�
 
     // --- Поиск по настройкам ------------------------------------------------
     await openPanel(page);
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const ind = document.getElementById('settingsNavIndicator')?.getBoundingClientRect();
+          const head = document.querySelector('[data-cat-head="page"]')?.getBoundingClientRect();
+          return ind && head ? Math.abs(ind.top - head.top) : 999;
+        }),
+      )
+      .toBeLessThan(2);
+
     await page.locator('#panelSearch').fill('прокси');
     await expect(page.locator('[data-cat="region"]')).not.toHaveClass(/is-filtered/);
     await expect(page.locator('[data-cat="player"]')).toHaveClass(/is-filtered/);
@@ -88,6 +98,15 @@ test('интерфейс: поиск настроек, масштаб, фоку�
     // --- ARIA и фокус -------------------------------------------------------
     await openAppCategory(page);
     await expect(page.locator('[data-cat-head="app"]')).toHaveAttribute('aria-expanded', 'true');
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const ind = document.getElementById('settingsNavIndicator')?.getBoundingClientRect();
+          const head = document.querySelector('[data-cat-head="app"]')?.getBoundingClientRect();
+          return ind && head ? Math.abs(ind.top - head.top) : 999;
+        }),
+      )
+      .toBeLessThan(2);
     await expect(page.locator('#offlineScreen')).toHaveAttribute('role', 'alert');
 
     await page.keyboard.press('Tab');

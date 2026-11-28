@@ -25,6 +25,12 @@ contextBridge.exposeInMainWorld('octo', {
   themePalettes: ipcRenderer.sendSync('octo:theme-palettes'),
   rainbowPresets: ipcRenderer.sendSync('octo:rainbow-presets'),
   uiComponents: ipcRenderer.sendSync('octo:ui-components'),
+  uiCustom: ipcRenderer.sendSync('octo:ui-custom'),
+  onUiCustom(callback) {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('octo:ui-custom-changed', listener);
+    return () => ipcRenderer.removeListener('octo:ui-custom-changed', listener);
+  },
   onTheme(callback) {
     const listener = (_event, payload) => callback(payload);
     ipcRenderer.on('octo:theme-changed', listener);
@@ -62,6 +68,14 @@ contextBridge.exposeInMainWorld('octo', {
   },
   replyPluginDialog(payload) {
     ipcRenderer.send('octo:plugin-dialog-result', payload);
+  },
+  onAppDialog(callback) {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('octo:app-dialog', listener);
+    return () => ipcRenderer.removeListener('octo:app-dialog', listener);
+  },
+  replyAppDialog(payload) {
+    ipcRenderer.send('octo:app-dialog-result', payload);
   },
   ready() {
     ipcRenderer.send('octo:ready');

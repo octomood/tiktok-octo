@@ -3,11 +3,13 @@
 const { app, shell } = require('electron');
 const {
   ctx,
+  layoutSoon,
   pushState,
   setUiScale,
   toast,
   stepHistory,
   setPanelOpen,
+  setPluginsOpen,
   setPopover,
   setPaletteOpen,
   setCloseToTray,
@@ -139,6 +141,101 @@ function openSettingsCategory(category) {
   player.watchPanel(true);
   player.refreshDevices();
   sendToWindow('octo:panel-category', category);
+}
+
+const SIDE_NAV_FALLBACKS = {
+  foryou: HOME_URL,
+  explore: 'https://www.tiktok.com/explore',
+  following: 'https://www.tiktok.com/following',
+  friends: 'https://www.tiktok.com/friends',
+  'short-drama': 'https://www.tiktok.com/short-drama',
+  live: 'https://www.tiktok.com/live',
+  upload: 'https://www.tiktok.com/upload',
+  profile: 'https://www.tiktok.com/login',
+};
+
+/**
+ * Переход по разделу из кастомного левого меню.
+ *
+ * Сначала пробуем кликнуть по скрытому SPA-пункту TikTok на текущей странице,
+ * чтобы переключение прошло мгновенно без перезагрузки (и с актуальным `/@user`
+ * для профиля или модалкой входа); если пункта нет или сайт ещё не загружен,
+ * переходим по прямому URL.
+ */
+async function openSideNavRoute(wc, key) {
+  if (!wc || wc.isDestroyed()) return;
+  const fallback = SIDE_NAV_FALLBACKS[key];
+  if (!fallback) return;
+
+  find.close({ focusView: false });
+  if (ctx.panelOpen) {
+    setPanelOpen(false);
+    player.watchPanel(false);
+  }
+  if (ctx.pluginsOpen) setPluginsOpen(false);
+
+  const currentUrl = wc.getURL();
+  if (!isTikTokUrl(currentUrl)) {
+    wc.loadURL(fallback).catch(() => {});
+    wc.focus();
+    return;
+  }
+
+  try {
+    const result = await wc.executeJavaScript(
+      `(() => {
+        const key = ${JSON.stringify(key)};
+        const selectors = {
+          foryou: ['[data-e2e="nav-foryou"]', 'a[href="/foryou"]', 'a[href="/"]'],
+          explore: ['[data-e2e="nav-explore"]', 'a[href="/explore"]'],
+          following: ['[data-e2e="nav-following"]', 'a[href="/following"]'],
+          friends: ['[data-e2e="nav-friends"]', 'a[href="/friends"]'],
+          'short-drama': ['[data-e2e="nav-short-drama"]', 'a[href="/short-drama"]'],
+          live: ['[data-e2e="nav-live"]', 'a[href="/live"]'],
+          upload: ['[data-e2e="nav-upload"]', 'a[href="/upload"]'],
+          profile: ['[data-e2e="nav-profile"]', '[data-e2e="top-login-button"]', '[data-e2e="nav-login-button"]'],
+        };
+        const list = selectors[key] || [];
+        let target = null;
+        for (const sel of list) {
+          const el = document.querySelector(sel);
+          if (el) {
+            target = el;
+            break;
+          }
+        }
+        if (!target) return { clicked: false, href: '' };
+        const link = target.closest('a[href]') || target.querySelector('a[href]');
+        const href = link ? link.getAttribute('href') || '' : '';
+        target.click();
+        return { clicked: true, href };
+      })()`,
+      true,
+    );
+
+    if (!result || !result.clicked) {
+      wc.loadURL(fallback).catch(() => {});
+    } else if (result.href && (result.href.startsWith('/') || isTikTokUrl(result.href))) {
+      const targetUrl = result.href.startsWith('/')
+        ? `https://www.tiktok.com${result.href}`
+        : result.href;
+      setTimeout(() => {
+        if (wc.isDestroyed()) return;
+        const nowUrl = wc.getURL();
+        if (nowUrl === currentUrl && nowUrl !== targetUrl) {
+          wc.loadURL(targetUrl).catch(() => {});
+        }
+      }, 260);
+    }
+  } catch {
+    wc.loadURL(fallback).catch(() => {});
+  }
+
+  try {
+    wc.focus();
+  } catch {
+    /* view закрывается */
+  }
 }
 
 function handleCommand(command, payload) {
@@ -426,14 +523,63 @@ function handleCommand(command, payload) {
     case 'audioDevices':
       player.refreshDevices();
       break;
-    case 'openUrl':
-      if (typeof payload === 'string' && isTikTokUrl(payload)) {
+    case 'openUrl': {
+      if (typeof payload !== 'string') break;
+      const target = payload.trim().startsWith('/')
+        ? `https://www.tiktok.com${payload.trim()}`
+        : payload.trim();
+      if (isTikTokUrl(target)) {
         find.close({ focusView: false });
-        wc.loadURL(payload);
-      } else if (typeof payload === 'string') {
-        openExternal(payload);
+        wc.loadURL(target);
+      } else {
+        openExternal(target);
       }
       break;
+    }
+    case 'sideNavToggle':
+      ctx.sideNavCollapsed = !ctx.sideNavCollapsed;
+      writeState({ sideNavCollapsed: ctx.sideNavCollapsed });
+      layoutSoon();
+      break;
+    case 'sideNav': {
+      const key = typeof payload === 'string' ? payload : '';
+      if (key === 'messages') {
+        find.close({ focusView: false });
+        if (ctx.panelOpen) {
+          setPanelOpen(false);
+          player.watchPanel(false);
+        }
+        if (ctx.pluginsOpen) setPluginsOpen(false);
+        chat.openFull();
+        refreshTrayMenu();
+        break;
+      }
+      if (key === 'settings') {
+        if (!ctx.htmlFullscreen && !ctx.pipActive && !ctx.barOnly) {
+          const opening = !ctx.panelOpen;
+          setPanelOpen(opening);
+          player.watchPanel(opening);
+          if (opening) player.refreshDevices();
+        }
+        refreshTrayMenu();
+        break;
+      }
+      openSideNavRoute(wc, key);
+      break;
+    }
+    case 'sideNavSearch': {
+      const query = typeof payload === 'string' ? payload.trim() : '';
+      if (!query) break;
+      find.close({ focusView: false });
+      if (ctx.panelOpen) {
+        setPanelOpen(false);
+        player.watchPanel(false);
+      }
+      if (ctx.pluginsOpen) setPluginsOpen(false);
+      wc.loadURL(`https://www.tiktok.com/search?q=${encodeURIComponent(query)}`).catch(() => {});
+      wc.focus();
+      break;
+    }
     case 'openInBrowser': {
       const url = wc.getURL();
       if (isTikTokUrl(url)) {
@@ -778,6 +924,9 @@ function handleCommand(command, payload) {
     case 'themeAmoled':
       cosmetics.applyThemeAmoled(Boolean(payload));
       break;
+    case 'themeRandomOnStart':
+      cosmetics.applyThemeRandomOnStart(Boolean(payload));
+      break;
     case 'themePalette':
       if (typeof payload === 'string') cosmetics.applyThemePalette(payload);
       break;
@@ -787,6 +936,9 @@ function handleCommand(command, payload) {
     case 'themeRainbow':
       if (payload && typeof payload === 'object') cosmetics.applyThemeRainbow(payload);
       break;
+    case 'uiPickerActive':
+      ctx.uiPickerActive = Boolean(payload);
+      return;
     case 'uiCustomSet': {
       if (!payload || typeof payload !== 'object') break;
       const current = ctx.uiCustom && typeof ctx.uiCustom === 'object' ? { ...ctx.uiCustom } : {};
@@ -801,6 +953,7 @@ function handleCommand(command, payload) {
       const next = uiCustom.normalizeUiCustom(current);
       ctx.uiCustom = next;
       writeState({ uiCustom: next });
+      uiCustom.broadcastUiCustom(next);
       if (ctx.win && !ctx.win.isDestroyed()) {
         ctx.win.setTitle(next.brand?.label || 'TikTok Octo');
       }
@@ -813,6 +966,7 @@ function handleCommand(command, payload) {
         uiCustom.removeComponentFiles(payload);
         ctx.uiCustom = uiCustom.normalizeUiCustom(next);
         writeState({ uiCustom: ctx.uiCustom });
+        uiCustom.broadcastUiCustom(ctx.uiCustom);
         if (payload === 'brand' && ctx.win && !ctx.win.isDestroyed()) {
           ctx.win.setTitle('TikTok Octo');
         }
@@ -821,6 +975,7 @@ function handleCommand(command, payload) {
         uiCustom.removeComponentFiles('');
         ctx.uiCustom = {};
         writeState({ uiCustom: {} });
+        uiCustom.broadcastUiCustom({});
         if (ctx.win && !ctx.win.isDestroyed()) {
           ctx.win.setTitle('TikTok Octo');
         }
@@ -843,6 +998,7 @@ function handleCommand(command, payload) {
         if (cleaned) current[compId] = cleaned;
         ctx.uiCustom = uiCustom.normalizeUiCustom(current);
         writeState({ uiCustom: ctx.uiCustom });
+        uiCustom.broadcastUiCustom(ctx.uiCustom);
         pushState();
         toast(`Иконка обновлена: ${res.fileName}`);
       };
@@ -884,6 +1040,7 @@ function handleCommand(command, payload) {
         if (cleaned) current[compId] = cleaned;
         ctx.uiCustom = uiCustom.normalizeUiCustom(current);
         writeState({ uiCustom: ctx.uiCustom });
+        uiCustom.broadcastUiCustom(ctx.uiCustom);
         pushState();
         toast(`Шрифт компонента: ${res.fileName}`);
       };
@@ -900,6 +1057,140 @@ function handleCommand(command, payload) {
         .then((res) => {
           if (!res.canceled && res.filePaths && res.filePaths[0]) {
             applyCompFont(res.filePaths[0]);
+          }
+        });
+      break;
+    }
+    case 'topbarButtonAdd': {
+      if (!payload || typeof payload !== 'object') break;
+      const list = Array.isArray(ctx.topbarButtons) ? ctx.topbarButtons.slice() : [];
+      const nextList = uiCustom.normalizeTopbarButtons([...list, payload]);
+      ctx.topbarButtons = nextList;
+      ctx.pendingTopbarIcon = null;
+      writeState({ topbarButtons: nextList });
+      toast('Кнопка добавлена в верхнюю полосу');
+      break;
+    }
+    case 'topbarButtonUpdate': {
+      if (!payload || typeof payload !== 'object' || typeof payload.id !== 'string') break;
+      const list = Array.isArray(ctx.topbarButtons) ? ctx.topbarButtons.slice() : [];
+      const updated = list.map((item) =>
+        item.id === payload.id && payload.patch && typeof payload.patch === 'object'
+          ? { ...item, ...payload.patch, id: item.id }
+          : item,
+      );
+      const nextList = uiCustom.normalizeTopbarButtons(updated);
+      ctx.topbarButtons = nextList;
+      writeState({ topbarButtons: nextList });
+      break;
+    }
+    case 'topbarButtonRemove': {
+      if (typeof payload !== 'string' || !payload) break;
+      const list = Array.isArray(ctx.topbarButtons) ? ctx.topbarButtons : [];
+      const nextList = list.filter((item) => item.id !== payload);
+      ctx.topbarButtons = nextList;
+      const compId = `customBtn:${payload}`;
+      uiCustom.removeComponentFiles(compId);
+      if (ctx.uiCustom && ctx.uiCustom[compId]) {
+        const nextCustom = { ...ctx.uiCustom };
+        delete nextCustom[compId];
+        ctx.uiCustom = uiCustom.normalizeUiCustom(nextCustom);
+        writeState({ topbarButtons: nextList, uiCustom: ctx.uiCustom });
+        uiCustom.broadcastUiCustom(ctx.uiCustom);
+      } else {
+        writeState({ topbarButtons: nextList });
+      }
+      toast('Кнопка удалена из верхней полосы');
+      break;
+    }
+    case 'topbarButtonMove': {
+      if (!payload || typeof payload !== 'object' || typeof payload.id !== 'string') break;
+      const dir = Number(payload.dir) < 0 ? -1 : 1;
+      const list = Array.isArray(ctx.topbarButtons) ? ctx.topbarButtons.slice() : [];
+      const idx = list.findIndex((item) => item.id === payload.id);
+      if (idx < 0) break;
+      const nextIdx = idx + dir;
+      if (nextIdx < 0 || nextIdx >= list.length) break;
+      const [moved] = list.splice(idx, 1);
+      list.splice(nextIdx, 0, moved);
+      ctx.topbarButtons = uiCustom.normalizeTopbarButtons(list);
+      writeState({ topbarButtons: ctx.topbarButtons });
+      break;
+    }
+    case 'topbarButtonsReset': {
+      for (const item of ctx.topbarButtons || []) {
+        uiCustom.removeComponentFiles(`customBtn:${item.id}`);
+      }
+      ctx.topbarButtons = [];
+      ctx.pendingTopbarIcon = null;
+      if (ctx.uiCustom) {
+        const nextCustom = { ...ctx.uiCustom };
+        let changed = false;
+        for (const key of Object.keys(nextCustom)) {
+          if (key.startsWith('customBtn:')) {
+            delete nextCustom[key];
+            changed = true;
+          }
+        }
+        if (changed) {
+          ctx.uiCustom = uiCustom.normalizeUiCustom(nextCustom);
+          writeState({ topbarButtons: [], uiCustom: ctx.uiCustom });
+          uiCustom.broadcastUiCustom(ctx.uiCustom);
+        } else {
+          writeState({ topbarButtons: [] });
+        }
+      } else {
+        writeState({ topbarButtons: [] });
+      }
+      toast('Свои кнопки верхней полосы удалены');
+      break;
+    }
+    case 'topbarButtonIconPick': {
+      const btnId =
+        payload && typeof payload.id === 'string' && payload.id.trim()
+          ? payload.id
+              .trim()
+              .replace(/[^a-zA-Z0-9_-]/g, '')
+              .slice(0, 40)
+          : '';
+      if (!btnId) break;
+      const compId = `customBtn:${btnId}`;
+      const applyBtnIcon = (filePath) => {
+        const res = uiCustom.installComponentIcon(compId, filePath);
+        if (!res.ok) {
+          toast(res.error);
+          return;
+        }
+        const list = Array.isArray(ctx.topbarButtons) ? ctx.topbarButtons.slice() : [];
+        const exists = list.some((item) => item.id === btnId);
+        if (exists) {
+          ctx.topbarButtons = uiCustom.normalizeTopbarButtons(
+            list.map((item) =>
+              item.id === btnId ? { ...item, iconType: 'file', iconValue: res.fileName } : item,
+            ),
+          );
+          writeState({ topbarButtons: ctx.topbarButtons });
+        } else {
+          ctx.pendingTopbarIcon = { id: btnId, fileName: res.fileName, dataUrl: res.dataUrl };
+        }
+        pushState();
+        toast(`Иконка кнопки: ${res.fileName}`);
+      };
+      if (payload && typeof payload.filePath === 'string' && payload.filePath.trim()) {
+        applyBtnIcon(payload.filePath);
+        break;
+      }
+      dialogs
+        .showOpenDialog(ctx.win, {
+          title: 'Выберите иконку для кнопки',
+          properties: ['openFile'],
+          filters: [
+            { name: 'Изображения', extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'] },
+          ],
+        })
+        .then((res) => {
+          if (!res.canceled && res.filePaths && res.filePaths[0]) {
+            applyBtnIcon(res.filePaths[0]);
           }
         });
       break;

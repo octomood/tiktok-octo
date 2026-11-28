@@ -1,6 +1,7 @@
 'use strict';
 
-const { app, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { normalizeHex } = require('./md3-palettes');
@@ -8,7 +9,20 @@ const uiFont = require('./ui-font');
 
 const MAX_ICON_BYTES = 2 * 1024 * 1024;
 const MAX_FONT_BYTES = 10 * 1024 * 1024;
+const MAX_COMPONENTS = 500;
+const MAX_TOPBAR_BUTTONS = 24;
 const ICON_TYPES = new Set(['default', 'preset', 'emoji', 'file', 'none']);
+const TOPBAR_SLOTS = new Set(['nav', 'actions', 'tools', 'extra']);
+const TOPBAR_ICON_TYPES = new Set(['preset', 'emoji', 'file', 'none']);
+const BLOCKED_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+const UNHIDEABLE_IDS = new Set([
+  'titlebar',
+  'panel',
+  'win:downloads:winbar',
+  'win:annotator:winbar',
+  'win:update:card',
+  'win:dialogs:card',
+]);
 const FONT_PRESETS = new Set([
   'inherit',
   'google-sans-medium',
@@ -242,6 +256,30 @@ function clampInt(value, min, max, fallback) {
   return Math.min(max, Math.max(min, num));
 }
 
+function isValidComponentId(id) {
+  if (typeof id !== 'string' || BLOCKED_KEYS.has(id)) return false;
+  if (id.includes('..')) return false;
+  return /^[a-zA-Z0-9:._-]{1,120}$/.test(id);
+}
+
+function safeFilePrefix(id) {
+  if (/^[a-zA-Z0-9_-]{1,64}$/.test(id)) return id;
+  const clean = id.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 48);
+  const hash = crypto.createHash('sha1').update(id).digest('hex').slice(0, 12);
+  return `${clean}_${hash}`;
+}
+
+function metaForComponent(id) {
+  const known = COMPONENT_MAP.get(id);
+  if (known) return known;
+  return {
+    id,
+    supportsLabel: true,
+    supportsIcon: true,
+    supportsHeight: false,
+  };
+}
+
 function iconsDir() {
   return path.join(app.getPath('userData'), 'ui-icons');
 }
@@ -298,13 +336,15 @@ function removePrefixedFiles(dir, prefix, exts, keepExt = '') {
 }
 
 function normalizeComponentConfig(id, raw) {
-  const meta = COMPONENT_MAP.get(id);
-  if (!meta || !raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  if (!isValidComponentId(id)) return null;
+  const meta = metaForComponent(id);
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
 
+  const prefix = safeFilePrefix(id);
   const next = {};
 
   if (meta.supportsLabel) {
-    const label = sanitizeText(raw.label, 60);
+    const label = sanitizeText(raw.label, 80);
     if (label) next.label = label;
   }
 
@@ -326,7 +366,7 @@ function normalizeComponentConfig(id, raw) {
         next.iconValue = val;
       }
     } else if (iconType === 'file') {
-      const stored = findStoredFile(iconsDir(), id, ALLOWED_ICON_EXTS);
+      const stored = findStoredFile(iconsDir(), prefix, ALLOWED_ICON_EXTS);
       if (stored) {
         next.iconType = 'file';
         next.iconValue =
@@ -356,7 +396,7 @@ function normalizeComponentConfig(id, raw) {
       next.fontFamily = family;
     }
   } else if (fontPreset === 'custom-file') {
-    const storedFont = findStoredFile(fontsDir(), `comp-${id}`, uiFont.ALLOWED_EXTS);
+    const storedFont = findStoredFile(fontsDir(), `comp-${prefix}`, uiFont.ALLOWED_EXTS);
     if (storedFont) {
       next.fontPreset = 'custom-file';
       next.fontFileName =
@@ -392,7 +432,7 @@ function normalizeComponentConfig(id, raw) {
     next.height = clampInt(raw.height, 38, 72, 0);
   }
 
-  if (raw.hidden === true && id !== 'titlebar' && id !== 'panel') {
+  if (raw.hidden === true && !UNHIDEABLE_IDS.has(id)) {
     next.hidden = true;
   }
 
@@ -402,16 +442,143 @@ function normalizeComponentConfig(id, raw) {
 function normalizeUiCustom(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   const result = {};
-  for (const item of UI_COMPONENTS) {
-    const cleaned = normalizeComponentConfig(item.id, raw[item.id]);
-    if (cleaned) result[item.id] = cleaned;
+  let count = 0;
+  for (const key of Object.keys(raw)) {
+    if (count >= MAX_COMPONENTS) break;
+    const cleaned = normalizeComponentConfig(key, raw[key]);
+    if (cleaned) {
+      result[key] = cleaned;
+      count += 1;
+    }
   }
   return result;
 }
 
+function sanitizeUrlPayload(raw) {
+  if (typeof raw !== 'string') return '';
+  const trimmed = raw.trim().slice(0, 400);
+  if (!trimmed) return '';
+  if (trimmed.startsWith('/')) return `https://www.tiktok.com${trimmed}`;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+      return parsed.toString();
+    }
+  } catch {
+    /* невалидный URL */
+  }
+  return '';
+}
+
+function normalizeTopbarPayload(cmd, rawPayload) {
+  if (cmd === 'openUrl') return sanitizeUrlPayload(rawPayload);
+  if (typeof rawPayload === 'string') return sanitizeText(rawPayload, 200);
+  if (typeof rawPayload === 'number' && Number.isFinite(rawPayload)) return rawPayload;
+  if (typeof rawPayload === 'boolean') return rawPayload;
+  return undefined;
+}
+
+function normalizeTopbarButton(raw, index, usedIds) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const cmd =
+    typeof raw.cmd === 'string' && /^[a-zA-Z0-9:._-]{1,80}$/.test(raw.cmd.trim())
+      ? raw.cmd.trim()
+      : '';
+  if (!cmd) return null;
+
+  let id =
+    typeof raw.id === 'string'
+      ? raw.id
+          .trim()
+          .replace(/[^a-zA-Z0-9_-]/g, '')
+          .slice(0, 40)
+      : '';
+  if (!id || BLOCKED_KEYS.has(id) || (usedIds && usedIds.has(id))) {
+    let seq = index + 1;
+    while (usedIds && usedIds.has(`tb_${seq}`)) seq += 1;
+    id = `tb_${seq}`;
+  }
+  usedIds?.add(id);
+
+  const slot = TOPBAR_SLOTS.has(raw.slot) ? raw.slot : 'extra';
+  const label = sanitizeText(raw.label, 40);
+  const tooltip = sanitizeText(raw.tooltip, 100);
+  const payload = normalizeTopbarPayload(cmd, raw.payload);
+  if (cmd === 'openUrl' && !payload) return null;
+
+  let iconType = TOPBAR_ICON_TYPES.has(raw.iconType) ? raw.iconType : 'preset';
+  let iconValue = '';
+  if (iconType === 'preset') {
+    iconValue = sanitizeText(raw.iconValue, 40).replace(/[^a-z0-9-]/gi, '') || 'sparkle';
+  } else if (iconType === 'emoji') {
+    iconValue = sanitizeText(raw.iconValue, 12);
+    if (!iconValue) {
+      iconType = 'preset';
+      iconValue = 'sparkle';
+    }
+  } else if (iconType === 'file') {
+    const stored = findStoredFile(iconsDir(), safeFilePrefix(`customBtn:${id}`), ALLOWED_ICON_EXTS);
+    if (stored) {
+      iconValue =
+        typeof raw.iconValue === 'string' && raw.iconValue.trim()
+          ? path.basename(raw.iconValue).slice(0, 120)
+          : path.basename(stored);
+    } else {
+      iconType = 'preset';
+      iconValue = 'sparkle';
+    }
+  } else if (iconType === 'none' && !label) {
+    // Кнопка совсем без иконки и текста невозможна.
+    iconType = 'preset';
+    iconValue = 'sparkle';
+  }
+
+  const entry = { id, cmd, slot, iconType };
+  if (iconValue) entry.iconValue = iconValue;
+  if (label) entry.label = label;
+  if (tooltip) entry.tooltip = tooltip;
+  if (payload !== undefined && payload !== '') entry.payload = payload;
+  return entry;
+}
+
+function normalizeTopbarButtons(raw) {
+  if (!Array.isArray(raw)) return [];
+  const used = new Set();
+  const out = [];
+  for (let i = 0; i < raw.length && out.length < MAX_TOPBAR_BUTTONS; i += 1) {
+    const item = normalizeTopbarButton(raw[i], i, used);
+    if (item) out.push(item);
+  }
+  return out;
+}
+
+function toTopbarPayload(rawList) {
+  const list = normalizeTopbarButtons(rawList);
+  return list.map((item) => {
+    const entry = { ...item };
+    if (entry.iconType === 'file') {
+      const iconFile = findStoredFile(
+        iconsDir(),
+        safeFilePrefix(`customBtn:${entry.id}`),
+        ALLOWED_ICON_EXTS,
+      );
+      const dataUrl = readCachedFile(iconFile, MAX_ICON_BYTES, 'dataUrl');
+      if (dataUrl) entry.iconDataUrl = dataUrl;
+      else {
+        entry.iconType = 'preset';
+        entry.iconValue = 'sparkle';
+      }
+    }
+    return entry;
+  });
+}
+
 function installComponentIcon(compId, sourcePath) {
-  const meta = COMPONENT_MAP.get(compId);
-  if (!meta || !meta.supportsIcon) {
+  if (!isValidComponentId(compId)) {
+    return { ok: false, error: 'Некорректный идентификатор компонента' };
+  }
+  const meta = metaForComponent(compId);
+  if (!meta.supportsIcon) {
     return { ok: false, error: 'Этот компонент не поддерживает смену иконки' };
   }
   if (typeof sourcePath !== 'string' || !sourcePath.trim()) {
@@ -435,19 +602,21 @@ function installComponentIcon(compId, sourcePath) {
     return { ok: false, error: 'Файл иконки больше 2 МБ' };
   }
   const dir = iconsDir();
+  const prefix = safeFilePrefix(compId);
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  removePrefixedFiles(dir, compId, ALLOWED_ICON_EXTS, ext);
-  const dest = path.join(dir, `${compId}${ext}`);
+  removePrefixedFiles(dir, prefix, ALLOWED_ICON_EXTS, ext);
+  const dest = path.join(dir, `${prefix}${ext}`);
   fs.copyFileSync(resolved, dest);
   fileCache.delete(`${dest}:dataUrl`);
   return {
     ok: true,
     fileName: path.basename(resolved).slice(0, 120),
+    dataUrl: readCachedFile(dest, MAX_ICON_BYTES, 'dataUrl'),
   };
 }
 
 function installComponentFont(compId, sourcePath) {
-  if (!COMPONENT_MAP.has(compId)) {
+  if (!isValidComponentId(compId)) {
     return { ok: false, error: 'Неизвестный компонент' };
   }
   if (typeof sourcePath !== 'string' || !sourcePath.trim()) {
@@ -471,9 +640,10 @@ function installComponentFont(compId, sourcePath) {
     return { ok: false, error: 'Файл шрифта больше 10 МБ' };
   }
   const dir = fontsDir();
+  const prefix = `comp-${safeFilePrefix(compId)}`;
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  removePrefixedFiles(dir, `comp-${compId}`, uiFont.ALLOWED_EXTS, ext);
-  const dest = path.join(dir, `comp-${compId}${ext}`);
+  removePrefixedFiles(dir, prefix, uiFont.ALLOWED_EXTS, ext);
+  const dest = path.join(dir, `${prefix}${ext}`);
   fs.copyFileSync(resolved, dest);
   fileCache.delete(`${dest}:base64`);
   return {
@@ -482,13 +652,51 @@ function installComponentFont(compId, sourcePath) {
   };
 }
 
+function removeAllStoredComponentFiles() {
+  try {
+    const dir = iconsDir();
+    if (fs.existsSync(dir)) {
+      for (const name of fs.readdirSync(dir)) {
+        const target = path.join(dir, name);
+        fileCache.delete(`${target}:dataUrl`);
+        try {
+          if (fs.statSync(target).isFile()) fs.unlinkSync(target);
+        } catch {
+          /* игнорируем */
+        }
+      }
+    }
+  } catch {
+    /* игнорируем */
+  }
+  try {
+    const dir = fontsDir();
+    if (fs.existsSync(dir)) {
+      for (const name of fs.readdirSync(dir)) {
+        if (!name.startsWith('comp-')) continue;
+        const target = path.join(dir, name);
+        fileCache.delete(`${target}:base64`);
+        try {
+          if (fs.statSync(target).isFile()) fs.unlinkSync(target);
+        } catch {
+          /* игнорируем */
+        }
+      }
+    }
+  } catch {
+    /* игнорируем */
+  }
+}
+
 function removeComponentFiles(compId) {
   if (!compId) {
-    for (const item of UI_COMPONENTS) removeComponentFiles(item.id);
+    removeAllStoredComponentFiles();
     return;
   }
-  removePrefixedFiles(iconsDir(), compId, ALLOWED_ICON_EXTS);
-  removePrefixedFiles(fontsDir(), `comp-${compId}`, uiFont.ALLOWED_EXTS);
+  if (!isValidComponentId(compId)) return;
+  const prefix = safeFilePrefix(compId);
+  removePrefixedFiles(iconsDir(), prefix, ALLOWED_ICON_EXTS);
+  removePrefixedFiles(fontsDir(), `comp-${prefix}`, uiFont.ALLOWED_EXTS);
 }
 
 function toRendererPayload(uiCustom) {
@@ -496,8 +704,9 @@ function toRendererPayload(uiCustom) {
   const out = {};
   for (const [id, cfg] of Object.entries(normalized)) {
     const entry = { ...cfg };
+    const prefix = safeFilePrefix(id);
     if (entry.iconType === 'file') {
-      const iconFile = findStoredFile(iconsDir(), id, ALLOWED_ICON_EXTS);
+      const iconFile = findStoredFile(iconsDir(), prefix, ALLOWED_ICON_EXTS);
       const dataUrl = readCachedFile(iconFile, MAX_ICON_BYTES, 'dataUrl');
       if (dataUrl) entry.iconDataUrl = dataUrl;
       else {
@@ -506,7 +715,7 @@ function toRendererPayload(uiCustom) {
       }
     }
     if (entry.fontPreset === 'custom-file') {
-      const fontFile = findStoredFile(fontsDir(), `comp-${id}`, uiFont.ALLOWED_EXTS);
+      const fontFile = findStoredFile(fontsDir(), `comp-${prefix}`, uiFont.ALLOWED_EXTS);
       const base64 = readCachedFile(fontFile, MAX_FONT_BYTES, 'base64');
       if (base64) entry.fontDataBase64 = base64;
       else {
@@ -519,6 +728,26 @@ function toRendererPayload(uiCustom) {
   return out;
 }
 
+function broadcastUiCustom(uiCustom) {
+  const payload = toRendererPayload(uiCustom);
+  try {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win || win.isDestroyed()) continue;
+      const wc = win.webContents;
+      if (!wc || wc.isDestroyed()) continue;
+      try {
+        wc.send('octo:ui-custom-changed', payload);
+      } catch {
+        /* окно закрывается */
+      }
+    }
+    require('./context-menu').syncUiCustom?.(payload);
+  } catch {
+    /* тестовая среда */
+  }
+  return payload;
+}
+
 function listComponents() {
   return UI_COMPONENTS.map((item) => ({ ...item }));
 }
@@ -526,6 +755,9 @@ function listComponents() {
 try {
   ipcMain?.on('octo:ui-components', (event) => {
     event.returnValue = listComponents();
+  });
+  ipcMain?.on('octo:ui-custom', (event) => {
+    event.returnValue = toRendererPayload(require('./app-context').ctx.uiCustom);
   });
 } catch {
   /* тестовая среда без Electron IPC */
@@ -535,11 +767,17 @@ module.exports = {
   UI_COMPONENTS,
   COMPONENT_MAP,
   ALLOWED_ICON_EXTS,
+  isValidComponentId,
+  safeFilePrefix,
   normalizeComponentConfig,
   normalizeUiCustom,
+  normalizeTopbarButton,
+  normalizeTopbarButtons,
+  toTopbarPayload,
   installComponentIcon,
   installComponentFont,
   removeComponentFiles,
   toRendererPayload,
+  broadcastUiCustom,
   listComponents,
 };

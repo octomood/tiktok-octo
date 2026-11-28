@@ -132,6 +132,43 @@ test('профили аккаунтов, заметки к авторам, пл�
       getComputedStyle(document.documentElement).getPropertyValue('--md-primary').trim(),
     );
     expect(primaryHex).not.toBe('#8c84a9');
+
+    // 6. Переключатель «Новая тема при каждом запуске»: меняет палитру при следующем старте.
+    const randomRow = page.locator('#rowThemeRandomOnStart');
+    await expect(randomRow).toHaveAttribute('aria-checked', 'false');
+    await randomRow.click();
+    await expect(randomRow).toHaveAttribute('aria-checked', 'true');
+    await expect.poll(() => readState(userData).themeRandomOnStart).toBe(true);
+
+    await app.close();
+    app = null;
+
+    app = await launch(userData);
+    await app.firstWindow();
+    const relaunchedPage = await waitForFileWindow(app);
+    expect(relaunchedPage, 'окно с полосой заголовка не появилось').toBeTruthy();
+    await relaunchedPage.waitForLoadState('load');
+    await expect(relaunchedPage.locator('#btnPanel')).toBeVisible();
+    await relaunchedPage.click('#btnPanel');
+    await relaunchedPage.click('#catCosmeticsHead');
+    await expect(relaunchedPage.locator('#rowThemeRandomOnStart')).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    const nextPalette = await expect
+      .poll(() => readState(userData).themePalette)
+      .not.toBe('emerald-forest');
+    void nextPalette;
+    await expect(relaunchedPage.locator('html')).not.toHaveAttribute(
+      'data-palette',
+      'emerald-forest',
+    );
+    await relaunchedPage.click('#rowThemeRandomOnStart');
+    await expect(relaunchedPage.locator('#rowThemeRandomOnStart')).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+    await expect.poll(() => readState(userData).themeRandomOnStart).toBe(false);
   } finally {
     if (app) await app.close();
     fs.rmSync(userData, { recursive: true, force: true });

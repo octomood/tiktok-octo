@@ -1,7 +1,8 @@
 'use strict';
 
-const { dialog, ipcMain } = require('electron');
+const { ipcMain } = require('electron');
 const { ctx, pushState, toast } = require('./app-context');
+const { showMessageBox } = require('./dialogs');
 const { readState, writeState } = require('./store');
 
 /**
@@ -131,7 +132,7 @@ async function toggle() {
 
   const hasCode = Boolean(settings.css.trim() || settings.js.trim());
   if (hasCode && process.env.OCTO_E2E !== '1') {
-    const result = await dialog.showMessageBox(ctx.win, {
+    const result = await showMessageBox(ctx.win, {
       type: 'warning',
       buttons: ['Включить', 'Отмена'],
       defaultId: 1,

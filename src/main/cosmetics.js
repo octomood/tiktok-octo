@@ -521,7 +521,7 @@ function frameInjectionScript(documentCss, shadowCss) {
       const targetCss = window.__octoFrameCssValue || '';
       if (!targetCss) return;
       const existing = document.querySelector('style#' + DOC_ID);
-      if (!existing || existing.textContent !== targetCss) {
+      if (!existing || existing.textContent !== targetCss || document.head.lastElementChild !== existing) {
         install(document, targetCss, DOC_ID);
       }
     });
@@ -595,15 +595,187 @@ function resolveValue(value) {
   return typeof value === 'function' ? value() : value || '';
 }
 
+const NATIVE_NAV_MARK = 'data-octo-native-sidenav';
+
+// Нативное левое меню TikTok скрываем полностью — его заменяет собственное
+// боковое меню приложения. DOM-элементы остаются в странице, чтобы SPA-переходы
+// и определение профиля продолжали работать.
+const NATIVE_NAV_HIDE_CSS = `
+  [class*="DivSideNavContainer"],
+  [class*="SideNavContainer"],
+  [data-octo-md3-surface="sidenav"],
+  [${NATIVE_NAV_MARK}="1"] {
+    display: none !important;
+  }
+  [class*="DivBodyContainer"],
+  [class*="DivMainContainer"] {
+    margin-inline-start: 0 !important;
+    padding-inline-start: 0 !important;
+  }
+`;
+
+// Видеоплеер и его кликабельные подложки не должны выделяться синим при
+// двойном клике, случайном перетаскивании или Ctrl+A. Текстовые блоки
+// рядом (описание, автор, комментарии, поля ввода) остаются выделяемыми.
+const VIDEO_NO_SELECT_CSS = `
+  video,
+  xg-video-container,
+  [class*="DivBasicPlayerWrapper"],
+  [class*="DivVideoWrapper"],
+  [class*="DivPlayerContainer"],
+  [class*="DivVideoPlayer"],
+  [class*="PlayerWrapper"],
+  [class*="xgplayer"],
+  [class*="PlayOverlay"],
+  [class*="VideoMask"],
+  [class*="ClickArea"],
+  [class*="DivLivePlayer"],
+  [class*="LivePlayer"],
+  [data-octo-md3-surface="video-stage"],
+  [data-octo-md3-surface="player-controls"],
+  [data-octo-md3-surface="player-controls-wrap"],
+  [data-octo-md3-surface="player-seekbar"],
+  [class*="DivVideoControlBottom"],
+  [class*="DivPlayerControls"],
+  [class*="DivBottomControls"],
+  [class*="DivMediaControl"],
+  [class*="DivControlBottom"],
+  :where(div:not([id="app"]):not([id="root"]):has(> video)) {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
+
+  video,
+  [class*="DivBasicPlayerWrapper"] img,
+  [class*="DivVideoWrapper"] img,
+  [data-octo-md3-surface="video-stage"] img,
+  :where(div:not([id="app"]):not([id="root"]):has(> video)) > img {
+    -webkit-user-drag: none !important;
+  }
+
+  video::selection,
+  [class*="DivBasicPlayerWrapper"]::selection,
+  [class*="DivVideoWrapper"]::selection,
+  [class*="xgplayer"]::selection,
+  [class*="PlayOverlay"]::selection,
+  [class*="VideoMask"]::selection,
+  [class*="ClickArea"]::selection,
+  [data-octo-md3-surface="video-stage"]::selection {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  :is(
+    input,
+    textarea,
+    [contenteditable=""],
+    [contenteditable="true"],
+    [contenteditable="plaintext-only"],
+    [data-e2e="video-desc"],
+    [data-e2e="browse-video-desc"],
+    [data-e2e="video-author-uniqueid"],
+    [data-e2e="browse-username"],
+    [data-e2e="browse-music"],
+    [data-e2e*="comment-level"],
+    [class*="DivVideoInfo"],
+    [class*="DivDescription"],
+    [class*="DivCommentList"],
+    [class*="DivCommentItem"]
+  ):not(button):not([role="button"]),
+  :is(
+    [data-e2e="video-desc"],
+    [data-e2e="browse-video-desc"],
+    [data-e2e="video-author-uniqueid"],
+    [data-e2e="browse-username"],
+    [data-e2e="browse-music"],
+    [data-e2e*="comment-level"],
+    [class*="DivVideoInfo"],
+    [class*="DivDescription"],
+    [class*="DivCommentList"],
+    [class*="DivCommentItem"]
+  ) :where(span, p, a, strong, div, h1, h2, h3, h4):not(button):not([role="button"]):not([class*="Button" i]) {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
+`;
+
+const NATIVE_NAV_HIDE_JS = `(() => {
+  const MARK = '${NATIVE_NAV_MARK}';
+  const scan = () => {
+    const anchors = document.querySelectorAll(
+      '[data-e2e^="nav-"], a[href="/foryou"], a[href="/explore"], a[href="/following"], a[href="/friends"], a[href="/live"], a[href="/upload"], [data-e2e="tiktok-logo"]',
+    );
+    if (anchors.length < 2) return;
+    for (const anchor of anchors) {
+      if (anchor.closest('[role="dialog"], header, [role="banner"]')) continue;
+      let cur = anchor.parentElement;
+      let picked = null;
+      while (
+        cur &&
+        cur !== document.body &&
+        cur !== document.documentElement &&
+        cur.id !== 'app' &&
+        cur.id !== 'root'
+      ) {
+        if (
+          cur.matches('main, [role="main"], header, [role="banner"], .live-room-container') ||
+          cur.querySelector('main, [role="main"], [data-e2e="live-room-content"], video')
+        ) {
+          break;
+        }
+        const rect = cur.getBoundingClientRect();
+        if (rect.width > 360) break;
+        if (rect.left <= 24 && rect.width >= 40 && rect.height >= 260) {
+          let count = 0;
+          for (const a of anchors) {
+            if (cur.contains(a)) count += 1;
+          }
+          if (count >= 2) picked = cur;
+        }
+        cur = cur.parentElement;
+      }
+      if (picked) {
+        if (picked.getAttribute(MARK) !== '1') picked.setAttribute(MARK, '1');
+      }
+    }
+  };
+
+  if (!window.__octoNativeNavHide) {
+    let timer = null;
+    const schedule = () => {
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        scan();
+      }, 150);
+    };
+    const root = document.body || document.documentElement;
+    if (root) {
+      const obs = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          if (m.addedNodes.length) {
+            schedule();
+            return;
+          }
+        }
+      });
+      obs.observe(root, { childList: true, subtree: true });
+    }
+    window.__octoNativeNavHide = { scan };
+  }
+  scan();
+  return 1;
+})()`;
+
 function enabledCss() {
-  return RULES.filter((rule) => isEnabled(rule.id))
+  const rulesCss = RULES.filter((rule) => isEnabled(rule.id))
     .map((rule) => resolveValue(rule.css))
-    .filter(Boolean)
-    .join('\n');
+    .filter(Boolean);
+  return [NATIVE_NAV_HIDE_CSS, VIDEO_NO_SELECT_CSS, ...rulesCss].join('\n');
 }
 
 function enabledShadowCss() {
-  const parts = [];
+  const parts = [VIDEO_NO_SELECT_CSS];
   if (isEnabled('modern-font')) parts.push(shadowFontRule());
   if (isEnabled('md3-design')) {
     parts.push(
@@ -1080,6 +1252,22 @@ function getThemeAmoled() {
   return readState().themeAmoled === true;
 }
 
+function getThemeRandomOnStart() {
+  return readState().themeRandomOnStart === true;
+}
+
+function pickRandomPaletteId(currentPalette, random = Math.random) {
+  const palettes = listPalettes();
+  if (!palettes.length) return 'octo-lavender';
+  const pool = palettes.filter((item) => item.id !== currentPalette);
+  const candidates = pool.length ? pool : palettes;
+  const idx = Math.min(
+    candidates.length - 1,
+    Math.max(0, Math.floor(random() * candidates.length)),
+  );
+  return candidates[idx].id;
+}
+
 function getThemeRainbow() {
   return normalizeRainbowConfig(readState().themeRainbow);
 }
@@ -1127,6 +1315,7 @@ function broadcastTheme() {
         /* окно закрывается */
       }
     }
+    require('./context-menu').syncTheme?.(payload);
   } catch {
     /* тестовая среда */
   }
@@ -1210,7 +1399,7 @@ async function runScripts(wc = ctx.view?.webContents) {
 
   const enabled = RULES.filter((rule) => isEnabled(rule.id));
   // Всегда включено, независимо от скина и переключателей косметики.
-  const scripts = [EMOJI_SCRIPT];
+  const scripts = [EMOJI_SCRIPT, NATIVE_NAV_HIDE_JS];
 
   for (const rule of RULES) {
     const js = resolveValue(rule.js);
@@ -1334,6 +1523,15 @@ function applyThemeAmoled(enabled) {
   return nextAmoled;
 }
 
+function applyThemeRandomOnStart(enabled) {
+  const next = Boolean(enabled);
+  ctx.themeRandomOnStart = next;
+  writeState({ themeRandomOnStart: next });
+  pushState();
+  if (onChange) onChange();
+  return next;
+}
+
 function applyThemeCustom(customRaw, { activate = true } = {}) {
   const nextCustom = normalizeCustomTheme(customRaw);
   const nextPalette = activate ? 'custom' : getThemePalette();
@@ -1401,9 +1599,9 @@ function toggle(id) {
   const chatWc = ctx.chatView?.webContents;
   if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
 
-  if (id === 'rainbow-theme') {
+  if (id === 'rainbow-theme' || id === 'hide-live-nav' || id === 'hide-drama-nav') {
     pushState();
-    broadcastTheme();
+    if (id === 'rainbow-theme') broadcastTheme();
   }
 
   if (onChange) onChange();
@@ -1422,7 +1620,14 @@ function menuItems() {
 // Интерфейс получает актуальные галочки сразу при старте.
 ctx.themeMode = getThemeMode();
 ctx.themeAmoled = getThemeAmoled();
-ctx.themePalette = getThemePalette();
+ctx.themeRandomOnStart = getThemeRandomOnStart();
+if (ctx.themeRandomOnStart) {
+  const nextPalette = pickRandomPaletteId(getThemePalette());
+  writeState({ themePalette: nextPalette });
+  ctx.themePalette = nextPalette;
+} else {
+  ctx.themePalette = getThemePalette();
+}
 ctx.themeCustom = getThemeCustom();
 ctx.themeRainbow = getThemeRainbow();
 setCosmeticsState(effectiveSettings());
@@ -1451,14 +1656,17 @@ module.exports = {
   prepareTheme,
   applyThemeMode,
   applyThemeAmoled,
+  applyThemeRandomOnStart,
   applyThemePalette,
   applyThemeCustom,
   applyThemeRainbow,
   getThemeAmoled,
+  getThemeRandomOnStart,
   getThemePalette,
   getThemeCustom,
   getThemeRainbow,
   getThemePayload,
+  pickRandomPaletteId,
   initThemeListener,
   toggle,
   isEnabled,

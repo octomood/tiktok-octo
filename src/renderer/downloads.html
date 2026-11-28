@@ -10,23 +10,79 @@
     <link rel="icon" href="assets/octo-logo-mark.png" />
     <link rel="stylesheet" href="fonts.css" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="win-chrome.css" />
     <link rel="stylesheet" href="downloads-manager.css" />
   </head>
   <body class="manager">
-    <header class="manager-head">
-      <h1 class="manager-title">Менеджер загрузок</h1>
-      <div class="manager-actions">
-        <button type="button" class="manager-btn" id="btnOpenFolder">Открыть папку загрузок</button>
-        <button type="button" class="manager-btn" id="btnClear">Очистить список</button>
-        <button type="button" class="manager-btn manager-btn--ghost" id="btnClose">Закрыть</button>
+    <div class="octo-winbar">
+      <div class="octo-winbar-brand">
+        <img class="octo-winbar-icon" src="assets/octo-logo-mark.png" alt="" draggable="false" />
+        <span class="octo-winbar-title">Менеджер загрузок</span>
       </div>
-    </header>
+      <div class="octo-winbar-controls">
+        <button
+          type="button"
+          class="octo-winbar-btn"
+          data-win-act="minimize"
+          title="Свернуть"
+          aria-label="Свернуть"
+        >
+          <svg viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M5 10h10" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="octo-winbar-btn"
+          data-win-act="maximize"
+          title="Развернуть"
+          aria-label="Развернуть"
+        >
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect class="ico-max" x="5.6" y="5.6" width="8.8" height="8.8" rx="1.6" />
+            <g class="ico-restore" stroke-linecap="round">
+              <path d="M7.6 7.4V5.9h6.5v6.5h-1.5" />
+              <rect x="5.9" y="7.9" width="6.2" height="6.2" rx="1.2" />
+            </g>
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="octo-winbar-btn octo-winbar-btn--close"
+          data-win-act="close"
+          title="Закрыть"
+          aria-label="Закрыть"
+        >
+          <svg viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M6.4 6.4l7.2 7.2M13.6 6.4l-7.2 7.2" />
+          </svg>
+        </button>
+      </div>
+    </div>
 
-    <main class="manager-list" id="managerList" aria-live="polite"></main>
-    <p class="manager-empty" id="managerEmpty">Пока ничего не скачано</p>
+    <div class="manager-content">
+      <header class="manager-head">
+        <h1 class="manager-title">Менеджер загрузок</h1>
+        <div class="manager-actions">
+          <button type="button" class="manager-btn" id="btnOpenFolder">
+            Открыть папку загрузок
+          </button>
+          <button type="button" class="manager-btn" id="btnClear">Очистить список</button>
+          <button type="button" class="manager-btn manager-btn--ghost" id="btnClose">
+            Закрыть
+          </button>
+        </div>
+      </header>
+
+      <main class="manager-list" id="managerList" aria-live="polite"></main>
+      <p class="manager-empty" id="managerEmpty">Пока ничего не скачано</p>
+    </div>
 
     <script src="i18n-dom.js"></script>
     <script src="theme-sync.js"></script>
+    <script src="ui-custom-core.js"></script>
+    <script src="win-chrome.js"></script>
+    <script src="md3-progress.js"></script>
     <script src="downloads.js"></script>
   </body>
 </html>

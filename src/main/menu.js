@@ -11,6 +11,7 @@ const plugins = require('./plugins');
 const i18n = require('./i18n');
 const autoTheme = require('./auto-theme');
 const privacy = require('./privacy');
+const contextMenu = require('./context-menu');
 
 const isMac = process.platform === 'darwin';
 
@@ -20,10 +21,12 @@ const isMac = process.platform === 'darwin';
  * Без него в приложении не было ни копирования, ни проверки орфографии,
  * ни «открыть ссылку в браузере» — только системные шорткаты.
  */
-function attachContextMenu(wc) {
+function attachContextMenu(wc, options = {}) {
+  const editableOnly = options.editableOnly === true;
   wc.on('context-menu', (_event, params) => {
     const template = [];
     const selection = (params.selectionText || '').trim();
+    if (editableOnly && !params.isEditable && !selection) return;
 
     if (params.misspelledWord) {
       for (const suggestion of (params.dictionarySuggestions || []).slice(0, 4)) {
@@ -36,7 +39,7 @@ function attachContextMenu(wc) {
       template.push({ type: 'separator' });
     }
 
-    if (params.linkURL) {
+    if (!editableOnly && params.linkURL) {
       template.push({
         label: 'Открыть ссылку в браузере',
         click: () => openExternal(params.linkURL),
@@ -48,7 +51,7 @@ function attachContextMenu(wc) {
       template.push({ type: 'separator' });
     }
 
-    if (params.mediaType === 'image' && params.srcURL) {
+    if (!editableOnly && params.mediaType === 'image' && params.srcURL) {
       template.push({ label: 'Сохранить изображение', click: () => wc.downloadURL(params.srcURL) });
       template.push({
         label: 'Копировать адрес изображения',
@@ -64,14 +67,16 @@ function attachContextMenu(wc) {
       template.push({ label: 'Выделить всё', role: 'selectAll' });
     } else if (selection) {
       template.push({ label: 'Копировать', role: 'copy' });
-      template.push({
-        label: 'Искать в Google',
-        click: () =>
-          openExternal(
-            `https://www.google.com/search?q=${encodeURIComponent(selection.slice(0, 200))}`,
-          ),
-      });
-    } else {
+      if (!editableOnly) {
+        template.push({
+          label: 'Искать в Google',
+          click: () =>
+            openExternal(
+              `https://www.google.com/search?q=${encodeURIComponent(selection.slice(0, 200))}`,
+            ),
+        });
+      }
+    } else if (!editableOnly) {
       template.push({
         label: 'Назад',
         enabled: canGoBack(wc),
@@ -86,29 +91,43 @@ function attachContextMenu(wc) {
       template.push({ label: 'Найти на странице…', click: () => handleCommand('find') });
     }
 
-    template.push({ type: 'separator' });
-    template.push({
-      label: 'Проверить элемент',
-      click: () =>
-        autoTheme.suspend(wc).finally(() => {
-          if (!wc.isDestroyed()) wc.inspectElement(params.x, params.y);
-        }),
-    });
-
-    const pluginItems = plugins.contextMenuItems({
-      linkURL: params.linkURL,
-      selectionText: params.selectionText,
-      isEditable: params.isEditable,
-      mediaType: params.mediaType,
-      srcURL: params.srcURL,
-      pageURL: wc.getURL(),
-    });
-    if (pluginItems.length) {
+    if (!editableOnly) {
       template.push({ type: 'separator' });
-      template.push(...pluginItems);
+      template.push({
+        label: 'Проверить элемент',
+        click: () =>
+          autoTheme.suspend(wc).finally(() => {
+            if (!wc.isDestroyed()) wc.inspectElement(params.x, params.y);
+          }),
+      });
+
+      const pluginItems = plugins.contextMenuItems({
+        linkURL: params.linkURL,
+        selectionText: params.selectionText,
+        isEditable: params.isEditable,
+        mediaType: params.mediaType,
+        srcURL: params.srcURL,
+        pageURL: wc.getURL(),
+      });
+      if (pluginItems.length) {
+        template.push({ type: 'separator' });
+        template.push(...pluginItems);
+      }
     }
 
-    Menu.buildFromTemplate(i18n.applyToMenuTemplate(template)).popup({
+    const translated = i18n.applyToMenuTemplate(template);
+    const inMainWindow =
+      ctx.win &&
+      !ctx.win.isDestroyed() &&
+      (wc === ctx.view?.webContents ||
+        wc === ctx.chatView?.webContents ||
+        wc === ctx.win.webContents);
+
+    if (inMainWindow && contextMenu.open({ targetWc: wc, params, items: translated })) {
+      return;
+    }
+
+    Menu.buildFromTemplate(translated).popup({
       window: ctx.win ?? undefined,
     });
   });

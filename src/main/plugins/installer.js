@@ -324,6 +324,59 @@ function inspectDirectory(dir) {
   };
 }
 
+const TEXT_PREVIEW_EXTS = new Set([
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.json',
+  '.css',
+  '.html',
+  '.md',
+  '.txt',
+  '.svg',
+]);
+const MAX_PREVIEW_FILES = 24;
+const MAX_PREVIEW_FILE_BYTES = 64 * 1024;
+const MAX_PREVIEW_TOTAL_BYTES = 256 * 1024;
+
+function extractSourcePreview(files, manifest) {
+  if (!(files instanceof Map)) return [];
+  const candidates = [];
+  for (const [name, buf] of files.entries()) {
+    if (!Buffer.isBuffer(buf)) continue;
+    const ext = path.extname(name).toLowerCase();
+    if (!TEXT_PREVIEW_EXTS.has(ext) && name !== manifest?.main) continue;
+    // Пропускаем бинарные файлы с нулевым байтом.
+    if (buf.subarray(0, 1024).includes(0)) continue;
+    candidates.push([name, buf]);
+  }
+  candidates.sort(([a], [b]) => {
+    if (a === manifest?.main) return -1;
+    if (b === manifest?.main) return 1;
+    if (a === 'plugin.json') return -1;
+    if (b === 'plugin.json') return 1;
+    return a.localeCompare(b);
+  });
+
+  const out = [];
+  let total = 0;
+  for (const [name, buf] of candidates.slice(0, MAX_PREVIEW_FILES)) {
+    const remaining = MAX_PREVIEW_TOTAL_BYTES - total;
+    if (remaining <= 0) break;
+    const limit = Math.min(MAX_PREVIEW_FILE_BYTES, remaining);
+    const truncated = buf.length > limit;
+    const slice = truncated ? buf.subarray(0, limit) : buf;
+    total += slice.length;
+    out.push({
+      path: name,
+      size: buf.length,
+      truncated,
+      content: slice.toString('utf8'),
+    });
+  }
+  return out;
+}
+
 /** Данные для диалога подтверждения. */
 function preview(inspection, { source = 'file', entry = null } = {}) {
   if (!inspection?.ok) return null;
@@ -343,7 +396,9 @@ function preview(inspection, { source = 'file', entry = null } = {}) {
     baseline: inspection.report.baseline,
     networkHosts: inspection.manifest.networkHosts || [],
     report: inspection.report,
+    icon: inspection.icon || '',
     size: inspection.size,
+    sourceFiles: extractSourcePreview(inspection.files, inspection.manifest),
   };
 }
 

@@ -93,6 +93,7 @@ test('окно обновления: предложение, загрузка и
       'Загрузка идёт в фоне, окно можно закрыть.',
     );
     await expect(update.locator('#updateProgress')).toBeVisible();
+    await expect(update.locator('#updateBar .md3-progress-canvas')).toBeVisible();
     await expect(update.locator('#updatePercent')).toHaveText('42 %');
     expect(await update.locator('#updateFill').evaluate((node) => node.style.width)).toBe('42%');
     await expect(update.locator('#btnAction')).toBeHidden();

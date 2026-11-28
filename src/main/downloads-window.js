@@ -5,6 +5,7 @@ const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const { ctx } = require('./app-context');
 const downloads = require('./downloads');
 const i18n = require('./i18n');
+const windowChrome = require('./window-chrome');
 
 /**
  * Отдельное окно «Менеджер загрузок».
@@ -37,23 +38,26 @@ function open() {
     return win;
   }
 
-  win = new BrowserWindow({
-    width: 640,
-    height: 540,
-    minWidth: 460,
-    minHeight: 340,
-    title: i18n.t('Менеджер загрузок'),
-    backgroundColor: '#0b0b0f',
-    autoHideMenuBar: true,
-    webPreferences: {
-      preload: path.join(__dirname, 'downloads-preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  });
+  win = new BrowserWindow(
+    windowChrome.framelessOptions({
+      width: 640,
+      height: 540,
+      minWidth: 460,
+      minHeight: 340,
+      show: false,
+      title: i18n.t('Менеджер загрузок'),
+      webPreferences: {
+        preload: path.join(__dirname, 'downloads-preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    }),
+  );
+  windowChrome.attach(win, { closeOnEscape: true });
 
   win.loadFile(path.join(__dirname, '../renderer/downloads.html'));
+  win.webContents.once('did-finish-load', push);
   win.once('ready-to-show', () => {
     push();
     win.show();

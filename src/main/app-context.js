@@ -8,7 +8,15 @@
  */
 
 const { app } = require('electron');
-const { TITLEBAR_H, MAX_CHROME_H, PANEL_W, CHAT_W, CHAT_HANDLE_W } = require('./shared');
+const {
+  TITLEBAR_H,
+  MAX_CHROME_H,
+  PANEL_W,
+  SIDENAV_W,
+  SIDENAV_COLLAPSED_W,
+  CHAT_W,
+  CHAT_HANDLE_W,
+} = require('./shared');
 const { COSMETIC_RULES } = require('./cosmetic-catalog');
 const { REGION_PRESETS } = require('./region-catalog');
 const { APP_LANGUAGES, SITE_LANGUAGES } = require('./language-catalog');
@@ -35,6 +43,8 @@ const ctx = {
   chatWidth: CHAT_W,
   /** Чат поджимает ленту (иначе лежит поверх неё). */
   chatDock: true,
+  /** Свёрнуто ли кастомное левое меню навигации до узкого рельса иконок. */
+  sideNavCollapsed: false,
   /** Уведомления о новых сообщениях: тип по заголовку не определить, только счётчик. */
   notifications: {
     enabled: false,
@@ -86,12 +96,20 @@ const ctx = {
   uiFont: { preset: 'google-sans-medium', family: '', fileName: '' },
   /** Покомпонентная кастомизация собственного интерфейса. */
   uiCustom: {},
+  /** Пользовательские кнопки верхней полосы. */
+  topbarButtons: [],
+  /** Временный файл иконки для черновика кнопки верхней полосы. */
+  pendingTopbarIcon: null,
   /** Открыта ли панель функций. */
   panelOpen: false,
+  /** Активна пипетка выбора элемента в редакторе компонентов. */
+  uiPickerActive: false,
   /** Открыт ли оверлей менеджера плагинов. */
   pluginsOpen: false,
   /** Открыт ли модальный диалог плагина (confirm/prompt/pick). */
   pluginDialogOpen: false,
+  /** Открыт ли кастомный системный диалог приложения (showMessageBox). */
+  appDialogOpen: false,
   /** Какое быстрое меню открыто под полосой: стикеры или активные плагины. */
   popover: null,
   /** Открыта ли палитра команд (view на время скрывается). */
@@ -116,6 +134,8 @@ const ctx = {
   themeMode: 'dark',
   /** Чисто чёрный AMOLED-фон поверх тёмной темы. */
   themeAmoled: false,
+  /** Менять ли палитру оформления на случайную при каждом запуске. */
+  themeRandomOnStart: false,
   /** Цветовая палитра MD3 Expressive (см. md3-palettes.js). */
   themePalette: 'octo-lavender',
   /** Пользовательские цвета палитры 'custom'. */
@@ -150,13 +170,16 @@ const ctx = {
   memoryGuard: true,
   /** Страница не загрузилась: показываем свой экран вместо белого. */
   offline: false,
+  /** Основной документ ещё грузится: показываем экран загрузки с логотипом. */
+  viewLoading: false,
   /**
    * Состояние косметических правил для панели функций.
-   * @type {Array<{ id: string, label: string, enabled: boolean }>}
+   * @type {Array<{ id: string, label: string, hint: string, enabled: boolean }>}
    */
   cosmetics: COSMETIC_RULES.map((rule) => ({
     id: rule.id,
     label: rule.label,
+    hint: rule.hint || '',
     enabled: rule.default,
     experimental: Boolean(rule.experimental),
   })),
@@ -300,11 +323,30 @@ function toast(text) {
 // должна поджимать ленту до нечитаемой полоски.
 const CHAT_FEED_MIN = 320;
 
+/** Видно ли кастомное левое меню навигации в текущем режиме окна. */
+function isSideNavVisible() {
+  return (
+    !ctx.htmlFullscreen &&
+    !ctx.ambient &&
+    !ctx.pipActive &&
+    !ctx.barOnly &&
+    !ctx.offline &&
+    !ctx.welcome.open
+  );
+}
+
+/** Фактическая ширина кастомного левого меню в DIP. */
+function sideNavWidth() {
+  if (!isSideNavVisible()) return 0;
+  const css = ctx.sideNavCollapsed ? SIDENAV_COLLAPSED_W : SIDENAV_W;
+  return Math.round(css * (ctx.uiScale || 1));
+}
+
 /** Ширина, доступная сайту и док-панели чата. */
 function contentWidth() {
   if (!ctx.win || ctx.win.isDestroyed()) return 0;
   const [width] = ctx.win.getContentSize();
-  return Math.max(0, width);
+  return Math.max(0, width - sideNavWidth());
 }
 
 /**
@@ -324,10 +366,12 @@ function syncViewVisibility() {
   if (ctx.view.webContents && ctx.view.webContents.isDestroyed()) return;
   const visible =
     !ctx.offline &&
+    !ctx.viewLoading &&
     !ctx.paletteOpen &&
     !ctx.panelOpen &&
     !ctx.pluginsOpen &&
     !ctx.pluginDialogOpen &&
+    !ctx.appDialogOpen &&
     !ctx.barOnly &&
     !ctx.welcome.open;
   try {
@@ -348,7 +392,7 @@ function syncViewVisibility() {
   }
 }
 
-/** Контент сайта занимает всё окно, кроме верхней полосы (и панели чата). */
+/** Контент сайта занимает всё окно, кроме верхней полосы, левого меню и панели чата. */
 function layout() {
   if (!ctx.win || ctx.win.isDestroyed() || !ctx.view) return;
   const wc = ctx.view.webContents;
@@ -356,7 +400,8 @@ function layout() {
   try {
     const [width, height] = ctx.win.getContentSize();
     const top = ctx.htmlFullscreen || ctx.ambient ? 0 : ctx.chromeHeight;
-    const available = Math.max(0, width);
+    const sideW = sideNavWidth();
+    const available = Math.max(0, width - sideW);
 
     // Чат виден только в обычном окне; в PiP, полном экране и оверлеях он спрятан.
     const chat = ctx.chatView;
@@ -371,6 +416,7 @@ function layout() {
       !ctx.panelOpen &&
       !ctx.pluginsOpen &&
       !ctx.pluginDialogOpen &&
+      !ctx.appDialogOpen &&
       !ctx.barOnly &&
       !ctx.welcome.open;
     const chatWidth = Math.min(ctx.chatWidth, chatWidthLimit(available));
@@ -378,7 +424,7 @@ function layout() {
     const docked = chatVisible && ctx.chatDock !== false;
 
     ctx.view.setBounds({
-      x: docked ? chatWidth + CHAT_HANDLE_W : 0,
+      x: sideW + (docked ? chatWidth + CHAT_HANDLE_W : 0),
       y: top,
       width: Math.max(0, available - (docked ? chatWidth + CHAT_HANDLE_W : 0)),
       height: Math.max(0, height - top),
@@ -390,7 +436,7 @@ function layout() {
       chat.setVisible(chatVisible);
       if (chatVisible) {
         const next = {
-          x: 0,
+          x: sideW,
           y: top,
           width: chatWidth,
           height: Math.max(0, height - top),
@@ -455,6 +501,8 @@ function setPanelOpen(open) {
       !next &&
       !ctx.pluginsOpen &&
       !ctx.paletteOpen &&
+      !ctx.pluginDialogOpen &&
+      !ctx.appDialogOpen &&
       !ctx.welcome.open &&
       !ctx.find.open &&
       ctx.view &&
@@ -492,6 +540,43 @@ function setPluginDialogOpen(open) {
       !ctx.panelOpen &&
       !ctx.pluginsOpen &&
       !ctx.paletteOpen &&
+      !ctx.appDialogOpen &&
+      !ctx.welcome.open &&
+      !ctx.find.open &&
+      ctx.view &&
+      !ctx.view.webContents.isDestroyed()
+    ) {
+      ctx.view.webContents.focus();
+    }
+  }
+}
+
+/** Показать/скрыть модальный диалог приложения поверх основного окна. */
+function setAppDialogOpen(open) {
+  const next = Boolean(open);
+  if (next === ctx.appDialogOpen) return;
+  ctx.appDialogOpen = next;
+  syncViewVisibility();
+  if (next && ctx.chatView && !ctx.chatView.webContents.isDestroyed()) {
+    try {
+      ctx.chatView.setVisible(false);
+    } catch {
+      /* view уже закрывается */
+    }
+  }
+  if (!next) layout();
+  repaintWindow();
+  setTimeout(repaintWindow, 40);
+
+  if (ctx.win && !ctx.win.isDestroyed()) {
+    const wc = ctx.win.webContents;
+    if (next && wc && !wc.isDestroyed()) wc.focus();
+    else if (
+      !next &&
+      !ctx.panelOpen &&
+      !ctx.pluginsOpen &&
+      !ctx.paletteOpen &&
+      !ctx.pluginDialogOpen &&
       !ctx.welcome.open &&
       !ctx.find.open &&
       ctx.view &&
@@ -520,6 +605,8 @@ function setPluginsOpen(open) {
       !next &&
       !ctx.panelOpen &&
       !ctx.paletteOpen &&
+      !ctx.pluginDialogOpen &&
+      !ctx.appDialogOpen &&
       !ctx.welcome.open &&
       !ctx.find.open &&
       ctx.view &&
@@ -559,6 +646,7 @@ function setCosmeticsState(saved = {}) {
   ctx.cosmetics = COSMETIC_RULES.map((rule) => ({
     id: rule.id,
     label: rule.label,
+    hint: rule.hint || '',
     enabled: saved[rule.id] === undefined ? rule.default : saved[rule.id] === true,
     experimental: Boolean(rule.experimental),
   }));
@@ -786,9 +874,14 @@ function currentState() {
     pluginsOpen: ctx.pluginsOpen,
     popover: ctx.popover,
     panelWidth: PANEL_W,
+    sideNavCollapsed: Boolean(ctx.sideNavCollapsed),
+    sideNavWidth: SIDENAV_W,
+    sideNavCollapsedWidth: SIDENAV_COLLAPSED_W,
     uiScale: ctx.uiScale,
     uiFont: require('./ui-font').toRendererPayload(ctx.uiFont),
     uiCustom: require('./ui-custom').toRendererPayload(ctx.uiCustom),
+    topbarButtons: require('./ui-custom').toTopbarPayload(ctx.topbarButtons),
+    pendingTopbarIcon: ctx.pendingTopbarIcon || null,
     // Ширина для полоски-ручки: фактическая, а не желаемая — в узком окне
     // чат упирается в предел и ручка должна стоять на его краю.
     chat: {
@@ -834,6 +927,7 @@ function currentState() {
     abLoop: { ...ctx.abLoop },
     themeMode: ctx.themeMode,
     themeAmoled: Boolean(ctx.themeAmoled),
+    themeRandomOnStart: Boolean(ctx.themeRandomOnStart),
     themePalette: ctx.themePalette,
     themeCustom: ctx.themeCustom,
     themeRainbow: ctx.themeRainbow,
@@ -857,6 +951,7 @@ function currentState() {
     onBattery: ctx.onBattery,
     memoryGuard: ctx.memoryGuard,
     offline: ctx.offline,
+    viewLoading: Boolean(ctx.viewLoading),
     version: app.getVersion(),
     find: { ...ctx.find },
     download: ctx.download ? { ...ctx.download } : null,
@@ -956,6 +1051,7 @@ module.exports = {
   setPanelOpen,
   setPluginsOpen,
   setPluginDialogOpen,
+  setAppDialogOpen,
   setPopover,
   setPaletteOpen,
   setWelcomeOpen,

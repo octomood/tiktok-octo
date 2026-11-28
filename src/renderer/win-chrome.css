@@ -1,0 +1,167 @@
+/* Общая шапка безрамочных дочерних окон (Material Design 3 Expressive) */
+
+body.octo-frameless {
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--md-outline-variant, #47405e) 55%, transparent);
+}
+
+body.octo-frameless.is-maximized {
+  box-shadow: none;
+}
+
+.octo-winbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 38px;
+  padding: 0 8px 0 12px;
+  background:
+    radial-gradient(
+      220px 60px at 0% 50%,
+      color-mix(in srgb, var(--md-primary, #8c84a9) 14%, transparent),
+      transparent 72%
+    ),
+    var(--md-surface-container-low, #211d30);
+  border-bottom: 1px solid color-mix(in srgb, var(--md-outline-variant, #47405e) 55%, transparent);
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+:root[data-theme='dark'][data-amoled='true'] .octo-winbar {
+  background: var(--md-surface-container-low, #08080a);
+}
+
+.octo-winbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.octo-winbar-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.octo-winbar-title {
+  overflow: hidden;
+  color: var(--md-on-surface, #ddd2e0);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.octo-winbar-controls {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--md-shape-full, 9999px);
+  background: var(--md-surface-container, #2b263d);
+  -webkit-app-region: no-drag;
+}
+
+.octo-winbar-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--md-on-surface-variant, #b8aec8);
+  cursor: pointer;
+  transition:
+    background 0.14s var(--md-spring-effects-fast, ease),
+    color 0.14s var(--md-spring-effects-fast, ease),
+    border-radius 0.24s var(--md-shape-ease, cubic-bezier(0.2, 0, 0, 1)),
+    transform 0.35s var(--md-spring-spatial-fast, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.octo-winbar-btn:first-child {
+  border-radius: var(--md-shape-pill, 24px) 6px 6px var(--md-shape-pill, 24px);
+}
+
+.octo-winbar-btn:last-child {
+  border-radius: 6px var(--md-shape-pill, 24px) var(--md-shape-pill, 24px) 6px;
+}
+
+.octo-winbar-btn:only-child {
+  border-radius: var(--md-shape-pill, 24px);
+}
+
+.octo-winbar-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.octo-winbar-btn:hover {
+  background: var(--md-state-hover, rgba(140, 132, 169, 0.16));
+  color: var(--md-on-surface, #ddd2e0);
+  border-radius: 12px;
+}
+
+.octo-winbar-btn:first-child:hover {
+  border-radius: var(--md-shape-pill, 24px) 12px 12px var(--md-shape-pill, 24px);
+}
+
+.octo-winbar-btn:last-child:hover {
+  border-radius: 12px var(--md-shape-pill, 24px) var(--md-shape-pill, 24px) 12px;
+}
+
+.octo-winbar-btn:active {
+  transform: scale(0.92);
+  border-radius: var(--md-shape-pill, 24px);
+}
+
+.octo-winbar-btn--close:hover,
+.octo-winbar-btn--close:last-child:hover,
+.octo-winbar-btn--close:only-child:hover {
+  background: var(--md-error-container, #601410);
+  color: var(--md-on-error-container, #f9dedc);
+  border-radius: var(--md-shape-pill, 24px);
+}
+
+.octo-winbar .ico-restore {
+  display: none;
+}
+
+body.is-maximized .octo-winbar .ico-max {
+  display: none;
+}
+
+body.is-maximized .octo-winbar .ico-restore {
+  display: inline;
+}
+
+[dir='rtl'] .octo-winbar-btn:first-child {
+  border-radius: 6px var(--md-shape-pill, 24px) var(--md-shape-pill, 24px) 6px;
+}
+
+[dir='rtl'] .octo-winbar-btn:last-child {
+  border-radius: var(--md-shape-pill, 24px) 6px 6px var(--md-shape-pill, 24px);
+}
+
+[dir='rtl'] .octo-winbar-btn:first-child:hover {
+  border-radius: 12px var(--md-shape-pill, 24px) var(--md-shape-pill, 24px) 12px;
+}
+
+[dir='rtl'] .octo-winbar-btn:last-child:hover {
+  border-radius: var(--md-shape-pill, 24px) 12px 12px var(--md-shape-pill, 24px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .octo-winbar-btn {
+    transition-duration: 0.01ms !important;
+  }
+}

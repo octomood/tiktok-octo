@@ -3,6 +3,7 @@
 const path = require('node:path');
 const { BrowserWindow, ipcMain } = require('electron');
 const i18n = require('./i18n');
+const windowChrome = require('./window-chrome');
 
 /**
  * Отдельное окно обновления.
@@ -27,28 +28,30 @@ function push() {
 }
 
 function open() {
-  win = new BrowserWindow({
-    width: 480,
-    height: 312,
-    minWidth: 380,
-    minHeight: 260,
-    resizable: false,
-    maximizable: false,
-    fullscreenable: false,
-    center: true,
-    title: i18n.t('Обновление приложения'),
-    backgroundColor: '#141218',
-    autoHideMenuBar: true,
-    show: false,
-    webPreferences: {
-      preload: path.join(__dirname, 'update-preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  });
+  win = new BrowserWindow(
+    windowChrome.framelessOptions({
+      width: 480,
+      height: 312,
+      minWidth: 380,
+      minHeight: 260,
+      resizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      center: true,
+      title: i18n.t('Обновление приложения'),
+      show: false,
+      webPreferences: {
+        preload: path.join(__dirname, 'update-preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    }),
+  );
+  windowChrome.attach(win, { closeOnEscape: true });
 
   win.loadFile(path.join(__dirname, '../renderer/update.html'));
+  win.webContents.once('did-finish-load', push);
   win.once('ready-to-show', () => {
     push();
     if (!win || win.isDestroyed()) return;

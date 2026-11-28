@@ -22,6 +22,12 @@ contextBridge.exposeInMainWorld('octo', {
     ipcRenderer.on('octo:theme-changed', listener);
     return () => ipcRenderer.removeListener('octo:theme-changed', listener);
   },
+  uiCustom: ipcRenderer.sendSync('octo:ui-custom'),
+  onUiCustom(callback) {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('octo:ui-custom-changed', listener);
+    return () => ipcRenderer.removeListener('octo:ui-custom-changed', listener);
+  },
 });
 
 contextBridge.exposeInMainWorld('octoManager', {
@@ -53,5 +59,19 @@ contextBridge.exposeInMainWorld('octoManager', {
   },
   close() {
     ipcRenderer.send('octo:downloads-close');
+  },
+});
+
+contextBridge.exposeInMainWorld('octoWindow', {
+  control(action) {
+    ipcRenderer.send('octo:win-control', action);
+  },
+  state() {
+    return ipcRenderer.sendSync('octo:win-state');
+  },
+  onState(callback) {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('octo:win-state', listener);
+    return () => ipcRenderer.removeListener('octo:win-state', listener);
   },
 });

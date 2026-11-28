@@ -657,6 +657,41 @@
 
   // --- Общая отрисовка --------------------------------------------------------
 
+  function syncNavIndicator() {
+    const group = el.panel.querySelector('.plugins-nav-group');
+    if (!group) return;
+    let indicator = group.querySelector('.plugins-nav-indicator');
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.className = 'plugins-nav-indicator';
+      indicator.setAttribute('aria-hidden', 'true');
+      group.prepend(indicator);
+    }
+    const activeHead = group.querySelector('.panel-cat-head.is-current');
+    if (!activeHead || activeHead.offsetHeight <= 0 || el.panel.hidden) {
+      group.classList.remove('has-indicator');
+      indicator.style.opacity = '0';
+      return;
+    }
+    const top = activeHead.offsetTop;
+    const prevTop = Number(indicator.dataset.top);
+    const dist = Number.isFinite(prevTop) ? Math.abs(top - prevTop) : 0;
+    const dur = Math.round(Math.min(420, Math.max(240, 210 + dist * 0.34)));
+
+    const wasVisible = indicator.style.opacity === '1' && group.classList.contains('has-indicator');
+    if (!wasVisible) indicator.style.transition = 'none';
+    group.classList.add('has-indicator');
+    indicator.dataset.top = String(top);
+    indicator.style.setProperty('--ind-dur', `${dur}ms`);
+    indicator.style.height = `${activeHead.offsetHeight}px`;
+    indicator.style.transform = `translateY(${top}px)`;
+    if (!wasVisible) {
+      void indicator.offsetWidth;
+      indicator.style.transition = '';
+    }
+    indicator.style.opacity = '1';
+  }
+
   function renderTabs() {
     for (const item of el.panel.querySelectorAll('[data-tab]')) {
       const active = item.dataset.tab === activeTab;
@@ -667,6 +702,7 @@
     for (const page of el.panel.querySelectorAll('[data-page]')) {
       page.hidden = page.dataset.page !== activeTab;
     }
+    window.requestAnimationFrame(syncNavIndicator);
   }
 
   function render() {
@@ -811,5 +847,6 @@
   })();
 
   // Рисуем пустое состояние до первого ответа, чтобы оверлей не мигал.
+  window.addEventListener('resize', syncNavIndicator);
   if (!rendered) render();
 })();

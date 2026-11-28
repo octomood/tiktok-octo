@@ -6,6 +6,7 @@ const { BrowserWindow, clipboard, ipcMain, nativeImage } = require('electron');
 const { toast } = require('./app-context');
 const { outputDir } = require('./screenshot');
 const i18n = require('./i18n');
+const windowChrome = require('./window-chrome');
 
 /**
  * Окно «Снимок с аннотацией».
@@ -23,21 +24,22 @@ function open(image) {
 
   // Окно запоминаем локально: closed старого окна приходит позже и не должен
   // обнулять ссылку на только что созданное новое.
-  const editor = new BrowserWindow({
-    width: 980,
-    height: 740,
-    minWidth: 560,
-    minHeight: 420,
-    title: i18n.t('Снимок с аннотацией'),
-    backgroundColor: '#0b0b0f',
-    autoHideMenuBar: true,
-    webPreferences: {
-      preload: path.join(__dirname, 'annotator-preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  });
+  const editor = new BrowserWindow(
+    windowChrome.framelessOptions({
+      width: 980,
+      height: 740,
+      minWidth: 560,
+      minHeight: 420,
+      title: i18n.t('Снимок с аннотацией'),
+      webPreferences: {
+        preload: path.join(__dirname, 'annotator-preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    }),
+  );
+  windowChrome.attach(editor);
   win = editor;
 
   editor.loadFile(path.join(__dirname, '../renderer/annotator.html'));

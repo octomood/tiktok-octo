@@ -92,9 +92,29 @@ test('окно, команды, поиск и панель функций', asyn
     expect(dialogBox.x).toBeGreaterThan(20);
     expect(dialogBox.x + dialogBox.width).toBeLessThan(viewSize.w - 20);
 
-    // Пункты навигации в группе видны по умолчанию, имеют скругление на краях группы
-    // (16px сверху у первого, 16px снизу у последнего, 6px в середине) и при наведении
-    // становятся ярче без переворота верхних/нижних углов.
+    // Пункты навигации в меню настроек оформлены как MD3-пилюли (24px) с прозрачным
+    // фоном в покое и подсветкой при наведении, а активный раздел выделяется
+    // скользящей капсулой индикатора.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const ind = document.getElementById('settingsNavIndicator');
+          const cs = ind ? getComputedStyle(ind) : null;
+          return cs
+            ? {
+                opacity: cs.opacity,
+                bg: cs.backgroundColor,
+                tl: cs.borderTopLeftRadius,
+              }
+            : null;
+        }),
+      )
+      .toEqual({
+        opacity: '1',
+        bg: expect.not.stringMatching(/^rgba\(0,\s*0,\s*0,\s*0\)$/),
+        tl: '24px',
+      });
+
     const readNavGeometry = () =>
       page.evaluate(() =>
         ['library', 'stats', 'downloads'].map((id) => {
@@ -110,32 +130,16 @@ test('окно, команды, поиск и панель функций', asyn
         }),
       );
     const navDefault = await readNavGeometry();
-    expect(navDefault).toEqual([
-      {
-        id: 'library',
-        bg: expect.not.stringMatching(/^rgba\(0,\s*0,\s*0,\s*0\)$/),
-        tl: '16px',
-        tr: '16px',
-        bl: '6px',
-        br: '6px',
-      },
-      {
-        id: 'stats',
-        bg: expect.not.stringMatching(/^rgba\(0,\s*0,\s*0,\s*0\)$/),
-        tl: '6px',
-        tr: '6px',
-        bl: '6px',
-        br: '6px',
-      },
-      {
-        id: 'downloads',
-        bg: expect.not.stringMatching(/^rgba\(0,\s*0,\s*0,\s*0\)$/),
-        tl: '6px',
-        tr: '6px',
-        bl: '16px',
-        br: '16px',
-      },
-    ]);
+    expect(navDefault).toEqual(
+      ['library', 'stats', 'downloads'].map((id) => ({
+        id,
+        bg: 'rgba(0, 0, 0, 0)',
+        tl: '24px',
+        tr: '24px',
+        bl: '24px',
+        br: '24px',
+      })),
+    );
 
     for (const [index, id] of ['library', 'stats', 'downloads'].entries()) {
       await page.locator(`[data-cat-head="${id}"]`).hover();
@@ -146,7 +150,7 @@ test('окно, команды, поиск и панель функций', asyn
         })
         .toEqual({
           ...navDefault[index],
-          bg: expect.not.stringContaining(navDefault[index].bg),
+          bg: expect.not.stringMatching(/^rgba\(0,\s*0,\s*0,\s*0\)$/),
         });
     }
 

@@ -64,6 +64,14 @@ const el = {
   btnPluginsActive: $('btnPluginsActive'),
   chat: $('btnChat'),
   chatResize: $('chatResize'),
+  sideNav: $('appSideNav'),
+  sideNavList: $('appSideNavList'),
+  sideNavIndicator: $('appSideNavIndicator'),
+  btnSideNavToggle: $('btnSideNavToggle'),
+  sideNavSearch: $('sideNavSearch'),
+  btnSideNavSearch: $('btnSideNavSearch'),
+  btnSideNavSearchClear: $('btnSideNavSearchClear'),
+  sideNavUnread: $('sideNavUnread'),
   rowChatDock: $('rowChatDock'),
   rowNotify: $('rowNotify'),
   rowNotifyQuiet: $('rowNotifyQuiet'),
@@ -128,6 +136,7 @@ const el = {
   backupLatest: $('backupLatest'),
   privacySize: $('privacySize'),
   privacyList: $('privacyList'),
+  loadingScreen: $('loadingScreen'),
   offlineScreen: $('offlineScreen'),
   rowSafeMode: $('rowSafeMode'),
   safeModeNote: $('safeModeNote'),
@@ -221,6 +230,7 @@ const el = {
   regionPingResult: $('regionPingResult'),
   themeModeSelect: $('themeModeSelect'),
   rowThemeAmoled: $('rowThemeAmoled'),
+  rowThemeRandomOnStart: $('rowThemeRandomOnStart'),
   themePaletteGrid: $('themePaletteGrid'),
   themePaletteActiveName: $('themePaletteActiveName'),
   themeCustomBox: $('themeCustomBox'),
@@ -253,6 +263,7 @@ const el = {
   themeCustomTextReset: $('themeCustomTextReset'),
   btnThemeCustomAuto: $('btnThemeCustomAuto'),
   btnOpenComponentsCat: $('btnOpenComponentsCat'),
+  btnOpenTopbarSettings: $('btnOpenTopbarSettings'),
   profileSelect: $('profileSelect'),
   profileNewName: $('profileNewName'),
   btnProfileAdd: $('btnProfileAdd'),
@@ -298,6 +309,9 @@ const state = {
   pluginsOpen: false,
   popover: null,
   panelWidth: 300,
+  sideNavCollapsed: false,
+  sideNavWidth: 240,
+  sideNavCollapsedWidth: 72,
   palette: false,
   player: {
     speed: 1,
@@ -316,6 +330,7 @@ const state = {
   },
   cosmetics: [],
   themeAmoled: false,
+  themeRandomOnStart: false,
   themeRainbow: { hueFrom: 0, hueTo: 360, speed: 1 },
   closeToTray: false,
   autostart: false,
@@ -421,8 +436,6 @@ let pluginsPanelWasOpen = false;
 
 buildPanelNav();
 buildSettingsLayout();
-
-if (api.ui.platform === 'darwin') document.body.classList.add('mac');
 
 // --- Действия ---------------------------------------------------------------
 
@@ -563,6 +576,10 @@ el.panel.addEventListener('click', (event) => {
   }
   if (row.dataset.cmd === 'themeAmoled') {
     api.cmd('themeAmoled', !state.themeAmoled);
+    return;
+  }
+  if (row.dataset.cmd === 'themeRandomOnStart') {
+    api.cmd('themeRandomOnStart', !state.themeRandomOnStart);
     return;
   }
   if (row.dataset.cmd === 'repliesSave') {
@@ -773,6 +790,11 @@ el.themeCustomTrigger?.addEventListener('click', () => {
 
 el.btnOpenComponentsCat?.addEventListener('click', () => {
   openPanelCategory('components');
+});
+
+el.btnOpenTopbarSettings?.addEventListener('click', () => {
+  openPanelCategory('components');
+  document.getElementById('topbarBtnAction')?.focus();
 });
 
 let activeThemeColorRole = 'primary';
@@ -1078,12 +1100,71 @@ el.btnProfileDelete.addEventListener('click', () => {
 // Ширина чата: тянем полоску между чатом и лентой, двойной клик — сброс.
 let chatDrag = null;
 
+function sideNavLeftOffset() {
+  if (!el.sideNav || el.sideNav.hidden) return 0;
+  return state.sideNavCollapsed
+    ? Number(state.sideNavCollapsedWidth) || 72
+    : Number(state.sideNavWidth) || 240;
+}
+
 function chatLeftOffset() {
-  return 0;
+  return sideNavLeftOffset();
 }
 
 function clampChatWidth(value) {
-  return Math.min(980, Math.max(300, Math.round(Number(value) || 420)));
+  const dockSpare = state.chat?.dock === false ? 0 : 320;
+  const avail = Math.max(300, (window.innerWidth || 1280) - sideNavLeftOffset() - dockSpare);
+  return Math.min(980, avail, Math.max(300, Math.round(Number(value) || 420)));
+}
+
+let pendingSideNavSearchFocus = false;
+
+if (el.btnSideNavToggle) {
+  el.btnSideNavToggle.addEventListener('click', () => api.cmd('sideNavToggle'));
+}
+
+if (el.sideNavList) {
+  el.sideNavList.addEventListener('click', (event) => {
+    const item = event.target.closest('[data-sidenav]');
+    if (!item) return;
+    api.cmd('sideNav', item.dataset.sidenav);
+  });
+}
+
+if (el.sideNavSearch) {
+  el.sideNavSearch.addEventListener('input', () => {
+    if (el.btnSideNavSearchClear) {
+      el.btnSideNavSearchClear.hidden = !el.sideNavSearch.value;
+    }
+  });
+  el.sideNavSearch.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const query = el.sideNavSearch.value.trim();
+    if (query) api.cmd('sideNavSearch', query);
+  });
+}
+
+if (el.btnSideNavSearchClear) {
+  el.btnSideNavSearchClear.addEventListener('click', () => {
+    if (!el.sideNavSearch) return;
+    el.sideNavSearch.value = '';
+    el.btnSideNavSearchClear.hidden = true;
+    el.sideNavSearch.focus();
+  });
+}
+
+if (el.btnSideNavSearch) {
+  el.btnSideNavSearch.addEventListener('click', () => {
+    if (state.sideNavCollapsed) {
+      pendingSideNavSearchFocus = true;
+      api.cmd('sideNavToggle');
+      return;
+    }
+    const query = el.sideNavSearch?.value.trim() || '';
+    if (query) api.cmd('sideNavSearch', query);
+    else el.sideNavSearch?.focus();
+  });
 }
 
 el.chatResize.addEventListener('pointerdown', (event) => {
@@ -1419,23 +1500,60 @@ function renderFind() {
   findWasOpen = Boolean(find.open);
 }
 
+const progressCtrl = window.octoProgress?.attachLinear(el.progress, {
+  mode: 'indeterminate',
+  active: false,
+  strokeWidth: 3.4,
+  amplitude: 2.3,
+  wavelength: 24,
+  showTrack: true,
+  showDot: true,
+});
+const downloadCtrl = window.octoProgress?.attachLinear(el.download, {
+  mode: 'determinate',
+  value: 0,
+  active: false,
+  strokeWidth: 3.4,
+  amplitude: 2.3,
+  wavelength: 24,
+  showTrack: true,
+  showDot: true,
+});
+const loadingRingCtrl = window.octoProgress?.attachCircular(
+  el.loadingScreen?.querySelector('.loading-ring'),
+  { strokeWidth: 4.5 },
+);
+
 function renderDownload() {
   const download = state.download;
   el.download.hidden = !download;
   document.body.classList.toggle('is-downloading', Boolean(download));
-  if (!download) return;
+  if (!download) {
+    downloadCtrl?.set({ active: false, value: 0 });
+    return;
+  }
 
   const percent = Math.max(0, Math.min(100, Number(download.percent) || 0));
   el.downloadFill.style.width = `${percent}%`;
+  downloadCtrl?.set({
+    mode: download.totalBytes > 0 ? 'determinate' : 'indeterminate',
+    value: percent / 100,
+    active: true,
+  });
   el.download.title = `${download.name} — ${percent}%`;
 }
 
 function renderUnread() {
   const count = Number(state.unread) || 0;
+  const label = count > 99 ? '99+' : String(count);
   el.unread.hidden = count <= 0;
-  el.unread.textContent = count > 99 ? '99+' : String(count);
+  el.unread.textContent = label;
   el.unread.title = `Непрочитанных: ${count}`;
   el.pill.title = count > 0 ? `${count} непрочитанных` : '';
+  if (el.sideNavUnread) {
+    el.sideNavUnread.hidden = count <= 0;
+    el.sideNavUnread.textContent = label;
+  }
 }
 
 function setSwitch(row, value) {
@@ -1695,7 +1813,9 @@ function renderActivePlugins(summary) {
 
 function renderCosmetics(list) {
   const items = Array.isArray(list) ? list : [];
-  const signature = items.map((item) => `${item.id}:${item.experimental ? '1' : '0'}`).join('|');
+  const signature = items
+    .map((item) => `${item.id}:${item.experimental ? '1' : '0'}:${item.hint || ''}`)
+    .join('|');
 
   if (signature !== cosmeticsSignature) {
     cosmeticsSignature = signature;
@@ -1718,7 +1838,15 @@ function renderCosmetics(list) {
       toggle.className = 'switch';
       toggle.setAttribute('aria-hidden', 'true');
 
-      row.append(label, toggle);
+      if (item.hint) {
+        row.classList.add('panel-row--hinted');
+        const sub = document.createElement('span');
+        sub.className = 'panel-row-sub';
+        sub.textContent = item.hint;
+        row.append(label, toggle, sub);
+      } else {
+        row.append(label, toggle);
+      }
       const target =
         item.experimental && el.panelExperimental ? el.panelExperimental : el.panelCosmetics;
       target.append(row);
@@ -1878,6 +2006,12 @@ function buildSettingsLayout() {
   nav.id = 'settingsNav';
   nav.setAttribute('aria-label', tr('Настройки'));
 
+  const navIndicator = document.createElement('div');
+  navIndicator.className = 'settings-nav-indicator';
+  navIndicator.id = 'settingsNavIndicator';
+  navIndicator.setAttribute('aria-hidden', 'true');
+  nav.append(navIndicator);
+
   const content = document.createElement('div');
   content.className = 'settings-content';
   content.id = 'settingsContent';
@@ -1895,6 +2029,8 @@ function buildSettingsLayout() {
     const body = cat.querySelector('.panel-cat-body');
     if (!body) continue;
     const title = cat.querySelector('.panel-cat-title')?.textContent || '';
+    const head = cat.querySelector('[data-cat-head]');
+    if (head && title && !head.title) head.title = title;
     body.dataset.settingsTitle = title;
     body.hidden = true;
     settingsBodies.set(cat.dataset.cat, body);
@@ -1903,6 +2039,150 @@ function buildSettingsLayout() {
 
   settingsContent = content;
   panelCategory = nav.querySelector('.panel-cat')?.dataset.cat || 'page';
+  window.addEventListener('resize', () => {
+    syncSettingsNavIndicator();
+    syncSideNavIndicator();
+  });
+}
+
+/** Перемещает скользящую капсулу навигации к активному пункту списка. */
+function moveNavIndicator(nav, indicator, activeHead, hidden) {
+  if (!nav || !indicator) return;
+  if (hidden || !activeHead || activeHead.offsetHeight <= 0) {
+    nav.classList.remove('has-indicator');
+    indicator.style.opacity = '0';
+    return;
+  }
+
+  let top = 0;
+  let node = activeHead;
+  while (node && node !== nav) {
+    top += node.offsetTop;
+    node = node.offsetParent;
+  }
+
+  const prevTop = Number(indicator.dataset.top);
+  const dist = Number.isFinite(prevTop) ? Math.abs(top - prevTop) : 0;
+  const dur = Math.round(Math.min(460, Math.max(240, 210 + dist * 0.34)));
+
+  const wasVisible = indicator.style.opacity === '1' && nav.classList.contains('has-indicator');
+  if (!wasVisible) {
+    indicator.style.transition = 'none';
+  }
+  nav.classList.add('has-indicator');
+  indicator.dataset.top = String(top);
+  indicator.style.setProperty('--ind-dur', `${dur}ms`);
+  indicator.style.height = `${activeHead.offsetHeight}px`;
+  indicator.style.transform = `translateY(${top}px)`;
+  if (!wasVisible) {
+    void indicator.offsetWidth;
+    indicator.style.transition = '';
+  }
+  indicator.style.opacity = '1';
+}
+
+/** Перемещает скользящую капсулу навигации к текущему выбранному разделу настроек. */
+function syncSettingsNavIndicator() {
+  const nav = $('settingsNav');
+  const indicator = $('settingsNavIndicator');
+  const activeHead = nav?.querySelector('.panel-cat.is-current .panel-cat-head') || null;
+  moveNavIndicator(nav, indicator, activeHead, el.panel.hidden || Boolean(panelQuery));
+}
+
+/** Определяет активный пункт кастомного левого меню по текущему URL и состоянию. */
+function activeSideNavKey() {
+  if (state.panel) return 'settings';
+
+  let pathname = '/';
+  try {
+    pathname = state.url ? new window.URL(state.url).pathname.replace(/\/+$/, '') || '/' : '/';
+  } catch {
+    pathname = '/';
+  }
+
+  if (pathname === '/' || pathname.startsWith('/foryou')) return 'foryou';
+  if (pathname.startsWith('/explore')) return 'explore';
+  if (pathname.startsWith('/following')) return 'following';
+  if (pathname.startsWith('/friends')) return 'friends';
+  if (
+    pathname.startsWith('/short-drama') ||
+    pathname.startsWith('/miniseries') ||
+    pathname.startsWith('/drama')
+  ) {
+    return 'short-drama';
+  }
+  if (
+    pathname === '/live' ||
+    pathname.startsWith('/live/') ||
+    /^\/@[^/]+\/live(?:\/|$)/.test(pathname)
+  ) {
+    return 'live';
+  }
+  if (pathname.startsWith('/messages')) return 'messages';
+  if (
+    pathname.startsWith('/upload') ||
+    pathname.startsWith('/creator-center') ||
+    pathname.startsWith('/tiktokstudio')
+  ) {
+    return 'upload';
+  }
+  if (pathname.startsWith('/@') || pathname.startsWith('/profile')) return 'profile';
+  if (pathname.startsWith('/search')) return null;
+  return 'foryou';
+}
+
+/** Перемещает скользящую капсулу в кастомном левом меню. */
+function syncSideNavIndicator() {
+  if (!el.sideNav || !el.sideNavList || !el.sideNavIndicator) return;
+  const activeHead = el.sideNavList.querySelector('.app-sidenav-item.is-current') || null;
+  moveNavIndicator(el.sideNavList, el.sideNavIndicator, activeHead, el.sideNav.hidden);
+}
+
+/** Синхронизирует состояние кастомного левого меню. */
+function renderSideNav() {
+  if (!el.sideNav) return;
+  const hidden = Boolean(
+    state.pip ||
+    state.barOnly ||
+    state.ambient ||
+    state.chromeHidden ||
+    state.offline ||
+    state.welcome?.open,
+  );
+  el.sideNav.hidden = hidden;
+
+  const collapsed = Boolean(state.sideNavCollapsed);
+  el.sideNav.classList.toggle('is-collapsed', collapsed);
+  if (el.btnSideNavToggle) {
+    el.btnSideNavToggle.setAttribute('aria-expanded', String(!collapsed));
+    const toggleLabel = collapsed ? 'Развернуть меню' : 'Свернуть меню';
+    el.btnSideNavToggle.title = toggleLabel;
+    el.btnSideNavToggle.setAttribute('aria-label', toggleLabel);
+  }
+
+  if (pendingSideNavSearchFocus && !collapsed && !hidden) {
+    pendingSideNavSearchFocus = false;
+    window.requestAnimationFrame(() => el.sideNavSearch?.focus());
+  }
+
+  const cosmetics = Array.isArray(state.cosmetics) ? state.cosmetics : [];
+  const hideLive = Boolean(cosmetics.find((item) => item.id === 'hide-live-nav')?.enabled);
+  const hideDrama = Boolean(cosmetics.find((item) => item.id === 'hide-drama-nav')?.enabled);
+
+  const activeKey = activeSideNavKey();
+  if (el.sideNavList) {
+    for (const item of el.sideNavList.querySelectorAll('[data-sidenav]')) {
+      const key = item.dataset.sidenav;
+      if (key === 'live') item.hidden = hideLive;
+      else if (key === 'short-drama') item.hidden = hideDrama;
+      const current = !item.hidden && key === activeKey;
+      item.classList.toggle('is-current', current);
+      if (current) item.setAttribute('aria-current', 'page');
+      else item.removeAttribute('aria-current');
+    }
+  }
+
+  if (!hidden) window.requestAnimationFrame(syncSideNavIndicator);
 }
 
 function normalizeSearch(text) {
@@ -1991,6 +2271,7 @@ function applyPanelFilter() {
   }
 
   el.panelNoResults.hidden = !(query && visible === 0);
+  syncSettingsNavIndicator();
 }
 
 /** Переключает правую колонку на выбранный раздел настроек. */
@@ -2214,6 +2495,15 @@ function paletteItems() {
       label: tr(state.themeAmoled ? 'AMOLED-режим: выключить' : 'AMOLED-режим: включить'),
       cmd: 'themeAmoled',
       payload: !state.themeAmoled,
+    },
+    {
+      label: tr(
+        state.themeRandomOnStart
+          ? 'Новая тема при каждом запуске: выключить'
+          : 'Новая тема при каждом запуске: включить',
+      ),
+      cmd: 'themeRandomOnStart',
+      payload: !state.themeRandomOnStart,
     },
     ...(Array.isArray(api.themePalettes)
       ? api.themePalettes.map((palette) => ({
@@ -3074,8 +3364,24 @@ function renderUiFont() {
   el.uiFontFileName.textContent = font.fileName || tr('Файл не выбран');
 }
 
+function renderLoadingScreen() {
+  if (!el.loadingScreen) return;
+  const chatOffset =
+    state.chat?.open && state.chat?.dock !== false ? clampChatWidth(state.chat.width) + 6 : 0;
+  el.loadingScreen.style.setProperty('--loading-left', `${sideNavLeftOffset() + chatOffset}px`);
+  el.loadingScreen.hidden =
+    state.viewLoading !== true ||
+    state.offline === true ||
+    Boolean(state.welcome?.open) ||
+    Boolean(state.ambient) ||
+    Boolean(state.pip) ||
+    Boolean(state.barOnly);
+  if (!el.loadingScreen.hidden) loadingRingCtrl?.refresh();
+}
+
 function renderResilience() {
   el.offlineScreen.hidden = state.offline !== true;
+  renderLoadingScreen();
   const safeMode = state.safeMode === true;
   el.rowSafeMode.hidden = !safeMode;
   el.safeModeNote.hidden = !safeMode;
@@ -3370,6 +3676,9 @@ function renderThemePalettes(isDark) {
   syncCustomThemePaintControls(isDark);
 }
 
+let panelInitialized = false;
+let panelFilterDirty = true;
+
 function renderPanel() {
   const open = Boolean(state.panel);
   el.panel.hidden = !open;
@@ -3392,11 +3701,14 @@ function renderPanel() {
     api.cmd('keymapCapturing', false);
   }
 
-  applyPanelFilter();
+  if (open) {
+    window.requestAnimationFrame(syncSettingsNavIndicator);
+  }
 
   if (open && !panelWasOpen && !el.panel.contains(document.activeElement)) {
     el.panelSearch.focus({ preventScroll: true });
   }
+  const justClosed = !open && panelWasOpen;
   panelWasOpen = open;
 
   el.panelVersion.textContent = `v${state.version || '—'} · Electron ${api.ui.electron}`;
@@ -3446,6 +3758,7 @@ function renderPanel() {
     : null;
   renderThemePalettes(darkCosmetic ? Boolean(darkCosmetic.enabled) : true);
   setSwitch(el.rowThemeAmoled, Boolean(state.themeAmoled));
+  setSwitch(el.rowThemeRandomOnStart, Boolean(state.themeRandomOnStart));
   if (document.activeElement !== el.themeModeSelect && state.themeMode) {
     el.themeModeSelect.value = state.themeMode;
   }
@@ -3466,7 +3779,15 @@ function renderPanel() {
   renderFiltersSettings();
   renderRegion();
   renderLanguages();
-  applyPanelFilter();
+  if (open || !panelInitialized || justClosed) {
+    panelInitialized = true;
+    if (open || panelFilterDirty || justClosed) {
+      panelFilterDirty = false;
+      applyPanelFilter();
+    }
+  } else {
+    panelFilterDirty = true;
+  }
 }
 
 function renderPluginsPanel() {
@@ -3543,6 +3864,7 @@ function render() {
   el.pill.classList.toggle('is-loading', state.loading && !toastText);
   el.pill.classList.toggle('is-toast', Boolean(toastText));
   el.progress.classList.toggle('is-loading', state.loading);
+  progressCtrl?.set({ active: Boolean(state.loading) && !state.download });
 
   document.body.classList.toggle('is-muted', state.muted);
   document.body.classList.toggle('is-maximized', state.maximized);
@@ -3569,6 +3891,7 @@ function render() {
   el.pipAdaptive.setAttribute('aria-pressed', String(Boolean(state.pipAdaptive)));
   renderPipProgress();
   renderBar();
+  renderSideNav();
   renderChatHandle();
 
   el.max.title = state.maximized ? 'Восстановить' : 'Развернуть';
@@ -3583,8 +3906,11 @@ function render() {
   renderStickerPicker(state.stickers);
   renderActivePlugins(state.plugins);
   renderPalette();
+  window.octoUiCustom?.renderTopbarButtons?.(state.topbarButtons, state.uiCustom, state);
   window.octoUiCustom?.apply(state.uiCustom);
-  window.octoUiCustom?.renderEditor(state.uiCustom);
+  if (state.panel) {
+    window.octoUiCustom?.renderEditor(state.uiCustom, state.topbarButtons, state);
+  }
 }
 
 function showToast(text) {
@@ -3615,14 +3941,16 @@ if (storedCustomCode) {
 }
 
 api.onState(apply);
-api.onI18n?.(() => applyPanelFilter());
+api.onI18n?.(() => {
+  if (state.panel) applyPanelFilter();
+});
 api.ready();
 render();
 syncChromeHeight();
 
 // Обратный отсчёт таймера сна: раз в секунду обновляем подпись, без IPC.
 setInterval(() => {
-  if (Number(state.sleepTimerEnds) > 0) renderSleep();
+  if (state.panel && Number(state.sleepTimerEnds) > 0) renderSleep();
 }, 1000);
 
 (() => {
@@ -3787,4 +4115,44 @@ setInterval(() => {
       }
     }
   });
+})();
+
+/** Мягкий тактильный отклик MD3 Expressive из точки нажатия. */
+(() => {
+  const RIPPLE_SELECTOR =
+    '.icon-btn, .settings-btn, .panel-cat-head, .app-sidenav-item, .app-sidenav-toggle, ' +
+    '.settings-content button.panel-row, .stepper-btn, .timer-btn, .speed-btn, .panel-close, ' +
+    '.plugins-btn, .primary, .ghost, .danger, .plugins-nav-link';
+  const motionReduce =
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)')
+      : null;
+
+  document.addEventListener(
+    'pointerdown',
+    (event) => {
+      if (event.button !== 0 || motionReduce?.matches) return;
+      const target =
+        event.target && typeof event.target.closest === 'function'
+          ? event.target.closest(RIPPLE_SELECTOR)
+          : null;
+      if (!target || target.disabled) return;
+      const rect = target.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const rx = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+      const ry = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
+      const diameter = Math.ceil(Math.hypot(rect.width, rect.height) * 2);
+      target.style.setProperty('--octo-rx', `${rx.toFixed(1)}px`);
+      target.style.setProperty('--octo-ry', `${ry.toFixed(1)}px`);
+      target.style.setProperty('--octo-rd', `${diameter}px`);
+      target.classList.remove('is-rippling');
+      void target.offsetWidth;
+      target.classList.add('is-rippling');
+      clearTimeout(target._octoRippleTimer);
+      target._octoRippleTimer = setTimeout(() => {
+        target.classList.remove('is-rippling');
+      }, 460);
+    },
+    { passive: true },
+  );
 })();

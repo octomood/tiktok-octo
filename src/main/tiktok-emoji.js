@@ -103,8 +103,22 @@ function installEmoji(emoji, replace) {
 
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
-      if (mutation.type === 'characterData') pending.add(mutation.target);
-      else for (const node of mutation.addedNodes) pending.add(node);
+      if (mutation.type === 'characterData') {
+        if (mutation.target.data.includes('[')) pending.add(mutation.target);
+      } else {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType === 3) {
+            if (node.data.includes('[')) pending.add(node);
+          } else if (node.nodeType === 1) {
+            if (
+              node.childElementCount > 20 ||
+              (node.textContent && node.textContent.includes('['))
+            ) {
+              pending.add(node);
+            }
+          }
+        }
+      }
     }
     if (pending.size && timer === null) timer = setTimeout(flush, 32);
   });

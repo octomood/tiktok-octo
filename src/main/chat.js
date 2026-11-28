@@ -681,6 +681,9 @@ function ensureView() {
 
   const wc = view.webContents;
   wc.setUserAgent(CHROME_UA);
+  // Ленивый require: menu.js тянет commands.js -> chat.js, поэтому на этапе
+  // загрузки модуля attachContextMenu ещё не экспортирован.
+  require('./menu').attachContextMenu(wc);
   // Тёмная тема включается до первой загрузки, иначе страница сообщений
   // успевает мигнуть белым.
   autoTheme.sync(wc).catch(() => {});
@@ -893,6 +896,7 @@ syncPrefs();
 module.exports = {
   attach,
   open,
+  openFull,
   close,
   toggle,
   dispose,

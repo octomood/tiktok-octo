@@ -21,6 +21,10 @@ const MAX_CHROME_H = 480;
 // Ширина боковой панели функций.
 const PANEL_W = 300;
 
+// Ширина кастомного левого меню навигации (развёрнутого и свёрнутого).
+const SIDENAV_W = 240;
+const SIDENAV_COLLAPSED_W = 72;
+
 // Ширина панели чата: список переписок и узкий диалог помещаются целиком.
 const CHAT_W = 420;
 
@@ -148,6 +152,8 @@ module.exports = {
   TITLEBAR_H,
   MAX_CHROME_H,
   PANEL_W,
+  SIDENAV_W,
+  SIDENAV_COLLAPSED_W,
   CHAT_W,
   CHAT_HANDLE_W,
   PARTITION,

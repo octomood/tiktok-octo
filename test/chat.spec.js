@@ -114,9 +114,9 @@ test('чат открывается панелью слева, двойной к
     expect(chatView, 'панель загрузила адрес чата').toBeTruthy();
     expect(feedView, 'лента осталась на своей странице').toBeTruthy();
     expect(chatView.bounds.width).toBe(420);
-    // По умолчанию чат поджимает ленту, а не лежит поверх неё.
-    expect(feedView.bounds.x).toBe(426);
-    expect(chatView.bounds.x).toBe(0);
+    // По умолчанию слева стоит кастомное меню (240 px), а чат поджимает ленту.
+    expect(chatView.bounds.x).toBe(240);
+    expect(feedView.bounds.x).toBe(240 + 420 + 6);
 
     // Панель — часть приложения: косметика и тёмная тема применяются и к ней.
     const chatPage = await waitForWindow(

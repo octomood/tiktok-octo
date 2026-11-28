@@ -77,6 +77,7 @@ test('переливание цветов интерфейса в космети
 
     const rainbowSwitch = page.locator('#panelExperimental [data-cosmetic="rainbow-theme"]');
     await expect(rainbowSwitch).toHaveAttribute('aria-checked', 'false');
+    await expect(rainbowSwitch).toContainText('Сильно нагружает процессор и видеокарту');
     await expect(page.locator('#rainbowSettingsBox')).toBeHidden();
     await expect(page.locator('html')).not.toHaveAttribute('data-rainbow', 'true');
 
