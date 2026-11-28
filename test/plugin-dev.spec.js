@@ -50,7 +50,9 @@ test('dev-плагин перезагружается при изменении 
       'полоса заголовка',
     );
 
+    await page.waitForLoadState('load');
     await page.click('#btnPanel');
+    await expect(page.locator('#panel')).toBeVisible();
     await page.locator('[data-cat-head="plugins"]').click();
     await expect(
       page.locator('#panelPluginActions .panel-row').filter({ hasText: 'Посчитать видео' }),

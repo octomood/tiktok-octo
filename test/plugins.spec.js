@@ -78,7 +78,9 @@ test('плагин, команды, панель и менеджер', async () 
       .toBe('1');
 
     // Панель функций: плагин виден, включён и добавил свою строку.
+    await page.waitForLoadState('load');
     await page.click('#btnPanel');
+    await expect(page.locator('#panel')).toBeVisible();
     await page.locator('[data-cat-head="plugins"]').click();
     await expect(page.locator('#panelPlugins')).toContainText('Hello octo');
     await expect(page.locator('#panelPlugins [data-plugin-toggle]')).toHaveAttribute(

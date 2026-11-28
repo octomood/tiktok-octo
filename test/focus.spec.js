@@ -63,7 +63,7 @@ test('focus mode: затемнение после лимита и возврат
 
   try {
     const launched = await launch(userData, {
-      OCTO_FOCUS_UNIT_MS: '300',
+      OCTO_FOCUS_UNIT_MS: '350',
       OCTO_FOCUS_TICK_MS: '100',
     });
     app = launched.app;
@@ -92,8 +92,8 @@ test('focus mode: затемнение после лимита и возврат
       window.__fakeVideo = fake;
     });
 
-    await page.evaluate(() => window.octo.cmd('focusMinutes', 1));
-    await page.evaluate(() => window.octo.cmd('focusBreak', 1));
+    await page.evaluate(() => window.octo.cmd('focusMinutes', 3));
+    await page.evaluate(() => window.octo.cmd('focusBreak', 2));
     await emitMedia(app, 'media-started-playing');
     await page.evaluate(() => window.octo.cmd('focusToggle'));
     await expect(page.locator('#rowFocus')).toHaveAttribute('aria-checked', 'true');
@@ -101,8 +101,11 @@ test('focus mode: затемнение после лимита и возврат
     // Лимит исчерпан: затемнение и пауза.
     await expect(site.locator('#octo-focus-curtain')).toBeVisible({ timeout: 5000 });
     expect(await site.evaluate(() => window.__fakeVideo.paused)).toBe(true);
+    // На настоящей странице video.pause() вызывает media-paused, иначе следующий
+    // цикл фокуса сразу начнёт тикать после перерыва и снова повесит шторку.
+    await emitMedia(app, 'media-paused');
 
-    // Перерыв короткий (тоже 300 мс) — затемнение уходит само.
+    // Перерыв короткий (700 мс) — затемнение уходит само.
     await expect(site.locator('#octo-focus-curtain')).toBeHidden({ timeout: 5000 });
 
     // Esc/кнопка выключают режим и снимают настройку.
