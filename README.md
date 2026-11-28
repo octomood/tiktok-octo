@@ -43,16 +43,16 @@ floating mini player and desktop shortcuts that make sense.
 
 ### Material Design 3 Expressive & Appearance
 
-|                                              |                                                                                                                                                                                                                                                                |
-| :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **🎨&nbsp; MD3 Expressive UI**               | Tonal pill containers, grouped rounded lists, spring motion physics, expressive sliders, custom dropdowns (`md3-select`) and wavy progress indicators across the title bar, Settings overlay, Plugin Manager, Download Manager, Annotator, Wizard and Updater. |
-| **🌈&nbsp; 20 palettes &amp; custom colors** | **Octo Lavender** by default, 19 curated MD3 schemes plus a **custom color picker** (any primary color with optional secondary, tertiary, surface, and text overrides) across dark, light, **System**, and true-black **AMOLED** modes.                        |
-| **🧩&nbsp; Component customizer**            | Per-component customization in **Settings → Appearance → Components**: override labels, tooltips, icons (built-in SVG set, emoji, or custom image), fg/bg/border colors, per-component fonts, sizes, radius, opacity, and visibility.                          |
-| **✨&nbsp; Material 3 on tiktok.com**        | Tabs, buttons, navigation rail, search bar, cards, comments, chat, dialogs, Business Suite, subframes and Shadow DOM match your chosen MD3 palette. Switch back to stock TikTok anytime in **Settings → Tweaks**.                                              |
-| **🔤&nbsp; Shell &amp; site fonts**          | **Google Sans Medium** by default in the shell, with presets, any system font by name, or your own `.ttf` / `.otf` / `.woff` / `.woff2` file; `Inter` is applied cleanly across site text without touching SVG icons.                                          |
-| **💬&nbsp; Comments side panel**             | The video page's "You may like" column stays out of the way: the comment icon opens it, and a second click or <kbd>Esc</kbd> hides it again. Can be toggled in **Tweaks**.                                                                                     |
-| **🏅&nbsp; Community badges**                | Animated MD3 vector badges next to usernames in profiles, feeds, comments, and chat. Clicking a badge opens an MD3 card with the role and description; synced from `src/main/badges.json` and toggleable in **Tweaks**.                                        |
-| **♿&nbsp; Accessibility**                   | Focus rings on every control, focus containment in dialogs and the command palette, `prefers-reduced-motion`, ARIA roles and an RTL Arabic layout.                                                                                                             |
+|                                              |                                                                                                                                                                                                                                                                                         |
+| :------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **🎨&nbsp; MD3 Expressive UI**               | Tonal pill containers, grouped rounded lists, spring motion physics, expressive sliders, custom dropdowns (`md3-select`) and wavy progress indicators across the title bar, Settings overlay, Plugin Manager, Download Manager, Annotator, Wizard and Updater.                          |
+| **🌈&nbsp; 20 palettes &amp; custom colors** | **Octo Lavender** by default, 19 curated MD3 schemes, a **custom color picker** (any primary color with optional secondary, tertiary, surface, and text overrides), and an **iridescent color-shift** toggle in Tweaks across dark, light, **System**, and true-black **AMOLED** modes. |
+| **🧩&nbsp; Component customizer**            | Per-component customization in **Settings → Appearance → Components**: override labels, tooltips, icons (built-in SVG set, emoji, or custom image), fg/bg/border colors, per-component fonts, sizes, radius, opacity, and visibility.                                                   |
+| **✨&nbsp; Material 3 on tiktok.com**        | Tabs, buttons, navigation rail, search bar, cards, comments, chat, dialogs, Business Suite, subframes and Shadow DOM match your chosen MD3 palette. Switch back to stock TikTok anytime in **Settings → Tweaks**.                                                                       |
+| **🔤&nbsp; Shell &amp; site fonts**          | **Google Sans Medium** by default in the shell, with presets, any system font by name, or your own `.ttf` / `.otf` / `.woff` / `.woff2` file; `Inter` is applied cleanly across site text without touching SVG icons.                                                                   |
+| **💬&nbsp; Comments side panel**             | The video page's "You may like" column stays out of the way: the comment icon opens it, and a second click or <kbd>Esc</kbd> hides it again. Can be toggled in **Tweaks**.                                                                                                              |
+| **🏅&nbsp; Community badges**                | Animated MD3 vector badges next to usernames in profiles, feeds, comments, and chat. Clicking a badge opens an MD3 card with the role and description; synced from `src/main/badges.json` and toggleable in **Tweaks**.                                                                 |
+| **♿&nbsp; Accessibility**                   | Focus rings on every control, focus containment in dialogs and the command palette, `prefers-reduced-motion`, ARIA roles and an RTL Arabic layout.                                                                                                                                      |
 
 Joined buttons in the site skin have pill-shaped outer edges and 6px inner corners (12px on hover).
 
@@ -397,9 +397,6 @@ npm run install:local # AppImage from the working tree + app-menu entry
 the “TikTok Octo (локальная сборка)” item in the app menu, so changes can be
 checked without starting the app from a terminal. It publishes nothing; if the
 app is already running, quit it first or the old instance will be focused.
-OpenCode agents are not allowed to launch the app or Playwright by hand
-(`opencode.json`): UI is verified by tests, and the build lands in the menu with
-the same command.
 
 The test suite launches the app with a temporary profile and `about:blank` as the
 home page, so it touches neither your session nor the network. On Linux `npm test`
