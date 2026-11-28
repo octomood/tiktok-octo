@@ -286,6 +286,18 @@ test('обновление файлом показывает смену изда
       (candidate) => candidate.url().startsWith('file://'),
       'полоса заголовка',
     );
+    await waitForWindow(app, (candidate) => candidate.url() === 'about:blank', 'страница сайта');
+    await page.waitForLoadState('load');
+    await expect(page.locator('#titlebar')).toBeVisible();
+    await expect
+      .poll(() =>
+        app.evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows().some(
+            (w) => w.webContents.getURL().endsWith('/index.html') && w.isVisible(),
+          ),
+        ),
+      )
+      .toBe(true);
 
     const capturedDialogs = [];
     const install = async (file, buttonLabels) => {
