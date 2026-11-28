@@ -389,6 +389,7 @@ function iframePage(content) {
 }
 
 async function openStickers(page) {
+  await expect(page.locator('#panelVersion')).toContainText('v');
   await page.click('#btnStickers');
   await expect(page.locator('#stickerPopover')).toBeVisible();
   await expect(page.locator('#panel')).toBeHidden();

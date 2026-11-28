@@ -211,15 +211,19 @@ test('чат открывается панелью слева, двойной к
       link.textContent = 'Сообщения';
       document.body.append(link);
     });
-    await site.evaluate(() => {
-      const link = document.getElementById('octo-messages');
-      link.dispatchEvent(
-        new window.MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }),
-      );
-      link.dispatchEvent(
-        new window.MouseEvent('click', { bubbles: true, cancelable: true, detail: 2 }),
-      );
-    });
+    await site
+      .evaluate(() => {
+        const link = document.getElementById('octo-messages');
+        link.dispatchEvent(
+          new window.MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }),
+        );
+        link.dispatchEvent(
+          new window.MouseEvent('click', { bubbles: true, cancelable: true, detail: 2 }),
+        );
+      })
+      .catch((err) => {
+        if (!/Execution context was destroyed/i.test(String(err))) throw err;
+      });
 
     await expect
       .poll(
