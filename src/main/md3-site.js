@@ -6037,6 +6037,7 @@ function syncScript(dark = true, amoled = false) {
 
     const observedShadows = new WeakSet();
     let observerOpts = null;
+    let lastScanAt = 0;
 
     const CLASSIFY_SELECTOR =
       'button, [role="button"], [role="switch"], [class*="Switch"], [class*="Toggle"], [class*="AutoScroll"] div, [class*="DivPlayerControls"] > div, [class*="DivBottomControls"] > div, [' +
@@ -6151,11 +6152,12 @@ function syncScript(dark = true, amoled = false) {
 
       if (root === document) syncMessagesLayout();
       const shadowRoots = root === document ? collectShadowRoots(document) : [];
-      if (state.domObserver && observerOpts) {
+      const curState = window.__octoMd3;
+      if (curState && curState.domObserver && observerOpts) {
         for (const sr of shadowRoots) {
           if (!observedShadows.has(sr)) {
             observedShadows.add(sr);
-            state.domObserver.observe(sr, observerOpts);
+            curState.domObserver.observe(sr, observerOpts);
           }
         }
       }
@@ -6216,12 +6218,14 @@ function syncScript(dark = true, amoled = false) {
     };
 
     const apply = () => {
+      const curMode = window.__octoMd3 ? window.__octoMd3.mode : MODE;
+      const curAmoled = window.__octoMd3 ? Boolean(window.__octoMd3.amoled) : AMOLED;
       const root = document.documentElement;
-      if (root && root.getAttribute(ATTR) !== MODE) {
-        root.setAttribute(ATTR, MODE);
+      if (root && root.getAttribute(ATTR) !== curMode) {
+        root.setAttribute(ATTR, curMode);
       }
       if (root) {
-        if (AMOLED) setAttrIfDiff(root, AMOLED_ATTR, 'true');
+        if (curAmoled) setAttrIfDiff(root, AMOLED_ATTR, 'true');
         else delAttrIfSet(root, AMOLED_ATTR);
       }
       lastScanAt = Date.now();
@@ -6231,12 +6235,12 @@ function syncScript(dark = true, amoled = false) {
     if (window.__octoMd3) {
       window.__octoMd3.mode = MODE;
       window.__octoMd3.amoled = AMOLED;
-      apply();
+      if (typeof window.__octoMd3.apply === 'function') window.__octoMd3.apply();
+      else apply();
       return 0;
     }
 
     let timer = null;
-    let lastScanAt = 0;
     let dirtyWhileHidden = false;
     let scrolling = false;
     let scrollScanTimer = null;
@@ -6351,6 +6355,7 @@ function syncScript(dark = true, amoled = false) {
       amoled: AMOLED,
       attrObserver: null,
       domObserver: null,
+      apply,
       stop() {
         if (timer) clearTimeout(timer);
         if (scrollScanTimer) clearTimeout(scrollScanTimer);

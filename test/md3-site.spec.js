@@ -2119,6 +2119,13 @@ test('MD3 на странице сообщений: подложки не миг
         favAction: null,
         commentLikeIcon: null,
       });
+
+    // Повторное выполнение MD3-скрипта (как при did-finish-load / schedule)
+    // не должно падать с ReferenceError по lastScanAt/state.
+    const { syncScript } = require('../src/main/md3-site');
+    const rerunResult = await site.evaluate((code) => window.eval(code), syncScript(true, false));
+    expect(rerunResult).toBe(0);
+    await expect(site.evaluate(() => Boolean(window.__octoMd3))).resolves.toBe(true);
   } finally {
     if (app) await app.close();
     await new Promise((resolve) => server.close(resolve));

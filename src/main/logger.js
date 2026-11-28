@@ -181,8 +181,12 @@ function sanitizeValue(value, depth = 0) {
           key,
         )
       ) {
-        if (key === 'proxy') out.proxy = describeProxy(item);
-        else out[key] = item ? `<len:${String(item).length}>` : '';
+        if (key === 'proxy') {
+          out.proxy =
+            item && typeof item === 'object' ? sanitizeValue(item, depth + 1) : describeProxy(item);
+        } else {
+          out[key] = item ? `<len:${String(item).length}>` : '';
+        }
         continue;
       }
       if (/url$/i.test(key) && typeof item === 'string') {

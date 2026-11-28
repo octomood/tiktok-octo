@@ -48,12 +48,14 @@ test('санитайзер скрывает токены, пароли, пути
 
     logger.clear();
     logger.info('auth', 'login attempt', { url: 'https://www.tiktok.com/login?token=secret123' });
+    logger.info('region', 'applyProxy', { mode: 'system', proxy: logger.describeProxy('') });
     logger.throttled('k1', 60_000, 'WARN', 'chat', 'first warning');
     logger.throttled('k1', 60_000, 'WARN', 'chat', 'suppressed warning');
     logger.flush();
 
     const dump = logger.readAllLogs();
     expect(dump).toContain('[INFO] [auth] login attempt');
+    expect(dump).toContain('"proxy":{"enabled":false}');
     expect(dump).toContain('https://www.tiktok.com/login?token=<скрыто>');
     expect(dump).not.toContain('secret123');
     expect(dump).toContain('first warning');
