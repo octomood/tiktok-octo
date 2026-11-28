@@ -12,8 +12,10 @@
 
 ## Как проверить
 
-1. Откройте **Плагины → Установить из файла…**.
-2. Выберите `plugins/packages/app.octo.test-basic-1.0.1.octoplugin`.
+1. Соберите пакет командой из раздела «Сборка» (или запустите папку через
+   `OCTO_PLUGIN_DEV_DIR`).
+2. Откройте **Плагины → Установить из файла…** и выберите собранный архив
+   `dist/app.octo.test-basic-1.0.1.octoplugin`.
 3. Подтвердите установку — плагин просит только CSS.
 4. Откройте ленту: должна появиться розовая рамка и бейдж **OCTO TEST OK**.
 5. Откройте панель функций → **Плагины** → нажмите **«Тест: текущее время»**.
@@ -27,5 +29,5 @@
 ## Сборка
 
 ```bash
-node scripts/pack-plugin.js plugins/examples/octo-test --out plugins/packages
+node scripts/pack-plugin.js plugins/examples/octo-test --out dist
 ```

@@ -6,3 +6,6 @@ playwright-report/
 .DS_Store
 .octo-keys/
 src/renderer/plugins-docs/
+AGENTS.md
+opencode.json
+docs/promo/
