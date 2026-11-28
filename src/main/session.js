@@ -1,7 +1,7 @@
 'use strict';
 
 const { session } = require('electron');
-const { PARTITION, CHROME_UA, isTikTokUrl, isAuthHost } = require('./shared');
+const { PARTITION, CHROME_UA, isTikTokUrl, isAuthHost, isOAuthPopupUrl } = require('./shared');
 const downloads = require('./downloads');
 const region = require('./region');
 const { findAppLanguage } = require('./language-catalog');
@@ -51,12 +51,64 @@ function applySpellChecker(ses) {
 }
 
 function isDiagnosticEndpoint(rawUrl) {
-  if (!rawUrl) return false;
-  if (isAuthHost(rawUrl)) return true;
-  if (!isTikTokUrl(rawUrl)) return false;
-  return /\/(?:passport|login|oauth|messages|inbox|business-suite|im\/|api\/v\d+\/im)/i.test(
+  if (!rawUrl || !/^https:/i.test(rawUrl)) return false;
+  if (!isTikTokUrl(rawUrl)) return isOAuthPopupUrl(rawUrl);
+  return /\/(?:passport|login|signup|register|oauth|messages|inbox|business-suite|im\/|api\/v\d+\/im)/i.test(
     rawUrl,
   );
+}
+
+function deleteHeaderInsensitive(headers, targetLower) {
+  for (const key of Object.keys(headers)) {
+    if (key.toLowerCase() === targetLower) delete headers[key];
+  }
+}
+
+function setHeader(headers, name, value) {
+  deleteHeaderInsensitive(headers, name.toLowerCase());
+  headers[name] = value;
+}
+
+function clientHintValues() {
+  const major = String(process.versions.chrome || '128.0.0.0').split('.')[0] || '128';
+  const platform =
+    process.platform === 'darwin'
+      ? '"macOS"'
+      : process.platform === 'win32'
+        ? '"Windows"'
+        : '"Linux"';
+  return {
+    ua: `"Chromium";v="${major}", "Not:A-Brand";v="8", "Google Chrome";v="${major}"`,
+    mobile: '?0',
+    platform,
+  };
+}
+
+function installSessionHeaders(ses) {
+  const hints = clientHintValues();
+  ses.webRequest.onBeforeSendHeaders({ urls: ['https://*/*'] }, (details, callback) => {
+    const url = details.url || '';
+    const isTikTok = isTikTokUrl(url);
+    const isOAuth = !isTikTok && isOAuthPopupUrl(url);
+    if (isTikTok) {
+      region.applyRequestHeaders(details);
+    }
+    if ((isTikTok || isOAuth) && details.requestHeaders) {
+      setHeader(details.requestHeaders, 'Sec-CH-UA', hints.ua);
+      setHeader(details.requestHeaders, 'Sec-CH-UA-Mobile', hints.mobile);
+      setHeader(details.requestHeaders, 'Sec-CH-UA-Platform', hints.platform);
+    }
+    callback({ requestHeaders: details.requestHeaders });
+  });
+}
+
+function headerValuesCount(headers, targetLower) {
+  if (!headers) return 0;
+  for (const [key, val] of Object.entries(headers)) {
+    if (key.toLowerCase() !== targetLower) continue;
+    return Array.isArray(val) ? val.length : val ? 1 : 0;
+  }
+  return 0;
 }
 
 function installNetworkDiagnostics(ses) {
@@ -97,6 +149,20 @@ function installNetworkDiagnostics(ses) {
       logger.info('net:auth', `HTTP ${code} ${details.method} ${details.resourceType}`, {
         url: logger.sanitizeUrl(details.url),
       });
+    } else if (isDiag) {
+      logger.throttled(
+        `net-diag:${details.method}:${details.resourceType}:${logger.sanitizeUrl(details.url)}`,
+        500,
+        'INFO',
+        'net:diag',
+        `HTTP ${code} ${details.method} ${details.resourceType}`,
+        {
+          url: logger.sanitizeUrl(details.url),
+          setCookies: headerValuesCount(details.responseHeaders, 'set-cookie'),
+          hasCors: headerValuesCount(details.responseHeaders, 'access-control-allow-origin') > 0,
+          fromCache: details.fromCache,
+        },
+      );
     }
   });
 
@@ -132,11 +198,14 @@ function prepareSession(partition) {
   preparedSessions.add(ses);
   logger.info('session', 'prepareSession', { partition: part });
 
-  // Accept-Language для TikTok и сохранённый прокси (см. region.js).
+  // Прокси, Accept-Language для TikTok и согласованные Client Hints.
   region.installSessionHooks(ses);
+  installSessionHeaders(ses);
   installNetworkDiagnostics(ses);
 
-  ses.setUserAgent(CHROME_UA, 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7');
+  // Chromium сам добавляет веса (;q=0.9, …) к списку языков; если передать
+  // уже взвешенную строку, получается битый заголовок «ru;q=0.9;q=0.9».
+  ses.setUserAgent(CHROME_UA, 'ru-RU,ru,en-US,en');
   applySpellChecker(ses);
 
   ses.setPermissionRequestHandler((wc, permission, callback, details) => {

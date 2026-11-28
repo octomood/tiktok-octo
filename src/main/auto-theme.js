@@ -1,6 +1,7 @@
 'use strict';
 
 const logger = require('./logger');
+const { isTikTokUrl, isTikTokAuthUrl, isOAuthPopupUrl } = require('./shared');
 
 /**
  * Автотёмная тема Chromium для страниц, которые не читают cookie-тему TikTok.
@@ -30,6 +31,32 @@ function alive(wc) {
   return Boolean(wc && !wc.isDestroyed?.() && wc.debugger);
 }
 
+/**
+ * Не держим CDP-отладчик на экранах входа/регистрации, OAuth и основном
+ * `www.tiktok.com` (там тему уже включает cookie `tiktok_webapp_theme`):
+ * активная сессия отладчика на страницах паспорта мешает навигации и
+ * провоцирует ложные срабатывания антибот-проверок.
+ */
+function shouldAttachForUrl(rawUrl) {
+  const text = String(rawUrl || '').trim();
+  if (!text || /^about:/i.test(text)) return false;
+  if (isTikTokAuthUrl(text)) return false;
+  if (!isTikTokUrl(text) && isOAuthPopupUrl(text)) return false;
+  if (isTikTokUrl(text)) {
+    try {
+      const parsed = new URL(text);
+      if (parsed.hostname === 'www.tiktok.com' || parsed.hostname === 'm.tiktok.com') {
+        return /^\/(?:business-suite|tiktokstudio|ads|legal|safety|privacy|about)(?:\/|$)/i.test(
+          parsed.pathname,
+        );
+      }
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
 function detachOwned(wc) {
   if (!wc || !ownedByWc.has(wc)) return;
   try {
@@ -53,6 +80,10 @@ function applyNow(wc, on) {
   }
 
   target = wc;
+  const effectiveOn = Boolean(on) && shouldAttachForUrl(wc.getURL());
+  if (!effectiveOn && !ownedByWc.has(wc) && !wc.debugger.isAttached()) {
+    return false;
+  }
 
   try {
     if (!wc.debugger.isAttached()) {
@@ -60,9 +91,9 @@ function applyNow(wc, on) {
       ownedByWc.add(wc);
     }
     return wc.debugger
-      .sendCommand('Emulation.setAutoDarkModeOverride', { enabled: Boolean(on) })
+      .sendCommand('Emulation.setAutoDarkModeOverride', { enabled: effectiveOn })
       .then(() => {
-        if (!on) detachOwned(wc);
+        if (!effectiveOn) detachOwned(wc);
         return true;
       })
       .catch((err) => {

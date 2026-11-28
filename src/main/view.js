@@ -4,7 +4,6 @@ const { WebContentsView, session } = require('electron');
 const {
   HOME_URL,
   PARTITION,
-  CHROME_UA,
   REGION_PRELOAD,
   isTikTokUrl,
   isAuthUrl,
@@ -325,7 +324,6 @@ function createView(urlOverride) {
   };
   setViewLoading(true);
 
-  wc.setUserAgent(CHROME_UA);
   // Непрозрачный фон: полупрозрачный WebContentsView на Linux заставляет
   // композитор собирать видео через лишний слой и кадры могут «застыть».
   view.setBackgroundColor('#000000');
@@ -378,7 +376,9 @@ function createView(urlOverride) {
       return { action: 'deny' };
     }
     // Окна OAuth (Google/Apple/Facebook/X) — безрамочные popup'ы поверх приложения.
-    if (isAuthUrl(url)) {
+    // Часть SDK открывает окно на about:blank и тут же перенаправляет его на провайдера;
+    // дальнейшую навигацию в таком popup'е контролирует hardening.js.
+    if (isAuthUrl(url) || (disposition === 'new-window' && (!url || /^about:blank$/i.test(url)))) {
       logger.info('oauth', 'windowOpen allow popup', {
         url: logger.sanitizeUrl(url),
         frameName,
@@ -592,7 +592,9 @@ function createView(urlOverride) {
       url: logger.sanitizeUrl(loadedUrl),
       hadLoadFailure: loadFailed,
     });
-    if (/\/(?:login|passport|foryou|messages|inbox)/i.test(loadedUrl)) {
+    if (
+      /\/(?:login|signup|register|passport|tiktokstudio|foryou|messages|inbox)/i.test(loadedUrl)
+    ) {
       logAuthCookieSummary(ses, `page-load:${logger.sanitizeUrl(loadedUrl)}`);
     }
     // did-finish-load приходит и после сетевой ошибки, когда документ пустой.

@@ -2,7 +2,7 @@
 
 const { app } = require('electron');
 const { ctx } = require('./app-context');
-const { isTikTokUrl, isAuthHost } = require('./shared');
+const { isOAuthPopupUrl } = require('./shared');
 const { openExternal } = require('./links');
 const docsWindow = require('./plugins/docs-window');
 const logger = require('./logger');
@@ -25,9 +25,9 @@ function isOwnContents(wc) {
   );
 }
 
-/** Навигация, разрешённая внутри popup'а: сам TikTok и экраны входа. */
+/** Навигация, разрешённая внутри popup'а: сам TikTok и экраны OAuth. */
 function isPopupUrl(url) {
-  return isTikTokUrl(url) || isAuthHost(url);
+  return isOAuthPopupUrl(url);
 }
 
 function installWebContentsGuards() {
@@ -38,14 +38,20 @@ function installWebContentsGuards() {
       event.preventDefault();
     });
 
-    // Новые окна из popup'ов не открываем — только в системном браузере.
+    // Новые окна из popup'ов не открываем: ссылки OAuth ведём в том же popup,
+    // а сторонние ссылки — в системный браузер.
     wc.setWindowOpenHandler(({ url }) => {
       if (!isOwnContents(wc)) {
-        logger.info('hardening', 'popup windowOpen blocked', {
+        const allowed = isPopupUrl(url);
+        logger.info('hardening', 'popup windowOpen intercepted', {
           url: logger.sanitizeUrl(url),
-          allowedHost: isPopupUrl(url),
+          allowedHost: allowed,
         });
-        if (!isPopupUrl(url)) openExternal(url);
+        if (allowed && /^https:/i.test(url || '')) {
+          wc.loadURL(url).catch(() => {});
+        } else if (!allowed) {
+          openExternal(url);
+        }
       }
       return { action: 'deny' };
     });

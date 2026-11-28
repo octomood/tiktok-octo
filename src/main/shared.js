@@ -64,18 +64,35 @@ const CHROME_UA = buildUserAgent();
 const AUTH_RULES = [
   {
     host: 'accounts.google.com',
-    path: /^\/(?:o\/oauth2|signin|v3\/signin|ServiceLogin)/,
+    path: /^\/(?:o\/oauth2|oauth2|signin|v3\/signin|ServiceLogin|gsi|AccountChooser|InteractiveLogin|CheckCookie|AddSession|RotateCookies|Logout|ListAccounts)/i,
   },
-  { host: 'appleid.apple.com', path: /^\/(?:auth|appleid)/ },
+  { host: 'appleid.apple.com', path: /^\/(?:auth|appleid|signin|account)/i },
   { host: 'idmsa.apple.com', path: /^\// },
   {
     host: /^(?:www\.|m\.|web\.|mbasic\.)?facebook\.com$/,
-    path: /^\/(?:v\d+\.\d+\/dialog\/oauth|dialog\/oauth)/,
+    path: /^\/(?:v\d+\.\d+\/dialog\/oauth|dialog\/oauth|login\.php|login\/|r\.php|reg\/|privacy\/consent|checkpoint)/i,
   },
-  { host: /^(?:www\.)?twitter\.com$/, path: /^\/(?:i\/)?oauth/ },
-  { host: 'api.twitter.com', path: /^\/oauth/ },
-  { host: /^(?:www\.)?x\.com$/, path: /^\/(?:i\/)?oauth/ },
+  {
+    host: /^(?:www\.|api\.)?twitter\.com$/,
+    path: /^\/(?:i\/(?:oauth|flow\/(?:login|signup))|oauth|account)/i,
+  },
+  {
+    host: /^(?:www\.|api\.)?x\.com$/,
+    path: /^\/(?:i\/(?:oauth|flow\/(?:login|signup))|oauth|account)/i,
+  },
+  { host: /^(?:id|oauth)\.vk\.com$/, path: /^\// },
+  { host: /^(?:kauth|accounts)\.kakao\.com$/, path: /^\// },
+  { host: 'access.line.me', path: /^\// },
 ];
+
+// Промежуточные хосты, на которые провайдеры OAuth перенаправляют уже открытое popup-окно
+// во время входа (например, установка cookie YouTube / экран согласия Google).
+const OAUTH_POPUP_HELPER_HOSTS = new Set([
+  'accounts.youtube.com',
+  'consent.google.com',
+  'gds.google.com',
+  'myaccount.google.com',
+]);
 
 /** @returns {URL | null} */
 function parseUrl(rawUrl) {
@@ -110,6 +127,23 @@ function isAuthHost(rawUrl) {
   return AUTH_RULES.some((rule) =>
     typeof rule.host === 'string' ? url.hostname === rule.host : rule.host.test(url.hostname),
   );
+}
+
+/** Навигация, разрешённая внутри открытого OAuth popup-окна. */
+function isOAuthPopupUrl(rawUrl) {
+  if (/^about:blank$/i.test(String(rawUrl || '').trim())) return true;
+  if (isTikTokUrl(rawUrl) || isAuthHost(rawUrl)) return true;
+  const url = parseUrl(rawUrl);
+  return Boolean(url && url.protocol === 'https:' && OAUTH_POPUP_HELPER_HOSTS.has(url.hostname));
+}
+
+/** Страницы входа, регистрации и паспорта TikTok. */
+function isTikTokAuthUrl(rawUrl) {
+  const url = parseUrl(rawUrl);
+  if (!url || url.protocol !== 'https:') return false;
+  if (!isTikTokUrl(rawUrl)) return false;
+  if (/^passport/i.test(url.hostname)) return true;
+  return /^\/(?:login|signup|register|passport|auth|verify)(?:\/|$)/i.test(url.pathname);
 }
 
 /** Ссылки, которые можно безопасно отдать системному браузеру. */
@@ -161,8 +195,10 @@ module.exports = {
   AUTH_RULES,
   CHROME_UA,
   isTikTokUrl,
+  isTikTokAuthUrl,
   isAuthUrl,
   isAuthHost,
+  isOAuthPopupUrl,
   isExternalUrl,
   authorFromUrl,
   isInternalUrl,

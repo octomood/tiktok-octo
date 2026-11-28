@@ -11,7 +11,7 @@ const {
   toast,
   chatWidthLimit,
 } = require('./app-context');
-const { CHROME_UA, REGION_PRELOAD, CHAT_W, isTikTokUrl } = require('./shared');
+const { REGION_PRELOAD, CHAT_W, isTikTokUrl } = require('./shared');
 const { readState, writeState } = require('./store');
 const { openExternal } = require('./links');
 const cosmetics = require('./cosmetics');
@@ -707,7 +707,6 @@ function ensureView() {
   view.setBackgroundColor('#000000');
 
   const wc = view.webContents;
-  wc.setUserAgent(CHROME_UA);
   // Ленивый require: menu.js тянет commands.js -> chat.js, поэтому на этапе
   // загрузки модуля attachContextMenu ещё не экспортирован.
   require('./menu').attachContextMenu(wc);

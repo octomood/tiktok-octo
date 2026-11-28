@@ -455,29 +455,25 @@ function applySavedProxy() {
   refreshProxy();
 }
 
+function applyRequestHeaders(details) {
+  const preset = activePreset();
+  const site = activeSiteLanguage();
+  const acceptLanguage = site?.acceptLanguage || preset.acceptLanguage;
+  if (!acceptLanguage || !details?.requestHeaders) return;
+  for (const key of Object.keys(details.requestHeaders)) {
+    if (key.toLowerCase() === 'accept-language') delete details.requestHeaders[key];
+  }
+  details.requestHeaders['Accept-Language'] = acceptLanguage;
+}
+
 /**
- * Вешается на persistent-сессию один раз: переписывает Accept-Language
- * только у TikTok и восстанавливает сохранённый прокси при старте.
+ * Восстанавливает сохранённый прокси и cookie языка при старте persistent-сессии.
+ * Перехватчик onBeforeSendHeaders регистрируется единым местом в session.js,
+ * чтобы не перетирать другие модификации заголовков той же сессии.
  */
 function installSessionHooks(ses) {
   proxyReady = applyProxy(ses);
   applySiteLanguageCookie(ses).catch(() => {});
-
-  ses.webRequest.onBeforeSendHeaders(
-    { urls: ['*://tiktok.com/*', '*://*.tiktok.com/*'] },
-    (details, callback) => {
-      const preset = activePreset();
-      const site = activeSiteLanguage();
-      const acceptLanguage = site?.acceptLanguage || preset.acceptLanguage;
-      if (acceptLanguage) {
-        for (const key of Object.keys(details.requestHeaders)) {
-          if (key.toLowerCase() === 'accept-language') delete details.requestHeaders[key];
-        }
-        details.requestHeaders['Accept-Language'] = acceptLanguage;
-      }
-      callback({ requestHeaders: details.requestHeaders });
-    },
-  );
 }
 
 function setPreset(id) {
@@ -728,6 +724,7 @@ module.exports = {
   testConnection,
   discoverProxies,
   resetSiteData,
+  applyRequestHeaders,
   installSessionHooks,
   installIpc,
   installLoginHandler,
