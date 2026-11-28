@@ -37,6 +37,7 @@ async function launch(userData) {
   await app.firstWindow();
   const page = await waitForWindow(app, (candidate) => candidate.url().startsWith('file://'));
   const site = await waitForWindow(app, (candidate) => candidate.url() === 'about:blank');
+  await expect(page.locator('#panelVersion')).toContainText('v');
   return { app, page, site };
 }
 

@@ -362,6 +362,7 @@ async function launchRaw(userData, chatUrl, extraEnv = {}) {
   const view = await findWindow(instance, (candidate) => candidate.url().startsWith(chatUrl));
   expect(view, 'страница чата не появилась').toBeTruthy();
 
+  await expect(page.locator('#panelVersion')).toContainText('v');
   return { instance, page, view };
 }
 
