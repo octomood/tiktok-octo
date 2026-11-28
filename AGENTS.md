@@ -455,15 +455,14 @@ npx prettier --check <изменённые файлы>
   - `role` _(необязательно)_: `creator`, `dev`, `supporter`, `bug_hunter`,
     `verified` — задаёт значения по умолчанию;
   - `icon`: ID иконки из [`src/main/badge-icons.js`](src/main/badge-icons.js)
-    (`01_code_brackets` / `code`, `02_terminal_window` / `terminal`,
-    `03_bug_radar` / `bug`, `04_gear_cog` / `gear`, `05_puzzle_module` /
-    `puzzle`, `06_rocket_launch` / `rocket`, `07_terminal_bolt` / `bolt`,
-    `08_magic_wand` / `wand`, `09_heart_pulse` / `heart`, `10_fire_streak` /
-    `fire`, `11_star_shine` / `star`, `12_sparkle_burst` / `sparkles`,
-    `13_thumbs_up` / `thumbs-up`, `14_shield_check` / `shield`,
-    `15_check_pill` / `check`, `16_alert_triangle` / `alert`,
-    `17_bell_notify` / `bell`, `18_chat_typing` / `chat`,
-    `19_megaphone_news` / `megaphone`, `20_handshake_collab` / `handshake`);
+    (50 штук `01_code_brackets` … `50_coffee_chill` и короткие алиасы: `code`,
+    `terminal`, `bug`, `gear`, `puzzle`, `rocket`, `bolt`, `wand`, `heart`,
+    `fire`, `star`, `sparkles`, `thumbs-up`, `shield`, `check`, `alert`,
+    `bell`, `chat`, `megaphone`, `handshake`, `cpu`, `git`, `wrench`,
+    `display`, `database`, `cloud`, `key`, `lock`, `palette`, `layers`, `eye`,
+    `camera`, `play`, `music`, `sliders`, `crown`, `gem`, `trophy`, `medal`,
+    `party`, `clap`, `wink`, `team`, `plane`, `globe`, `link`, `book`,
+    `folder`, `hourglass`, `coffee`);
   - `title` (до 80 символов) и `description` (до 320 символов) — короткий
     заголовок роли и история/благодарность, показываемые в модалке по клику;
   - `accent` (`primary` | `secondary` | `tertiary`) или `color` (`#RRGGBB`,

@@ -43,32 +43,35 @@ floating mini player and desktop shortcuts that make sense.
 
 ### Material Design 3 Expressive & Appearance
 
-|                                       |                                                                                                                                                                                                                                                                |
-| :------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **🎨&nbsp; MD3 Expressive UI**        | Tonal pill containers, grouped rounded lists, spring motion physics, expressive sliders, custom dropdowns (`md3-select`) and wavy progress indicators across the title bar, Settings overlay, Plugin Manager, Download Manager, Annotator, Wizard and Updater. |
-| **🌈&nbsp; 20 harmonious palettes**   | **Octo Lavender** (`#3e3854` / `#8c84a9` / `#ddd2e0`) by default plus 19 curated MD3 schemes (Iris &amp; Lilac, Sakura Blossom, Emerald Forest, Deep Ocean, Graphite, etc.), each with dark, light and **System** modes.                                       |
-| **✨&nbsp; Material 3 on tiktok.com** | Tabs, buttons, navigation rail, search bar, cards, comments, chat, dialogs, Business Suite, subframes and Shadow DOM match your chosen MD3 palette. Switch back to stock TikTok anytime in **Settings → Tweaks**.                                              |
-| **🔤&nbsp; Shell &amp; site fonts**   | **Google Sans Medium** by default in the shell, with presets, any system font by name, or your own `.ttf` / `.otf` / `.woff` / `.woff2` file; `Inter` is applied cleanly across site text without touching SVG icons.                                          |
-| **💬&nbsp; Comments side panel**      | The video page's "You may like" column stays out of the way: the comment icon opens it, and a second click or <kbd>Esc</kbd> hides it again. Can be toggled in **Tweaks**.                                                                                     |
-| **🏅&nbsp; Community badges**         | Animated MD3 vector badges next to usernames in profiles, feeds, comments, and chat. Clicking a badge opens an MD3 card with the role and description; synced from `src/main/badges.json` and toggleable in **Tweaks**.                                        |
-| **♿&nbsp; Accessibility**            | Focus rings on every control, focus containment in dialogs and the command palette, `prefers-reduced-motion`, ARIA roles and an RTL Arabic layout.                                                                                                             |
+|                                              |                                                                                                                                                                                                                                                                |
+| :------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **🎨&nbsp; MD3 Expressive UI**               | Tonal pill containers, grouped rounded lists, spring motion physics, expressive sliders, custom dropdowns (`md3-select`) and wavy progress indicators across the title bar, Settings overlay, Plugin Manager, Download Manager, Annotator, Wizard and Updater. |
+| **🌈&nbsp; 20 palettes &amp; custom colors** | **Octo Lavender** by default, 19 curated MD3 schemes plus a **custom color picker** (any primary color with optional secondary, tertiary, surface, and text overrides) across dark, light, **System**, and true-black **AMOLED** modes.                        |
+| **🧩&nbsp; Component customizer**            | Per-component customization in **Settings → Appearance → Components**: override labels, tooltips, icons (built-in SVG set, emoji, or custom image), fg/bg/border colors, per-component fonts, sizes, radius, opacity, and visibility.                          |
+| **✨&nbsp; Material 3 on tiktok.com**        | Tabs, buttons, navigation rail, search bar, cards, comments, chat, dialogs, Business Suite, subframes and Shadow DOM match your chosen MD3 palette. Switch back to stock TikTok anytime in **Settings → Tweaks**.                                              |
+| **🔤&nbsp; Shell &amp; site fonts**          | **Google Sans Medium** by default in the shell, with presets, any system font by name, or your own `.ttf` / `.otf` / `.woff` / `.woff2` file; `Inter` is applied cleanly across site text without touching SVG icons.                                          |
+| **💬&nbsp; Comments side panel**             | The video page's "You may like" column stays out of the way: the comment icon opens it, and a second click or <kbd>Esc</kbd> hides it again. Can be toggled in **Tweaks**.                                                                                     |
+| **🏅&nbsp; Community badges**                | Animated MD3 vector badges next to usernames in profiles, feeds, comments, and chat. Clicking a badge opens an MD3 card with the role and description; synced from `src/main/badges.json` and toggleable in **Tweaks**.                                        |
+| **♿&nbsp; Accessibility**                   | Focus rings on every control, focus containment in dialogs and the command palette, `prefers-reduced-motion`, ARIA roles and an RTL Arabic layout.                                                                                                             |
+
+Joined buttons in the site skin have pill-shaped outer edges and 6px inner corners (12px on hover).
 
 ### Shell, Player & Viewing
 
-|                                         |                                                                                                                                                                                                                   |
-| :-------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **🪟&nbsp; 52 px tonal title bar**      | Back / forward / reload / home, live page pill, unread count, quick playback &amp; tool groups and native window controls. Dragging and double-click to maximise come for free.                                   |
-| **🔐&nbsp; Real login &amp; profiles**  | Persistent `persist:octo-tiktok` session on disk plus isolated **Account profiles** — create and switch between accounts without restarting. Google, Apple, Facebook and X OAuth windows open on top of the app.  |
-| **🔎&nbsp; Find in page**               | <kbd>Ctrl</kbd>+<kbd>F</kbd> opens a compact tonal bar with a `1/3` counter. The page slides down instead of being covered; <kbd>Esc</kbd> closes it.                                                             |
-| **🎬&nbsp; Picture-in-picture**         | Compact always-on-top mini player: auto-advance, previous/next, scrub bar with timecode and "−10 s", adaptive sizing for your screen. Toolbar button or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>.            |
-| **📌&nbsp; Always on top &amp; Tray**   | Keep the feed above your work (survives restarts), or hide to tray, mute, pin, open PiP and enable "close to tray" to keep listening.                                                                             |
-| **🔇&nbsp; Sound &amp; equalizer**      | Instant mute with a click, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> or media keys, 0–200 % volume slider, audio output picker, speech/music equalizer and mono mode for one earbud.                          |
-| **⏯️&nbsp; Frame step &amp; A–B loop**  | Step frame-by-frame while paused (<kbd>,</kbd> / <kbd>.</kbd> or panel buttons), loop an A–B segment and keep playback speed locked between videos.                                                               |
-| **🖼️&nbsp; Picture &amp; captions**     | Brightness, contrast, warm tone, sharpness and fit/fill. Captions toggle via the site's own button, while size, background and outline update without touching account settings.                                  |
-| **🎞️&nbsp; Video quality**              | Real stream resolution and bitrate plus HEVC support. On Linux, experimental VA-API hardware decoding in **Player** enables H.265 HD after a restart on supported GPUs.                                           |
-| **⏱️&nbsp; Sleep, focus &amp; ambient** | Sleep timer (15/30/60 min, end of video or N videos with fade-out), idle auto-pause + `powerSaveBlocker`, **Focus mode** (15/25/50/90 min + breaks) and distraction-free **Ambient** mode on a second monitor.    |
-| **🔳&nbsp; QR &amp; bar-only remote**   | Local offline QR code for the current video, plus **Bar only** mode — a compact remote without the site (title, play/pause, volume, PiP).                                                                         |
-| **⌨️&nbsp; Keyboard &amp; zoom**        | J / L seek 10 s, K / Space pause, 0–9 jump to percentage, S snapshot, ? hint. Remappable shortcuts with profiles and conflict highlights, browser-grade page zoom (50–300 %) and independent UI scale (80–150 %). |
+|                                         |                                                                                                                                                                                                                                                                                                                                                |
+| :-------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **🪟&nbsp; 52 px tonal title bar**      | Back / forward / reload / home, live page pill, unread count, quick playback &amp; tool groups and native window controls. Dragging and double-click to maximise come for free.                                                                                                                                                                |
+| **🔐&nbsp; Real login &amp; profiles**  | Persistent `persist:octo-tiktok` session on disk plus isolated **Account profiles** — create and switch between accounts without restarting. Google, Apple, Facebook and X OAuth windows open on top of the app.                                                                                                                               |
+| **🔎&nbsp; Find in page**               | <kbd>Ctrl</kbd>+<kbd>F</kbd> opens a compact tonal bar with a `1/3` counter. The page slides down instead of being covered; <kbd>Esc</kbd> closes it.                                                                                                                                                                                          |
+| **🎬&nbsp; Picture-in-picture**         | Compact always-on-top mini player: auto-advance, previous/next, scrub bar with timecode and "−10 s", adaptive sizing for your screen. Toolbar button or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>.                                                                                                                                         |
+| **📌&nbsp; Always on top &amp; Tray**   | Keep the feed above your work (survives restarts), or hide to tray, mute, pin, open PiP and enable "close to tray" to keep listening.                                                                                                                                                                                                          |
+| **🔇&nbsp; Sound &amp; equalizer**      | Instant mute with a click, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> or media keys, 0–200 % volume slider, audio output picker, speech/music equalizer and mono mode for one earbud.                                                                                                                                                       |
+| **⏯️&nbsp; Frame step &amp; A–B loop**  | Step frame-by-frame while paused (<kbd>,</kbd> / <kbd>.</kbd> or panel buttons), loop an A–B segment and keep playback speed locked between videos.                                                                                                                                                                                            |
+| **🖼️&nbsp; Picture &amp; captions**     | Brightness, contrast, warm tone, sharpness and fit/fill. Captions toggle via the site's own button, while size, background and outline update without touching account settings.                                                                                                                                                               |
+| **🎞️&nbsp; Video quality**              | Real stream resolution and bitrate plus HEVC support. On Linux, experimental VA-API hardware decoding in **Player** enables H.265 HD after a restart on supported GPUs.                                                                                                                                                                        |
+| **⏱️&nbsp; Sleep, focus &amp; ambient** | Sleep timer (15/30/60 min, end of video or N videos with fade-out), idle auto-pause + `powerSaveBlocker`, **Focus mode** (15/25/50/90 min + breaks) and distraction-free **Ambient** mode on a second monitor.                                                                                                                                 |
+| **🔳&nbsp; QR &amp; bar-only remote**   | Local offline QR code for the current video, plus **Bar only** mode — a compact remote without the site (title, play/pause, volume, PiP).                                                                                                                                                                                                      |
+| **⌨️&nbsp; Keyboard &amp; zoom**        | J / L seek 10 s, K / Space pause, 0–9 jump to percentage, S snapshot, ? hint; in video fullscreen, <kbd>↑</kbd>/<kbd>↓</kbd>, mouse wheel and on-screen buttons switch videos while staying in fullscreen. Remappable shortcuts with profiles and conflict highlights, browser-grade page zoom (50–300 %) and independent UI scale (80–150 %). |
 
 ### Chat, Library & Media
 
@@ -86,7 +89,7 @@ floating mini player and desktop shortcuts that make sense.
 
 |                                        |                                                                                                                                                                                                                                                                                                          |
 | :------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **🧩&nbsp; Sandboxed plugins**         | Modal **Plugins** manager (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>): local `.octoplugin` installs, permissions, static audit, embedded Ed25519 `SIGNATURE.json`, tamper checks, logs and rollback. SDK with types/mock, ES modules and hot reload. [t.me/octo_plugins](https://t.me/octo_plugins). |
+| **🧩&nbsp; Sandboxed plugins**         | Modal **Plugins** manager (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>): local `.octoplugin` installs, permissions, static audit, Ed25519 signing, "official" label, tamper checks, logs and rollback. SDK with types/mock, ES modules and hot reload. [t.me/octo_plugins](https://t.me/octo_plugins). |
 | **🧪&nbsp; Custom code &amp; filters** | Optional isolated page CSS/JS (off by default with warning and one-click kill switch), plus content filters by words, hashtags and authors.                                                                                                                                                              |
 | **🌐&nbsp; Region, proxy &amp; DPI**   | 12 country presets (`Accept-Language`, `navigator.language`, timezone, geolocation), SOCKS5/HTTP proxy + local VPN proxy discovery, connection latency test and experimental **DPI bypass** (DNS-over-HTTPS + TLS ClientHello SNI splitting).                                                            |
 | **🗣️&nbsp; Language**                  | 12 UI languages (including RTL Arabic) and 22 TikTok site languages via documented `default_lang` cookie, `Accept-Language` and `navigator.language`.                                                                                                                                                    |
@@ -234,6 +237,11 @@ window's session, so sign-in, theme and conversations are already there.
   otherwise only a narrow strip would remain for the conversation list. Links
   from a conversation to other TikTok pages open in the main window, external
   links go to the system browser.
+- **Emoji** — known TikTok codes (46 English codes and Russian
+  `[Глаза-сердечки]` → 😍) are always replaced with ordinary Unicode emoji in
+  page text, including messages, reply previews and the side chat, regardless
+  of the MD3 skin. These are approximations, not TikTok artwork; appearance
+  depends on the system font. Unknown codes and input fields are left intact.
 - **Limitation**: this is the same TikTok web client, not a separate chat. If
   the site changes the messages layout, the panel shows what the site renders;
   there are no private requests and no bypassing protections.
@@ -251,7 +259,7 @@ permission.
 
 The **Plugins** manager (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>) opens as
 an MD3 Expressive overlay with local `.octoplugin` installs, per-plugin
-permissions, security reports, embedded Ed25519 `SIGNATURE.json` verification,
+permissions, security reports, embedded Ed25519 `OCTO-SIGNATURE.json` verification,
 tamper detection, logs, DevTools for dev plugins and rollback. The "All plugins"
 tab links to the Telegram channel [t.me/octo_plugins](https://t.me/octo_plugins):
 download a package there and install it with **Install from file**. The puzzle
@@ -260,8 +268,15 @@ actions without opening Settings.
 
 Before installation the app validates the manifest and ZIP, runs a static audit
 (Node, `eval`, direct network, cookies, native binaries, obfuscation), checks
-SHA-256 and Ed25519 signatures, and shows every requested permission. Updates
-that add permissions always require confirmation.
+SHA-256 and Ed25519 signatures, and shows every requested permission and network
+host. When updating from a file, the dialog lists added permissions and hosts and
+warns about downgrades. The publisher is remembered on first install (the signing
+key, or the author name for unsigned plugins): if a package with the same `id`
+comes from a different publisher, it needs a separate confirmation and does not
+receive the old version's settings, storage or secrets. A plugin signed with the
+TikTok Octo key is marked "official"; an unsigned plugin with high-risk
+permissions (`page:script`, `network`, `downloads`) opens a warning dialog that
+lists them, and its "without signature" label stands out in the card.
 
 Developer guide: [docs/plugins/README.md](docs/plugins/README.md) ·
 Publishing rules: [docs/plugins/PUBLISHING.md](docs/plugins/PUBLISHING.md) ·
@@ -405,7 +420,8 @@ src/
     chat.js            side chat panel over the feed
     session.js         persistent session, permissions, downloads
     profiles.js        isolated multi-account profiles
-    md3-palettes.js    20 harmonious MD3 Expressive palettes (dark + light)
+    md3-palettes.js    20 curated MD3 Expressive palettes and custom-color scheme generator
+    ui-custom.js       shell component catalog, icon/font storage and overrides
     md3-site.js        Material Design 3 Expressive skin for tiktok.com
     cosmetics.js       site tweaks, typography, feed layout, comments panel
     region.js          region presets, Accept-Language, proxy & network test
@@ -436,6 +452,7 @@ src/
     styles.css         MD3 Expressive styling, tokens and spring curves
     md3-select.js      accessible MD3 Expressive dropdown component
     theme-sync.js      theme/palette sync across shell and child windows
+    ui-custom.js       live per-component shell overrides and settings editor
     titlebar.js        state, toasts, keyboard plumbing
     plugins.html / plugins.css / plugins.js
                        MD3 Expressive plugin manager
@@ -480,7 +497,8 @@ session, a custom `octo-plugin://` origin, a strict CSP and all network requests
 cancelled at the session level. The plugin sees only the frozen `window.octo`
 bridge; main validates every call against the manifest permissions. Page CSS and
 page scripts are executed against the site from main, the latter in an isolated
-world with runtime scanning. Before anything reaches disk, the package is
+world with its own strict CSP (no network, no `eval`) and locks on cookies,
+site storage, frames and HTML injection. Before anything reaches disk, the package is
 validated, unpacked in memory, statically audited, hash-checked, signature-checked
 and shown to the user with every permission.
 
@@ -571,9 +589,10 @@ Small things that took actual work:
   the next launch until the update is installed. Plugins do not auto-update:
   download a new version from the Telegram channel and install the file.
 - **Plugins are JavaScript-only.** Native modules, WebAssembly and workers are
-  rejected. A plugin with `page:script` shares the DOM with the site and can read
-  visible page content — install only sources you trust. Publishing requires
-  source links and signatures for the verified badge.
+  rejected. A plugin with `page:script` shares the DOM with the site, can read
+  visible page content including messages and send it to its allowed hosts —
+  install only sources you trust. Publishing requires
+  source links, and only the TikTok Octo key earns the "official" label.
 - **Plugins are distributed through the Telegram channel**
   [t.me/octo_plugins](https://t.me/octo_plugins). There is no built-in catalog or
   background update check; installing from a file works offline.

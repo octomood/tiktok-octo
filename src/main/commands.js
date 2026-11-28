@@ -25,6 +25,7 @@ const sleepTimer = require('./sleep-timer');
 const player = require('./player');
 const videoQuality = require('./video-quality');
 const pip = require('./pip');
+const fullscreenNav = require('./fullscreen-nav');
 const { captureFrame, captureForAnnotation } = require('./screenshot');
 const autostart = require('./autostart');
 const linkHandler = require('./link-handler');
@@ -36,6 +37,7 @@ const find = require('./find');
 const plugins = require('./plugins');
 const dialogs = require('./dialogs');
 const uiFont = require('./ui-font');
+const uiCustom = require('./ui-custom');
 const stickers = require('./stickers');
 const i18n = require('./i18n');
 const autoTheme = require('./auto-theme');
@@ -185,10 +187,12 @@ function handleCommand(command, payload) {
       refreshTrayMenu();
       break;
     case 'feedNext':
-      pip.next();
+      if (ctx.htmlFullscreen) fullscreenNav.next();
+      else pip.next();
       break;
     case 'feedPrev':
-      pip.prev();
+      if (ctx.htmlFullscreen) fullscreenNav.prev();
+      else pip.prev();
       break;
     case 'pipAuto':
       pip.toggleAuto();
@@ -771,9 +775,132 @@ function handleCommand(command, payload) {
     case 'themeMode':
       if (typeof payload === 'string') cosmetics.applyThemeMode(payload);
       break;
+    case 'themeAmoled':
+      cosmetics.applyThemeAmoled(Boolean(payload));
+      break;
     case 'themePalette':
       if (typeof payload === 'string') cosmetics.applyThemePalette(payload);
       break;
+    case 'themeCustom':
+      if (payload && typeof payload === 'object') cosmetics.applyThemeCustom(payload);
+      break;
+    case 'uiCustomSet': {
+      if (!payload || typeof payload !== 'object') break;
+      const current = ctx.uiCustom && typeof ctx.uiCustom === 'object' ? { ...ctx.uiCustom } : {};
+      if (typeof payload.id === 'string' && payload.patch && typeof payload.patch === 'object') {
+        const merged = { ...(current[payload.id] || {}), ...payload.patch };
+        const cleaned = uiCustom.normalizeComponentConfig(payload.id, merged);
+        if (cleaned) current[payload.id] = cleaned;
+        else delete current[payload.id];
+      } else {
+        Object.assign(current, uiCustom.normalizeUiCustom(payload));
+      }
+      const next = uiCustom.normalizeUiCustom(current);
+      ctx.uiCustom = next;
+      writeState({ uiCustom: next });
+      if (ctx.win && !ctx.win.isDestroyed()) {
+        ctx.win.setTitle(next.brand?.label || 'TikTok Octo');
+      }
+      break;
+    }
+    case 'uiCustomReset': {
+      if (typeof payload === 'string' && payload && payload !== 'all') {
+        const next = { ...(ctx.uiCustom || {}) };
+        delete next[payload];
+        uiCustom.removeComponentFiles(payload);
+        ctx.uiCustom = uiCustom.normalizeUiCustom(next);
+        writeState({ uiCustom: ctx.uiCustom });
+        if (payload === 'brand' && ctx.win && !ctx.win.isDestroyed()) {
+          ctx.win.setTitle('TikTok Octo');
+        }
+        toast('Оформление компонента сброшено');
+      } else {
+        uiCustom.removeComponentFiles('');
+        ctx.uiCustom = {};
+        writeState({ uiCustom: {} });
+        if (ctx.win && !ctx.win.isDestroyed()) {
+          ctx.win.setTitle('TikTok Octo');
+        }
+        toast('Оформление всех компонентов сброшено');
+      }
+      break;
+    }
+    case 'uiCustomIconPick': {
+      const compId = payload && typeof payload.id === 'string' ? payload.id : '';
+      if (!compId) break;
+      const applyIcon = (filePath) => {
+        const res = uiCustom.installComponentIcon(compId, filePath);
+        if (!res.ok) {
+          toast(res.error);
+          return;
+        }
+        const current = { ...(ctx.uiCustom || {}) };
+        const merged = { ...(current[compId] || {}), iconType: 'file', iconValue: res.fileName };
+        const cleaned = uiCustom.normalizeComponentConfig(compId, merged);
+        if (cleaned) current[compId] = cleaned;
+        ctx.uiCustom = uiCustom.normalizeUiCustom(current);
+        writeState({ uiCustom: ctx.uiCustom });
+        pushState();
+        toast(`Иконка обновлена: ${res.fileName}`);
+      };
+      if (payload && typeof payload.filePath === 'string' && payload.filePath.trim()) {
+        applyIcon(payload.filePath);
+        break;
+      }
+      dialogs
+        .showOpenDialog(ctx.win, {
+          title: 'Выберите файл иконки',
+          properties: ['openFile'],
+          filters: [
+            { name: 'Изображения', extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'] },
+          ],
+        })
+        .then((res) => {
+          if (!res.canceled && res.filePaths && res.filePaths[0]) {
+            applyIcon(res.filePaths[0]);
+          }
+        });
+      break;
+    }
+    case 'uiCustomFontPick': {
+      const compId = payload && typeof payload.id === 'string' ? payload.id : '';
+      if (!compId) break;
+      const applyCompFont = (filePath) => {
+        const res = uiCustom.installComponentFont(compId, filePath);
+        if (!res.ok) {
+          toast(res.error);
+          return;
+        }
+        const current = { ...(ctx.uiCustom || {}) };
+        const merged = {
+          ...(current[compId] || {}),
+          fontPreset: 'custom-file',
+          fontFileName: res.fileName,
+        };
+        const cleaned = uiCustom.normalizeComponentConfig(compId, merged);
+        if (cleaned) current[compId] = cleaned;
+        ctx.uiCustom = uiCustom.normalizeUiCustom(current);
+        writeState({ uiCustom: ctx.uiCustom });
+        pushState();
+        toast(`Шрифт компонента: ${res.fileName}`);
+      };
+      if (payload && typeof payload.filePath === 'string' && payload.filePath.trim()) {
+        applyCompFont(payload.filePath);
+        break;
+      }
+      dialogs
+        .showOpenDialog(ctx.win, {
+          title: 'Выберите файл шрифта',
+          properties: ['openFile'],
+          filters: [{ name: 'Шрифты', extensions: ['ttf', 'otf', 'woff', 'woff2'] }],
+        })
+        .then((res) => {
+          if (!res.canceled && res.filePaths && res.filePaths[0]) {
+            applyCompFont(res.filePaths[0]);
+          }
+        });
+      break;
+    }
     case 'profileSwitch':
       if (typeof payload === 'string') profiles.switchTo(payload);
       break;

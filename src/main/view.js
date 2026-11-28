@@ -31,6 +31,7 @@ const ads = require('./ads');
 const player = require('./player');
 const media = require('./media');
 const pip = require('./pip');
+const fullscreenNav = require('./fullscreen-nav');
 const feedKeys = require('./feed-keys');
 const qr = require('./qr');
 const stats = require('./stats');
@@ -351,6 +352,7 @@ function createView(urlOverride) {
     focus.reapply();
     media.apply();
     pip.reapply();
+    fullscreenNav.apply();
     feedKeys.sync();
     ads.apply();
     filters.apply();
@@ -376,6 +378,7 @@ function createView(urlOverride) {
 
   // --- Полноэкранное видео --------------------------------------------------
   wc.on('enter-html-full-screen', () => {
+    fullscreenNav.onEnterFullscreen();
     ctx.htmlFullscreen = true;
     // Панель сбоку не должна мешать видео на весь экран.
     setPanelOpen(false, { persist: false });
@@ -383,6 +386,7 @@ function createView(urlOverride) {
     pushState();
   });
   wc.on('leave-html-full-screen', () => {
+    if (fullscreenNav.onLeaveFullscreen()) return;
     ctx.htmlFullscreen = false;
     layout();
     pushState();

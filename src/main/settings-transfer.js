@@ -43,7 +43,9 @@ const SETTINGS_KEYS = [
   'player',
   'cosmetics',
   'themeMode',
+  'themeAmoled',
   'themePalette',
+  'themeCustom',
   'region',
   'language',
   'siteLanguage',
@@ -57,6 +59,7 @@ const SETTINGS_KEYS = [
   'zoomFactor',
   'uiScale',
   'uiFont',
+  'uiCustom',
   'alwaysOnTop',
   'closeToTray',
   'startInTray',
@@ -69,7 +72,13 @@ const SETTINGS_KEYS = [
   'gif',
 ];
 
-const BOOLEAN_KEYS = new Set(['feedKeys', 'alwaysOnTop', 'closeToTray', 'startInTray']);
+const BOOLEAN_KEYS = new Set([
+  'themeAmoled',
+  'feedKeys',
+  'alwaysOnTop',
+  'closeToTray',
+  'startInTray',
+]);
 
 let onChange = null;
 let initialized = false;
@@ -202,6 +211,10 @@ function cleanSettings(raw) {
       result.uiFont = require('./ui-font').normalizeUiFont(value);
       continue;
     }
+    if (key === 'uiCustom') {
+      result.uiCustom = require('./ui-custom').normalizeUiCustom(value);
+      continue;
+    }
     if (key === 'language') {
       const language = APP_LANGUAGES.find((item) => item.id === value);
       if (language) result.language = language.id;
@@ -227,6 +240,11 @@ function cleanSettings(raw) {
     if (key === 'themePalette') {
       const { normalizePaletteId } = require('./md3-palettes');
       if (typeof value === 'string') result.themePalette = normalizePaletteId(value);
+      continue;
+    }
+    if (key === 'themeCustom') {
+      const { normalizeCustomTheme } = require('./md3-palettes');
+      result.themeCustom = normalizeCustomTheme(value);
       continue;
     }
     if (key === 'region') {
@@ -256,7 +274,9 @@ function liveDefaults() {
     player: ctx.player,
     cosmetics: cosmetic,
     themeMode: ctx.themeMode,
+    themeAmoled: Boolean(ctx.themeAmoled),
     themePalette: ctx.themePalette,
+    themeCustom: ctx.themeCustom,
     // Логин и пароль прокси остаются в профиле, но не в экспорте.
     region: stripRegionCredentials(ctx.region),
     language: ctx.language,
@@ -277,6 +297,7 @@ function liveDefaults() {
     zoomFactor: 1,
     uiScale: ctx.uiScale || 1,
     uiFont: ctx.uiFont || { preset: 'google-sans-medium', family: '', fileName: '' },
+    uiCustom: ctx.uiCustom || {},
     alwaysOnTop: false,
     closeToTray: ctx.closeToTray,
     startInTray: ctx.startInTray,
@@ -417,6 +438,13 @@ function refreshLive() {
   if (state.uiFont !== undefined) {
     require('./app-context').ctx.uiFont = require('./ui-font').normalizeUiFont(state.uiFont);
   }
+  if (state.uiCustom !== undefined) {
+    const nextCustom = require('./ui-custom').normalizeUiCustom(state.uiCustom);
+    require('./app-context').ctx.uiCustom = nextCustom;
+    if (ctx.win && !ctx.win.isDestroyed()) {
+      ctx.win.setTitle(nextCustom.brand?.label || 'TikTok Octo');
+    }
+  }
   call('./i18n', 'sync');
   call('./i18n', 'broadcast');
   call('./region', 'sync');
@@ -437,6 +465,14 @@ function refreshLive() {
   call('./ads', 'sync');
 
   setCosmeticsState(state.cosmetics || {});
+  if ('themeAmoled' in state) {
+    call('./cosmetics', 'applyThemeAmoled', state.themeAmoled === true);
+  }
+  if (state.themeCustom) {
+    call('./cosmetics', 'applyThemeCustom', state.themeCustom, {
+      activate: state.themePalette === 'custom',
+    });
+  }
   if (state.themePalette) {
     call('./cosmetics', 'applyThemePalette', state.themePalette);
   }

@@ -14,6 +14,8 @@ const managerWindow = require('./window');
 const docsWindow = require('./docs-window');
 const { compareVersions, isCompatible, applySettings } = require('./manifest');
 const { installDecision } = require('./security');
+const { trustNotice, needsTrustWarning } = require('./plugin-trust');
+const { compareUpdate } = require('./update-trust');
 const {
   describePermissions,
   baselinePermissions,
@@ -408,7 +410,58 @@ function findingsText(report, limit = 6) {
   return warnings.length ? warnings.join('\n') : '';
 }
 
-function confirmDetail(preview, { update = false, addedPermissions = [] } = {}) {
+function shortKey(fingerprint) {
+  return String(fingerprint || '')
+    .slice(0, 16)
+    .replace(/(.{4})(?=.)/g, '$1 ');
+}
+
+function permissionLines(ids) {
+  return describePermissions(ids).map(
+    (item) => `• ${item.label} (риск: ${riskLabel(item.risk)}) — ${item.description}`,
+  );
+}
+
+/** Строки диалога о том, что меняет обновление поверх установленной версии. */
+function trustLines(trust) {
+  if (!trust) return [];
+  const lines = [''];
+  if (trust.downgrade) {
+    lines.push(`Внимание: версия ${trust.version} старше установленной ${trust.previousVersion}.`);
+  } else if (trust.sameVersion) {
+    lines.push(`Та же версия ${trust.version}, но содержимое пакета другое.`);
+  } else {
+    lines.push(`Обновление с версии ${trust.previousVersion} до ${trust.version}.`);
+  }
+
+  if (trust.publisherChanged) {
+    lines.push('Издатель сменился: настройки, хранилище и секреты не перейдут к новой версии.');
+  } else if (trust.signedNow) {
+    lines.push(
+      `Теперь плагин подписан: издатель закрепится за ключом ${shortKey(trust.publisher.key)}.`,
+    );
+  } else if (trust.publisher.key) {
+    lines.push(`Издатель подтверждён подписью (ключ ${shortKey(trust.publisher.key)}).`);
+  } else {
+    lines.push('Издатель не подтверждён: пакет без подписи, сверяется только имя автора.');
+  }
+
+  if (trust.addedPermissions.length) {
+    lines.push('', 'Новые разрешения:', ...permissionLines(trust.addedPermissions));
+  }
+  if (trust.removedPermissions.length) {
+    lines.push('', 'Убраны разрешения:', ...permissionLines(trust.removedPermissions));
+  }
+  if (trust.addedHosts.length) {
+    lines.push('', 'Новые сетевые хосты:', ...trust.addedHosts.map((item) => `• ${item}`));
+  }
+  if (trust.removedHosts.length) {
+    lines.push('', 'Убраны сетевые хосты:', ...trust.removedHosts.map((item) => `• ${item}`));
+  }
+  return lines;
+}
+
+function confirmDetail(preview, { update = false, addedPermissions = [], trust = null } = {}) {
   const lines = [
     `${preview.name} ${preview.version} · ${preview.author?.name || 'неизвестный автор'}`,
     preview.description,
@@ -429,6 +482,10 @@ function confirmDetail(preview, { update = false, addedPermissions = [] } = {}) 
       lines.push(`• ${item.label} (риск: ${riskLabel(item.risk)}) — ${item.description}`);
     }
   }
+  if (preview.networkHosts?.length) {
+    lines.push('', 'Сетевые хосты:', ...preview.networkHosts.map((item) => `• ${item}`));
+  }
+  lines.push(...trustLines(trust && { ...trust, version: preview.version }));
 
   if (update && preview.registryVersion) {
     lines.push('', `Обновление до версии ${preview.registryVersion}.`);
@@ -441,27 +498,68 @@ function confirmDetail(preview, { update = false, addedPermissions = [] } = {}) 
   if (warnings) {
     lines.push('', 'Предупреждения статической проверки:', warnings);
   }
-  if (preview.signature !== 'verified') {
-    lines.push(
-      '',
-      preview.signature === 'unsigned'
-        ? 'Плагин не подписан. Устанавливайте, только если доверяете автору и исходникам.'
-        : 'Подпись недействительна — установка запрещена.',
-    );
-  }
+  lines.push('', ...trustNotice(preview));
 
   return lines.filter((line) => line !== undefined && line !== null).join('\n');
 }
 
+function trustNeedsAttention(trust) {
+  return Boolean(
+    trust &&
+    (trust.publisherChanged ||
+      trust.downgrade ||
+      trust.addedPermissions.length ||
+      trust.addedHosts.length),
+  );
+}
+
 async function confirmInstall(preview, options = {}) {
   const { response } = await showMessage({
-    type: preview.report.verdict === 'safe' ? 'question' : 'warning',
+    type:
+      preview.report.verdict === 'safe' &&
+      !trustNeedsAttention(options.trust) &&
+      !needsTrustWarning(preview)
+        ? 'question'
+        : 'warning',
     title: options.update ? 'Обновление плагина' : 'Установка плагина',
     message: options.update
       ? `Обновить «${preview.name}» до ${preview.version}?`
       : `Установить «${preview.name}» ${preview.version}?`,
     detail: confirmDetail(preview, options),
     buttons: [options.update ? 'Обновить' : 'Установить', 'Отмена'],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  });
+  return response === 0;
+}
+
+/**
+ * Отдельное подтверждение, когда пакет с тем же id выпустил другой издатель:
+ * по умолчанию — отмена, а при согласии данные старой версии не переносятся.
+ */
+async function confirmPublisherChange(preview, trust) {
+  const reason =
+    trust.reason === 'key-changed'
+      ? 'Новая версия подписана другим ключом, чем установленная.'
+      : trust.reason === 'signature-lost'
+        ? 'Установленная версия подписана, а новая — нет.'
+        : `Автор в новой версии — «${trust.publisher.author || '?'}», в установленной — «${
+            trust.previousPublisher.author || '?'
+          }».`;
+  const { response } = await showMessage({
+    type: 'warning',
+    title: 'Другой издатель',
+    message: `Плагин «${preview.name}» выпустил другой издатель`,
+    detail: [
+      reason,
+      '',
+      'Если продолжить, новая версия встанет как отдельный плагин: настройки, хранилище и секреты установленной версии ей не передадутся.',
+      'Прежнюю версию вместе с её данными можно вернуть в «История версий».',
+      '',
+      'Продолжайте, только если получили файл от автора плагина.',
+    ].join('\n'),
+    buttons: ['Продолжить без данных', 'Отмена'],
     defaultId: 1,
     cancelId: 1,
     noLink: true,
@@ -561,10 +659,19 @@ async function installInspection(inspection, options = {}) {
       entry: options.entry || null,
     });
 
+    const trust = compareUpdate(current, inspection);
+    if (options.auto && trust?.publisherChanged) {
+      return { ok: false, error: 'Пакет выпустил другой издатель' };
+    }
+
     if (!options.auto) {
+      if (trust?.publisherChanged && !(await confirmPublisherChange(preview, trust))) {
+        return { ok: false, cancelled: true };
+      }
       const confirmed = await confirmInstall(preview, {
         update: Boolean(current),
         addedPermissions: options.addedPermissions || [],
+        trust,
       });
       if (!confirmed) return { ok: false, cancelled: true };
     }
@@ -585,7 +692,9 @@ async function installInspection(inspection, options = {}) {
 
     if (result.ok && current?.dev) {
       devRecords = devRecords.filter((record) => record.id !== current.id);
-      // Настройки и данные dev-версии не теряются при переходе на каталог.
+    }
+    // Настройки и данные dev-версии не теряются при переходе на пакет того же автора.
+    if (result.ok && current?.dev && !trust?.publisherChanged) {
       if (current.settings && Object.keys(current.settings).length) {
         result.record.settings = applySettings(result.record.manifest, current.settings);
       }

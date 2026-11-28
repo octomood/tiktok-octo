@@ -268,6 +268,57 @@ test('чат: кнопка за правым краем тоже расширя�
   }
 });
 
+test('чат: меню, спрятанное за правым краем, не раздувает панель', async () => {
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-e2e-chatchase-'));
+  // Скрытое меню стоит сразу за правой границей и уезжает вместе с ней: сколько
+  // ни расширяй панель, оно снова «за краем». Панель не должна гнаться за ним до
+  // 980 px, отнимая ширину у ленты.
+  const chase = `<!doctype html>
+<html><body style="margin:0;background:#111">
+  <div style="position:relative;width:100%;height:100vh;overflow:hidden">
+    <div role="textbox" contenteditable="true" style="width:300px;height:40px"></div>
+    <button id="parked" style="position:absolute;left:calc(100% + 40px);top:8px;width:36px;height:36px">
+      Menu
+    </button>
+  </div>
+</body></html>`;
+  const { server, url } = await startServer(chase);
+  let app;
+
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: {
+        ...process.env,
+        OCTO_E2E: '1',
+        OCTO_USER_DATA: userData,
+        OCTO_HOME_URL: 'about:blank',
+        OCTO_CHAT_URL: url,
+      },
+    });
+
+    await app.firstWindow();
+    const page = await waitForWindow(app, (candidate) => candidate.url().startsWith('file://'));
+    await waitForWindow(app, (candidate) => candidate.url() === 'about:blank');
+
+    await page.evaluate(() => window.octo.cmd('chat'));
+    await waitForWindow(app, (candidate) => candidate.url().startsWith('http://127.0.0.1'));
+
+    const chatWidth = async () => {
+      const views = await viewLayout(app);
+      const chat = views.find((item) => item.url.startsWith('http://127.0.0.1'));
+      return chat ? chat.bounds.width : -1;
+    };
+    // Все отложенные замеры (500 и 1600 мс после загрузки) успевают пройти.
+    await new Promise((resolve) => setTimeout(resolve, 3500));
+    expect(await chatWidth()).toBe(420);
+  } finally {
+    if (app) await app.close();
+    server.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
 test('чат: открытие переписки внутри страницы заново подгоняет панель', async () => {
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-e2e-chatnav-'));
   // Сначала список переписок помещается в 420 px, а открытый диалог — нет.

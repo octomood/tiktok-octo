@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('octo', {
   },
   theme: ipcRenderer.sendSync('octo:theme'),
   themePalettes: ipcRenderer.sendSync('octo:theme-palettes'),
+  uiComponents: ipcRenderer.sendSync('octo:ui-components'),
   onTheme(callback) {
     const listener = (_event, payload) => callback(payload);
     ipcRenderer.on('octo:theme-changed', listener);

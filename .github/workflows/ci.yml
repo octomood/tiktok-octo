@@ -29,5 +29,9 @@ jobs:
       - name: Форматирование
         run: npm run format:check
 
+      # Подписи пакетов в plugins/packages и ключи в trusted-keys/ — без секрета.
+      - name: Подписи плагинов
+        run: npm run plugin:verify
+
       - name: Дымовой тест
         run: npm test

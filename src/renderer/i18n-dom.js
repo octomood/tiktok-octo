@@ -135,6 +135,12 @@
 
   function translateAttribute(element, attr, force) {
     if (!element || element.nodeType !== 1 || skipped(element)) return;
+    if (
+      element.hasAttribute('data-octo-custom-tooltip') &&
+      (attr === 'title' || attr === 'aria-label' || attr === 'placeholder')
+    ) {
+      return;
+    }
     const raw = element.getAttribute(attr);
     if (!raw || !raw.trim()) return;
 

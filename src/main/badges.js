@@ -317,7 +317,7 @@ const BADGES_CSS = `
   }
 
   /* Анимации MD3 Expressive для встроенных SVG-иконок */
-  .ob-rock, .ob-float-tilt, .ob-spin-45, .ob-spin-36, .ob-squash-tilt,
+  .ob-rock, .ob-float-tilt, .ob-spin-45, .ob-spin-36, .ob-spin-180, .ob-squash-tilt,
   .ob-float, .ob-heartbeat, .ob-bounce-tilt, .ob-alert, .ob-bell,
   .ob-nudge-l, .ob-nudge-r, .ob-tilt-pop, .ob-sparkle, .ob-sparkle-d,
   .ob-blink, .ob-wiggle-l, .ob-wiggle-r, .ob-pulse, .ob-flame,
@@ -330,6 +330,7 @@ const BADGES_CSS = `
   .ob-float { animation: octo-b-float 2s ease-in-out infinite; }
   .ob-spin-45 { animation: octo-b-spin45 2.4s cubic-bezier(0.2, 0.8, 0.2, 1) infinite; }
   .ob-spin-36 { animation: octo-b-spin36 4s linear infinite; }
+  .ob-spin-180 { animation: octo-b-spin180 2.4s cubic-bezier(0.2, 0.8, 0.2, 1) infinite; }
   .ob-squash-tilt { animation: octo-b-squash 2s cubic-bezier(0.34, 1.4, 0.64, 1) infinite; }
   .ob-heartbeat { animation: octo-b-heart 2s ease-in-out infinite; }
   .ob-bounce-tilt { animation: octo-b-bounce-tilt 2s cubic-bezier(0.34, 1.4, 0.64, 1) infinite; }
@@ -358,6 +359,7 @@ const BADGES_CSS = `
   @keyframes octo-b-float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(12px, -16px); } }
   @keyframes octo-b-spin45 { 0% { transform: rotate(0deg); } 55%, 100% { transform: rotate(45deg); } }
   @keyframes octo-b-spin36 { 0% { transform: rotate(0deg); } 100% { transform: rotate(36deg); } }
+  @keyframes octo-b-spin180 { 0%, 40% { transform: rotate(0deg); } 80%, 100% { transform: rotate(180deg); } }
   @keyframes octo-b-squash { 0%, 100% { transform: scale(1) rotate(-3deg); } 25% { transform: scale(1.12, 0.9) rotate(4deg); } 50% { transform: scale(0.94, 1.08) rotate(-2deg); } }
   @keyframes octo-b-heart { 0%, 60%, 100% { transform: scale(1); } 15% { transform: scale(1.16); } 30% { transform: scale(0.96); } 42% { transform: scale(1.1); } }
   @keyframes octo-b-bounce-tilt { 0%, 70%, 100% { transform: translateY(0) rotate(0deg); } 25% { transform: translateY(-18px) rotate(-6deg); } 48% { transform: translateY(4px) rotate(3deg); } }
@@ -482,6 +484,18 @@ const BADGES_CSS = `
   @keyframes octo-badge-pop {
     from { opacity: 0; transform: translateY(-6px) scale(0.96); }
     to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* «Уменьшить движение»: значок, кнопка закрытия и окно меняют состояние без
+     пружин и появления. Блок стоит в конце, чтобы перекрыть правила выше. */
+  @media (prefers-reduced-motion: reduce) {
+    button.${BADGE_CLASS}[id^="octo-badge-btn-"],
+    #octo-badge-modal-close {
+      transition: none !important;
+    }
+    #octo-badge-modal[${MODAL_ATTR}] {
+      animation: none !important;
+    }
   }
 `;
 

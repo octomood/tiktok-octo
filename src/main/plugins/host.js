@@ -15,6 +15,13 @@ const { ctx, toast, setPluginDialogOpen } = require('../app-context');
 const { openExternal } = require('../links');
 const { isSafeRelativePath, isCompatible } = require('./manifest');
 const { scanPageScript, validateCss } = require('./security');
+const {
+  registerWorld,
+  prepareWorld,
+  ensurePageWorld,
+  wrapPageRun,
+  unwrapPageRun,
+} = require('./page-world');
 const { verifyInstalled, manifestFor, saveRecord, setRecordSettings } = require('./installer');
 const { LIMITS, PROTOCOL } = require('./constants');
 const state = require('./state');
@@ -412,6 +419,7 @@ async function load(record) {
     logs: [],
     saveTimer: null,
   };
+  registerWorld(entry.worldId, record.id);
 
   let win;
   try {
@@ -571,6 +579,7 @@ async function pollWatchersFor(entry) {
   }));
   let results;
   try {
+    if (!(await prepareWorld(wc, entry.worldId))) return;
     results = await wc.executeJavaScriptInIsolatedWorld(entry.worldId, [
       {
         code: `(() => {
@@ -1323,6 +1332,9 @@ async function handleApi(entry, method, payload) {
       }
       const wc = await pageContents(entry);
       if (!wc) return hostForbidden('Страница ещё не готова');
+      if (!(await prepareWorld(wc, entry.worldId))) {
+        return hostForbidden('Не удалось включить защиту изолированного мира страницы');
+      }
       try {
         const result = await wc.executeJavaScriptInIsolatedWorld(entry.worldId, [
           {
@@ -1397,6 +1409,9 @@ async function handleApi(entry, method, payload) {
       }
       const wc = await pageContents(entry);
       if (!wc) return hostForbidden('Страница ещё не готова');
+      if (!(await prepareWorld(wc, entry.worldId))) {
+        return hostForbidden('Не удалось включить защиту изолированного мира страницы');
+      }
       try {
         await wc.executeJavaScriptInIsolatedWorld(entry.worldId, [
           { code: `document.querySelector(${JSON.stringify(selector)}); true;` },
@@ -1435,36 +1450,43 @@ async function handleApi(entry, method, payload) {
         const first = scan.findings.find((item) => item.severity === 'block');
         return hostForbidden(first?.message || 'Скрипт не прошёл проверку');
       }
+      // Граница — CSP мира и замки в нём (page-world.js), а не только сканер:
+      // без них код плагина на страницу не попадает.
+      if (!(await ensurePageWorld(wc, entry.worldId))) {
+        return hostForbidden('Не удалось включить защиту изолированного мира страницы');
+      }
       try {
         let timer = null;
         const timeout = new Promise((_resolve, reject) => {
           timer = setTimeout(() => reject(new Error('таймаут выполнения')), 10000);
         });
-        const execution = wc.executeJavaScriptInIsolatedWorld(entry.worldId, [
-          {
-            code: `(() => {
-              const result = (() => { ${code} })();
-              if (result === undefined) return null;
-              let json;
-              try {
-                json = JSON.stringify(result);
-              } catch {
-                throw new Error('Результат page.run не сериализуется в JSON');
-              }
-              if (json && json.length > 256 * 1024) {
-                throw new Error('Результат page.run больше 256 КБ');
-              }
-              return result;
-            })()`,
-          },
-        ]);
-        let result;
+        const runInWorld = async () => {
+          const { token, source } = wrapPageRun(code);
+          const value = await wc.executeJavaScriptInIsolatedWorld(entry.worldId, [
+            { code: source },
+          ]);
+          return unwrapPageRun(value, token);
+        };
+        // Страница могла смениться между проверкой и запуском (новый документ
+        // или процесс рендерера): мир готовим заново, код плагина ещё не шёл.
+        const execution = runInWorld().then(async (reply) => {
+          if (!reply.notReady) return reply;
+          if (!(await ensurePageWorld(wc, entry.worldId))) {
+            return { error: 'защита изолированного мира не включилась' };
+          }
+          const retry = await runInWorld();
+          return retry.notReady ? { error: 'защита изолированного мира не включилась' } : retry;
+        });
+        let reply;
         try {
-          result = await Promise.race([execution, timeout]);
+          reply = await Promise.race([execution, timeout]);
         } finally {
           clearTimeout(timer);
         }
-        return { ok: true, result };
+        if (typeof reply.error === 'string') {
+          return hostForbidden(`Ошибка на странице: ${reply.error}`);
+        }
+        return { ok: true, result: reply.result };
       } catch (err) {
         return hostForbidden(`Ошибка на странице: ${err.message}`);
       }

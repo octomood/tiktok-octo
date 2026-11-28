@@ -47,7 +47,9 @@
     if (!payload || typeof payload !== 'object') return;
     const root = document.documentElement;
     const dark = payload.dark !== false;
+    const amoled = dark && payload.amoled === true;
     root.dataset.theme = dark ? 'dark' : 'light';
+    root.dataset.amoled = amoled ? 'true' : 'false';
     if (payload.palette) root.dataset.palette = String(payload.palette);
     root.style.setProperty('--md-scheme', dark ? 'dark' : 'light');
 

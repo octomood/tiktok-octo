@@ -305,6 +305,16 @@ test('MD3 дизайн для всего сайта: все элементы, SP
 
     // 1. MD3 включён по умолчанию и красит весь сайт в тёмную MD3-палитру.
     await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          navBorder: getComputedStyle(document.querySelector('.nav')).borderTopWidth,
+          pillBorder: getComputedStyle(document.querySelector('.page-pill')).borderTopWidth,
+          winBorder: getComputedStyle(document.querySelector('.win-controls')).borderTopWidth,
+        })),
+      )
+      .toEqual({ navBorder: '0px', pillBorder: '0px', winBorder: '0px' });
+
+    await expect
       .poll(() => site.evaluate(() => document.documentElement.getAttribute('data-octo-md3')))
       .toBe('dark');
 
@@ -322,6 +332,7 @@ test('MD3 дизайн для всего сайта: все элементы, SP
           navBadgeTextColor: getComputedStyle(document.getElementById('navBadgeText')).color,
           nestedNavInnerBg: getComputedStyle(document.getElementById('navForYou')).backgroundColor,
           navFollowingBg: getComputedStyle(document.getElementById('navFollowing')).backgroundColor,
+          navFollowingShadow: getComputedStyle(document.getElementById('navFollowing')).boxShadow,
           tooltipWrapperBg: getComputedStyle(document.getElementById('tooltipWrapper'))
             .backgroundColor,
           likeWrapperBg: getComputedStyle(document.getElementById('likeTooltipWrapper'))
@@ -371,6 +382,7 @@ test('MD3 дизайн для всего сайта: все элементы, SP
             .backgroundColor,
           moreDrawerBtnShadow: getComputedStyle(document.getElementById('moreDrawerBtn')).boxShadow,
           searchRadius: getComputedStyle(document.getElementById('searchBox')).borderTopLeftRadius,
+          searchShadow: getComputedStyle(document.getElementById('searchBox')).boxShadow,
           loginBg: getComputedStyle(document.getElementById('btnLogin')).backgroundColor,
           loginRadius: getComputedStyle(document.getElementById('btnLogin')).borderTopLeftRadius,
           loginInnerRadius: getComputedStyle(document.getElementById('btnLogin'))
@@ -410,6 +422,7 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         navBadgeTextColor: 'rgb(23, 20, 34)', // #171422 — тёмный текст на кнопке/бейдже #8c84a9
         nestedNavInnerBg: 'rgba(0, 0, 0, 0)', // вложенная ссылка не рисует второй овал внутри внешнего
         navFollowingBg: 'rgb(43, 38, 61)', // #2b263d — соединённый неактивный пункт в сайдбаре
+        navFollowingShadow: 'none',
         tooltipWrapperBg: 'rgba(0, 0, 0, 0)', // TUXTooltip-reference не красится как тултип
         likeWrapperBg: 'rgba(0, 0, 0, 0)',
         likeBtnBg: 'rgba(0, 0, 0, 0)',
@@ -439,11 +452,12 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         moreDrawerBtnBg: 'rgba(0, 0, 0, 0)',
         moreDrawerBtnShadow: 'none',
         searchRadius: '14px',
+        searchShadow: 'none',
         loginBg: 'rgb(140, 132, 169)', // #8c84a9
-        loginRadius: '14px',
-        loginInnerRadius: '5px', // соединённый край пары кнопок в шапке
+        loginRadius: '24px',
+        loginInnerRadius: '6px', // соединённый край пары кнопок в шапке
         editBg: 'rgb(86, 78, 112)', // #564e70
-        editInnerRadius: '5px',
+        editInnerRadius: '6px',
         tabColor: 'rgb(197, 189, 219)', // #c5bddb
         tabRadius: '12px',
         tabBarBg: expect.not.stringMatching(/^rgb\(0,\s*0,\s*0\)$/),
@@ -557,10 +571,10 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         barRadius: '0px',
         allSurface: 'chip-active',
         allBg: 'rgb(86, 78, 112)', // #564e70 — active secondary-container
-        allRadius: '9999px',
+        allRadius: '24px',
         followersSurface: 'chip',
         followersBg: 'rgb(62, 56, 84)', // #3e3854 — surface-container-high (видимая пилюля)
-        followersRadius: '9999px',
+        followersRadius: '24px',
       });
     await site.evaluate(() => document.getElementById('notifDrawer')?.remove());
 
@@ -729,6 +743,43 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         }
       })
       .toBe('dark');
+
+    // AMOLED-режим делает фон сайта чисто чёрным без декоративных фигур и перезагрузки.
+    await page.click('#rowThemeAmoled');
+    await expect
+      .poll(() =>
+        site.evaluate(() => document.documentElement.getAttribute('data-octo-md3-amoled')),
+      )
+      .toBe('true');
+    await expect
+      .poll(() =>
+        site.evaluate(() => ({
+          bodyBg: getComputedStyle(document.body).backgroundColor,
+          bodyBgImg: getComputedStyle(document.body).backgroundImage,
+          surface: getComputedStyle(document.documentElement)
+            .getPropertyValue('--octo-md-surface')
+            .trim(),
+        })),
+      )
+      .toEqual({
+        bodyBg: 'rgb(0, 0, 0)',
+        bodyBgImg: 'none',
+        surface: '#000000',
+      });
+    await page.click('#rowThemeAmoled');
+    await expect
+      .poll(() =>
+        site.evaluate(() => document.documentElement.getAttribute('data-octo-md3-amoled')),
+      )
+      .toBeNull();
+    await expect
+      .poll(() =>
+        site.evaluate(() =>
+          getComputedStyle(document.documentElement).getPropertyValue('--octo-md-surface').trim(),
+        ),
+      )
+      .toBe('#191624');
+
     await page.click('#btnPanel');
 
     // 6.5. Нижняя панель плеера, прогресс-бар, переключатель автопрокрутки, кнопка «•••»
@@ -1342,6 +1393,384 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         })),
       )
       .toEqual({ railAttr: null, brandAttr: 'full' });
+  } finally {
+    if (app) await app.close();
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+test('MD3 скин сайта: переходы учитывают системную настройку «Уменьшить движение»', async () => {
+  test.setTimeout(60_000);
+  const server = http.createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    response.end(MOCK_SITE);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${server.address().port}/`;
+
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-md3-motion-'));
+  let app;
+
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: {
+        ...process.env,
+        OCTO_E2E: '1',
+        OCTO_USER_DATA: userData,
+        OCTO_HOME_URL: url,
+      },
+    });
+
+    await app.firstWindow();
+    const site = await waitForWindow(
+      app,
+      (candidate) => candidate.url().startsWith(url),
+      'страница сайта',
+    );
+    await expect
+      .poll(() => site.evaluate(() => document.documentElement.getAttribute('data-octo-md3')))
+      .toBe('dark');
+
+    await site.evaluate(() => {
+      const root = document.getElementById('shadowHost').attachShadow({ mode: 'open' });
+      const btn = document.createElement('button');
+      btn.id = 'shadowBtn';
+      btn.className = 'TUXButton--primary';
+      btn.textContent = 'Shadow MD3';
+      root.append(btn);
+    });
+
+    // Длительности переходов скина: кнопка, пункт сайдбара, подфрейм и shadow root.
+    const durations = () =>
+      site.evaluate(() => {
+        const frameBtn = document
+          .getElementById('studioFrame')
+          ?.contentDocument?.getElementById('frameBtn');
+        const shadowBtn = document
+          .getElementById('shadowHost')
+          .shadowRoot?.getElementById('shadowBtn');
+        const of = (el) => (el ? getComputedStyle(el).transitionDuration : '');
+        return {
+          button: of(document.getElementById('btnLogin')),
+          sideNav: of(document.getElementById('navFollowing')),
+          frame: of(frameBtn),
+          shadow: of(shadowBtn),
+        };
+      });
+
+    // 1. Без настройки скин анимирует смену цвета и формы, как раньше.
+    await expect.poll(durations).toEqual({
+      button: '0.16s, 0.22s, 0.16s, 0.16s, 0.16s',
+      sideNav: '0.16s, 0.16s, 0.22s, 0.16s',
+      frame: '0.16s, 0.22s, 0.16s, 0.16s, 0.16s',
+      shadow: '0.16s, 0.22s, 0.16s, 0.16s, 0.16s',
+    });
+
+    // 2. «Уменьшить движение» обнуляет все переходы скина, включая подфреймы и shadow root.
+    await site.emulateMedia({ reducedMotion: 'reduce' });
+    await expect.poll(durations).toEqual({
+      button: '0s, 0s, 0s, 0s, 0s',
+      sideNav: '0s, 0s, 0s, 0s',
+      frame: '0s, 0s, 0s, 0s, 0s',
+      shadow: '0s, 0s, 0s, 0s, 0s',
+    });
+
+    // 3. Возврат настройки возвращает переходы без перезагрузки страницы.
+    await site.emulateMedia({ reducedMotion: 'no-preference' });
+    await expect
+      .poll(async () => (await durations()).button)
+      .toBe('0.16s, 0.22s, 0.16s, 0.16s, 0.16s');
+  } finally {
+    if (app) await app.close();
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+const JOINED_SITE = `<!doctype html><html lang="ru"><meta charset="utf-8"><title>MD3</title>
+<style>body{font-family:system-ui;padding:32px}section{display:flex;gap:48px;align-items:flex-start}.group{display:flex;gap:4px}.vertical{flex-direction:column}button{height:44px;min-width:120px;padding:0 20px}</style>
+<section><div class="group" id="horizontal"><button class="TUXButton--secondary">Назад</button><button class="TUXButton--secondary">Сохранить</button><button class="TUXButton--secondary">Далее</button></div>
+<div class="group vertical" id="vertical"><button class="TUXButton--secondary">Создать</button><button class="TUXButton--secondary">Изменить</button><button class="TUXButton--secondary">Отменить</button></div></section></html>`;
+
+test('MD3 соединённые кнопки: определение групп и углы в покое и при наведении', async () => {
+  test.setTimeout(60_000);
+  const server = http.createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    response.end(JOINED_SITE);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${server.address().port}/`;
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-md3-joined-'));
+  let app;
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: { ...process.env, OCTO_E2E: '1', OCTO_USER_DATA: userData, OCTO_HOME_URL: url },
+    });
+    await app.firstWindow();
+    const site = await waitForWindow(app, (candidate) => candidate.url().startsWith(url), 'кнопки');
+    const buttons = site.locator('.group > button');
+    // Атрибуты выставляет настоящий observer скина по геометрии, не тест.
+    await expect
+      .poll(() =>
+        buttons.evaluateAll((els) => els.map((el) => el.getAttribute('data-octo-md3-btn'))),
+      )
+      .toEqual(['h-first', 'h-mid', 'h-last', 'v-first', 'v-mid', 'v-last']);
+    const corners = (i) =>
+      buttons.nth(i).evaluate((el) => {
+        const s = getComputedStyle(el);
+        return [
+          s.borderTopLeftRadius,
+          s.borderTopRightRadius,
+          s.borderBottomRightRadius,
+          s.borderBottomLeftRadius,
+        ];
+      });
+    const resting = [
+      [24, 6, 6, 24],
+      [6, 6, 6, 6],
+      [6, 24, 24, 6],
+      [24, 24, 6, 6],
+      [6, 6, 6, 6],
+      [6, 6, 24, 24],
+    ];
+    const hovered = resting.map((values) => values.map((r) => (r === 6 ? 12 : r)));
+    for (const reducedMotion of ['no-preference', 'reduce']) {
+      await site.emulateMedia({ reducedMotion });
+      await site.mouse.move(0, 0);
+      for (let i = 0; i < resting.length; i++) {
+        await expect.poll(() => corners(i)).toEqual(resting[i].map((r) => `${r}px`));
+        await buttons.nth(i).hover();
+        await expect.poll(() => corners(i)).toEqual(hovered[i].map((r) => `${r}px`));
+        await site.mouse.move(0, 0);
+        await expect.poll(() => corners(i)).toEqual(resting[i].map((r) => `${r}px`));
+      }
+    }
+  } finally {
+    if (app) await app.close();
+    await new Promise((resolve) => server.close(resolve));
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
+});
+
+// Страница сообщений с незнакомыми классами (новая вёрстка Business Suite): светлые
+// подложки сайта распознаются по цвету. Повторные сканирования не должны сбрасывать
+// MD3-подложку обратно в белую, а строка под курсором — оставаться белой с белым текстом.
+const MESSAGES_SITE = `<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <title>Сообщения</title>
+    <style>
+      body { margin: 0; background: #ffffff; color: #161823; font-family: system-ui, sans-serif; }
+      .x1hdr { height: 56px; background: #ffffff; display: flex; align-items: center; }
+      .x1box { width: 400px; background: #ffffff; padding: 8px; }
+      .x1row { display: flex; align-items: center; height: 64px; padding: 0 12px; color: #161823; }
+      .x1row span { color: #161823; }
+      .x1row:hover, .x1row.x1on { background: #f1f1f2; }
+    </style>
+  </head>
+  <body>
+    <div class="x1hdr" id="msgHeader"><span id="msgTitle">Сообщения</span></div>
+    <div class="x1box" id="msgInbox">
+      <div class="x1row x1on" id="rowSelected"><span id="rowSelectedName">вандерюша</span></div>
+      <div class="x1row" id="rowHover"><span id="rowHoverName">Xidintonka</span></div>
+      <div class="x1row" id="rowPlain"><span>hollatrigga</span></div>
+    </div>
+    <div id="msgAway" style="height:200px;"></div>
+  </body>
+</html>`;
+
+test('MD3 на странице сообщений: подложки не мигают при сканировании, строка под курсором читаема', async () => {
+  test.setTimeout(60_000);
+  const server = http.createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    response.end(MESSAGES_SITE);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${server.address().port}/messages`;
+  const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'octo-md3-msg-'));
+  let app;
+
+  try {
+    app = await electron.launch({
+      args: [path.join(__dirname, '..'), '--no-sandbox'],
+      env: {
+        ...process.env,
+        OCTO_E2E: '1',
+        OCTO_USER_DATA: userData,
+        OCTO_HOME_URL: url,
+      },
+    });
+    await app.firstWindow();
+    const site = await waitForWindow(
+      app,
+      (candidate) => candidate.url().startsWith(url),
+      'страница сообщений',
+    );
+    await expect
+      .poll(() => site.evaluate(() => document.documentElement.getAttribute('data-octo-md3')))
+      .toBe('dark');
+
+    const read = () =>
+      site.evaluate(() => {
+        const bg = (id) => getComputedStyle(document.getElementById(id)).backgroundColor;
+        const color = (id) => getComputedStyle(document.getElementById(id)).color;
+        return {
+          header: bg('msgHeader'),
+          inbox: bg('msgInbox'),
+          selected: bg('rowSelected'),
+          selectedName: color('rowSelectedName'),
+        };
+      });
+    const expected = {
+      header: 'rgb(33, 29, 48)', // #211d30 — светлая шапка в MD3
+      inbox: 'rgb(33, 29, 48)', // #211d30 — карточка списка переписок
+      selected: 'rgb(86, 78, 112)', // #564e70 — выбранный диалог, secondary-container
+      selectedName: 'rgb(221, 210, 224)', // #ddd2e0 — читаемое имя на #564e70
+    };
+    await expect.poll(read).toEqual(expected);
+
+    // DOM сайта меняется постоянно (время, «печатает…», подгрузка): каждое изменение
+    // запускает новое сканирование, и подложки не должны возвращаться к белым.
+    const samples = [];
+    for (let i = 0; i < 16; i += 1) {
+      await site.evaluate(() => {
+        const marker = document.createElement('i');
+        document.getElementById('msgAway').appendChild(marker);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      samples.push(await read());
+    }
+    expect(samples.filter((sample) => JSON.stringify(sample) !== JSON.stringify(expected))).toEqual(
+      [],
+    );
+
+    // Наведение не меняет DOM, а сайт красит строку светлым :hover.
+    await site.hover('#rowHover');
+    const hovered = () =>
+      site.evaluate(() => ({
+        bg: getComputedStyle(document.getElementById('rowHover')).backgroundColor,
+        name: getComputedStyle(document.getElementById('rowHoverName')).color,
+      }));
+    await expect.poll(hovered).toEqual({
+      bg: 'rgb(62, 56, 84)', // #3e3854 — surface-container-high при наведении (§16)
+      name: 'rgb(221, 210, 224)', // #ddd2e0
+    });
+
+    // Курсор ушёл — строка снова прозрачная, без «залипшей» подсветки.
+    await site.hover('#msgAway');
+    await expect
+      .poll(() =>
+        site.evaluate(() => getComputedStyle(document.getElementById('rowHover')).backgroundColor),
+      )
+      .toBe('rgba(0, 0, 0, 0)');
+    expect(await read()).toEqual(expected);
+
+    // 9.5. Сообщения со вложенной белой шапкой внутри <header> и узким списком
+    // чатов (~76 px): шапка и выбранная строка не остаются белыми.
+    await site.evaluate(() => {
+      document.body.innerHTML = `
+        <header id="msgTopHdr" style="height:56px;">
+          <div id="msgTopHdrInner" style="height:100%;background:#ffffff;display:flex;align-items:center;justify-content:space-between;padding:0 16px;">
+            <span>TikTok</span>
+            <svg id="msgDmSvg" width="20" height="20" fill="currentColor"><path d="M0 0h20v20H0z"/></svg>
+          </div>
+        </header>
+        <div style="display:flex;height:360px;">
+          <div id="narrowChatList" style="width:76px;">
+            <div class="x1narrow" id="narrowRow1" style="width:72px;height:60px;background:#f1f1f1;">A</div>
+            <div class="x1narrow" id="narrowRow2" style="width:72px;height:60px;">B</div>
+            <div class="x1narrow" id="narrowRow3" style="width:72px;height:60px;">C</div>
+          </div>
+          <div id="narrowChatBody" style="flex:1;">Чат</div>
+        </div>
+      `;
+    });
+
+    await expect
+      .poll(() =>
+        site.evaluate(() => ({
+          hdrBg: getComputedStyle(document.getElementById('msgTopHdr')).backgroundColor,
+          hdrInnerBg: getComputedStyle(document.getElementById('msgTopHdrInner')).backgroundColor,
+          dmColor: getComputedStyle(document.getElementById('msgDmSvg')).color,
+          narrowRowBg: getComputedStyle(document.getElementById('narrowRow1')).backgroundColor,
+        })),
+      )
+      .toEqual({
+        hdrBg: 'rgb(33, 29, 48)',
+        hdrInnerBg: 'rgba(0, 0, 0, 0)',
+        dmColor: 'rgb(221, 210, 224)',
+        narrowRowBg: 'rgb(86, 78, 112)',
+      });
+
+    // 10. Контраст текста и иконок: --const-text-primary, нижняя панель плеера
+    // вне DivBasicPlayerWrapper (пауза, 1.0x, CC-контур, звук), плашка над
+    // автором, карточки/модалки в тёмной и светлой теме.
+    await site.evaluate(() => {
+      document.body.innerHTML = `
+        <div class="DivItemContainerV2" id="contrastSlide" style="position:relative;width:820px;height:520px;background:rgb(25,22,36);">
+          <div class="DivBasicPlayerWrapper" id="contrastWrap" style="position:relative;width:360px;height:460px;margin:0 auto;">
+            <video id="contrastVideo" style="width:100%;height:100%;"></video>
+            <div id="anchorPill" style="position:absolute;left:16px;bottom:84px;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,0.14);display:inline-flex;align-items:center;gap:6px;">
+              <svg id="anchorSvg" width="14" height="14" viewBox="0 0 14 14"><rect id="anchorRect" width="10" height="10" x="2" y="2" fill="var(--const-text-primary)"/></svg>
+              <span id="anchorText" style="color:var(--const-text-primary);">Промо</span>
+            </div>
+          </div>
+          <div class="DivVideoControlBottom" id="outerBar" style="position:absolute;left:0;right:0;bottom:0;height:48px;display:flex;align-items:center;gap:12px;padding:0 16px;">
+            <button type="button" id="outerPauseBtn" style="width:28px;height:28px;">
+              <svg id="outerPauseSvg" width="20" height="20" viewBox="0 0 20 20"><rect id="outerPauseRect" x="4" y="3" width="4" height="14" fill="var(--const-text-primary)"/></svg>
+            </button>
+            <div id="outerSpeed" style="color:var(--const-text-primary);">1.0x</div>
+            <button type="button" id="outerCcBtn" style="width:28px;height:28px;">
+              <svg id="outerCcSvg" width="20" height="20" viewBox="0 0 20 20"><g fill="none"><path id="outerCcPath" d="M3 5h14v10H3z" stroke="#161823" stroke-width="2"/></g></svg>
+            </button>
+            <button type="button" id="outerVolBtn" style="width:28px;height:28px;">
+              <svg id="outerVolSvg" width="20" height="20" viewBox="0 0 20 20"><path id="outerVolPath" d="M3 8h4l5-4v12l-5-4H3z" fill="rgba(255,255,255,0.35)"/></svg>
+            </button>
+          </div>
+          <div id="darkCard" class="DivInfoCard" style="position:absolute;right:16px;top:16px;padding:10px;">
+            <span id="darkCardText" style="color:#161823;">Тёмный текст на карточке</span>
+          </div>
+          <div id="lightPillInDark" style="position:absolute;right:16px;top:76px;padding:6px 10px;background:#ffffff;">
+            <span id="lightPillText" style="color:#f5f5f5;">Белый текст на белом</span>
+          </div>
+        </div>
+      `;
+      window.history.pushState({}, '', '/foryou');
+    });
+
+    await expect
+      .poll(() =>
+        site.evaluate(() => ({
+          constPrimary: getComputedStyle(document.documentElement)
+            .getPropertyValue('--const-text-primary')
+            .trim(),
+          anchorText: getComputedStyle(document.getElementById('anchorText')).color,
+          anchorRect: getComputedStyle(document.getElementById('anchorRect')).fill,
+          pauseRect: getComputedStyle(document.getElementById('outerPauseRect')).fill,
+          speedColor: getComputedStyle(document.getElementById('outerSpeed')).color,
+          ccStroke: getComputedStyle(document.getElementById('outerCcPath')).stroke,
+          ccFill: getComputedStyle(document.getElementById('outerCcPath')).fill,
+          volFill: getComputedStyle(document.getElementById('outerVolPath')).fill,
+          cardText: getComputedStyle(document.getElementById('darkCardText')).color,
+          lightPillText: getComputedStyle(document.getElementById('lightPillText')).color,
+        })),
+      )
+      .toEqual({
+        constPrimary: '#ffffff',
+        anchorText: 'rgb(255, 255, 255)',
+        anchorRect: 'rgb(255, 255, 255)',
+        pauseRect: 'rgb(255, 255, 255)',
+        speedColor: 'rgb(221, 210, 224)',
+        ccStroke: 'rgb(221, 210, 224)',
+        ccFill: 'none',
+        volFill: 'rgb(221, 210, 224)',
+        cardText: 'rgb(221, 210, 224)',
+        lightPillText: 'rgb(37, 32, 53)',
+      });
   } finally {
     if (app) await app.close();
     await new Promise((resolve) => server.close(resolve));
