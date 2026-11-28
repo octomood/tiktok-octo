@@ -8,6 +8,7 @@
  */
 
 const { app } = require('electron');
+const logger = require('./logger');
 const {
   TITLEBAR_H,
   MAX_CHROME_H,
@@ -316,6 +317,7 @@ function toast(text) {
   } catch {
     /* язык ещё не готов — показываем исходную строку */
   }
+  logger.info('toast', String(text || ''));
   sendToWindow('octo:state', { toast: { id: ++ctx.toastSeq, text: value } });
 }
 
@@ -359,6 +361,7 @@ function chatWidthLimit(available = contentWidth()) {
 }
 
 let viewHidden = false;
+let lastViewVisible = null;
 
 /** Показать view только когда нет оверлеев (настройки, палитра, мастер, экран ошибки). */
 function syncViewVisibility() {
@@ -374,6 +377,19 @@ function syncViewVisibility() {
     !ctx.appDialogOpen &&
     !ctx.barOnly &&
     !ctx.welcome.open;
+  if (lastViewVisible !== visible) {
+    lastViewVisible = visible;
+    logger.debug('view', 'visibility changed', {
+      visible,
+      offline: ctx.offline,
+      loading: ctx.viewLoading,
+      panel: ctx.panelOpen,
+      plugins: ctx.pluginsOpen,
+      palette: ctx.paletteOpen,
+      welcome: ctx.welcome.open,
+      barOnly: ctx.barOnly,
+    });
+  }
   try {
     ctx.view.setVisible(visible);
     if (visible && viewHidden) {
@@ -488,6 +504,7 @@ function setPanelOpen(open) {
   const next = Boolean(open);
   if (next === ctx.panelOpen) return;
   ctx.panelOpen = next;
+  logger.info('ui', 'panel toggle', { open: next });
   if (next) {
     ctx.popover = null;
     ctx.pluginsOpen = false;
@@ -592,6 +609,7 @@ function setPluginsOpen(open) {
   const next = Boolean(open);
   if (next === ctx.pluginsOpen) return;
   ctx.pluginsOpen = next;
+  logger.info('ui', 'plugins overlay toggle', { open: next });
   if (next) {
     ctx.popover = null;
     ctx.panelOpen = false;
@@ -676,6 +694,7 @@ function setPaletteOpen(open) {
   const next = Boolean(open);
   if (next === ctx.paletteOpen) return;
   ctx.paletteOpen = next;
+  logger.info('ui', 'palette toggle', { open: next });
 
   syncViewVisibility();
 
@@ -712,6 +731,7 @@ function setWelcomeOpen(open) {
   const next = Boolean(open);
   if (next === ctx.welcome.open) return;
   ctx.welcome.open = next;
+  logger.info('ui', 'welcome toggle', { open: next });
   applyWelcomeAudio(next);
 
   layoutSoon();
@@ -834,9 +854,10 @@ function stepHistory(delta) {
     const history = wc.navigationHistory;
     const target = history.getActiveIndex() + delta;
     if (target < 0 || target >= history.length()) return;
+    logger.info('nav', 'step history', { delta, target, len: history.length() });
     history.goToIndex(target);
-  } catch {
-    /* view уже закрывается */
+  } catch (err) {
+    logger.warn('nav', 'step history failed', err?.message);
   }
 }
 
@@ -1027,6 +1048,7 @@ function setUnread(count) {
   if (next === ctx.unread) return;
   const previous = ctx.unread;
   ctx.unread = next;
+  logger.info('notify', 'unread changed', { previous, next });
   try {
     app.setBadgeCount(next);
   } catch {

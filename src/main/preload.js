@@ -80,6 +80,9 @@ contextBridge.exposeInMainWorld('octo', {
   ready() {
     ipcRenderer.send('octo:ready');
   },
+  log(level, scope, message, meta) {
+    ipcRenderer.send('octo:log', { level, scope, message, meta });
+  },
 });
 
 contextBridge.exposeInMainWorld('octoPlugins', {

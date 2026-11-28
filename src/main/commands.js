@@ -68,6 +68,7 @@ const profiles = require('./profiles');
 const history = require('./history');
 const creatorNotes = require('./creator-notes');
 const { showMessageBox } = require('./dialogs');
+const logger = require('./logger');
 // Ступени масштаба как в браузерах.
 const ZOOM_STEPS = [0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
@@ -214,20 +215,36 @@ async function openSideNavRoute(wc, key) {
     );
 
     if (!result || !result.clicked) {
-      wc.loadURL(fallback).catch(() => {});
+      logger.info('sidenav', 'fallback loadURL', { key, fallback });
+      wc.loadURL(fallback).catch((err) => {
+        logger.warn('sidenav', 'fallback loadURL failed', { key, err: err?.message });
+      });
     } else if (result.href && (result.href.startsWith('/') || isTikTokUrl(result.href))) {
       const targetUrl = result.href.startsWith('/')
         ? `https://www.tiktok.com${result.href}`
         : result.href;
+      logger.info('sidenav', 'clicked SPA nav item', { key, href: result.href });
       setTimeout(() => {
         if (wc.isDestroyed()) return;
         const nowUrl = wc.getURL();
         if (nowUrl === currentUrl && nowUrl !== targetUrl) {
-          wc.loadURL(targetUrl).catch(() => {});
+          logger.info('sidenav', 'SPA click did not change URL, loading directly', {
+            key,
+            targetUrl,
+          });
+          wc.loadURL(targetUrl).catch((err) => {
+            logger.warn('sidenav', 'direct loadURL failed', { key, err: err?.message });
+          });
         }
       }, 260);
+    } else {
+      logger.info('sidenav', 'clicked item without href', { key });
     }
-  } catch {
+  } catch (err) {
+    logger.warn('sidenav', 'executeJavaScript failed, loading fallback', {
+      key,
+      err: err?.message,
+    });
     wc.loadURL(fallback).catch(() => {});
   }
 
@@ -239,7 +256,13 @@ async function openSideNavRoute(wc, key) {
 }
 
 function handleCommand(command, payload) {
-  if (!ctx.win || !ctx.view) return;
+  if (!ctx.win || !ctx.view) {
+    logger.warn('cmd', 'ignored (no win/view)', { command });
+    return;
+  }
+  if (command !== 'uiPickerActive' && command !== 'pipSeek') {
+    logger.info('cmd', String(command || ''), logger.sanitizeCommandPayload(command, payload));
+  }
   const wc = ctx.view.webContents;
 
   switch (command) {
@@ -754,6 +777,15 @@ function handleCommand(command, payload) {
       break;
     case 'diagnosticsCopy':
       privacy.copyDiagnostics();
+      break;
+    case 'logsSave':
+      privacy.saveLogs();
+      break;
+    case 'logsFolder':
+      privacy.openLogsFolder();
+      break;
+    case 'logsClear':
+      privacy.clearLogs();
       break;
     case 'showLicenses':
       privacy.showLicenses();

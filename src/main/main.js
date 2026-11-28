@@ -7,6 +7,9 @@ if (process.env.OCTO_USER_DATA) app.setPath('userData', process.env.OCTO_USER_DA
 // Тесты не должны писать в настоящую папку «Загрузки».
 if (process.env.OCTO_DOWNLOADS_DIR) app.setPath('downloads', process.env.OCTO_DOWNLOADS_DIR);
 
+const logger = require('./logger');
+logger.installGlobalErrorHandlers();
+
 /**
  * Аппаратный декодер на Linux — частая причина «звук идёт, картинка стоит»:
  * драйвер отдаёт звук, но перестаёт проводить кадры в композитор. Для клиента
@@ -93,9 +96,10 @@ function applyStartupActions() {
     if (!process.argv.includes(flag)) return;
     setTimeout(() => {
       try {
+        logger.info('app', 'startup action', { flag, command });
         handleCommand(command);
-      } catch {
-        /* окно ещё не готово */
+      } catch (err) {
+        logger.warn('app', 'startup action failed', { flag, command, err: err?.message });
       }
     }, 1200);
   };
@@ -110,12 +114,17 @@ function registerMediaKeys() {
   if (process.env.OCTO_E2E) return;
   const bind = (accelerator, command) => {
     try {
-      if (globalShortcut.register(accelerator, () => handleCommand(command))) return;
+      if (globalShortcut.register(accelerator, () => handleCommand(command))) {
+        logger.debug('shortcuts', 'media key registered', { accelerator, command });
+        return;
+      }
       mediaKeysFailed = true;
+      logger.warn('shortcuts', 'media key is taken', { accelerator, command });
       console.warn('[octo] shortcut is taken:', accelerator);
     } catch (err) {
       // На Wayland глобальные клавиши могут требовать портал — не критично.
       mediaKeysFailed = true;
+      logger.warn('shortcuts', 'media key failed', { accelerator, command, err: err?.message });
       console.warn('[octo] shortcut failed:', accelerator, err.message);
     }
   };
@@ -132,12 +141,16 @@ function registerMediaKeys() {
 
 const gotLock = cliMode ? true : app.requestSingleInstanceLock();
 if (!gotLock) {
+  logger.info('app', 'second instance exiting (lock held)');
+  logger.flush();
   app.quit();
 } else {
   app.on('second-instance', (_event, argv) => {
+    logger.info('app', 'second-instance event');
     if (!deepLinks.queueFrom(argv)) {
       const extUrl = externalHttpUrlFromArgv(argv);
       if (extUrl && linkHandler.isAvailable()) {
+        logger.info('links', 'forwarding external URL from second-instance', { url: extUrl });
         linkHandler.openInFallbackBrowser(extUrl);
         return;
       }
@@ -147,16 +160,32 @@ if (!gotLock) {
   });
 
   app.whenReady().then(async () => {
+    logger.init();
+    logger.info('app', 'app ready', {
+      version: app.getVersion(),
+      electron: process.versions.electron,
+      chrome: process.versions.chrome,
+      node: process.versions.node,
+      platform: process.platform,
+      arch: process.arch,
+      packaged: app.isPackaged && !process.defaultApp,
+      e2e: process.env.OCTO_E2E === '1',
+      hwVideo: process.argv.includes('--hw') || process.env.OCTO_HW_VIDEO === '1',
+    });
+
     if (cliMode) {
       const result = cliInstall ? appimage.install() : appimage.uninstall();
       if (result.ok) {
+        logger.info('appimage', cliInstall ? 'installed' : 'uninstalled');
         console.log(
           `[octo] ${cliInstall ? 'installed' : 'uninstalled'}`,
           result.appImage || result.desktop || '',
         );
       } else {
+        logger.error('appimage', 'integration failed', result.error);
         console.error('[octo] AppImage integration failed:', result.error);
       }
+      logger.flush();
       app.quit();
       return;
     }
@@ -255,6 +284,7 @@ if (!gotLock) {
 
     ipcMain.on('octo:cmd', (_event, command, payload) => handleCommand(command, payload));
     ipcMain.on('octo:ready', () => {
+      logger.info('renderer', 'titlebar ready');
       pushState();
       // Сообщаем один раз, что медиа-клавиши не достались (Wayland, заняты).
       if (mediaKeysFailed) {
@@ -264,8 +294,19 @@ if (!gotLock) {
     });
     ipcMain.on('octo:chrome-height', (_event, height) => setChromeHeight(height));
     ipcMain.on('octo:find', (_event, payload) => find.handle(payload));
+    ipcMain.on('octo:log', (_event, entry) => {
+      if (!entry || typeof entry !== 'object') return;
+      const level = String(entry.level || 'INFO').toUpperCase();
+      const scope = `ui:${String(entry.scope || 'renderer').slice(0, 24)}`;
+      const message = String(entry.message || '').slice(0, 500);
+      if (!message) return;
+      if (level === 'ERROR') logger.error(scope, message, entry.meta);
+      else if (level === 'WARN') logger.warn(scope, message, entry.meta);
+      else logger.info(scope, message, entry.meta);
+    });
 
     app.on('activate', () => {
+      logger.info('app', 'activate');
       if (!ctx.win || ctx.win.isDestroyed()) createWindow();
       else showWindow();
     });
@@ -273,6 +314,12 @@ if (!gotLock) {
     // После сбоя и перезапуска GPU-процесса активное видео может остаться с
     // пустой текстурой (чёрный экран): перерисовываем view и видеослой.
     app.on('child-process-gone', (_event, details) => {
+      logger.error('app', 'child-process-gone', {
+        type: details?.type,
+        reason: details?.reason,
+        exitCode: details?.exitCode,
+        name: details?.name,
+      });
       if (details?.type !== 'GPU') return;
       const wc = ctx.view?.webContents;
       if (wc && !wc.isDestroyed()) {
@@ -287,17 +334,22 @@ if (!gotLock) {
   });
 
   app.on('before-quit', () => {
+    logger.info('app', 'before-quit');
     ctx.quitting = true;
+    logger.flush();
   });
 
   app.on('will-quit', () => {
+    logger.info('app', 'will-quit');
     globalShortcut.unregisterAll();
     badges.stopSync();
     plugins.dispose();
     destroyTray();
+    logger.flush();
   });
 
   app.on('window-all-closed', () => {
+    logger.info('app', 'window-all-closed', { platform: process.platform });
     if (process.platform !== 'darwin') app.quit();
   });
 }

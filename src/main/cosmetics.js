@@ -25,6 +25,7 @@ const { isTikTokUrl } = require('./shared');
 const autoTheme = require('./auto-theme');
 const badges = require('./badges');
 const md3Site = require('./md3-site');
+const logger = require('./logger');
 const { EMOJI_SCRIPT } = require('./tiktok-emoji');
 const {
   getPaletteTokens,
@@ -701,10 +702,14 @@ const VIDEO_NO_SELECT_CSS = `
 
 const NATIVE_NAV_HIDE_JS = `(() => {
   const MARK = '${NATIVE_NAV_MARK}';
+  const CHAT_GUARD =
+    '[data-octo-md3-chat-layout], [data-e2e="chat-list-item"], [data-e2e="message-input-area"], [class*="SessionList" i], [class*="ConversationList" i], [class*="ChatList" i], [class*="DivChatMain" i]';
   const scan = () => {
-    const anchors = document.querySelectorAll(
-      '[data-e2e^="nav-"], a[href="/foryou"], a[href="/explore"], a[href="/following"], a[href="/friends"], a[href="/live"], a[href="/upload"], [data-e2e="tiktok-logo"]',
-    );
+    const anchors = Array.from(
+      document.querySelectorAll(
+        '[data-e2e^="nav-"], a[href="/foryou"], a[href="/explore"], a[href="/following"], a[href="/friends"], a[href="/live"], a[href="/upload"]',
+      ),
+    ).filter((el, _idx, all) => !all.some((other) => other !== el && other.contains(el)));
     if (anchors.length < 2) return;
     for (const anchor of anchors) {
       if (anchor.closest('[role="dialog"], header, [role="banner"]')) continue;
@@ -718,8 +723,8 @@ const NATIVE_NAV_HIDE_JS = `(() => {
         cur.id !== 'root'
       ) {
         if (
-          cur.matches('main, [role="main"], header, [role="banner"], .live-room-container') ||
-          cur.querySelector('main, [role="main"], [data-e2e="live-room-content"], video')
+          cur.matches('main, [role="main"], header, [role="banner"], .live-room-container, ' + CHAT_GUARD) ||
+          cur.querySelector('main, [role="main"], [data-e2e="live-room-content"], video, ' + CHAT_GUARD)
         ) {
           break;
         }
@@ -1376,15 +1381,31 @@ async function applyNow(wc) {
       const key = await wc.insertCSS(css, { cssOrigin: 'user' });
       if (currentGeneration === state.generation) state.keys.push(key);
       else wc.removeInsertedCSS(key).catch(() => {});
-    } catch {
-      /* документ сменился между вызовом и вставкой */
+    } catch (err) {
+      logger.throttled(
+        'cosmetics-insert-css',
+        5000,
+        'DEBUG',
+        'cosmetics',
+        'insertCSS failed',
+        err?.message,
+      );
     }
   }
   await Promise.all(previous.map((key) => wc.removeInsertedCSS(key).catch(() => {})));
   if (currentGeneration !== state.generation) return;
 
   await runScripts(wc);
-  injectFrameStyles(wc).catch(() => {});
+  injectFrameStyles(wc).catch((err) => {
+    logger.throttled(
+      'cosmetics-frame-css',
+      5000,
+      'DEBUG',
+      'cosmetics',
+      'injectFrameStyles failed',
+      err?.message,
+    );
+  });
 }
 
 const scriptRunning = new WeakSet();

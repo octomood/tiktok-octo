@@ -33,11 +33,11 @@ async function waitForValue(read, check, label, timeout = 15000) {
   throw new Error(`не дождались: ${label}`);
 }
 
-function diagnosticsFile(dir) {
+function diagnosticsFile(dir, prefix = 'tiktok-octo-diagnostics-') {
   if (!fs.existsSync(dir)) return '';
   const name = fs
     .readdirSync(dir)
-    .filter((item) => /^tiktok-octo-diagnostics-.*\.txt$/.test(item))
+    .filter((item) => item.startsWith(prefix) && item.endsWith('.txt'))
     .sort()
     .at(-1);
   return name ? path.join(dir, name) : '';
@@ -135,6 +135,35 @@ test('приватность: локальные данные, удаление,
     expect(diagnostics).not.toContain('user:pass');
     expect(diagnostics).not.toContain('socks5://');
     expect(diagnostics).toContain('Cookies, токены, переписка');
+    expect(diagnostics).toContain('--- Последние события ---');
+
+    // --- Полные логи и очистка ----------------------------------------------
+    await page.evaluate(() => window.octo.cmd('logsSave'));
+    const logsFile = await waitForValue(
+      () => diagnosticsFile(diagnosticsDir, 'tiktok-octo-logs-'),
+      (value) => Boolean(value),
+      'файл логов',
+    );
+    const savedLogs = fs.readFileSync(logsFile, 'utf8');
+    expect(savedLogs).toContain('--- Логи приложения ---');
+    expect(savedLogs).toContain('[app] app ready');
+    expect(savedLogs).toContain('[cmd] diagnosticsCopy');
+    expect(savedLogs).not.toContain(os.homedir());
+    expect(savedLogs).not.toContain('user:pass');
+    expect(savedLogs).not.toContain('socks5://');
+
+    await page.evaluate(() => window.octo.cmd('logsClear'));
+    await expect(page.locator('#pageTitle')).toContainText('Логи очищены');
+    fs.rmSync(logsFile, { force: true });
+    await page.evaluate(() => window.octo.cmd('logsSave'));
+    const clearedLogsFile = await waitForValue(
+      () => diagnosticsFile(diagnosticsDir, 'tiktok-octo-logs-'),
+      (value) => Boolean(value),
+      'файл логов после очистки',
+    );
+    const clearedLogs = fs.readFileSync(clearedLogsFile, 'utf8');
+    expect(clearedLogs).toContain('logs cleared');
+    expect(clearedLogs).not.toContain('[app] app ready');
 
     // --- Лицензии и дисклеймер ---------------------------------------------
     await page.evaluate(() => window.octo.cmd('showLicenses'));

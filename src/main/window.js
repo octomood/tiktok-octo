@@ -21,6 +21,7 @@ const uiCustom = require('./ui-custom');
 const { getPaletteTokens, normalizePaletteId } = require('./md3-palettes');
 const contextMenu = require('./context-menu');
 const { attachContextMenu } = require('./menu');
+const logger = require('./logger');
 
 function saveGeometry(win) {
   // В PiP и в «только полоса» окно маленькое — сохраняем геометрию до режима.
@@ -67,6 +68,11 @@ function createWindow() {
   });
 
   ctx.win = win;
+  logger.info('window', 'created', {
+    width: bounds.width ?? 1280,
+    height: bounds.height ?? 840,
+    uiScale,
+  });
   win.setMenuBarVisibility(false);
   ctx.uiScale = uiScale;
   ctx.uiFont = uiFont.normalizeUiFont(saved.uiFont);
@@ -100,6 +106,11 @@ function createWindow() {
   win.loadFile(path.join(__dirname, '../renderer/index.html'));
 
   win.once('ready-to-show', () => {
+    logger.info('window', 'ready-to-show', {
+      startHidden,
+      hasTray: Boolean(ctx.tray),
+      maximized: Boolean(saved.maximized),
+    });
     if (saved.alwaysOnTop) win.setAlwaysOnTop(true, 'floating');
     if (saved.maximized) win.maximize();
 
@@ -112,39 +123,47 @@ function createWindow() {
 
   win.on('resize', layout);
   win.on('maximize', () => {
+    logger.debug('window', 'maximize');
     layout();
     pushState();
   });
   win.on('unmaximize', () => {
+    logger.debug('window', 'unmaximize');
     layout();
     pushState();
   });
   win.on('enter-full-screen', () => {
+    logger.info('window', 'enter-full-screen');
     layout();
     pushState();
   });
   win.on('leave-full-screen', () => {
+    logger.info('window', 'leave-full-screen');
     layout();
     pushState();
   });
   win.on('show', () => {
+    logger.debug('window', 'show');
     layout();
     win.webContents.invalidate();
     resumePlayback();
     refreshTrayMenu();
   });
   win.on('hide', () => {
+    logger.debug('window', 'hide');
     rememberPlayback();
     player.pauseForBackground();
     refreshTrayMenu();
   });
   win.on('minimize', () => {
+    logger.debug('window', 'minimize');
     rememberPlayback();
     player.pauseForBackground();
     refreshTrayMenu();
   });
   win.on('blur', () => player.pauseForBackground());
   win.on('restore', () => {
+    logger.debug('window', 'restore');
     resumePlayback();
     refreshTrayMenu();
   });
@@ -152,15 +171,18 @@ function createWindow() {
   win.on('close', (event) => {
     const state = readState();
     if (state.closeToTray === true && !ctx.quitting) {
+      logger.info('window', 'close intercepted -> hide to tray');
       event.preventDefault();
       win.hide();
       refreshTrayMenu();
       return;
     }
+    logger.info('window', 'closing', { quitting: ctx.quitting });
     saveGeometry(win);
   });
 
   win.on('closed', () => {
+    logger.info('window', 'closed');
     contextMenu.dispose();
     chat.dispose();
     pip.reset();
@@ -174,7 +196,28 @@ function createWindow() {
 
   attachContextMenu(win.webContents, { editableOnly: true });
   win.webContents.on('before-input-event', handleShortcut);
+  win.webContents.on('render-process-gone', (_event, details) => {
+    logger.error('window', 'shell render-process-gone', {
+      reason: details?.reason,
+      exitCode: details?.exitCode,
+    });
+  });
+  win.webContents.on('did-fail-load', (_event, code, description, url) => {
+    logger.error('window', 'shell did-fail-load', { code, description, url });
+  });
+  win.webContents.on('console-message', (event) => {
+    if (event.level === 'error' || event.level === 'warning') {
+      logger.throttled(
+        `shell-console:${String(event.message).slice(0, 60)}`,
+        3000,
+        event.level === 'error' ? 'ERROR' : 'WARN',
+        'shell:console',
+        event.message,
+      );
+    }
+  });
   win.webContents.once('did-finish-load', () => {
+    logger.info('window', 'shell did-finish-load');
     pushState();
     refreshTrayMenu();
   });

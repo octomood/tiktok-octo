@@ -17,6 +17,7 @@ const { openExternal } = require('./links');
 const cosmetics = require('./cosmetics');
 const autoTheme = require('./auto-theme');
 const { evalInPage } = require('./page-eval');
+const logger = require('./logger');
 
 /**
  * Чат в панели слева.
@@ -32,7 +33,7 @@ const { evalInPage } = require('./page-eval');
  */
 
 const DEFAULT_CHAT_URL = 'https://www.tiktok.com/messages';
-const MESSAGES_PATH = /^\/messages(?:\/|$)/;
+const MESSAGES_PATH = /^\/(?:messages|inbox)(?:\/|$)/i;
 const BUSINESS_CHAT_PATH = /^\/business-suite\/?(?:messages|inbox|chat)?(?:\/|$)/i;
 const BUSINESS_HOST = /^business\.tiktok\.com$/i;
 const BUSINESS_SUB_CHAT_PATH = /^\/(?:$|messages|inbox|chat|i18n|creator)(?:\/|$)/i;
@@ -283,6 +284,7 @@ function scheduleFit(view, { immediate = true } = {}) {
     const prev = lastGrowth && lastGrowth.generation === generation ? lastGrowth : null;
     if (prev && ctx.chatWidth === prev.to && need - prev.need >= prev.to - prev.from - 4) {
       // Расширение не помогло: возвращаем ширину до погони и больше не меряем.
+      logger.debug('chat', 'scheduleFit rollback', { from: prev.from, to: prev.to, need });
       lastGrowth = null;
       cancelFit();
       ctx.chatWidth = prev.from;
@@ -295,6 +297,7 @@ function scheduleFit(view, { immediate = true } = {}) {
     const next = Math.min(limit, need + FIT_MARGIN);
     if (next <= ctx.chatWidth) return;
 
+    logger.debug('chat', 'scheduleFit resize', { from: ctx.chatWidth, to: next, need, limit });
     lastGrowth = { generation, from: ctx.chatWidth, to: next, need };
     ctx.chatWidth = next;
     layoutSoon();
@@ -366,7 +369,7 @@ let pendingFull = null;
 
 function allowFullNavigation(url) {
   try {
-    pendingFull = { path: new URL(url).pathname, until: Date.now() + 5000 };
+    pendingFull = { path: new URL(url).pathname, until: Date.now() + 15000 };
   } catch {
     pendingFull = null;
   }
@@ -374,6 +377,7 @@ function allowFullNavigation(url) {
 
 function fullNavigationAllowed(url) {
   if (!pendingFull || Date.now() > pendingFull.until) return false;
+  if (isChatPanelUrl(url)) return true;
   try {
     return new URL(url).pathname === pendingFull.path;
   } catch {
@@ -386,14 +390,28 @@ function fullNavigationAllowed(url) {
  * отменить: панель уже открыта. Сработает, даже если клик по ссылке успел
  * проскочить мимо нашего перехватчика в странице.
  *
- * `fromUrl` — страница, с которой уходим. Если она уже была сообщениями,
- * это внутренний переход самой страницы (выбор переписки), его не трогаем.
+ * `fromUrl` — страница, с которой уходим. Если она уже была страницей сообщений
+ * (или Business Suite), это внутренний переход, его не трогаем.
  */
 function interceptNavigation(url, fromUrl) {
   if (!isMessagesUrl(url)) return false;
-  if (isMessagesUrl(fromUrl)) return false;
-  if (ctx.htmlFullscreen || ctx.pipActive) return false;
-  if (fullNavigationAllowed(url)) return false;
+  if (isChatPanelUrl(fromUrl)) return false;
+  if (ctx.htmlFullscreen || ctx.pipActive) {
+    logger.debug('chat', 'interceptNavigation skipped (fullscreen/pip)', {
+      url: logger.sanitizeUrl(url),
+    });
+    return false;
+  }
+  if (fullNavigationAllowed(url)) {
+    logger.debug('chat', 'interceptNavigation skipped (full allowed)', {
+      url: logger.sanitizeUrl(url),
+    });
+    return false;
+  }
+  logger.info('chat', 'interceptNavigation -> open panel', {
+    url: logger.sanitizeUrl(url),
+    from: logger.sanitizeUrl(fromUrl),
+  });
   open(url);
   return true;
 }
@@ -413,7 +431,7 @@ function linkScript() {
   if (window.__octoChatLinks) return 0;
   // На самой странице сообщений и в Business Suite перехватывать нечего.
   if (
-    /^\\/(?:messages|business-suite)(?:\\/|$)/i.test(location.pathname) ||
+    /^\\/(?:messages|inbox|business-suite)(?:\\/|$)/i.test(location.pathname) ||
     /(^|\\.)business\\.tiktok\\.com$/i.test(location.hostname)
   ) {
     return 0;
@@ -422,7 +440,10 @@ function linkScript() {
   const isMessages = (raw) => {
     try {
       const url = new URL(raw);
-      return /(^|\\.)tiktok\\.com$/.test(url.hostname) && /^\\/messages(?:\\/|$)/.test(url.pathname);
+      return (
+        /(^|\\.)tiktok\\.com$/.test(url.hostname) &&
+        /^\\/(?:messages|inbox)(?:\\/|$)/i.test(url.pathname)
+      );
     } catch {
       return false;
     }
@@ -579,6 +600,10 @@ function attach(wc) {
     }
     if (!payload || !isMessagesUrl(payload.url)) return;
 
+    logger.info('chat', 'console signal received', {
+      full: Boolean(payload.full),
+      url: logger.sanitizeUrl(payload.url),
+    });
     if (payload.full) openFull(payload.url);
     else open(payload.url);
   });
@@ -646,8 +671,8 @@ function applyChatStyles(wc) {
       panelCssKeys.set(wc, key);
       if (prev && prev !== key) wc.removeInsertedCSS(prev).catch(() => {});
     })
-    .catch(() => {
-      /* документ сменился между вызовом и вставкой */
+    .catch((err) => {
+      logger.debug('chat', 'insertCSS failed', err?.message);
     });
   injectPanelFrameStyles(wc);
   cosmetics.apply(wc);
@@ -657,9 +682,11 @@ function applyChatStyles(wc) {
 function ensureView() {
   if (ctx.chatView && !ctx.chatView.webContents.isDestroyed()) return ctx.chatView;
   if (!ctx.win || ctx.win.isDestroyed() || !ctx.view || ctx.view.webContents.isDestroyed()) {
+    logger.warn('chat', 'ensureView skipped (missing win or view)');
     return null;
   }
 
+  logger.info('chat', 'creating chat WebContentsView');
   const main = ctx.view.webContents;
   const view = new WebContentsView({
     webPreferences: {
@@ -688,10 +715,22 @@ function ensureView() {
   // успевает мигнуть белым.
   autoTheme.sync(wc).catch(() => {});
 
-  wc.on('dom-ready', () => applyChatStyles(wc));
+  wc.on('dom-ready', () => {
+    logger.debug('chat', 'dom-ready', { url: logger.sanitizeUrl(wc.getURL()) });
+    applyChatStyles(wc);
+  });
   wc.on('did-finish-load', () => {
+    logger.info('chat', 'did-finish-load', { url: logger.sanitizeUrl(wc.getURL()) });
     applyChatStyles(wc);
     scheduleFit(view);
+  });
+  wc.on('did-fail-load', (_event, code, description, url, isMainFrame) => {
+    if (code === -3) return;
+    logger.error('chat', isMainFrame ? 'did-fail-load' : 'subframe did-fail-load', {
+      code,
+      description,
+      url: logger.sanitizeUrl(url),
+    });
   });
   // Промо и ленивые блоки дорисовываются позже — повторяем, как в ленте.
   wc.on('did-stop-loading', () => {
@@ -702,16 +741,35 @@ function ensureView() {
   });
   wc.on('did-frame-finish-load', (_event, isMainFrame) => {
     if (!isMainFrame) {
+      logger.debug('chat', 'subframe finished load', { url: logger.sanitizeUrl(wc.getURL()) });
       injectPanelFrameStyles(wc);
       cosmetics.injectFrameStyles(wc).catch(() => {});
       if (ctx.chatView === view && ctx.chatOpen) scheduleFit(view, { immediate: false });
     }
   });
+  wc.on('did-start-navigation', (details) => {
+    if (details?.isMainFrame && !details.isSameDocument) {
+      logger.info('chat', 'did-start-navigation', { url: logger.sanitizeUrl(details.url) });
+    }
+  });
+  wc.on('did-redirect-navigation', (details) => {
+    if (details?.isMainFrame) {
+      logger.info('chat', 'did-redirect-navigation', { url: logger.sanitizeUrl(details.url) });
+    }
+  });
+  wc.on('did-navigate', (_event, url, httpResponseCode, httpStatusText) => {
+    logger.info('chat', 'did-navigate', {
+      url: logger.sanitizeUrl(url),
+      status: httpResponseCode,
+      statusText: httpStatusText,
+    });
+  });
   // Переписка открывается внутри той же страницы: после перехода раскладка
   // сообщений может стать шире, чем была у списка. Иначе правый край диалога
   // остаётся обрезанным до следующего открытия панели.
-  wc.on('did-navigate-in-page', (_event, _url, isMainFrame) => {
+  wc.on('did-navigate-in-page', (_event, url, isMainFrame) => {
     if (!isMainFrame) return;
+    logger.info('chat', 'did-navigate-in-page', { url: logger.sanitizeUrl(url) });
     cosmetics.injectFrameStyles(wc).catch(() => {});
     // Ждём, пока доиграет переход: в момент анимации колонки ещё сдвинуты,
     // и замер поехавших кнопок расширил бы панель зря.
@@ -733,32 +791,61 @@ function ensureView() {
   wc.on('will-navigate', (event, url, _isInPlace, isMainFrame) => {
     if (!isMainFrameEvent(event, isMainFrame)) return;
     if (isTikTokUrl(url)) {
-      if (isChatPanelUrl(url)) return;
+      if (isChatPanelUrl(url)) {
+        logger.info('chat', 'will-navigate allow in panel', { url: logger.sanitizeUrl(url) });
+        return;
+      }
+      logger.info('chat', 'will-navigate forward to main view', { url: logger.sanitizeUrl(url) });
       event.preventDefault();
       const target = ctx.view && ctx.view.webContents;
       if (target && !target.isDestroyed()) target.loadURL(url).catch(() => {});
       return;
     }
+    logger.info('chat', 'will-navigate external', { url: logger.sanitizeUrl(url) });
     event.preventDefault();
     openExternal(url);
   });
   wc.on('will-redirect', (event, url, _isInPlace, isMainFrame) => {
     if (!isMainFrameEvent(event, isMainFrame)) return;
-    if (isTikTokUrl(url) || /^about:blank$/i.test(url)) return;
+    if (isTikTokUrl(url) || /^about:blank$/i.test(url)) {
+      logger.info('chat', 'will-redirect allow in panel', { url: logger.sanitizeUrl(url) });
+      return;
+    }
+    logger.warn('chat', 'will-redirect external', { url: logger.sanitizeUrl(url) });
     event.preventDefault();
     openExternal(url);
   });
   wc.setWindowOpenHandler(({ url }) => {
     if (isTikTokUrl(url)) {
+      logger.info('chat', 'windowOpen forward to main view', { url: logger.sanitizeUrl(url) });
       const target = ctx.view && ctx.view.webContents;
       if (target && !target.isDestroyed()) target.loadURL(url);
     } else {
+      logger.info('chat', 'windowOpen external', { url: logger.sanitizeUrl(url) });
       openExternal(url);
     }
     return { action: 'deny' };
   });
+  wc.on('console-message', (event) => {
+    if (event.level === 'error' || event.level === 'warning') {
+      logger.throttled(
+        `chat-console:${String(event.message).slice(0, 60)}`,
+        3000,
+        event.level === 'error' ? 'ERROR' : 'WARN',
+        'chat:console',
+        event.message,
+      );
+    }
+  });
+  wc.on('render-process-gone', (_event, details) => {
+    logger.error('chat', 'render-process-gone', {
+      reason: details?.reason,
+      exitCode: details?.exitCode,
+    });
+  });
 
   wc.on('destroyed', () => {
+    logger.info('chat', 'chatView destroyed');
     if (ctx.chatView === view) {
       ctx.chatView = null;
       ctx.chatOpen = false;
@@ -770,8 +857,17 @@ function ensureView() {
 
 /** Открыть панель; url — страница сообщений, с которой пришёл клик. */
 function open(url) {
-  if (!ctx.win || ctx.win.isDestroyed() || !ctx.view) return false;
-  if (ctx.htmlFullscreen || ctx.pipActive) return false;
+  if (!ctx.win || ctx.win.isDestroyed() || !ctx.view) {
+    logger.warn('chat', 'open ignored (no win/view)');
+    return false;
+  }
+  if (ctx.htmlFullscreen || ctx.pipActive) {
+    logger.info('chat', 'open blocked (fullscreen/pip)', {
+      fullscreen: ctx.htmlFullscreen,
+      pip: ctx.pipActive,
+    });
+    return false;
+  }
   if (ctx.panelOpen) setPanelOpen(false);
 
   const view = ensureView();
@@ -781,13 +877,20 @@ function open(url) {
   const target = addressFor(url);
   const wasOpen = ctx.chatOpen;
   ctx.chatOpen = true;
+  logger.info('chat', 'open panel', {
+    target: logger.sanitizeUrl(target),
+    current: logger.sanitizeUrl(wc.getURL()),
+    wasOpen,
+    width: ctx.chatWidth,
+    dock: ctx.chatDock,
+  });
   // Панель открыли заново — снова доверяем автоподбору, даже если ширину
   // в прошлый раз тянули мышью.
   if (!wasOpen) manualWidth = false;
 
   if (wc.getURL() !== target) {
-    wc.loadURL(target).catch(() => {
-      /* окно закрыли во время загрузки */
+    wc.loadURL(target).catch((err) => {
+      logger.warn('chat', 'loadURL failed', err?.message);
     });
   }
 
@@ -807,11 +910,15 @@ function open(url) {
 function openFull(url) {
   close({ focus: false });
   const main = ctx.view && ctx.view.webContents;
-  if (!main || main.isDestroyed()) return;
+  if (!main || main.isDestroyed()) {
+    logger.warn('chat', 'openFull ignored (no main view)');
+    return;
+  }
   const target = addressFor(url);
+  logger.info('chat', 'openFull', { target: logger.sanitizeUrl(target) });
   allowFullNavigation(target);
-  main.loadURL(target).catch(() => {
-    /* окно закрыли во время загрузки */
+  main.loadURL(target).catch((err) => {
+    logger.warn('chat', 'openFull loadURL failed', err?.message);
   });
   main.focus();
 }
@@ -819,6 +926,7 @@ function openFull(url) {
 function close({ focus = true } = {}) {
   const view = ctx.chatView;
   const wasOpen = ctx.chatOpen || Boolean(view);
+  if (wasOpen) logger.info('chat', 'close panel', { focus });
   cancelFit();
   ctx.chatView = null;
   ctx.chatOpen = false;
@@ -873,6 +981,10 @@ function resetView() {
 ipcMain.on('octo:chat-open', (event, payload) => {
   if (!ctx.view || event.sender !== ctx.view.webContents) return;
   if (!payload || typeof payload.url !== 'string' || !isMessagesUrl(payload.url)) return;
+  logger.info('chat', 'preload signal octo:chat-open', {
+    full: Boolean(payload.full),
+    url: logger.sanitizeUrl(payload.url),
+  });
   if (payload.full) openFull(payload.url);
   else open(payload.url);
 });

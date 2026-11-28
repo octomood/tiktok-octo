@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('./logger');
+
 /**
  * Автотёмная тема Chromium для страниц, которые не читают cookie-тему TikTok.
  *
@@ -64,11 +66,13 @@ function applyNow(wc, on) {
         return true;
       })
       .catch((err) => {
+        logger.throttled('auto-dark-err', 5000, 'WARN', 'theme', 'auto dark failed', err?.message);
         if (process.env.OCTO_DEBUG) console.warn('[octo] auto dark:', err.message);
         if (ownedByWc.has(wc)) detachOwned(wc);
         return false;
       });
   } catch (err) {
+    logger.throttled('auto-dark-err', 5000, 'WARN', 'theme', 'auto dark failed', err?.message);
     if (process.env.OCTO_DEBUG) console.warn('[octo] auto dark:', err.message);
     if (ownedByWc.has(wc)) detachOwned(wc);
     return false;

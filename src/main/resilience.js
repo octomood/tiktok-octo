@@ -6,6 +6,7 @@ const { app, powerMonitor } = require('electron');
 const { ctx, pushState, toast } = require('./app-context');
 const { readState, writeState } = require('./store');
 const { showMessageBox } = require('./dialogs');
+const logger = require('./logger');
 
 /**
  * Устойчивость: безопасный режим после падений, сторож памяти и экономный
@@ -75,6 +76,7 @@ function init() {
   safeMode = saved.safeMode === true || failures >= 2;
   running = true;
   writeGuard({ running: true, failures, safeMode });
+  logger.info('resilience', 'init', { failures, safeMode });
 
   ctx.safeMode = safeMode;
   const state = readState();
@@ -253,6 +255,10 @@ async function checkMemory() {
     lastMemoryReload = Date.now();
     memoryReloads += 1;
     noteMemoryReload(kb);
+    logger.warn('resilience', 'memory guard reload', {
+      mb: Math.round(kb / 1024),
+      reload: memoryReloads,
+    });
     toast('Высокий расход памяти — перезапускаю страницу');
     try {
       wc.reload();

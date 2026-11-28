@@ -8,6 +8,7 @@ const { ctx, pushState, toast } = require('./app-context');
 const { readState, writeState } = require('./store');
 const { authorFromUrl } = require('./shared');
 const { buildPath } = require('./download-name');
+const logger = require('./logger');
 
 /**
  * Менеджер загрузок.
@@ -215,6 +216,12 @@ function handle(item, source) {
     receivedBytes: 0,
   };
   ctx.downloads.push(entry);
+  logger.info('downloads', 'started', {
+    id,
+    ext: path.extname(original),
+    totalBytes: entry.totalBytes,
+    auto: settings.auto,
+  });
 
   const activeCount = ctx.downloads.filter((candidate) => candidate.state === 'progressing').length;
   const overLimit = activeCount > settings.limit;
@@ -258,6 +265,12 @@ function handle(item, source) {
   item.once('done', (_event, state) => {
     const finalState =
       state === 'completed' ? 'completed' : state === 'cancelled' ? 'cancelled' : 'failed';
+    logger.info('downloads', 'done', {
+      id,
+      state: finalState,
+      receivedBytes: item.getReceivedBytes(),
+      totalBytes: item.getTotalBytes(),
+    });
     patch(id, {
       state: finalState,
       path: item.getSavePath() || '',

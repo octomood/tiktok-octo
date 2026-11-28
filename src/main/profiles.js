@@ -5,6 +5,7 @@ const { session } = require('electron');
 const { ctx, pushState, toast } = require('./app-context');
 const { PARTITION } = require('./shared');
 const { readState, writeState } = require('./store');
+const logger = require('./logger');
 
 /**
  * Профили аккаунтов (изолированные сессии TikTok при общих настройках оболочки).
@@ -104,6 +105,7 @@ function setSwitcher(fn) {
 function switchTo(id) {
   const target = list.find((item) => item.id === id);
   if (!target || target.id === active) return false;
+  logger.info('profiles', 'switchTo', { from: active, to: target.id });
   active = target.id;
   save();
   if (switcher) switcher(target);
@@ -122,6 +124,7 @@ function create(name) {
     name: cleanName(name, `Аккаунт ${list.length}`),
     partition: partitionFor(id),
   };
+  logger.info('profiles', 'create', { id: entry.id });
   list.push(entry);
   active = id;
   save();
@@ -135,6 +138,7 @@ function rename(id, name) {
   if (!target) return false;
   const next = cleanName(name);
   if (!next) return false;
+  logger.info('profiles', 'rename', { id });
   target.name = next;
   save();
   return true;
@@ -148,6 +152,7 @@ function remove(id) {
   const index = list.findIndex((item) => item.id === id);
   if (index < 0) return false;
   const [removed] = list.splice(index, 1);
+  logger.info('profiles', 'remove', { id: removed.id });
   const wasActive = active === id;
   if (wasActive) active = DEFAULT_ID;
   save();

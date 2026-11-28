@@ -5,6 +5,7 @@ const { handleCommand } = require('./commands');
 const plugins = require('./plugins');
 const keymap = require('./keymap');
 const fullscreenNav = require('./fullscreen-nav');
+const logger = require('./logger');
 
 /**
  * Горячие клавиши.
@@ -89,10 +90,12 @@ function handleShortcut(event, input) {
   const command = keymap.commandFor(accelerator) || ALIASES[accelerator];
 
   if (command) {
+    logger.debug('shortcut', 'triggered', { accelerator, command });
     return run(() => handleCommand(command));
   }
 
   if (plugins.handleShortcut(input)) {
+    logger.debug('shortcut', 'plugin handled', { key: input.key });
     event.preventDefault();
   }
   return undefined;

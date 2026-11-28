@@ -48,6 +48,25 @@ const resilience = require('./resilience');
 const windowsMedia = require('./windows-media');
 const profiles = require('./profiles');
 const history = require('./history');
+const logger = require('./logger');
+
+async function logAuthCookieSummary(ses, reason) {
+  if (!ses || !ses.cookies) return;
+  try {
+    const cookies = await ses.cookies.get({ domain: 'tiktok.com' });
+    const names = new Set(cookies.map((c) => c.name));
+    logger.info('auth:cookies', reason, {
+      count: cookies.length,
+      sessionid: names.has('sessionid') || names.has('sessionid_ss'),
+      sid_tt: names.has('sid_tt'),
+      uid_tt: names.has('uid_tt'),
+      passport_csrf: names.has('passport_csrf_token'),
+      ttwid: names.has('ttwid'),
+    });
+  } catch (err) {
+    logger.warn('auth:cookies', 'failed to inspect cookie summary', err?.message);
+  }
+}
 
 /** Окно OAuth: то же persistent-хранилище, без системной рамки, Node и preload. */
 function authWindowOptions() {
@@ -191,8 +210,60 @@ function attachOAuthChrome(childWin) {
   };
 
   cwc.on('dom-ready', injectBar);
-  cwc.on('did-navigate', injectBar);
-  cwc.on('did-navigate-in-page', injectBar);
+  cwc.on('did-navigate', (_event, url, httpResponseCode, httpStatusText) => {
+    logger.info('oauth', 'did-navigate', {
+      url: logger.sanitizeUrl(url),
+      status: httpResponseCode,
+      statusText: httpStatusText,
+    });
+    injectBar();
+  });
+  cwc.on('did-navigate-in-page', (_event, url) => {
+    logger.debug('oauth', 'did-navigate-in-page', { url: logger.sanitizeUrl(url) });
+    injectBar();
+  });
+  cwc.on('did-start-navigation', (details) => {
+    if (details?.isMainFrame) {
+      logger.info('oauth', 'did-start-navigation', {
+        url: logger.sanitizeUrl(details.url),
+        inPlace: Boolean(details.isSameDocument),
+      });
+    }
+  });
+  cwc.on('did-redirect-navigation', (details) => {
+    if (details?.isMainFrame) {
+      logger.info('oauth', 'did-redirect-navigation', { url: logger.sanitizeUrl(details.url) });
+    }
+  });
+  cwc.on('did-finish-load', () => {
+    logger.info('oauth', 'did-finish-load', { url: logger.sanitizeUrl(cwc.getURL()) });
+  });
+  cwc.on('did-fail-load', (_event, code, description, url, isMainFrame) => {
+    if (!isMainFrame || code === -3) return;
+    logger.error('oauth', 'did-fail-load', {
+      code,
+      description,
+      url: logger.sanitizeUrl(url),
+    });
+  });
+  cwc.on('console-message', (event) => {
+    if (event.level === 'error' || event.level === 'warning') {
+      logger.throttled(
+        `oauth-console:${String(event.message).slice(0, 60)}`,
+        2000,
+        event.level === 'error' ? 'ERROR' : 'WARN',
+        'oauth:console',
+        event.message,
+      );
+    }
+  });
+  cwc.on('render-process-gone', (_event, details) => {
+    logger.error('oauth', 'render-process-gone', details);
+  });
+  childWin.on('closed', () => {
+    logger.info('oauth', 'popup closed');
+    logAuthCookieSummary(cwc.session, 'after-oauth-close');
+  });
 }
 
 function startUrl() {
@@ -227,6 +298,13 @@ function createView(urlOverride) {
 
   ctx.view = view;
   ctx.win.contentView.addChildView(view);
+  logger.info('view', 'createView', {
+    profile: profiles.activeProfile()?.id,
+    partition: profiles.activePartition(),
+    proxy: logger.describeProxy(ctx.region.proxy),
+    dpi: Boolean(ctx.dpi?.active),
+    urlOverride: urlOverride ? logger.sanitizeUrl(urlOverride) : '',
+  });
 
   const wc = view.webContents;
   // Окно пересоздали, пока открыт мастер: новый view тоже должен молчать.
@@ -254,38 +332,71 @@ function createView(urlOverride) {
   wc.setZoomFactor(readState().zoomFactor ?? 1);
 
   // --- Навигация: внутри приложения только TikTok и OAuth --------------------
-  wc.on('will-navigate', (event, url) => {
+  wc.on('will-navigate', (event, url, _isInPlace, isMainFrame) => {
+    // Навигации вложенных iframe (Business Suite, платежи, капча) не должны
+    // перехватываться как уход основного окна или открываться во внешнем браузере.
+    const isMain =
+      typeof event?.isMainFrame === 'boolean' ? event.isMainFrame : isMainFrame !== false;
+    if (!isMain || (event?.frame && event.frame !== wc.mainFrame)) return;
     // «Сообщения» живут в панели: не отдаём им всё окно, даже если клик
     // проскочил мимо перехватчика в странице.
     if (chat.interceptNavigation(url, wc.getURL())) {
+      logger.info('view', 'will-navigate intercepted by chat panel', {
+        url: logger.sanitizeUrl(url),
+      });
       event.preventDefault();
       return;
     }
-    if (isInternalUrl(url)) return;
+    if (isInternalUrl(url)) {
+      logger.info('view', 'will-navigate internal', { url: logger.sanitizeUrl(url) });
+      return;
+    }
+    logger.info('view', 'will-navigate external', { url: logger.sanitizeUrl(url) });
     event.preventDefault();
     openExternal(url);
   });
 
   wc.on('will-redirect', (event, url, _isInPlace, isMainFrame) => {
-    if (!isMainFrame || isInternalUrl(url)) return;
+    if (!isMainFrame) return;
+    if (isInternalUrl(url)) {
+      logger.info('view', 'will-redirect internal', { url: logger.sanitizeUrl(url) });
+      return;
+    }
+    logger.warn('view', 'will-redirect external', { url: logger.sanitizeUrl(url) });
     event.preventDefault();
     openExternal(url);
   });
 
-  wc.setWindowOpenHandler(({ url }) => {
+  wc.setWindowOpenHandler(({ url, frameName, disposition }) => {
     // Внутренние ссылки TikTok с target=_blank открываем в том же окне.
     if (isTikTokUrl(url)) {
+      logger.info('view', 'windowOpen same-view TikTok', {
+        url: logger.sanitizeUrl(url),
+        disposition,
+      });
       wc.loadURL(url);
       return { action: 'deny' };
     }
     // Окна OAuth (Google/Apple/Facebook/X) — безрамочные popup'ы поверх приложения.
     if (isAuthUrl(url)) {
+      logger.info('oauth', 'windowOpen allow popup', {
+        url: logger.sanitizeUrl(url),
+        frameName,
+        disposition,
+      });
       return { action: 'allow', overrideBrowserWindowOptions: authWindowOptions() };
     }
+    logger.info('view', 'windowOpen external deny', {
+      url: logger.sanitizeUrl(url),
+      disposition,
+    });
     openExternal(url);
     return { action: 'deny' };
   });
-  wc.on('did-create-window', (childWin) => attachOAuthChrome(childWin));
+  wc.on('did-create-window', (childWin, details) => {
+    logger.info('oauth', 'did-create-window', { url: logger.sanitizeUrl(details?.url) });
+    attachOAuthChrome(childWin);
+  });
 
   // --- Состояние -----------------------------------------------------------
   const refresh = () => pushState();
@@ -311,9 +422,15 @@ function createView(urlOverride) {
     lastUrlTimer = setTimeout(() => writeState({ lastUrl: url }), 1500);
   };
 
-  wc.on('did-navigate', () => {
+  wc.on('did-navigate', (_event, navUrl, httpResponseCode, httpStatusText) => {
     const previousUrl = lastUrl;
     lastUrl = wc.getURL();
+    logger.info('view', 'did-navigate', {
+      url: logger.sanitizeUrl(lastUrl || navUrl),
+      prev: logger.sanitizeUrl(previousUrl),
+      status: httpResponseCode,
+      statusText: httpStatusText,
+    });
     ctx.playing = false;
     // Ссылка сменилась — старый QR-код показывал бы чужую страницу.
     qr.clear();
@@ -328,6 +445,7 @@ function createView(urlOverride) {
     // Восстановленная сессия могла закончиться на /messages: показываем чат
     // панелью и возвращаем ленту вместо страницы на всё окно.
     if (chat.interceptNavigation(wc.getURL(), previousUrl)) {
+      logger.info('view', 'restored /messages redirected to HOME_URL');
       wc.loadURL(HOME_URL).catch(() => {});
     }
   });
@@ -336,6 +454,7 @@ function createView(urlOverride) {
     const previousUrl = lastUrl;
     const currentUrl = wc.getURL();
     lastUrl = currentUrl;
+    logger.info('view', 'did-navigate-in-page', { url: logger.sanitizeUrl(currentUrl) });
     // SPA сменила ролик: старый QR показывал бы чужую ссылку.
     if (qr.clear()) pushState();
     player.clearAbLoop({ silent: true });
@@ -390,18 +509,43 @@ function createView(urlOverride) {
 
   wc.on('did-start-navigation', (details) => {
     if (details && details.isMainFrame && !details.isSameDocument) {
+      logger.info('view', 'did-start-navigation', { url: logger.sanitizeUrl(details.url) });
       setViewLoading(true);
     }
   });
 
+  wc.on('did-redirect-navigation', (details) => {
+    if (details && details.isMainFrame) {
+      logger.info('view', 'did-redirect-navigation', { url: logger.sanitizeUrl(details.url) });
+    }
+  });
+
   wc.on('did-fail-load', (_event, code, description, url, isMainFrame) => {
-    if (!isMainFrame) return;
+    if (!isMainFrame) {
+      if (code !== -3) {
+        logger.warn('view', 'subframe did-fail-load', {
+          code,
+          description,
+          url: logger.sanitizeUrl(url),
+        });
+      }
+      return;
+    }
     setViewLoading(false);
-    if (code === -3 /* ERR_ABORTED */) return;
+    if (code === -3 /* ERR_ABORTED */) {
+      logger.debug('view', 'main did-fail-load ERR_ABORTED', { url: logger.sanitizeUrl(url) });
+      return;
+    }
 
     loadFailed = true;
     setOffline(true);
     loadFailures += 1;
+    logger.error('view', 'did-fail-load', {
+      code,
+      description,
+      url: logger.sanitizeUrl(url),
+      attempt: loadFailures,
+    });
     if (loadFailures > 3) {
       toast('Не удалось загрузить — нажмите ⟳ для повтора');
       return;
@@ -413,11 +557,18 @@ function createView(urlOverride) {
 
     clearTimeout(retryTimer);
     retryTimer = setTimeout(() => {
-      if (!wc.isDestroyed()) wc.reload();
+      if (!wc.isDestroyed()) {
+        logger.info('view', 'retrying reload after failure');
+        wc.reload();
+      }
     }, delay);
   });
 
   wc.on('render-process-gone', (_event, details) => {
+    logger.error('view', 'render-process-gone', {
+      reason: details?.reason,
+      exitCode: details?.exitCode,
+    });
     console.error('[octo] renderer gone:', details.reason);
     // Штатное завершение рендерера (закрытие окна) перезагружать не нужно.
     if (details.reason === 'clean-exit' || process.env.OCTO_E2E) return;
@@ -436,6 +587,14 @@ function createView(urlOverride) {
   });
 
   wc.on('did-finish-load', () => {
+    const loadedUrl = wc.getURL();
+    logger.info('view', 'did-finish-load', {
+      url: logger.sanitizeUrl(loadedUrl),
+      hadLoadFailure: loadFailed,
+    });
+    if (/\/(?:login|passport|foryou|messages|inbox)/i.test(loadedUrl)) {
+      logAuthCookieSummary(ses, `page-load:${logger.sanitizeUrl(loadedUrl)}`);
+    }
     // did-finish-load приходит и после сетевой ошибки, когда документ пустой.
     // В этом случае оставляем свой экран и не сбрасываем счётчик повторов.
     if (loadFailed) {
@@ -446,6 +605,7 @@ function createView(urlOverride) {
         .then((empty) => {
           setViewLoading(false);
           if (empty) {
+            logger.warn('view', 'did-finish-load body empty after failure');
             setOffline(true);
             return;
           }
@@ -479,6 +639,7 @@ function createView(urlOverride) {
   let lastHangReload = 0;
 
   wc.on('unresponsive', () => {
+    logger.warn('view', 'webContents unresponsive', { url: logger.sanitizeUrl(wc.getURL()) });
     toast('Страница не отвечает…');
     clearTimeout(hangTimer);
     hangTimer = setTimeout(() => {
@@ -486,13 +647,27 @@ function createView(urlOverride) {
       const now = Date.now();
       if (now - lastHangReload < 120000) return;
       lastHangReload = now;
+      logger.warn('view', 'reloading unresponsive page');
       toast('Перезапускаю зависшую страницу…');
       wc.reload();
     }, 20000);
   });
   wc.on('responsive', () => {
+    logger.info('view', 'webContents responsive again');
     clearTimeout(hangTimer);
     hangTimer = null;
+  });
+
+  wc.on('console-message', (event) => {
+    if (event.level === 'error' || event.level === 'warning') {
+      logger.throttled(
+        `view-console:${String(event.message).slice(0, 60)}`,
+        3000,
+        event.level === 'error' ? 'ERROR' : 'WARN',
+        'view:console',
+        event.message,
+      );
+    }
   });
 
   // --- Косметика: промо, скроллбары, лишние разделы ------------------------
@@ -565,12 +740,15 @@ function createView(urlOverride) {
     .catch(() => {})
     .then(() => region.applySiteLanguageCookie(ses).catch(() => {}))
     .finally(() => {
-      if (!wc.isDestroyed()) wc.loadURL(urlOverride || startUrl());
+      const target = urlOverride || startUrl();
+      logger.info('view', 'initial loadURL', { url: logger.sanitizeUrl(target) });
+      if (!wc.isDestroyed()) wc.loadURL(target);
     });
 }
 
 function recreateView() {
   if (!ctx.win || ctx.win.isDestroyed()) return;
+  logger.info('view', 'recreateView', { profile: profiles.activeProfile()?.id });
   chat.resetView();
   const old = ctx.view;
   ctx.view = null;

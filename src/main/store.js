@@ -3,6 +3,7 @@
 const { app } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
+const logger = require('./logger');
 
 const FILE = 'octo-state.json';
 
@@ -30,8 +31,8 @@ function writeState(patch) {
     } catch {
       /* Windows и файловые системы без прав доступа */
     }
-  } catch {
-    /* состояние — не критично, молча игнорируем */
+  } catch (err) {
+    logger.warn('store', 'writeState failed', err?.message);
   }
 }
 

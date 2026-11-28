@@ -4,6 +4,7 @@ const { app } = require('electron');
 const { ctx, toast } = require('./app-context');
 const { isTikTokUrl } = require('./shared');
 const { PROTOCOL, decodeArgument, targetFromArgv } = require('./deep-link-url');
+const logger = require('./logger');
 
 /**
  * Ссылки из системы.
@@ -29,11 +30,17 @@ function flush() {
     pending = url;
     return;
   }
-  wc.loadURL(url).catch(() => {});
+  logger.info('deeplink', 'opening URL', { url: logger.sanitizeUrl(url) });
+  wc.loadURL(url).catch((err) => {
+    logger.warn('deeplink', 'loadURL failed', err?.message);
+  });
 }
 
 function open(url) {
-  if (!isTikTokUrl(url)) return false;
+  if (!isTikTokUrl(url)) {
+    logger.warn('deeplink', 'rejected non-TikTok URL', { url: logger.sanitizeUrl(url) });
+    return false;
+  }
   pending = url;
   flush();
   if (pending && ready) toast('Не удалось открыть ссылку');

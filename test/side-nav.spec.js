@@ -139,6 +139,11 @@ test('кастомное левое меню навигации: поиск, р�
     await expect(page.locator('[data-sidenav="messages"]')).toHaveClass(/is-current/);
     await expect(page.locator('#btnChat')).toHaveAttribute('aria-pressed', 'false');
 
+    await site.evaluate(() => window.history.pushState({}, '', '/business-suite/messages'));
+    await expect(page.locator('[data-sidenav="messages"]')).toHaveClass(/is-current/);
+    await site.evaluate(() => window.history.pushState({}, '', '/inbox'));
+    await expect(page.locator('[data-sidenav="messages"]')).toHaveClass(/is-current/);
+
     await page.locator('[data-sidenav="foryou"]').click();
     await expect
       .poll(async () => (await viewBounds(app))?.url)

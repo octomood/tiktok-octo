@@ -1763,6 +1763,154 @@ test('MD3 на странице сообщений: подложки не миг
         nameColor: 'rgb(221, 210, 224)',
       });
 
+    // 9.8. Загрузка /messages без верхней шапки (r.top === 0) при пустой левой
+    // колонке (скелетон + ссылка с data-e2e="tiktok-logo") и уже смонтированной
+    // заглушкой DivChatMain (💬): левая колонка не скрывается, а после подгрузки
+    // обфусцированных строк разворачивается вместе с диалогом на всю ширину окна.
+    await site.evaluate(() => {
+      document.body.innerHTML = `
+        <div class="DivBodyContainer" id="msgAsyncShell" style="max-width:860px;margin:0 auto;height:420px;display:flex;">
+          <div id="msgAsyncLeft" style="width:280px;height:100%;background:rgb(18,27,32);">
+            <a href="/foryou" id="msgLogoInCol" style="display:flex;align-items:center;height:44px;padding:0 12px;">
+              <svg data-e2e="tiktok-logo" width="28" height="28" viewBox="0 0 28 28"></svg>
+            </a>
+          </div>
+          <div class="DivChatMain" id="msgAsyncMain" style="width:580px;height:100%;background:#ffffff;">
+            <svg width="48" height="48" viewBox="0 0 24 24"></svg>
+          </div>
+        </div>
+      `;
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const beforeLoad = await site.evaluate(() => {
+      const left = document.getElementById('msgAsyncLeft');
+      const main = document.getElementById('msgAsyncMain');
+      return {
+        leftDisplay: getComputedStyle(left).display,
+        leftNativeMark: left.getAttribute('data-octo-native-sidenav'),
+        leftChatLayout: left.getAttribute('data-octo-md3-chat-layout'),
+        mainChatLayout: main.getAttribute('data-octo-md3-chat-layout'),
+      };
+    });
+    expect(beforeLoad).toEqual({
+      leftDisplay: 'block',
+      leftNativeMark: null,
+      leftChatLayout: null,
+      mainChatLayout: null,
+    });
+
+    await site.evaluate(() => {
+      const left = document.getElementById('msgAsyncLeft');
+      for (const name of ['hollatrigga', 'вандерюша', 'qwartt']) {
+        const row = document.createElement('div');
+        row.style.cssText = 'height:64px;width:260px;display:flex;align-items:center;';
+        row.textContent = name;
+        left.appendChild(row);
+      }
+    });
+
+    await expect
+      .poll(
+        () =>
+          site.evaluate(() => ({
+            leftDisplay: getComputedStyle(document.getElementById('msgAsyncLeft')).display,
+            leftWidth: Math.round(
+              document.getElementById('msgAsyncLeft').getBoundingClientRect().width,
+            ),
+            shellWidth: Math.round(
+              document.getElementById('msgAsyncShell').getBoundingClientRect().width,
+            ),
+            winWidth: window.innerWidth,
+            mainLayout: document
+              .getElementById('msgAsyncMain')
+              .getAttribute('data-octo-md3-chat-layout'),
+          })),
+        { timeout: 6000 },
+      )
+      .toEqual({
+        leftDisplay: 'block',
+        leftWidth: 348,
+        shellWidth: expect.any(Number),
+        winWidth: expect.any(Number),
+        mainLayout: 'main',
+      });
+    const asyncDims = await site.evaluate(() => ({
+      shell: Math.round(document.getElementById('msgAsyncShell').getBoundingClientRect().width),
+      mainRight: Math.round(document.getElementById('msgAsyncMain').getBoundingClientRect().right),
+      win: window.innerWidth,
+    }));
+    expect(asyncDims.shell).toBeGreaterThanOrEqual(asyncDims.win - 4);
+    expect(asyncDims.mainRight).toBeGreaterThanOrEqual(asyncDims.win - 4);
+
+    // 9.9. Позднее появление Business Suite iframe после уже смонтированных пустой
+    // левой колонки и заглушки DivChatMain (💬): заглушка не блокирует распознавание
+    // iframe, обёртка вокруг iframe не скрывается, а iframe занимает 100% ширины.
+    await site.evaluate(() => {
+      document.body.innerHTML = `
+        <div class="DivBodyContainer" id="lazyBsShell" style="display:flex;width:100vw;height:420px;">
+          <div class="DivEmptyLeft" id="lazyBsEmptyLeft" style="width:300px;height:100%;"></div>
+          <div class="DivChatMain" id="lazyBsPlaceholder" style="width:320px;height:100%;">
+            <svg width="48" height="48" viewBox="0 0 24 24"></svg>
+          </div>
+        </div>
+      `;
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(
+      await site.evaluate(() => ({
+        leftDisplay: getComputedStyle(document.getElementById('lazyBsEmptyLeft')).display,
+        placeholderLayout: document
+          .getElementById('lazyBsPlaceholder')
+          .getAttribute('data-octo-md3-chat-layout'),
+      })),
+    ).toEqual({ leftDisplay: 'block', placeholderLayout: null });
+
+    await site.evaluate(() => {
+      const wrap = document.createElement('div');
+      wrap.id = 'lazyBsFrameWrap';
+      wrap.style.cssText = 'flex:1;height:100%;';
+      const frame = document.createElement('iframe');
+      frame.id = 'lazyBsFrame';
+      frame.setAttribute('src', 'about:blank#business-suite/messages');
+      frame.style.cssText = 'width:500px;height:100%;border:0;';
+      wrap.appendChild(frame);
+      document.getElementById('lazyBsShell').appendChild(wrap);
+    });
+
+    await expect
+      .poll(() =>
+        site.evaluate(() => ({
+          emptyLeftDisplay: getComputedStyle(document.getElementById('lazyBsEmptyLeft')).display,
+          placeholderDisplay: getComputedStyle(document.getElementById('lazyBsPlaceholder'))
+            .display,
+          wrapDisplay: getComputedStyle(document.getElementById('lazyBsFrameWrap')).display,
+          frameLayout: document
+            .getElementById('lazyBsFrame')
+            .getAttribute('data-octo-md3-chat-layout'),
+          frameWidth: Math.round(
+            document.getElementById('lazyBsFrame').getBoundingClientRect().width,
+          ),
+          winWidth: window.innerWidth,
+        })),
+      )
+      .toEqual({
+        emptyLeftDisplay: 'none',
+        placeholderDisplay: 'none',
+        wrapDisplay: 'block',
+        frameLayout: 'frame',
+        frameWidth: expect.any(Number),
+        winWidth: expect.any(Number),
+      });
+    const lazyFrameDims = await site.evaluate(() => ({
+      frameWidth: Math.round(document.getElementById('lazyBsFrame').getBoundingClientRect().width),
+      frameLeft: Math.round(document.getElementById('lazyBsFrame').getBoundingClientRect().left),
+      winWidth: window.innerWidth,
+    }));
+    expect(lazyFrameDims.frameLeft).toBe(0);
+    expect(lazyFrameDims.frameWidth).toBeGreaterThanOrEqual(lazyFrameDims.winWidth - 2);
+
     // 10. Контраст текста и иконок: --const-text-primary, нижняя панель плеера
     // вне DivBasicPlayerWrapper (пауза, 1.0x, CC-контур, звук, <use>, Animation),
     // плашка над автором и ИИ-метка с opacity-подложкой, устойчивые к повторному скану.

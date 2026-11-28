@@ -2,6 +2,7 @@
 
 const https = require('node:https');
 const net = require('node:net');
+const logger = require('./logger');
 
 /**
  * Локальный обход DPI без прокси и VPN (в духе Zapret / GoodbyeDPI / ByeDPI).
@@ -400,7 +401,13 @@ async function openTunnel(client, host, targetPort, rest) {
     });
   });
 
-  upstream.once('error', () => {
+  upstream.once('error', (err) => {
+    logger.throttled('dpi-upstream-err', 3000, 'WARN', 'dpi', 'upstream error', {
+      host,
+      port: targetPort,
+      established,
+      err: err?.message,
+    });
     if (!established) deny(client, 502, 'Bad Gateway');
     else client.destroy();
   });
@@ -471,7 +478,8 @@ function handleConnection(client) {
 
 function connectServer() {
   const next = net.createServer(handleConnection);
-  next.on('error', () => {
+  next.on('error', (err) => {
+    logger.error('dpi', 'proxy server error', err?.message);
     if (process.env.OCTO_DEBUG) console.warn('[octo] dpi proxy server error');
   });
 
@@ -495,11 +503,13 @@ async function start() {
   if (server) return port;
   server = await connectServer();
   port = server.address().port;
+  logger.info('dpi', 'started', { port });
   return port;
 }
 
 function stop() {
   if (!server) return;
+  logger.info('dpi', 'stopping', { port });
   const current = server;
   server = null;
   port = 0;

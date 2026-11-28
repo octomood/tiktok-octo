@@ -256,6 +256,9 @@ function buildAppMenu() {
             submenu: [
               { label: 'О программе', click: showAboutDialog },
               { label: 'Диагностика', click: () => privacy.copyDiagnostics() },
+              { label: 'Сохранить логи…', click: () => privacy.saveLogs() },
+              { label: 'Папка логов', click: () => privacy.openLogsFolder() },
+              { type: 'separator' },
               { label: 'Лицензии', click: () => privacy.showLicenses() },
               { label: 'Не связан с TikTok', click: () => privacy.showDisclaimer() },
             ],

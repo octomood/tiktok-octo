@@ -23,6 +23,7 @@ const {
   riskLabel,
 } = require('./permissions');
 const { DOCS_URL, PUBLISHING_URL, TELEGRAM_URL, LIMITS } = require('./constants');
+const logger = require('../logger');
 
 /**
  * Система плагинов целиком.
@@ -1203,6 +1204,7 @@ async function reloadDevPlugins() {
 async function setEnabled(id, enabled) {
   const record = getRecord(id);
   if (!record) return { ok: false, error: 'Плагин не найден' };
+  logger.info('plugins', enabled ? 'enabling plugin' : 'disabling plugin', { id });
   const preview = previewTimers.get(id);
   if (preview) {
     clearTimeout(preview);
@@ -1618,15 +1620,23 @@ function init(options = {}) {
   });
 
   if (safeMode) {
+    logger.warn('plugins', 'safeMode active, skipping plugin load');
     publishSummary();
     return;
   }
 
   loadInstalled()
-    .catch((err) => console.warn('[octo] plugins load failed:', err.message))
+    .catch((err) => {
+      logger.error('plugins', 'loadInstalled failed', err?.message);
+      console.warn('[octo] plugins load failed:', err.message);
+    })
     .finally(() => {
       loadDevPlugins();
       publishSummary();
+      logger.info('plugins', 'initialized', {
+        installed: ctx.plugins?.installedCount,
+        enabled: ctx.plugins?.enabledCount,
+      });
     });
 }
 

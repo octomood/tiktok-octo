@@ -1985,7 +1985,7 @@ const COMPONENT_CSS = `
   }
 
   [${CHAT_LAYOUT_ATTR}="main"] {
-    flex: 1 1 auto !important;
+    flex: 1 1 0% !important;
     width: auto !important;
     max-width: none !important;
     min-width: 0 !important;
@@ -2024,7 +2024,8 @@ const COMPONENT_CSS = `
     [class*="ConversationDetail"],
     [class*="ChatArea"]
   ) {
-    flex: 1 1 auto !important;
+    flex: 1 1 0% !important;
+    width: auto !important;
     max-width: none !important;
     min-width: 0 !important;
   }
@@ -3655,7 +3656,12 @@ function syncScript(dark = true, amoled = false) {
     };
 
     let lastLayoutFallbackAt = 0;
+    let layoutFallbackTimer = 0;
     const syncMessagesLayout = () => {
+      if (layoutFallbackTimer) {
+        clearTimeout(layoutFallbackTimer);
+        layoutFallbackTimer = 0;
+      }
       if (!isMessagesTopPage()) {
         lastLayoutFallbackAt = 0;
         if (document.querySelector('[' + CHAT_LAYOUT + ']')) {
@@ -3666,37 +3672,33 @@ function syncScript(dark = true, amoled = false) {
 
       const nextLayout = new Map();
       const mediaOrInputSelector =
-        'img, video, canvas, input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"], button, a[href], [data-e2e="tiktok-logo"], [data-e2e^="nav-"]';
+        'iframe, img, video, canvas, input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"], button, a[href], [data-e2e="tiktok-logo"], [data-e2e^="nav-"]';
+      const chatPaneSelector =
+        '[class*="DivChatMain" i], [class*="DivMessageContainer" i], [class*="ChatArea" i]';
       const hasRealNav = (el) =>
         el.matches('[class*="DivSideNavContainer"], nav') &&
         Boolean(el.querySelector('[data-e2e^="nav-"], a[href]'));
-      let workspace = document.querySelector(
-        '[' + CHAT_LAYOUT + '="frame"], [' + CHAT_LAYOUT + '="sidebar"], [' + CHAT_LAYOUT + '="list"]',
-      );
-      if (workspace && (!workspace.isConnected || workspace.clientHeight < 200)) {
-        workspace = null;
-      }
-      let isBusinessFrame =
-        workspace?.tagName === 'IFRAME' &&
-        /(?:business-suite|business\\.tiktok)/i.test(workspace.getAttribute('src') || '');
-      if (!workspace) {
-        for (const frame of document.querySelectorAll('iframe')) {
-          const src = frame.getAttribute('src') || '';
-          if (/(?:recaptcha|hcaptcha|turnstile|arkoselabs|stripe|paypal|accounts\\.)/i.test(src)) {
-            continue;
-          }
-          const r = frame.getBoundingClientRect();
-          if (frame.getAttribute(CHAT_LAYOUT) === 'frame' || (r.width >= 240 && r.height >= 200)) {
-            workspace = frame;
-            isBusinessFrame = /(?:business-suite|business\\.tiktok)/i.test(src);
-            break;
-          }
+      // Вложенный iframe (например, Business Suite) проверяем раньше всего остального,
+      // чтобы позднее появление iframe всегда перебивало ранние обёртки/заглушки.
+      let workspace = null;
+      let isBusinessFrame = false;
+      for (const frame of document.querySelectorAll('iframe')) {
+        const src = frame.getAttribute('src') || '';
+        if (/(?:recaptcha|hcaptcha|turnstile|arkoselabs|stripe|paypal|accounts\\.)/i.test(src)) {
+          continue;
+        }
+        const r = frame.getBoundingClientRect();
+        if (frame.getAttribute(CHAT_LAYOUT) === 'frame' || (r.width >= 200 && r.height >= 200)) {
+          workspace = frame;
+          isBusinessFrame = /(?:business-suite|business\\.tiktok)/i.test(src);
+          break;
         }
       }
 
       const isEmptyPane = (el) => {
         if (!el || el.id?.startsWith('octo-')) return false;
         if (el.matches('header, [role="banner"], [' + SURFACE + '="header"]')) return false;
+        if (el.querySelector('iframe')) return false;
         if (
           hasRealNav(el) ||
           el.querySelector('[class*="DivSideNavContainer"] [data-e2e^="nav-"], [class*="DivSideNavContainer"] a[href], nav a[href]')
@@ -3749,19 +3751,25 @@ function syncScript(dark = true, amoled = false) {
         }
       }
 
+      // Предыдущую эвристическую разметку переиспользуем только если она сама не является
+      // пустой правой заглушкой диалога (💬) и всё ещё содержит список переписок.
       if (!workspace) {
-        for (const candidate of document.querySelectorAll(
-          '[class*="DivChatMain" i], [class*="DivMessageContainer" i], [class*="ChatArea" i]',
-        )) {
-          const r = candidate.getBoundingClientRect();
-          if (r.width >= 240 && r.height >= 240) {
-            workspace = candidate;
-            break;
-          }
+        const sticky = document.querySelector('[' + CHAT_LAYOUT + '="sidebar"], [' + CHAT_LAYOUT + '="list"]');
+        if (
+          sticky &&
+          sticky.isConnected &&
+          sticky.clientHeight >= 200 &&
+          !sticky.matches(chatPaneSelector) &&
+          (sticky.textContent || '').trim()
+        ) {
+          workspace = sticky;
         }
       }
 
-      if (!workspace && Date.now() - lastLayoutFallbackAt >= 1200) {
+      const elapsedFallback = Date.now() - lastLayoutFallbackAt;
+      if (!workspace && elapsedFallback < 1200) {
+        layoutFallbackTimer = setTimeout(syncMessagesLayout, Math.max(50, 1200 - elapsedFallback));
+      } else if (!workspace && elapsedFallback >= 1200) {
         lastLayoutFallbackAt = Date.now();
         for (const candidate of document.querySelectorAll('div, section, aside, ul')) {
           if (
@@ -3773,18 +3781,20 @@ function syncScript(dark = true, amoled = false) {
             candidate.matches(
               'header, [role="banner"], [class*="DivSideNavContainer"], [' +
                 SURFACE +
-                '="sidenav"], [role="dialog"], [role="menu"]',
+                '="sidenav"], [role="dialog"], [role="menu"], ' +
+                chatPaneSelector,
             ) ||
             candidate.closest(
               'header, [role="banner"], [class*="DivSideNavContainer"], [' +
                 SURFACE +
-                '="sidenav"], [role="dialog"], [role="menu"]',
+                '="sidenav"], [role="dialog"], [role="menu"], ' +
+                chatPaneSelector,
             )
           ) {
             continue;
           }
           const r = candidate.getBoundingClientRect();
-          if (r.top < 36 || !(candidate.textContent || '').trim()) continue;
+          if (r.top < 0 || !(candidate.textContent || '').trim()) continue;
           const hasRightPane = Boolean(
             candidate.parentElement &&
               Array.from(candidate.parentElement.children).some((sib) => {
@@ -3857,18 +3867,23 @@ function syncScript(dark = true, amoled = false) {
           while (cur && cur !== document.body && cur !== document.documentElement) {
             const parent = cur.parentElement;
             if (!parent) break;
-            for (const sibling of parent.children) {
-              if (sibling === cur || sibling.id?.startsWith('octo-')) continue;
-              const wasHidden = sibling.getAttribute(CHAT_LAYOUT) === 'hidden';
-              if (!wasHidden) {
-                const sr = sibling.getBoundingClientRect();
-                const onLeft = sr.right <= wsRect.left + 20;
-                const onRight = cur !== workspace && sr.left >= wsRect.right - 20;
-                if (sr.width < 32 || sr.height < 200 || (!onLeft && !onRight)) continue;
-              }
-              if (isEmptyPane(sibling)) {
-                nextLayout.set(sibling, 'hidden');
-                anyHidden = true;
+            // Соседние пустые панели скрываем только при активном iframe (например Business Suite):
+            // в обычном /messages загружающаяся или пустая левая колонка со списком не должна
+            // получать display: none, иначе список переписок пропадает полностью.
+            if (isFrame) {
+              for (const sibling of parent.children) {
+                if (sibling === cur || sibling.id?.startsWith('octo-')) continue;
+                const wasHidden = sibling.getAttribute(CHAT_LAYOUT) === 'hidden';
+                if (!wasHidden) {
+                  const sr = sibling.getBoundingClientRect();
+                  const onLeft = sr.right <= wsRect.left + 20;
+                  const onRight = cur !== workspace && sr.left >= wsRect.right - 20;
+                  if (sr.width < 32 || sr.height < 200 || (!onLeft && !onRight)) continue;
+                }
+                if (isEmptyPane(sibling)) {
+                  nextLayout.set(sibling, 'hidden');
+                  anyHidden = true;
+                }
               }
             }
             if (cur !== workspace) {
@@ -6348,6 +6363,7 @@ function syncScript(dark = true, amoled = false) {
         document.removeEventListener('pointerdown', onPointerDown, true);
         if (hoverFrame) cancelAnimationFrame(hoverFrame);
         if (hoverRetryTimer) clearTimeout(hoverRetryTimer);
+        if (layoutFallbackTimer) clearTimeout(layoutFallbackTimer);
         stopSeekbars();
         if (railObserver) railObserver.disconnect();
         if (state.attrObserver) state.attrObserver.disconnect();

@@ -7,6 +7,22 @@
 
 const api = window.octo;
 const $ = (id) => document.getElementById(id);
+
+window.addEventListener('error', (event) => {
+  api?.log?.('ERROR', 'window', event.message || 'Renderer error', {
+    file: event.filename ? event.filename.split('/').pop() : '',
+    line: event.lineno || 0,
+  });
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event?.reason;
+  api?.log?.(
+    'ERROR',
+    'promise',
+    reason instanceof Error ? reason.message : String(reason || 'Rejected'),
+  );
+});
 // Для строк, которые собираются из нескольких частей: DOM-наблюдатель
 // переводит готовый текст, но не умеет переводить его фрагменты.
 const tr = (text) => (window.octoI18n ? window.octoI18n.translate(text) : text);
@@ -2118,7 +2134,13 @@ function activeSideNavKey() {
   ) {
     return 'live';
   }
-  if (pathname.startsWith('/messages')) return 'messages';
+  if (
+    pathname.startsWith('/messages') ||
+    pathname.startsWith('/inbox') ||
+    /^\/business-suite\/(?:messages|inbox|chat)(?:\/|$)/i.test(pathname)
+  ) {
+    return 'messages';
+  }
   if (
     pathname.startsWith('/upload') ||
     pathname.startsWith('/creator-center') ||
@@ -2280,6 +2302,7 @@ function openPanelCategory(id) {
   const cat = el.panel.querySelector(`.panel-cat[data-cat="${id}"]`);
   if (!cat) return;
 
+  api?.log?.('INFO', 'settings', 'category', { id });
   panelCategory = id;
   clearPanelSearch();
   applyPanelFilter();
@@ -2416,6 +2439,10 @@ function paletteItems() {
     { label: 'Полный экран', cmd: 'fullscreen', hint: 'F11' },
     { label: 'Инструменты разработчика', cmd: 'devtools', hint: 'Ctrl Shift I' },
     { label: 'Папка загрузок', cmd: 'openDownloads' },
+    { label: 'Скопировать диагностику', cmd: 'diagnosticsCopy' },
+    { label: 'Сохранить логи…', cmd: 'logsSave' },
+    { label: 'Открыть папку логов', cmd: 'logsFolder' },
+    { label: 'Очистить логи', cmd: 'logsClear' },
     { label: 'Проверить обновления', cmd: 'checkUpdates' },
     { label: 'О программе', cmd: 'about' },
     { label: 'Подписки', cmd: 'openUrl', payload: 'https://www.tiktok.com/following' },

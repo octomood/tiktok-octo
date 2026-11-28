@@ -13,6 +13,7 @@ const { lookupExternalIp } = require('./ip-lookup');
 const proxyDiscovery = require('./proxy-discovery');
 const dpiBypass = require('./dpi-bypass');
 const { stripProxyCredentials } = require('./proxy-url');
+const logger = require('./logger');
 
 /**
  * Подмена региона.
@@ -143,12 +144,14 @@ async function checkIp() {
 
   if (info) {
     const text = [info.ip, countryName(info.country), info.city].filter(Boolean).join(' · ');
+    logger.info('region', 'checkIp ok', { country: info.country || '', city: info.city || '' });
     ctx.regionCheck = { state: 'done', text };
     pushState();
     toast(`Внешний IP: ${text}`);
     return;
   }
 
+  logger.warn('region', 'checkIp failed');
   ctx.regionCheck = { state: 'error', text: t('Не удалось проверить') };
   pushState();
   toast('Не удалось узнать внешний IP — проверьте прокси и сеть');
@@ -178,12 +181,14 @@ async function testConnection() {
     const ms = Math.max(1, Date.now() - started);
     const via = ctx.dpi?.active ? 'DPI' : ctx.region.proxy ? 'Прокси' : 'Прямо';
     const text = `${via} · ${ms} мс (HTTP ${response.status})`;
+    logger.info('region', 'testConnection ok', { via, ms, status: response.status });
     ctx.proxyTest = { state: 'done', ms, text };
     pushState();
     toast(`Соединение: ${text}`);
   } catch (err) {
     if (token !== pingToken) return;
     const text = err?.name === 'AbortError' ? 'Таймаут (>8 с)' : 'Нет ответа от TikTok';
+    logger.warn('region', 'testConnection failed', { err: err?.message || text });
     ctx.proxyTest = { state: 'error', ms: 0, text };
     pushState();
     toast(`Проверка связи: ${text}`);
@@ -264,8 +269,10 @@ async function resetSiteData() {
     await cosmetics.prepareTheme(ses);
     await applySiteLanguageCookie(ses);
     wc.loadURL(HOME_URL);
+    logger.info('region', 'site data cleared');
     toast('Данные TikTok сброшены — войдите заново');
   } catch (err) {
+    logger.error('region', 'clear site data failed', err?.message);
     if (process.env.OCTO_DEBUG) console.warn('[octo] clear data failed:', err.message);
     toast('Не удалось сбросить данные сайта');
   }
@@ -416,7 +423,13 @@ function reloadView(ignoreCache = false) {
 
 function applyProxy(ses) {
   if (!ses) return Promise.resolve();
-  return ses.setProxy(proxyConfig(ctx.region.proxy)).catch((err) => {
+  const cfg = proxyConfig(ctx.region.proxy);
+  logger.info('region', 'applyProxy', {
+    mode: cfg.mode || (ctx.dpi?.active ? 'dpi' : 'proxy'),
+    proxy: logger.describeProxy(ctx.region.proxy),
+  });
+  return ses.setProxy(cfg).catch((err) => {
+    logger.error('region', 'setProxy failed', err?.message);
     if (process.env.OCTO_DEBUG) console.warn('[octo] proxy failed:', err.message);
   });
 }
@@ -471,6 +484,7 @@ function setPreset(id) {
   const preset = findPreset(id);
   if (preset.id === ctx.region.preset) return preset.id;
 
+  logger.info('region', 'preset changed', { from: ctx.region.preset, to: preset.id });
   ctx.region.preset = preset.id;
   persist({ preset: preset.id });
   reloadView();
@@ -489,6 +503,7 @@ function setSiteLanguage(id) {
   const next = site ? site.id : 'auto';
   if (next === ctx.siteLanguage) return next;
 
+  logger.info('region', 'siteLanguage changed', { from: ctx.siteLanguage, to: next });
   ctx.siteLanguage = next;
   writeState({ siteLanguage: next });
 
@@ -525,10 +540,12 @@ function siteLanguageMenuItems() {
 function setProxy(raw) {
   const text = String(raw || '').trim();
   if (!parseProxy(text).ok) {
+    logger.warn('region', 'invalid proxy rejected');
     toast('Прокси: нужен адрес вида socks5://host:port');
     pushState();
     return false;
   }
+  logger.info('region', 'setProxy', logger.describeProxy(text));
 
   // Свой прокси и обход DPI — взаимоисключающие способы: адрес важнее.
   if (text && ctx.dpi.enabled) {
@@ -564,8 +581,10 @@ async function applyDpi(enabled) {
     let targetPort = 0;
     try {
       targetPort = await dpiBypass.start();
+      logger.info('region', 'dpi bypass started', { port: targetPort });
     } catch (err) {
       ctx.dpi = { enabled: false, active: false, port: 0 };
+      logger.error('region', 'dpi bypass failed', err?.message);
       if (process.env.OCTO_DEBUG) console.warn('[octo] dpi bypass failed:', err.message);
       toast('Не удалось включить обход DPI');
       pushState();
@@ -581,6 +600,7 @@ async function applyDpi(enabled) {
       persistProxy('');
     }
   } else {
+    logger.info('region', 'dpi bypass stopped');
     dpiBypass.stop();
     ctx.dpi = { enabled: false, active: false, port: 0 };
     writeState({ dpiBypass: false });
@@ -607,8 +627,10 @@ async function prepareDpi() {
   try {
     const targetPort = await dpiBypass.start();
     ctx.dpi = { enabled: true, active: true, port: targetPort };
+    logger.info('region', 'dpi bypass restored on startup', { port: targetPort });
   } catch (err) {
     ctx.dpi = { enabled: false, active: false, port: 0 };
+    logger.error('region', 'dpi bypass startup restore failed', err?.message);
     if (process.env.OCTO_DEBUG) console.warn('[octo] dpi bypass failed:', err.message);
   }
 }
@@ -677,8 +699,12 @@ function installLoginHandler() {
     const key = `${parsed.hostname}:${parsed.port}:${parsed.auth.username}`;
     const count = (attempts.get(key) || 0) + 1;
     attempts.set(key, count);
-    if (count > 3) return;
+    if (count > 3) {
+      logger.warn('region', 'proxy auth attempt limit reached', { count });
+      return;
+    }
     setTimeout(() => attempts.delete(key), 15_000).unref?.();
+    logger.info('region', 'providing proxy credentials', { attempt: count });
 
     event.preventDefault();
     callback(parsed.auth.username, parsed.auth.password);

@@ -1,6 +1,7 @@
 'use strict';
 
 const autoTheme = require('./auto-theme');
+const logger = require('./logger');
 
 const pendingByWc = new WeakMap();
 
@@ -41,6 +42,14 @@ async function evalInPage(wc, scripts) {
       }
     } catch (err) {
       // Например, открыт DevTools — тогда попробуем в следующий раз.
+      logger.throttled(
+        'page-eval-attach',
+        5000,
+        'WARN',
+        'page-eval',
+        'debugger attach failed',
+        err?.message,
+      );
       if (process.env.OCTO_DEBUG) console.warn('[octo] page eval attach failed:', err.message);
       return;
     }
@@ -57,6 +66,7 @@ async function evalInPage(wc, scripts) {
       });
     }
   } catch (err) {
+    logger.throttled('page-eval-run', 5000, 'WARN', 'page-eval', 'evaluate failed', err?.message);
     if (process.env.OCTO_DEBUG) console.warn('[octo] page eval failed:', err.message);
   } finally {
     state.refs = Math.max(0, state.refs - 1);

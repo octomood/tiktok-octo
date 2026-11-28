@@ -32,6 +32,7 @@ const cosmetics = require('../cosmetics');
 const i18n = require('../i18n');
 const { findAppLanguage } = require('../language-catalog');
 const { normalizeAccelerator, matchesInput } = require('./accelerator');
+const logger = require('../logger');
 
 /**
  * Хост плагина.
@@ -242,6 +243,7 @@ function notifyChange() {
 function setError(entry, message, options = {}) {
   entry.error = message;
   entry.active = false;
+  logger.error('plugin', `${entry.id}: ${message}`, { crash: Boolean(options.crash) });
   pushLog(entry, 'error', message);
   if (options.crash) {
     entry.record.lastLogs = entry.logs.slice(-60);

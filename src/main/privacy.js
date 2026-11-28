@@ -3,13 +3,14 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { app, clipboard, session } = require('electron');
+const { app, clipboard, session, shell } = require('electron');
 const { ctx, pushState, toast } = require('./app-context');
 const { readState, writeState } = require('./store');
 const pluginsState = require('./plugins/state');
-const { showMessageBox } = require('./dialogs');
+const { showMessageBox, showSaveDialog } = require('./dialogs');
 const { PARTITION } = require('./shared');
 const { backupDir } = require('./settings-transfer');
+const logger = require('./logger');
 
 /**
  * Приватность и диагностика.
@@ -224,30 +225,25 @@ async function remove(id) {
 
 /** Убрать домашний каталог и похожие на секреты значения из текста. */
 function sanitizeText(value) {
-  let text = String(value || '');
-  const roots = [app.getPath('userData'), os.homedir(), app.getPath('home')].filter(Boolean);
-  for (const root of roots) {
-    text = text.split(root).join('~');
-    text = text.split(root.replaceAll('\\', '/')).join('~');
-  }
-  text = text.replace(
-    /((?:token|secret|password|passwd|api[_-]?key|cookie|authorization)\s*[:=]\s*)[^\s,;]+/gi,
-    '$1<скрыто>',
-  );
-  return text;
+  return logger.sanitizeText(value);
 }
 
-function buildDiagnostics() {
+function buildDiagnostics({ fullLogs = false } = {}) {
+  logger.flush();
   const state = readState();
   const plugins = pluginsState.list();
+  const activeProfile = require('./profiles').activeProfile();
   const lines = [
     `TikTok Octo ${app.getVersion()}`,
     `Electron ${process.versions.electron} · Chromium ${process.versions.chrome}`,
     `Node ${process.versions.node} · V8 ${process.versions.v8}`,
     `ОС: ${process.platform} ${process.arch} · ${os.release()}`,
     `Профиль: ${app.getPath('userData')}`,
+    `Аккаунт-профиль: ${activeProfile?.id || 'default'}`,
     `Язык: ${state.language || 'ru'} · TikTok: ${state.siteLanguage || 'auto'}`,
-    `Регион: ${state.region?.preset || 'off'} · прокси: ${state.region?.proxy ? 'включён' : 'нет'}`,
+    `Регион: ${state.region?.preset || 'off'} · прокси: ${
+      state.region?.proxy ? 'включён' : 'нет'
+    } · DPI: ${ctx.dpi?.active ? 'активен' : ctx.dpi?.enabled ? 'включён' : 'нет'}`,
     `Тема: ${
       state.cosmetics?.['dark-theme'] === false
         ? 'светлая'
@@ -271,8 +267,19 @@ function buildDiagnostics() {
         `  ${plugin.id} ${plugin.version || '?'} · ${plugin.enabled === false ? 'выкл' : 'вкл'}`,
     ),
     '',
-    'Cookies, токены, переписка и адреса страниц не включены.',
+    'Cookies, токены, переписка и секреты не включены.',
   ];
+
+  if (fullLogs) {
+    const allLogs = logger.readAllLogs();
+    lines.push('', '--- Логи приложения ---', allLogs || '(логов пока нет)');
+  } else {
+    const recent = logger.recentLines(120);
+    if (recent.length) {
+      lines.push('', '--- Последние события ---', ...recent);
+    }
+  }
+
   return sanitizeText(lines.join('\n'));
 }
 
@@ -308,6 +315,66 @@ async function copyDiagnostics() {
     toast(`Не удалось сохранить диагностику: ${err.message}`);
     return { ok: false, error: err.message };
   }
+}
+
+async function saveLogs() {
+  const text = buildDiagnostics({ fullLogs: true });
+  const name = `tiktok-octo-logs-${stamp()}.txt`;
+
+  if (process.env.OCTO_DIAGNOSTICS_DIR) {
+    try {
+      fs.mkdirSync(process.env.OCTO_DIAGNOSTICS_DIR, { recursive: true });
+      const file = path.join(process.env.OCTO_DIAGNOSTICS_DIR, name);
+      fs.writeFileSync(file, `${text}\n`, { encoding: 'utf8', mode: 0o600 });
+      toast(`Логи сохранены: ${name}`);
+      return { ok: true, file };
+    } catch (err) {
+      logger.error('privacy', 'saveLogs failed', err?.message);
+      toast(`Не удалось сохранить логи: ${err.message}`);
+      return { ok: false, error: err.message };
+    }
+  }
+
+  try {
+    const result = await showSaveDialog(ctx.win, {
+      title: 'Сохранить логи',
+      defaultPath: path.join(app.getPath('downloads'), name),
+      filters: [{ name: 'Текстовые файлы', extensions: ['txt', 'log'] }],
+    });
+    if (result.canceled || !result.filePath) {
+      return { ok: false, canceled: true };
+    }
+    fs.writeFileSync(result.filePath, `${text}\n`, { encoding: 'utf8', mode: 0o600 });
+    toast(`Логи сохранены: ${path.basename(result.filePath)}`);
+    return { ok: true, file: result.filePath };
+  } catch (err) {
+    logger.error('privacy', 'saveLogs failed', err?.message);
+    toast(`Не удалось сохранить логи: ${err.message}`);
+    return { ok: false, error: err.message };
+  }
+}
+
+function openLogsFolder() {
+  try {
+    logger.flush();
+    const dir = logger.logsDir();
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    shell.openPath(dir).then((errText) => {
+      if (errText) {
+        logger.warn('privacy', 'openLogsFolder error', errText);
+        toast('Не удалось открыть папку логов');
+      }
+    });
+  } catch (err) {
+    logger.warn('privacy', 'openLogsFolder failed', err?.message);
+    toast('Не удалось открыть папку логов');
+  }
+}
+
+function clearLogs() {
+  logger.clear();
+  toast('Логи очищены');
+  return { ok: true };
 }
 
 function licenseOf(info) {
@@ -405,6 +472,9 @@ module.exports = {
   buildDiagnostics,
   sanitizeText,
   copyDiagnostics,
+  saveLogs,
+  openLogsFolder,
+  clearLogs,
   licensesText,
   showLicenses,
   showDisclaimer,

@@ -3,6 +3,7 @@
 const { app } = require('electron');
 const { toast } = require('./app-context');
 const updateWindow = require('./update-window');
+const logger = require('./logger');
 
 /**
  * Автообновление (electron-updater) — только для упакованной сборки.
@@ -33,12 +34,14 @@ let checking = false;
 async function startDownload() {
   if (!autoUpdater || (phase !== 'available' && phase !== 'error')) return;
 
+  logger.info('updates', 'startDownload', { version: offeredVersion });
   phase = 'downloading';
   updateWindow.show({ phase, percent: 0 });
 
   try {
     await autoUpdater.downloadUpdate();
   } catch (err) {
+    logger.error('updates', 'downloadUpdate failed', err?.message ?? err);
     console.warn('[octo] update download failed:', err?.message ?? err);
     phase = 'error';
     updateWindow.show({ phase, percent: 0 });
@@ -47,6 +50,8 @@ async function startDownload() {
 
 function restartNow() {
   if (!autoUpdater || phase !== 'ready') return;
+  logger.info('updates', 'quitAndInstall', { version: offeredVersion });
+  logger.flush();
   // isSilent=true: обновляем без окна установщика NSIS на Windows.
   // isForceRunAfter=true: после тихой установки приложение запускается снова.
   autoUpdater.quitAndInstall(true, true);
@@ -89,15 +94,20 @@ function initUpdates() {
   autoUpdater.autoInstallOnAppQuit = true;
 
   autoUpdater.on('error', (err) => {
+    logger.error('updates', 'autoUpdater error', err?.message ?? err);
     console.warn('[octo] update error:', err?.message ?? err);
     if (phase !== 'downloading') return;
     phase = 'error';
     updateWindow.show({ phase, percent: 0 });
   });
 
-  autoUpdater.on('update-available', (info) => offer(info));
+  autoUpdater.on('update-available', (info) => {
+    logger.info('updates', 'update-available', { version: info?.version });
+    offer(info);
+  });
 
   autoUpdater.on('update-not-available', () => {
+    logger.debug('updates', 'update-not-available');
     if (phase !== 'available') return;
     phase = 'idle';
     updateWindow.close();
@@ -109,6 +119,7 @@ function initUpdates() {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
+    logger.info('updates', 'update-downloaded', { version: info?.version || offeredVersion });
     phase = 'ready';
     updateWindow.show({
       phase,
@@ -118,9 +129,11 @@ function initUpdates() {
   });
 
   checking = true;
+  logger.info('updates', 'startup checkForUpdates');
   autoUpdater
     .checkForUpdates()
     .catch((err) => {
+      logger.warn('updates', 'startup check failed', err?.message ?? err);
       console.warn('[octo] update check failed:', err?.message ?? err);
     })
     .finally(() => {
@@ -130,6 +143,7 @@ function initUpdates() {
 
 /** Ручная проверка из панели функций. */
 async function checkNow() {
+  logger.info('updates', 'manual checkNow', { packaged, flatpak: IS_FLATPAK, phase });
   if (IS_FLATPAK) {
     toast('Обновления приходят через Flathub');
     return;
@@ -153,7 +167,8 @@ async function checkNow() {
     const result = await autoUpdater.checkForUpdates();
     const version = String(result?.updateInfo?.version || '');
     if (!version || version === app.getVersion()) toast('Обновлений нет');
-  } catch {
+  } catch (err) {
+    logger.warn('updates', 'manual check failed', err?.message ?? err);
     toast('Не удалось проверить обновления');
   } finally {
     checking = false;
