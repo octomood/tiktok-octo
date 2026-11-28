@@ -1504,5 +1504,16 @@
   "ZIP: файл «{0}» больше {1} байт": "ZIP: file «{0}» lebih besar dari {1} byte",
   "ZIP: файл «{0}» повторяется": "ZIP: file «{0}» terduplikasi",
   "ZIP: файл слишком короткий": "ZIP: file terlalu pendek",
-  "ZIP: ZIP64 не поддерживается": "ZIP: ZIP64 tidak didukung"
+  "ZIP: ZIP64 не поддерживается": "ZIP: ZIP64 tidak didukung",
+  "Переливание цветов интерфейса": "Pergantian warna antarmuka",
+  "Настройка переливания": "Pengaturan gradasi",
+  "Оттенки переливания": "Nuansa gradasi",
+  "Вся радуга": "Pelangi penuh",
+  "Закат": "Senja",
+  "Океан": "Lautan",
+  "Неон": "Neon",
+  "Начальный оттенок": "Hue awal",
+  "Конечный оттенок": "Hue akhir",
+  "Экспериментальные": "Eksperimental",
+  "Экспериментальные функции могут снижать производительность и вызывать подтормаживания на тяжёлых страницах и видео.": "Fitur eksperimental dapat menurunkan performa dan menyebabkan lag pada halaman berat maupun pemutaran video."
 }

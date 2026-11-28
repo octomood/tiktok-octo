@@ -120,6 +120,10 @@ const ctx = {
   themePalette: 'octo-lavender',
   /** Пользовательские цвета палитры 'custom'. */
   themeCustom: { primary: '#8c84a9', secondary: '', tertiary: '', surface: '', text: '' },
+  /** Настройки переливания цветов: диапазон оттенков и скорость. */
+  themeRainbow: { hueFrom: 0, hueTo: 360, speed: 1 },
+  /** Динамические токены для режима переливания цветов. */
+  themeRainbowTokens: null,
   /** Настройки плеера, которых нет у сайта. */
   player: {
     speed: 1,
@@ -154,6 +158,7 @@ const ctx = {
     id: rule.id,
     label: rule.label,
     enabled: rule.default,
+    experimental: Boolean(rule.experimental),
   })),
   pipActive: false,
   /** Автолистание ленты в режиме PiP. */
@@ -555,6 +560,7 @@ function setCosmeticsState(saved = {}) {
     id: rule.id,
     label: rule.label,
     enabled: saved[rule.id] === undefined ? rule.default : saved[rule.id] === true,
+    experimental: Boolean(rule.experimental),
   }));
 }
 
@@ -830,7 +836,9 @@ function currentState() {
     themeAmoled: Boolean(ctx.themeAmoled),
     themePalette: ctx.themePalette,
     themeCustom: ctx.themeCustom,
+    themeRainbow: ctx.themeRainbow,
     themeTokens: ctx.themeTokens || null,
+    themeRainbowTokens: ctx.themeRainbowTokens || null,
     proxyScan: {
       state: ctx.proxyScan.state,
       items: ctx.proxyScan.items.map((item) => ({ ...item })),

@@ -28,9 +28,12 @@ const md3Site = require('./md3-site');
 const { EMOJI_SCRIPT } = require('./tiktok-emoji');
 const {
   getPaletteTokens,
+  getIridescentCssTokens,
   listPalettes,
+  RAINBOW_PRESETS,
   normalizePaletteId,
   normalizeCustomTheme,
+  normalizeRainbowConfig,
 } = require('./md3-palettes');
 
 const PROMO_MARK = 'data-octo-promo';
@@ -609,6 +612,7 @@ function enabledShadowCss() {
         getThemePalette(),
         getThemeCustom(),
         isEffectiveAmoled(),
+        isEnabled('rainbow-theme'),
       ),
     );
   }
@@ -638,6 +642,7 @@ async function injectFrameStyles(wc = ctx.view?.webContents) {
   const frameMd3Script = isEnabled('md3-design')
     ? md3Site.syncScript(isEnabled('dark-theme'), isEffectiveAmoled())
     : md3Site.CLEANUP_JS;
+  const frameRainbowScript = isEnabled('rainbow-theme') ? rainbowScript() : RAINBOW_CLEANUP_JS;
 
   await Promise.all(
     frames.map(async (frame) => {
@@ -645,6 +650,7 @@ async function injectFrameStyles(wc = ctx.view?.webContents) {
         .executeJavaScript(frameInjectionScript(documentCss, shadowCss), false)
         .catch(() => false);
       await frame.executeJavaScript(frameMd3Script, false).catch(() => false);
+      await frame.executeJavaScript(frameRainbowScript, false).catch(() => false);
       await frame.executeJavaScript(EMOJI_SCRIPT, false).catch(() => false);
     }),
   );
@@ -840,6 +846,140 @@ const COMMENTS_PANEL_CLEANUP_JS = `(() => {
   document.documentElement.removeAttribute('${COMMENTS_PANEL_MARK}');
 })()`;
 
+const RAINBOW_HUE_ATTR = 'data-octo-rainbow';
+
+function rainbowScript(config = getThemeRainbow()) {
+  const cfg = normalizeRainbowConfig(config);
+  return `(() => {
+  const ATTR = '${RAINBOW_HUE_ATTR}';
+  const BASE_DEG_PER_MS = 0.024;
+  const INITIAL_CFG = ${JSON.stringify(cfg)};
+  if (!document.documentElement) return 0;
+
+  if (window.__octoRainbow) {
+    window.__octoRainbow.update(INITIAL_CFG);
+    return 0;
+  }
+
+  let cfg = INITIAL_CFG;
+  const mq =
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)')
+      : null;
+
+  const computeHue = (reduced) => {
+    const from = Number(cfg.hueFrom) || 0;
+    const to = Number(cfg.hueTo) ?? 360;
+    const speed = Math.min(4, Math.max(0.2, Number(cfg.speed) || 1));
+    const isFull = Math.abs(to - from) >= 360;
+    const span = isFull ? 360 : ((to - from) % 360 + 360) % 360;
+    if (reduced) {
+      return ((from + (isFull ? 260 : span / 2)) % 360).toFixed(2);
+    }
+    if (!isFull && span === 0) {
+      return (((from % 360) + 360) % 360).toFixed(2);
+    }
+    const degPerMs = BASE_DEG_PER_MS * speed;
+    if (isFull) {
+      return ((Date.now() * degPerMs) % 360).toFixed(2);
+    }
+    const periodMs = (2 * Math.max(span, 30)) / degPerMs;
+    const phase = (Date.now() % periodMs) / periodMs;
+    const wave = 0.5 - 0.5 * Math.cos(phase * Math.PI * 2);
+    return ((from + span * wave) % 360).toFixed(2);
+  };
+
+  const stepMsForSpeed = () => {
+    const speed = Math.min(4, Math.max(0.2, Number(cfg.speed) || 1));
+    return Math.round(Math.min(260, Math.max(100, 160 / Math.sqrt(speed))));
+  };
+
+  let lastHue = '';
+  let scrolling = false;
+  let scrollTimer = null;
+  const paint = () => {
+    if (!document.documentElement || scrolling) return;
+    const hue = computeHue(Boolean(mq && mq.matches));
+    if (hue !== lastHue) {
+      lastHue = hue;
+      document.documentElement.style.setProperty('--octo-hue', hue);
+    }
+    if (document.documentElement.getAttribute(ATTR) !== 'true') {
+      document.documentElement.setAttribute(ATTR, 'true');
+    }
+  };
+
+  let timer = null;
+  const sync = () => {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+    paint();
+    if (document.visibilityState === 'hidden') return;
+    if (mq && mq.matches) return;
+    timer = setInterval(paint, stepMsForSpeed());
+  };
+
+  const onVisibility = () => sync();
+  const onMotion = () => sync();
+  const onScroll = () => {
+    scrolling = true;
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      scrolling = false;
+      paint();
+    }, 220);
+  };
+
+  document.addEventListener('visibilitychange', onVisibility);
+  window.addEventListener('scroll', onScroll, { passive: true, capture: true });
+  if (mq && typeof mq.addEventListener === 'function') {
+    mq.addEventListener('change', onMotion);
+  }
+
+  window.__octoRainbow = {
+    sync,
+    update(nextCfg) {
+      if (nextCfg && typeof nextCfg === 'object') cfg = nextCfg;
+      sync();
+    },
+    stop() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+      clearTimeout(scrollTimer);
+      scrolling = false;
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('scroll', onScroll, { capture: true });
+      if (mq && typeof mq.removeEventListener === 'function') {
+        mq.removeEventListener('change', onMotion);
+      }
+      if (document.documentElement) {
+        document.documentElement.removeAttribute(ATTR);
+        document.documentElement.style.removeProperty('--octo-hue');
+      }
+      delete window.__octoRainbow;
+    },
+  };
+
+  sync();
+  return 1;
+})()`;
+}
+
+const RAINBOW_CLEANUP_JS = `(() => {
+  if (window.__octoRainbow) {
+    window.__octoRainbow.stop();
+    return;
+  }
+  if (document.documentElement) {
+    document.documentElement.removeAttribute('${RAINBOW_HUE_ATTR}');
+    document.documentElement.style.removeProperty('--octo-hue');
+  }
+})()`;
+
 const IMPLEMENTATIONS = {
   'octo-brand': {
     css: '[data-octo-brand] svg { display: none !important; }',
@@ -853,9 +993,14 @@ const IMPLEMENTATIONS = {
         getThemePalette(),
         getThemeCustom(),
         isEffectiveAmoled(),
+        isEnabled('rainbow-theme'),
       ),
     js: () => md3Site.syncScript(isEnabled('dark-theme'), isEffectiveAmoled()),
     cleanupJs: md3Site.CLEANUP_JS,
+  },
+  'rainbow-theme': {
+    js: () => rainbowScript(),
+    cleanupJs: RAINBOW_CLEANUP_JS,
   },
   'modern-font': { css: siteFontCss() },
   'hide-app-promo': {
@@ -935,6 +1080,10 @@ function getThemeAmoled() {
   return readState().themeAmoled === true;
 }
 
+function getThemeRainbow() {
+  return normalizeRainbowConfig(readState().themeRainbow);
+}
+
 function isEffectiveAmoled() {
   return isEnabled('dark-theme') && getThemeAmoled();
 }
@@ -944,18 +1093,29 @@ function getThemePayload() {
   const amoled = dark && getThemeAmoled();
   const palette = getThemePalette();
   const custom = getThemeCustom();
+  const rainbow = isEnabled('rainbow-theme');
+  const rainbowConfig = getThemeRainbow();
   return {
     dark,
     amoled,
     palette,
     custom,
+    rainbow,
+    rainbowConfig,
+    rainbowTokens: rainbow ? getIridescentCssTokens(dark, { amoled }) : null,
     tokens: getPaletteTokens(palette, dark, custom, { amoled }),
   };
 }
 
-function broadcastTheme() {
+function syncThemeContext() {
   const payload = getThemePayload();
   ctx.themeTokens = payload.tokens;
+  ctx.themeRainbowTokens = payload.rainbowTokens;
+  return payload;
+}
+
+function broadcastTheme() {
+  const payload = syncThemeContext();
   try {
     for (const win of BrowserWindow.getAllWindows()) {
       if (!win || win.isDestroyed()) continue;
@@ -1119,14 +1279,12 @@ function applyThemeMode(mode, { reload = true } = {}) {
     nextMode === 'system' ? Boolean(nativeTheme.shouldUseDarkColors) : nextMode === 'dark';
 
   ctx.themeMode = nextMode;
-  ctx.themeTokens = getPaletteTokens(getThemePalette(), nextDark, getThemeCustom(), {
-    amoled: nextDark && getThemeAmoled(),
-  });
   writeState({
     themeMode: nextMode,
     cosmetics: { ...settings(), 'dark-theme': nextDark },
   });
   setCosmeticsState(effectiveSettings());
+  syncThemeContext();
   apply();
   const chatWc = ctx.chatView?.webContents;
   if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
@@ -1151,8 +1309,8 @@ function applyThemeMode(mode, { reload = true } = {}) {
 function applyThemePalette(paletteId) {
   const nextPalette = normalizePaletteId(paletteId);
   ctx.themePalette = nextPalette;
-  ctx.themeTokens = getThemePayload().tokens;
   writeState({ themePalette: nextPalette });
+  syncThemeContext();
   apply();
   const chatWc = ctx.chatView?.webContents;
   if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
@@ -1165,8 +1323,8 @@ function applyThemePalette(paletteId) {
 function applyThemeAmoled(enabled) {
   const nextAmoled = Boolean(enabled);
   ctx.themeAmoled = nextAmoled;
-  ctx.themeTokens = getThemePayload().tokens;
   writeState({ themeAmoled: nextAmoled });
+  syncThemeContext();
   apply();
   const chatWc = ctx.chatView?.webContents;
   if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
@@ -1181,8 +1339,8 @@ function applyThemeCustom(customRaw, { activate = true } = {}) {
   const nextPalette = activate ? 'custom' : getThemePalette();
   ctx.themeCustom = nextCustom;
   ctx.themePalette = nextPalette;
-  ctx.themeTokens = getThemePayload().tokens;
   writeState({ themeCustom: nextCustom, themePalette: nextPalette });
+  syncThemeContext();
   apply();
   const chatWc = ctx.chatView?.webContents;
   if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
@@ -1190,6 +1348,27 @@ function applyThemeCustom(customRaw, { activate = true } = {}) {
   broadcastTheme();
   if (onChange) onChange();
   return nextCustom;
+}
+
+function applyThemeRainbow(patch) {
+  const current = getThemeRainbow();
+  const nextRainbow = normalizeRainbowConfig({ ...current, ...(patch || {}) });
+  ctx.themeRainbow = nextRainbow;
+  writeState({ themeRainbow: nextRainbow });
+  syncThemeContext();
+  if (isEnabled('rainbow-theme')) {
+    runScripts();
+    injectFrameStyles().catch(() => {});
+    const chatWc = ctx.chatView?.webContents;
+    if (chatWc && !chatWc.isDestroyed()) {
+      runScripts(chatWc);
+      injectFrameStyles(chatWc).catch(() => {});
+    }
+  }
+  pushState();
+  broadcastTheme();
+  if (onChange) onChange();
+  return nextRainbow;
 }
 
 function initThemeListener() {
@@ -1217,16 +1396,22 @@ function toggle(id) {
   const next = !isEnabled(id);
   writeState({ cosmetics: { ...settings(), [id]: next } });
   setCosmeticsState(effectiveSettings());
+  if (id === 'rainbow-theme') syncThemeContext();
   apply();
   const chatWc = ctx.chatView?.webContents;
   if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
+
+  if (id === 'rainbow-theme') {
+    pushState();
+    broadcastTheme();
+  }
 
   if (onChange) onChange();
   return next;
 }
 
 function menuItems() {
-  return RULES.map((rule) => ({
+  return RULES.filter((rule) => !rule.experimental).map((rule) => ({
     label: rule.label,
     type: 'checkbox',
     checked: isEnabled(rule.id),
@@ -1239,8 +1424,9 @@ ctx.themeMode = getThemeMode();
 ctx.themeAmoled = getThemeAmoled();
 ctx.themePalette = getThemePalette();
 ctx.themeCustom = getThemeCustom();
-ctx.themeTokens = getThemePayload().tokens;
+ctx.themeRainbow = getThemeRainbow();
 setCosmeticsState(effectiveSettings());
+syncThemeContext();
 
 try {
   ipcMain?.on('octo:theme', (event) => {
@@ -1248,6 +1434,9 @@ try {
   });
   ipcMain?.on('octo:theme-palettes', (event) => {
     event.returnValue = listPalettes();
+  });
+  ipcMain?.on('octo:rainbow-presets', (event) => {
+    event.returnValue = RAINBOW_PRESETS;
   });
 } catch {
   /* тестовая среда без Electron IPC */
@@ -1264,9 +1453,11 @@ module.exports = {
   applyThemeAmoled,
   applyThemePalette,
   applyThemeCustom,
+  applyThemeRainbow,
   getThemeAmoled,
   getThemePalette,
   getThemeCustom,
+  getThemeRainbow,
   getThemePayload,
   initThemeListener,
   toggle,

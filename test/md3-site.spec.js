@@ -1792,6 +1792,111 @@ test('MD3 на странице сообщений: подложки не миг
         cardText: 'rgb(221, 210, 224)',
         lightPillText: 'rgb(37, 32, 53)',
       });
+
+    // 11. Активные лайки, избранное (undefined-icon / favorite-icon) и лайки в комментариях:
+    // круглая подложка заполняется акцентом темы с контрастной иконкой (не сбрасывается
+    // в белый проверкой контраста и не перебивается стилями диалога/комментариев),
+    // а при снятии реакции возвращается исходный неактивный вид.
+    await site.evaluate(() => {
+      document.body.innerHTML = `
+        <div class="ActionBar" id="feedReactionBar" style="display:flex;flex-direction:column;gap:12px;padding:16px;background:rgb(25,22,36);">
+          <button type="button" class="ButtonActionItem" id="rxLikeBtn" aria-pressed="true">
+            <span data-e2e="like-icon" id="rxLikeCircle" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;">
+              <svg id="rxLikeSvg" width="24" height="24" viewBox="0 0 24 24"><path id="rxLikePath" d="M12 21l-8-8a5 5 0 018-6 5 5 0 018 6z" fill="var(--octo-md-primary)"/></svg>
+            </span>
+            <strong data-e2e="like-count">110.6K</strong>
+          </button>
+          <button type="button" class="ButtonActionItem" id="rxFavBtn" aria-pressed="false">
+            <span data-e2e="undefined-icon" id="rxFavCircle" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;">
+              <svg id="rxFavSvg" width="24" height="24" viewBox="0 0 24 24"><path id="rxFavPath" d="M6 3h12v18l-6-4-6 4z" fill="rgb(250, 206, 21)"/></svg>
+            </span>
+            <strong data-e2e="undefined-count">12.1K</strong>
+          </button>
+          <button type="button" class="ButtonActionItem" id="rxCommentBtn" aria-pressed="true">
+            <span data-e2e="comment-icon" id="rxCommentCircle" style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;">
+              <svg id="rxCommentSvg" width="24" height="24" viewBox="0 0 24 24"><path id="rxCommentPath" d="M4 4h16v12H7l-3 3z" fill="rgb(255, 255, 255)"/></svg>
+            </span>
+            <strong data-e2e="comment-count">385</strong>
+          </button>
+        </div>
+        <aside id="rxComments" style="position:fixed;right:0;top:0;width:320px;height:420px;background:#161823;">
+          <div class="DivCommentItemContainer">
+            <button type="button" data-e2e="comment-like-icon" id="rxCommentLikeBtn" style="color:rgb(254, 44, 85);">
+              <svg id="rxCommentLikeSvg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path id="rxCommentLikePath" d="M8 14L2 8a4 4 0 016-5 4 4 0 016 5z"/></svg>
+            </button>
+          </div>
+        </aside>
+        <div role="dialog" id="rxModal" style="width:320px;padding:12px;">
+          <button type="button" class="ButtonActionItem" id="rxModalFavBtn">
+            <span data-e2e="favorite-icon" id="rxModalFavWrap">
+              <svg id="rxModalFavSvg" width="20" height="20" viewBox="0 0 20 20"><path id="rxModalFavPath" d="M5 2h10v16l-5-3-5 3z" fill="#FACE15"/></svg>
+            </span>
+          </button>
+        </div>
+      `;
+    });
+
+    await expect
+      .poll(() =>
+        site.evaluate(() => ({
+          likeAction: document.getElementById('rxLikeCircle')?.getAttribute('data-octo-md3-action'),
+          likeCircleBg: getComputedStyle(document.getElementById('rxLikeCircle')).backgroundColor,
+          likePathFill: getComputedStyle(document.getElementById('rxLikePath')).fill,
+          favAction: document.getElementById('rxFavCircle')?.getAttribute('data-octo-md3-action'),
+          favCircleBg: getComputedStyle(document.getElementById('rxFavCircle')).backgroundColor,
+          favPathFill: getComputedStyle(document.getElementById('rxFavPath')).fill,
+          commentAction: document
+            .getElementById('rxCommentCircle')
+            ?.getAttribute('data-octo-md3-action'),
+          commentPathFill: getComputedStyle(document.getElementById('rxCommentPath')).fill,
+          commentLikeIcon: document
+            .getElementById('rxCommentLikeSvg')
+            ?.getAttribute('data-octo-md3-icon'),
+          commentLikeFill: getComputedStyle(document.getElementById('rxCommentLikePath')).fill,
+          modalFavIcon: document
+            .getElementById('rxModalFavSvg')
+            ?.getAttribute('data-octo-md3-icon'),
+          modalFavFill: getComputedStyle(document.getElementById('rxModalFavPath')).fill,
+        })),
+      )
+      .toEqual({
+        likeAction: 'active',
+        likeCircleBg: 'rgb(140, 132, 169)',
+        likePathFill: 'rgb(23, 20, 34)',
+        favAction: 'active',
+        favCircleBg: 'rgb(140, 132, 169)',
+        favPathFill: 'rgb(23, 20, 34)',
+        commentAction: null,
+        commentPathFill: 'rgb(255, 255, 255)',
+        commentLikeIcon: 'active',
+        commentLikeFill: 'rgb(140, 132, 169)',
+        modalFavIcon: 'active',
+        modalFavFill: 'rgb(140, 132, 169)',
+      });
+
+    // Снятие лайка и избранного (через атрибут/fill/style) сразу убирает активную подсветку.
+    await site.evaluate(() => {
+      document.getElementById('rxLikeBtn').setAttribute('aria-pressed', 'false');
+      document.getElementById('rxLikePath').setAttribute('fill', 'rgb(255, 255, 255)');
+      document.getElementById('rxFavPath').setAttribute('fill', 'rgb(255, 255, 255)');
+      document.getElementById('rxCommentLikeBtn').style.color = 'rgb(255, 255, 255)';
+    });
+
+    await expect
+      .poll(() =>
+        site.evaluate(() => ({
+          likeAction: document.getElementById('rxLikeCircle')?.getAttribute('data-octo-md3-action'),
+          favAction: document.getElementById('rxFavCircle')?.getAttribute('data-octo-md3-action'),
+          commentLikeIcon: document
+            .getElementById('rxCommentLikeSvg')
+            ?.getAttribute('data-octo-md3-icon'),
+        })),
+      )
+      .toEqual({
+        likeAction: null,
+        favAction: null,
+        commentLikeIcon: null,
+      });
   } finally {
     if (app) await app.close();
     await new Promise((resolve) => server.close(resolve));

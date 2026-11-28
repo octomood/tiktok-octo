@@ -144,6 +144,17 @@ const el = {
   uiFontPickFile: $('uiFontPickFile'),
   rowBackupRestore: $('rowBackupRestore'),
   panelCosmetics: $('panelCosmetics'),
+  panelExperimental: $('panelExperimental'),
+  rainbowSettingsBox: $('rainbowSettingsBox'),
+  rainbowRangeBadge: $('rainbowRangeBadge'),
+  rainbowGradientBar: $('rainbowGradientBar'),
+  rainbowPresets: $('rainbowPresets'),
+  rainbowHueFrom: $('rainbowHueFrom'),
+  rainbowHueFromVal: $('rainbowHueFromVal'),
+  rainbowHueTo: $('rainbowHueTo'),
+  rainbowHueToVal: $('rainbowHueToVal'),
+  rainbowSpeed: $('rainbowSpeed'),
+  rainbowSpeedVal: $('rainbowSpeedVal'),
   panelDownloads: $('panelDownloads'),
   downloadsEmpty: $('downloadsEmpty'),
   panelPlugins: $('panelPlugins'),
@@ -305,6 +316,7 @@ const state = {
   },
   cosmetics: [],
   themeAmoled: false,
+  themeRainbow: { hueFrom: 0, hueTo: 360, speed: 1 },
   closeToTray: false,
   autostart: false,
   startInTray: false,
@@ -393,7 +405,10 @@ const PANEL_GROUPS = [
   { title: 'Общение', cats: ['notify', 'replies'] },
   { title: 'Библиотека', cats: ['library', 'stats', 'downloads'] },
   { title: 'Внешний вид', cats: ['cosmetics', 'components', 'custom'] },
-  { title: 'Система', cats: ['region', 'language', 'plugins', 'data', 'privacy', 'app'] },
+  {
+    title: 'Система',
+    cats: ['region', 'language', 'plugins', 'data', 'privacy', 'app', 'experimental'],
+  },
 ];
 const panelGroupNodes = [];
 let panelCategory = 'page';
@@ -870,6 +885,95 @@ function handleThemeHslInput() {
   clearTimeout(themeHslTimer);
   themeHslTimer = setTimeout(() => pushCustomThemePatch(activeThemeColorRole, hex), 30);
 }
+
+let rainbowInputTimer = null;
+function currentRainbowDraft() {
+  const saved = state.themeRainbow || {};
+  return {
+    hueFrom: Number.isFinite(Number(saved.hueFrom)) ? Number(saved.hueFrom) : 0,
+    hueTo: Number.isFinite(Number(saved.hueTo)) ? Number(saved.hueTo) : 360,
+    speed: Number.isFinite(Number(saved.speed)) ? Number(saved.speed) : 1,
+  };
+}
+
+function paintRainbowPreview(cfg) {
+  const from = Math.round(Number(cfg.hueFrom) || 0);
+  const to = Math.round(cfg.hueTo === undefined ? 360 : Number(cfg.hueTo));
+  const speed = Math.min(4, Math.max(0.2, Number(cfg.speed) || 1));
+  const isFull = Math.abs(to - from) >= 360;
+  const span = isFull ? 360 : (((to - from) % 360) + 360) % 360;
+
+  if (el.rainbowRangeBadge) {
+    el.rainbowRangeBadge.textContent = `${from}° – ${to}° · ${speed.toFixed(1)}×`;
+  }
+  if (el.rainbowHueFromVal) el.rainbowHueFromVal.textContent = `${from}°`;
+  if (el.rainbowHueToVal) el.rainbowHueToVal.textContent = `${to}°`;
+  if (el.rainbowSpeedVal) el.rainbowSpeedVal.textContent = `${speed.toFixed(1)}×`;
+
+  const paintHueSlider = (slider, hueVal) => {
+    if (!slider) return;
+    slider.style.setProperty('--slider-pct', `${((hueVal / 360) * 100).toFixed(2)}%`);
+    slider.style.setProperty('--thumb-color', `hsl(${hueVal % 360} 90% 56%)`);
+  };
+  paintHueSlider(el.rainbowHueFrom, from);
+  paintHueSlider(el.rainbowHueTo, to);
+  if (el.rainbowSpeed) {
+    const pct = ((speed - 0.2) / (4 - 0.2)) * 100;
+    el.rainbowSpeed.style.setProperty(
+      '--slider-pct',
+      `${Math.min(100, Math.max(0, pct)).toFixed(2)}%`,
+    );
+  }
+
+  if (el.rainbowGradientBar) {
+    const stops = [];
+    const count = isFull ? 6 : 4;
+    for (let i = 0; i <= count; i += 1) {
+      const h = (from + (span * i) / count) % 360;
+      stops.push(`hsl(${h.toFixed(0)} 88% 58%)`);
+    }
+    el.rainbowGradientBar.style.background = `linear-gradient(90deg, ${stops.join(', ')})`;
+  }
+
+  if (el.rainbowPresets) {
+    for (const btn of el.rainbowPresets.children) {
+      const match = Number(btn.dataset.hueFrom) === from && Number(btn.dataset.hueTo) === to;
+      btn.classList.toggle('is-active', match);
+      btn.setAttribute('aria-pressed', String(match));
+    }
+  }
+}
+
+function handleRainbowSliderInput() {
+  const next = {
+    hueFrom: Math.round(Number(el.rainbowHueFrom?.value) || 0),
+    hueTo: Math.round(Number(el.rainbowHueTo?.value ?? 360)),
+    speed: Math.round((Number(el.rainbowSpeed?.value) || 1) * 10) / 10,
+  };
+  state.themeRainbow = next;
+  paintRainbowPreview(next);
+  clearTimeout(rainbowInputTimer);
+  rainbowInputTimer = setTimeout(() => api.cmd('themeRainbow', next), 30);
+}
+
+el.rainbowHueFrom?.addEventListener('input', handleRainbowSliderInput);
+el.rainbowHueTo?.addEventListener('input', handleRainbowSliderInput);
+el.rainbowSpeed?.addEventListener('input', handleRainbowSliderInput);
+
+el.rainbowPresets?.addEventListener('click', (event) => {
+  const btn = event.target.closest('[data-rainbow-preset]');
+  if (!btn) return;
+  const next = {
+    ...currentRainbowDraft(),
+    hueFrom: Number(btn.dataset.hueFrom) || 0,
+    hueTo: Number(btn.dataset.hueTo ?? 360),
+  };
+  state.themeRainbow = next;
+  if (el.rainbowHueFrom) el.rainbowHueFrom.value = String(next.hueFrom);
+  if (el.rainbowHueTo) el.rainbowHueTo.value = String(next.hueTo);
+  paintRainbowPreview(next);
+  api.cmd('themeRainbow', next);
+});
 
 el.themeCustomHue?.addEventListener('input', handleThemeHslInput);
 el.themeCustomSat?.addEventListener('input', handleThemeHslInput);
@@ -1591,11 +1695,12 @@ function renderActivePlugins(summary) {
 
 function renderCosmetics(list) {
   const items = Array.isArray(list) ? list : [];
-  const signature = items.map((item) => item.id).join('|');
+  const signature = items.map((item) => `${item.id}:${item.experimental ? '1' : '0'}`).join('|');
 
   if (signature !== cosmeticsSignature) {
     cosmeticsSignature = signature;
     el.panelCosmetics.replaceChildren();
+    if (el.panelExperimental) el.panelExperimental.replaceChildren();
 
     for (const item of items) {
       const row = document.createElement('button');
@@ -1614,14 +1719,59 @@ function renderCosmetics(list) {
       toggle.setAttribute('aria-hidden', 'true');
 
       row.append(label, toggle);
-      el.panelCosmetics.append(row);
+      const target =
+        item.experimental && el.panelExperimental ? el.panelExperimental : el.panelCosmetics;
+      target.append(row);
     }
   }
 
   for (const item of items) {
-    const row = [...el.panelCosmetics.children].find((node) => node.dataset.cosmetic === item.id);
+    const container =
+      item.experimental && el.panelExperimental ? el.panelExperimental : el.panelCosmetics;
+    const row = [...container.children].find((node) => node.dataset.cosmetic === item.id);
     if (row) row.setAttribute('aria-checked', String(Boolean(item.enabled)));
   }
+}
+
+let rainbowPresetsBuilt = false;
+
+function renderRainbowSettings() {
+  if (!el.rainbowSettingsBox) return;
+  const rainbowRule = Array.isArray(state.cosmetics)
+    ? state.cosmetics.find((item) => item.id === 'rainbow-theme')
+    : null;
+  const enabled = Boolean(rainbowRule && rainbowRule.enabled);
+  el.rainbowSettingsBox.hidden = !enabled;
+
+  if (!rainbowPresetsBuilt && el.rainbowPresets) {
+    rainbowPresetsBuilt = true;
+    const presets = Array.isArray(api.rainbowPresets) ? api.rainbowPresets : [];
+    el.rainbowPresets.replaceChildren(
+      ...presets.map((preset) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'rainbow-preset-chip';
+        btn.dataset.rainbowPreset = preset.id;
+        btn.dataset.hueFrom = String(preset.hueFrom);
+        btn.dataset.hueTo = String(preset.hueTo);
+        btn.setAttribute('aria-pressed', 'false');
+        btn.textContent = preset.label;
+        return btn;
+      }),
+    );
+  }
+
+  const cfg = currentRainbowDraft();
+  if (el.rainbowHueFrom && document.activeElement !== el.rainbowHueFrom) {
+    el.rainbowHueFrom.value = String(cfg.hueFrom);
+  }
+  if (el.rainbowHueTo && document.activeElement !== el.rainbowHueTo) {
+    el.rainbowHueTo.value = String(cfg.hueTo);
+  }
+  if (el.rainbowSpeed && document.activeElement !== el.rainbowSpeed) {
+    el.rainbowSpeed.value = String(cfg.speed);
+  }
+  paintRainbowPreview(cfg);
 }
 
 let downloadsSignature = '';
@@ -3290,6 +3440,7 @@ function renderPanel() {
   setSwitch(el.rowLinkHandler, linkHandler.enabled);
 
   renderCosmetics(state.cosmetics);
+  renderRainbowSettings();
   const darkCosmetic = Array.isArray(state.cosmetics)
     ? state.cosmetics.find((item) => item.id === 'dark-theme')
     : null;
@@ -3338,6 +3489,10 @@ function render() {
     : null;
   const isDark = darkRule ? Boolean(darkRule.enabled) : true;
   const isAmoled = isDark && Boolean(state.themeAmoled);
+  const rainbowRule = Array.isArray(state.cosmetics)
+    ? state.cosmetics.find((item) => item.id === 'rainbow-theme')
+    : null;
+  const isRainbow = Boolean(rainbowRule && rainbowRule.enabled);
   const activePaletteId = state.themePalette || 'octo-lavender';
   const paletteObj = Array.isArray(api.themePalettes)
     ? api.themePalettes.find((item) => item.id === activePaletteId)
@@ -3354,11 +3509,15 @@ function render() {
       dark: isDark,
       amoled: isAmoled,
       palette: activePaletteId,
+      rainbow: isRainbow,
+      rainbowConfig: currentRainbowDraft(),
+      rainbowTokens: state.themeRainbowTokens || null,
       tokens,
     });
   } else {
     document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
     document.documentElement.dataset.amoled = isAmoled ? 'true' : 'false';
+    document.documentElement.dataset.rainbow = isRainbow ? 'true' : 'false';
   }
 
   el.back.disabled = !state.canGoBack;

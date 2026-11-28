@@ -19,10 +19,11 @@
  * широкими масками `[class*="TUXTooltip"]`, чтобы никогда не красить обёртки.
  */
 
-const { DEFAULT_PALETTE, getPaletteTokens } = require('./md3-palettes');
+const { DEFAULT_PALETTE, getPaletteTokens, getIridescentCssTokens } = require('./md3-palettes');
 
 const MD3_ATTR = 'data-octo-md3';
 const AMOLED_ATTR = 'data-octo-md3-amoled';
+const RAINBOW_ATTR = 'data-octo-rainbow';
 const ACCENT_ATTR = 'data-octo-md3-accent';
 const NAV_ATTR = 'data-octo-md3-nav';
 const POS_ATTR = 'data-octo-md3-pos';
@@ -37,8 +38,24 @@ const PROBE_ATTR = 'data-octo-md3-probe';
 const DARK_TOKENS = getPaletteTokens(DEFAULT_PALETTE, true);
 const LIGHT_TOKENS = getPaletteTokens(DEFAULT_PALETTE, false);
 
-function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE, customTheme = null, amoled = false) {
-  const t = getPaletteTokens(paletteId, dark, customTheme, { amoled: Boolean(dark && amoled) });
+function mixAlpha(color, pct) {
+  if (typeof color === 'string' && color.startsWith('oklch(') && !color.includes('/')) {
+    return `${color.slice(0, -1)} / ${(pct / 100).toFixed(2)})`;
+  }
+  return `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+}
+
+function tokenDeclarations(
+  dark,
+  paletteId = DEFAULT_PALETTE,
+  customTheme = null,
+  amoled = false,
+  rainbow = false,
+) {
+  const opts = { amoled: Boolean(dark && amoled) };
+  const t = rainbow
+    ? getIridescentCssTokens(dark, opts)
+    : getPaletteTokens(paletteId, dark, customTheme, opts);
   return `
     color-scheme: ${t.scheme} !important;
     --octo-md-primary: ${t.primary} !important;
@@ -137,7 +154,7 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE, customTheme = null
     --bg-view: ${t.surfaceContainerLow} !important;
     --bg-input: ${t.surfaceContainerHigh} !important;
     --bg-input-2: ${t.surfaceContainer} !important;
-    --bg-inverse-3: color-mix(in srgb, ${t.surfaceContainerHigh} 78%, transparent) !important;
+    --bg-inverse-3: ${mixAlpha(t.surfaceContainerHigh, 78)} !important;
     --BG-Dark-BGLevitation: ${t.surfaceContainerHigh} !important;
     --primary: ${t.primary} !important;
     --primary-2: ${t.onSurface} !important;
@@ -152,10 +169,10 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE, customTheme = null
     --text-reverse: ${t.onSurface} !important;
     --text-reverse-2: ${t.onSurfaceVariant} !important;
     --const-text-primary: #ffffff !important;
-    --line-primary: color-mix(in srgb, ${t.outlineVariant} 45%, transparent) !important;
-    --line-primary-2: color-mix(in srgb, ${t.outlineVariant} 55%, transparent) !important;
-    --line-secondary: color-mix(in srgb, ${t.outlineVariant} 42%, transparent) !important;
-    --line-reverse-2: color-mix(in srgb, ${t.outlineVariant} 42%, transparent) !important;
+    --line-primary: ${mixAlpha(t.outlineVariant, 45)} !important;
+    --line-primary-2: ${mixAlpha(t.outlineVariant, 55)} !important;
+    --line-secondary: ${mixAlpha(t.outlineVariant, 42)} !important;
+    --line-reverse-2: ${mixAlpha(t.outlineVariant, 42)} !important;
     --ui-page-flat-1: ${t.surface} !important;
     --ui-page-flat-2: ${t.surfaceContainerLow} !important;
     --ui-page-flat-3: ${t.surfaceContainer} !important;
@@ -169,14 +186,14 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE, customTheme = null
     --ui-sheet-grouped-2: ${t.surfaceContainer} !important;
     --ui-sheet-grouped-3: ${t.surfaceContainerHigh} !important;
     --ui-shape-primary: ${t.primary} !important;
-    --ui-shape-primary-2: color-mix(in srgb, ${t.primary} 60%, transparent) !important;
-    --ui-shape-primary-3: color-mix(in srgb, ${t.primary} 42%, transparent) !important;
-    --ui-shape-primary-4: color-mix(in srgb, ${t.primary} 24%, transparent) !important;
+    --ui-shape-primary-2: ${mixAlpha(t.primary, 60)} !important;
+    --ui-shape-primary-3: ${mixAlpha(t.primary, 42)} !important;
+    --ui-shape-primary-4: ${mixAlpha(t.primary, 24)} !important;
     --ui-shape-text-1-on-primary: ${t.onPrimary} !important;
     --ui-shape-neutral: ${t.onSurface} !important;
-    --ui-shape-neutral-2: color-mix(in srgb, ${t.onSurface} 24%, transparent) !important;
-    --ui-shape-neutral-3: color-mix(in srgb, ${t.onSurface} 14%, transparent) !important;
-    --ui-shape-neutral-4: color-mix(in srgb, ${t.onSurface} 8%, transparent) !important;
+    --ui-shape-neutral-2: ${mixAlpha(t.onSurface, 24)} !important;
+    --ui-shape-neutral-3: ${mixAlpha(t.onSurface, 14)} !important;
+    --ui-shape-neutral-4: ${mixAlpha(t.onSurface, 8)} !important;
     --ui-shape-text-1-on-neutral: ${t.surface} !important;
     --ui-text-1: ${t.onSurface} !important;
     --ui-text-1-display: ${t.onSurface} !important;
@@ -198,17 +215,17 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE, customTheme = null
     --tux-v2-color-ui-sheet-grouped-2: ${t.surfaceContainer} !important;
     --tux-v2-color-ui-sheet-grouped-3: ${t.surfaceContainerHigh} !important;
     --tux-v2-color-ui-sheet-backdrop-1: ${t.scrim} !important;
-    --tux-v2-color-ui-sheet-backdrop-2: color-mix(in srgb, ${t.scrim} 72%, transparent) !important;
+    --tux-v2-color-ui-sheet-backdrop-2: ${mixAlpha(t.scrim, 72)} !important;
     --tux-v2-color-ui-shape-primary: ${t.primary} !important;
-    --tux-v2-color-ui-shape-primary-2: color-mix(in srgb, ${t.primary} 60%, transparent) !important;
-    --tux-v2-color-ui-shape-primary-3: color-mix(in srgb, ${t.primary} 42%, transparent) !important;
-    --tux-v2-color-ui-shape-primary-4: color-mix(in srgb, ${t.primary} 24%, transparent) !important;
+    --tux-v2-color-ui-shape-primary-2: ${mixAlpha(t.primary, 60)} !important;
+    --tux-v2-color-ui-shape-primary-3: ${mixAlpha(t.primary, 42)} !important;
+    --tux-v2-color-ui-shape-primary-4: ${mixAlpha(t.primary, 24)} !important;
     --tux-v2-color-ui-shape-text-1-on-primary: ${t.onPrimary} !important;
     --tux-v2-color-ui-shape-text-2-on-primary: ${t.onPrimaryContainer} !important;
     --tux-v2-color-ui-shape-neutral: ${t.onSurface} !important;
-    --tux-v2-color-ui-shape-neutral-2: color-mix(in srgb, ${t.onSurface} 24%, transparent) !important;
-    --tux-v2-color-ui-shape-neutral-3: color-mix(in srgb, ${t.onSurface} 14%, transparent) !important;
-    --tux-v2-color-ui-shape-neutral-4: color-mix(in srgb, ${t.onSurface} 8%, transparent) !important;
+    --tux-v2-color-ui-shape-neutral-2: ${mixAlpha(t.onSurface, 24)} !important;
+    --tux-v2-color-ui-shape-neutral-3: ${mixAlpha(t.onSurface, 14)} !important;
+    --tux-v2-color-ui-shape-neutral-4: ${mixAlpha(t.onSurface, 8)} !important;
     --tux-v2-color-ui-shape-text-1-on-neutral: ${t.surface} !important;
     --tux-v2-color-ui-text-1: ${t.onSurface} !important;
     --tux-v2-color-ui-text-1-display: ${t.onSurface} !important;
@@ -227,11 +244,11 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE, customTheme = null
     --tux-v2-color-brand-tiktok-splash: ${t.secondary} !important;
     --tux-v2-color-live-brand-1: ${t.primary} !important;
     --tux-v2-color-live-brand-2: ${t.secondary} !important;
-    --tux-v2-color-live-foundation-background-1: color-mix(in srgb, ${t.surfaceContainer} 78%, transparent) !important;
-    --tux-v2-color-live-foundation-shape-1: color-mix(in srgb, ${t.surfaceContainerHigh} 72%, transparent) !important;
+    --tux-v2-color-live-foundation-background-1: ${mixAlpha(t.surfaceContainer, 78)} !important;
+    --tux-v2-color-live-foundation-shape-1: ${mixAlpha(t.surfaceContainerHigh, 72)} !important;
     --tux-v2-color-live-foundation-shape-2: ${t.surfaceContainerHigh} !important;
     --tux-v2-color-live-revenue-recharge-shape-1: ${t.surfaceContainerHigh} !important;
-    --tux-v2-color-live-revenue-recharge-shape-2: color-mix(in srgb, ${t.surfaceContainerHigh} 76%, transparent) !important;
+    --tux-v2-color-live-revenue-recharge-shape-2: ${mixAlpha(t.surfaceContainerHigh, 76)} !important;
 
     /* Semi / Arco Design (Business Suite, Studio, web_dm) */
     --semi-color-bg-0: ${t.surface} !important;
@@ -493,7 +510,7 @@ const COMPONENT_CSS = `
     box-shadow: none !important;
   }
 
-  [${SURFACE_ATTR}="drawer"] :where(a, span, p, div, h1, h2, h3, h4, label, strong, button, [role="button"], [role="menuitem"], svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([${SURFACE_ATTR}="chip-active"]):not([${SURFACE_ATTR}="chip-active"] *):not([${SURFACE_ATTR}="chip"]):not([role="switch"]):not([${ACCENT_ATTR}="switch"]):not([${ACCENT_ATTR}="switch-off"]):not(:disabled):not([aria-disabled="true"]) {
+  [${SURFACE_ATTR}="drawer"] :where(a, span, p, div, h1, h2, h3, h4, label, strong, button, [role="button"], [role="menuitem"], svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([${SURFACE_ATTR}="chip-active"]):not([${SURFACE_ATTR}="chip-active"] *):not([${SURFACE_ATTR}="chip"]):not([role="switch"]):not([${ACCENT_ATTR}="switch"]):not([${ACCENT_ATTR}="switch-off"]):not([${ICON_ATTR}="active"]):not([${ICON_ATTR}="active"] *):not([${ACTION_ATTR}="active"]):not([${ACTION_ATTR}="active"] *):not([${PROBE_ATTR}]):not(:disabled):not([aria-disabled="true"]) {
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -1020,7 +1037,7 @@ const COMPONENT_CSS = `
     [class*="NavBar"]:not([id^="octo-"]),
     [class*="HeaderBar"]:not([id^="octo-"]),
     [${SURFACE_ATTR}="header"]
-  ) :where(a, span, p, div, h1, h2, h3, h4, label, button, svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([class*="TUXButton--primary"]):not([class*="TUXButton--primary"] *):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([role="tooltip"]):not([role="tooltip"] *):not([${ICON_ATTR}="inverse"]):not([${ICON_ATTR}="inverse"] *):not([${FG_ATTR}="inverse"]):not([${FG_ATTR}="inverse"] *) {
+  ) :where(a, span, p, div, h1, h2, h3, h4, label, button, svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([class*="TUXButton--primary"]):not([class*="TUXButton--primary"] *):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([role="tooltip"]):not([role="tooltip"] *):not([${ICON_ATTR}="inverse"]):not([${ICON_ATTR}="inverse"] *):not([${FG_ATTR}="inverse"]):not([${FG_ATTR}="inverse"] *):not([${ICON_ATTR}="active"]):not([${ICON_ATTR}="active"] *):not([${ACTION_ATTR}="active"]):not([${ACTION_ATTR}="active"] *):not([${PROBE_ATTR}]) {
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -1413,10 +1430,61 @@ const COMPONENT_CSS = `
     box-shadow: none !important;
   }
 
-  [${ICON_ATTR}="active"],
-  [class*="ButtonActionItem"] svg path:is([fill="#FE2C55" i], [fill="#FF3B5C" i], [fill="#EA284E" i]),
-  [data-e2e*="like-icon"] path:is([fill="#FE2C55" i], [fill="#FF3B5C" i], [fill="#EA284E" i]),
-  [data-e2e*="favorite-icon"] path:is([fill="#FE2C55" i], [fill="#FF3B5C" i], [fill="#EA284E" i]) {
+  /* Активные реакции с круглой подложкой (лайк, избранное, репост): заметный акцент темы */
+  [${ACTION_ATTR}="active"][${ACTION_ATTR}="active"] {
+    background-color: var(--octo-md-primary) !important;
+    color: var(--octo-md-on-primary) !important;
+    box-shadow: var(--octo-md-elevation-1) !important;
+  }
+
+  [${ACTION_ATTR}="active"] svg {
+    color: var(--octo-md-on-primary) !important;
+  }
+
+  [${ACTION_ATTR}="active"] svg:not([fill="none"]),
+  [${ACTION_ATTR}="active"] svg:not([fill="none"]) :where(path, circle, rect, polygon, polyline, ellipse):not([fill="none"]),
+  [${ACTION_ATTR}="active"] svg[fill="none"] :where(path, circle, rect, polygon, polyline, ellipse)[fill]:not([fill="none"]) {
+    fill: var(--octo-md-on-primary) !important;
+  }
+
+  [${ACTION_ATTR}="active"] svg[stroke]:not([stroke="none"]),
+  [${ACTION_ATTR}="active"] svg :where(path, circle, rect, polygon, polyline, ellipse)[stroke]:not([stroke="none"]) {
+    stroke: var(--octo-md-on-primary) !important;
+  }
+
+  /* Активные иконки без круглой подложки (комментарии, компактная вёрстка) */
+  [${ICON_ATTR}="active"]:not([${ACTION_ATTR}="active"] *) {
+    color: var(--octo-md-primary) !important;
+  }
+
+  [${ICON_ATTR}="active"]:not([${ACTION_ATTR}="active"] *):not([fill="none"]):is(svg, path, circle, rect, polygon, polyline, ellipse),
+  svg[${ICON_ATTR}="active"]:not([${ACTION_ATTR}="active"] *):not([fill="none"]) :where(path, circle, rect, polygon, polyline, ellipse):not([fill="none"]),
+  svg[fill="none"][${ICON_ATTR}="active"]:not([${ACTION_ATTR}="active"] *) :where(path, circle, rect, polygon, polyline, ellipse)[fill]:not([fill="none"]) {
+    fill: var(--octo-md-primary) !important;
+  }
+
+  [${ICON_ATTR}="active"]:not([${ACTION_ATTR}="active"] *)[stroke]:not([stroke="none"]),
+  [${ICON_ATTR}="active"]:not([${ACTION_ATTR}="active"] *) :where(path, circle, rect, polygon, polyline, ellipse)[stroke]:not([stroke="none"]) {
+    stroke: var(--octo-md-primary) !important;
+  }
+
+  :is(
+    [class*="ButtonActionItem"],
+    [data-e2e*="like-icon"],
+    [data-e2e*="favorite-icon"],
+    [data-e2e="undefined-icon"],
+    [data-e2e*="collect-icon"],
+    [data-e2e*="bookmark-icon"],
+    [data-e2e*="repost-icon"]
+  ):not([${ACTION_ATTR}="active"]):not(:has([${ACTION_ATTR}="active"])) :is(path, circle, rect, polygon, polyline, ellipse):is(
+    [fill="#FE2C55" i],
+    [fill="#FF3B5C" i],
+    [fill="#EA284E" i],
+    [fill="#FACE15" i],
+    [fill="#FFB800" i],
+    [fill="#FFC800" i],
+    [fill="#FFCC00" i]
+  ) {
     color: var(--octo-md-primary) !important;
     fill: var(--octo-md-primary) !important;
   }
@@ -1568,7 +1636,7 @@ const COMPONENT_CSS = `
     [class*="DivMediaControl"],
     [class*="DivControlBottom"],
     [${SURFACE_ATTR}="player-controls"]
-  ) :where(div, span, p, label, time, a, strong, button, [role="button"], svg):not([${ACCENT_ATTR}="switch"]):not([${ACCENT_ATTR}="switch"] *):not([${ACCENT_ATTR}="switch-off"]):not([${ACCENT_ATTR}="switch-off"] *):not([${ACCENT_ATTR}="progress"]):not([${SURFACE_ATTR}="player-seekbar"]):not([${SURFACE_ATTR}="player-seekbar"] *):not([${SURFACE_ATTR}="player-seekbar-thumb"]):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]) {
+  ) :where(div, span, p, label, time, a, strong, button, [role="button"], svg):not([${ACCENT_ATTR}="switch"]):not([${ACCENT_ATTR}="switch"] *):not([${ACCENT_ATTR}="switch-off"]):not([${ACCENT_ATTR}="switch-off"] *):not([${ACCENT_ATTR}="progress"]):not([${SURFACE_ATTR}="player-seekbar"]):not([${SURFACE_ATTR}="player-seekbar"] *):not([${SURFACE_ATTR}="player-seekbar-thumb"]):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ICON_ATTR}="active"]):not([${ICON_ATTR}="active"] *):not([${ACTION_ATTR}="active"]):not([${ACTION_ATTR}="active"] *):not([${PROBE_ATTR}]) {
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -1646,11 +1714,11 @@ const COMPONENT_CSS = `
     border-inline-start: 1px solid color-mix(in srgb, var(--octo-md-outline-variant) 42%, transparent) !important;
   }
 
-  [${SURFACE_ATTR}="comments"] :where(span, p, div, h1, h2, h3, h4, label, a, strong, button, svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([${ICON_ATTR}="active"]):not([data-e2e="comment-post"]):not(:disabled):not([aria-disabled="true"]) {
+  [${SURFACE_ATTR}="comments"] :where(span, p, div, h1, h2, h3, h4, label, a, strong, button, svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([${ICON_ATTR}="active"]):not([${ICON_ATTR}="active"] *):not([${ACTION_ATTR}="active"]):not([${ACTION_ATTR}="active"] *):not([${PROBE_ATTR}]):not([data-e2e="comment-post"]):not(:disabled):not([aria-disabled="true"]) {
     color: var(--octo-md-on-surface) !important;
   }
 
-  [${SURFACE_ATTR}="comments"] :is(button, [role="button"]):not([data-e2e="comment-post"]):not([class*="Primary"]):not([${ACCENT_ATTR}="primary"]) {
+  [${SURFACE_ATTR}="comments"] :is(button, [role="button"]):not([data-e2e="comment-post"]):not([class*="Primary"]):not([${ACCENT_ATTR}="primary"]):not([${ACTION_ATTR}="active"]) {
     background-color: transparent !important;
     border: 0 !important;
     box-shadow: none !important;
@@ -2110,7 +2178,7 @@ const COMPONENT_CSS = `
     [class*="TUXModal-content"]:not([id^="octo-"]):not([${PROBE_ATTR}]),
     [class*="DivModalContainer"]:not([id^="octo-"]):not([${PROBE_ATTR}]),
     [class*="DivDialogContainer"]:not([id^="octo-"]):not([${PROBE_ATTR}])
-  ) :where(h1, h2, h3, h4, p, span, label, strong, a, button, svg):not([${ACCENT_ATTR}="primary-text"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([${ACCENT_ATTR}="badge"]):not([class*="Badge" i]):not(:disabled):not([aria-disabled="true"]):not([role="switch"]):not([${ACCENT_ATTR}="switch"]):not([${ACCENT_ATTR}="switch-off"]):not([class*="DivVideoWrapper"] *):not([class*="DivBasicPlayerWrapper"] *) {
+  ) :where(h1, h2, h3, h4, p, span, label, strong, a, button, svg):not([${ACCENT_ATTR}="primary-text"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([${ACCENT_ATTR}="badge"]):not([class*="Badge" i]):not([${ICON_ATTR}="active"]):not([${ICON_ATTR}="active"] *):not([${ACTION_ATTR}="active"]):not([${ACTION_ATTR}="active"] *):not([${PROBE_ATTR}]):not(:disabled):not([aria-disabled="true"]):not([role="switch"]):not([${ACCENT_ATTR}="switch"]):not([${ACCENT_ATTR}="switch-off"]):not([class*="DivVideoWrapper"] *):not([class*="DivBasicPlayerWrapper"] *) {
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -2141,7 +2209,7 @@ const COMPONENT_CSS = `
     [class*="DivPopupContainer"]:not([id^="octo-"]),
     [class*="DivDropdown"]:not([id^="octo-"]),
     [class*="DivMenuContainer"]:not([id^="octo-"])
-  ) :where(a, span, p, div, label, strong, li, button, svg, [role="menuitem"], [role="option"]):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([${ACCENT_ATTR}="primary-text"]):not(:disabled):not([aria-disabled="true"]) {
+  ) :where(a, span, p, div, label, strong, li, button, svg, [role="menuitem"], [role="option"]):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([${ACCENT_ATTR}="primary-text"]):not([${ICON_ATTR}="active"]):not([${ICON_ATTR}="active"] *):not([${ACTION_ATTR}="active"]):not([${ACTION_ATTR}="active"] *):not([${PROBE_ATTR}]):not(:disabled):not([aria-disabled="true"]) {
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -2511,21 +2579,49 @@ const TOKEN_ROOTS = `
     [class*="ThemeProvider"],
     [${MD3_ATTR}]`;
 
-function siteCss(dark = true, paletteId = DEFAULT_PALETTE, customTheme = null, amoled = false) {
+function rainbowPerformanceCss() {
+  return `
+    html[${RAINBOW_ATTR}="true"] {
+      --octo-md-motion-scale: 0 !important;
+    }
+    html[${RAINBOW_ATTR}="true"] body {
+      background-image: ${EXPRESSIVE_BG} !important;
+    }
+    html[${RAINBOW_ATTR}="true"][${AMOLED_ATTR}="true"] body {
+      background-image: none !important;
+    }
+  `;
+}
+
+function siteCss(
+  dark = true,
+  paletteId = DEFAULT_PALETTE,
+  customTheme = null,
+  amoled = false,
+  rainbow = false,
+) {
   return `
     ${TOKEN_ROOTS} {
-      ${tokenDeclarations(dark, paletteId, customTheme, amoled)}
+      ${tokenDeclarations(dark, paletteId, customTheme, amoled, rainbow)}
     }
     ${reducedMotionCss(TOKEN_ROOTS)}
     ${BASE_CANVAS_CSS}
+    ${rainbow ? rainbowPerformanceCss() : ''}
     ${COMPONENT_CSS}
   `;
 }
 
-function shadowCss(dark = true, paletteId = DEFAULT_PALETTE, customTheme = null, amoled = false) {
+function shadowCss(
+  dark = true,
+  paletteId = DEFAULT_PALETTE,
+  customTheme = null,
+  amoled = false,
+  rainbow = false,
+) {
   return `
     :host {
-      ${tokenDeclarations(dark, paletteId, customTheme, amoled)}
+      ${tokenDeclarations(dark, paletteId, customTheme, amoled, rainbow)}
+      ${rainbow ? '--octo-md-motion-scale: 0 !important;' : ''}
     }
     ${reducedMotionCss(':host')}
     ${COMPONENT_CSS}
@@ -2558,8 +2654,17 @@ function syncScript(dark = true, amoled = false) {
       if (el.hasAttribute(name)) el.removeAttribute(name);
     };
     const isTikTokRedAttr = (el) => {
-      const fill = el.getAttribute('fill');
-      return Boolean(fill && /^#(?:fe2c55|ff3b5c|ea284e)$/i.test(fill.trim()));
+      const fill = (el.getAttribute('fill') || '').trim();
+      const stroke = (el.getAttribute('stroke') || '').trim();
+      const re = /^#(?:fe2c55|ff3b5c|ea284e)$/i;
+      return re.test(fill) || re.test(stroke);
+    };
+
+    const isTikTokYellowAttr = (el) => {
+      const fill = (el.getAttribute('fill') || '').trim();
+      const stroke = (el.getAttribute('stroke') || '').trim();
+      const re = /^#(?:face15|ffc800|ffb800|ffcc00|f5b800|f9c900|ffd400)$/i;
+      return re.test(fill) || re.test(stroke);
     };
 
     const parseRgb = (value) => {
@@ -2569,6 +2674,20 @@ function syncScript(dark = true, amoled = false) {
       if (!alpha) return null;
       return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]), a: alpha };
     };
+
+    const parseCssColor = (value) => {
+      const rgb = parseRgb(value);
+      if (rgb) return rgb;
+      let clean = String(value || '').trim().replace(/^#/, '');
+      if (/^[0-9a-f]{3}$/i.test(clean)) {
+        clean = clean.split('').map((ch) => ch + ch).join('');
+      }
+      if (!/^[0-9a-f]{6}$/i.test(clean)) return null;
+      const n = parseInt(clean, 16);
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a: 1 };
+    };
+
+    const colorDist = (a, b) => Math.abs(a.r - b.r) + Math.abs(a.g - b.g) + Math.abs(a.b - b.b);
 
     const isLightColor = (value) => {
       const c = parseRgb(value);
@@ -2722,6 +2841,13 @@ function syncScript(dark = true, amoled = false) {
       if (!c || c.a < 0.15) return false;
       if (c.r >= 200 && c.g <= 105 && c.b >= 35 && c.b <= 145) return true;
       return c.r >= 95 && c.r >= c.g * 1.65 && c.r > c.b * 1.15 && c.g <= 115 && c.b <= 140;
+    };
+
+    // Фирменный жёлто-золотой TikTok (#face15, #ffc800, #ffb800 — «Избранное», репосты)
+    const isTikTokYellow = (value) => {
+      const c = parseRgb(value);
+      if (!c || c.a < 0.25) return false;
+      return c.r >= 200 && c.g >= 145 && c.g <= 235 && c.b <= 95 && c.r - c.b >= 110;
     };
 
     // Фирменный бирюзовый / тиловый TikTok (#25f4ee, #20d5ec, приглушённый трек свитча)
@@ -4319,6 +4445,8 @@ function syncScript(dark = true, amoled = false) {
       if (
         svg.closest(
           '[' +
+            ACTION +
+            '="active"], [' +
             ACCENT +
             '="switch"], [' +
             ACCENT +
@@ -4339,14 +4467,22 @@ function syncScript(dark = true, amoled = false) {
       const bgInfo = effectiveBgInfo(svg, bgCache, mediaRects);
       const prefix = iconTonePrefix(bgInfo);
       const st = getComputedStyle(svg);
-      if (isLowContrastPaint(st.color, bgInfo, strictPlayer)) {
+      if (!isTikTokRed(st.color) && !isTikTokYellow(st.color) && isLowContrastPaint(st.color, bgInfo, strictPlayer)) {
         iconWrites.set(svg, prefix ? prefix.slice(0, -1) : 'on-surface');
       }
       for (const p of svg.querySelectorAll('path, circle, rect, line, polyline, polygon, ellipse')) {
         if (p.getAttribute(ICON) === 'active') continue;
         const ps = getComputedStyle(p);
-        const badFill = ps.fill !== 'none' && isLowContrastPaint(ps.fill, bgInfo, strictPlayer);
-        const badStroke = ps.stroke !== 'none' && isLowContrastPaint(ps.stroke, bgInfo, strictPlayer);
+        const badFill =
+          ps.fill !== 'none' &&
+          !isTikTokRed(ps.fill) &&
+          !isTikTokYellow(ps.fill) &&
+          isLowContrastPaint(ps.fill, bgInfo, strictPlayer);
+        const badStroke =
+          ps.stroke !== 'none' &&
+          !isTikTokRed(ps.stroke) &&
+          !isTikTokYellow(ps.stroke) &&
+          isLowContrastPaint(ps.stroke, bgInfo, strictPlayer);
         if (badFill && badStroke) {
           iconWrites.set(p, prefix + 'fill-stroke');
         } else if (badFill) {
@@ -4639,41 +4775,171 @@ function syncScript(dark = true, amoled = false) {
       return playerIcons;
     };
 
+    const REACTION_CONTROL_SELECTOR = [
+      '[data-e2e*="like-icon"]',
+      '[data-e2e*="favorite-icon"]',
+      '[data-e2e="undefined-icon"]',
+      '[data-e2e*="collect-icon"]',
+      '[data-e2e*="bookmark-icon"]',
+      '[data-e2e*="repost-icon"]',
+      '[data-e2e="comment-like-icon"]',
+      '[class*="ButtonActionItem"]',
+      '[class*="DivActionItemContainer"] button:not([data-e2e*="more"]):not([data-e2e*="follow"])',
+      '[class*="ActionBar"] button:not([data-e2e*="more"]):not([data-e2e*="follow"])',
+      '[class*="DivComment"] [data-e2e*="like"]',
+      '[class*="DivComment"] [class*="Like" i]',
+    ].join(', ');
+
+    const REACTION_INCLUDE_E2E =
+      '[data-e2e*="like"], [data-e2e*="favorite"], [data-e2e="undefined-icon"], [data-e2e*="collect"], [data-e2e*="bookmark"], [data-e2e*="repost"]';
+    const REACTION_EXCLUDE_E2E =
+      '[data-e2e*="comment-icon"], [data-e2e*="share-icon"], [data-e2e*="more"], [data-e2e*="follow"], [data-e2e*="arrow"], [data-e2e*="feed-navigation"]';
+
     const syncActionIcons = (root, extraIcons = null, bgCache = new WeakMap(), mediaRects = null) => {
-      const icons = root.querySelectorAll(
-        '[data-e2e*="like-icon"], [data-e2e*="like-icon"] svg, [data-e2e*="like-icon"] path, [data-e2e*="favorite-icon"], [data-e2e*="favorite-icon"] svg, [data-e2e*="favorite-icon"] path, [class*="DivComment"] [data-e2e*="like"] svg, [class*="DivComment"] [data-e2e*="like"] svg path, [class*="DivComment"] [class*="Like" i] svg, [class*="DivComment"] [class*="Like" i] svg path',
+      const rootStyle = getComputedStyle(document.documentElement);
+      const primaryRgb = parseCssColor(rootStyle.getPropertyValue('--octo-md-primary'));
+      const onSurfaceRgb = parseCssColor(rootStyle.getPropertyValue('--octo-md-on-surface'));
+      const onSurfaceVarRgb = parseCssColor(rootStyle.getPropertyValue('--octo-md-on-surface-variant'));
+      const primaryChroma =
+        primaryRgb && Math.max(primaryRgb.r, primaryRgb.g, primaryRgb.b) - Math.min(primaryRgb.r, primaryRgb.g, primaryRgb.b) >= 20;
+      const canMatchPrimary = Boolean(
+        primaryRgb &&
+          primaryChroma &&
+          colorDist(primaryRgb, { r: 255, g: 255, b: 255 }) > 45 &&
+          colorDist(primaryRgb, { r: 22, g: 24, b: 35 }) > 45 &&
+          (!onSurfaceRgb || colorDist(primaryRgb, onSurfaceRgb) > 36) &&
+          (!onSurfaceVarRgb || colorDist(primaryRgb, onSurfaceVarRgb) > 24),
       );
-      const toCheck = [];
-      const toReset = [];
-      const nextActive = new Set();
-      for (const node of icons) {
-        if (node.id?.startsWith('octo-') || node.closest('[class*="DivSideNavContainer"], [' + SURFACE + '="sidenav"]')) continue;
-        if (isTikTokRedAttr(node)) {
-          nextActive.add(node);
+      const isPrimaryPaint = (value) => {
+        if (!canMatchPrimary) return false;
+        const c = parseRgb(value);
+        return Boolean(c && c.a >= 0.45 && colorDist(c, primaryRgb) <= 10);
+      };
+      const isActivePaint = (value) => isTikTokRed(value) || isTikTokYellow(value) || isPrimaryPaint(value);
+      const isActiveAttr = (el) => isTikTokRedAttr(el) || isTikTokYellowAttr(el);
+
+      const controls = new Set();
+      for (const el of root.querySelectorAll(REACTION_CONTROL_SELECTOR)) {
+        if (el.id?.startsWith('octo-') || el.closest('[class*="DivSideNavContainer"], [' + SURFACE + '="sidenav"]')) {
           continue;
         }
-        const btn = node.closest('button, [role="button"]');
-        const key =
-          (node.getAttribute('class') || '') +
-          '|' +
-          (node.getAttribute('fill') || '') +
-          '|' +
-          (btn?.getAttribute('aria-pressed') || '') +
-          '|' +
-          (btn?.getAttribute('class') || '');
-        if (node.dataset.octoMd3IconKey === key) continue;
-        node.dataset.octoMd3IconKey = key;
-        if (node.hasAttribute(ICON)) toReset.push(node);
-        toCheck.push(node);
+        const ctrl = el.closest('button, [role="button"]') || el;
+        if (
+          ctrl.id?.startsWith('octo-') ||
+          ctrl.matches('[' + SURFACE + '="player-more"]') ||
+          ctrl.closest('[' + SURFACE + '="player-more"]')
+        ) {
+          continue;
+        }
+        if (
+          ctrl.matches(REACTION_EXCLUDE_E2E) ||
+          (ctrl.querySelector(REACTION_EXCLUDE_E2E) && !ctrl.querySelector(REACTION_INCLUDE_E2E))
+        ) {
+          continue;
+        }
+        controls.add(ctrl);
       }
-      for (const node of toReset) node.removeAttribute(ICON);
-      for (const node of toCheck) {
-        const style = getComputedStyle(node);
-        if (isTikTokRed(style.color) || isTikTokRed(style.fill)) {
-          nextActive.add(node);
+
+      const entries = [];
+      const toProbe = [];
+      for (const ctrl of controls) {
+        const svgs = ctrl.matches('svg') ? [ctrl] : Array.from(ctrl.querySelectorAll('svg'));
+        const shapes = [];
+        for (const svg of svgs) {
+          for (const s of svg.querySelectorAll('path, circle, rect, line, polyline, polygon, ellipse')) {
+            shapes.push(s);
+          }
+        }
+        let circleEl = null;
+        const midNodes = [];
+        for (const svg of svgs) {
+          let cur = svg.parentElement;
+          while (cur && cur !== ctrl && cur !== document.body) {
+            if (!midNodes.includes(cur)) midNodes.push(cur);
+            if (!circleEl && !cur.querySelector('strong, [data-e2e*="count"]')) {
+              const r = cur.getBoundingClientRect();
+              if (r.width >= 26 && r.width <= 72 && r.height >= 26 && r.height <= 72 && Math.abs(r.width - r.height) <= 12) {
+                circleEl = cur;
+              }
+            }
+            cur = cur.parentElement;
+          }
+        }
+        const pressedHost =
+          ctrl.getAttribute('aria-pressed') === 'true' ||
+          ctrl.getAttribute('aria-checked') === 'true' ||
+          ctrl.getAttribute('data-active') === 'true' ||
+          Boolean(ctrl.querySelector('[aria-pressed="true"], [aria-checked="true"], [data-active="true"]'));
+        const nodes = [ctrl, ...midNodes, ...svgs, ...shapes];
+        const attrActive = pressedHost || nodes.some(isActiveAttr);
+        entries.push({ ctrl, circleEl, svgs, shapes, nodes, attrActive });
+        if (!attrActive || circleEl) {
+          for (const node of nodes) toProbe.push(node);
         }
       }
-      for (const node of nextActive) setAttrIfDiff(node, ICON, 'active');
+
+      const probeReset = [];
+      for (const node of toProbe) {
+        const prevIcon = node.getAttribute(ICON);
+        const prevAction = node.getAttribute(ACTION);
+        if (prevIcon !== null || prevAction !== null) {
+          probeReset.push({ node, prevIcon, prevAction });
+          if (prevIcon !== null) node.removeAttribute(ICON);
+          if (prevAction !== null) node.removeAttribute(ACTION);
+        }
+        node.setAttribute(PROBE, '');
+      }
+
+      const nextActiveCircles = new Set();
+      const nextActiveIcons = new Set();
+      try {
+        for (const entry of entries) {
+          let active = entry.attrActive;
+          if (!active) {
+            for (const node of entry.nodes) {
+              const st = getComputedStyle(node);
+              if (isActivePaint(st.color) || isActivePaint(st.fill) || isActivePaint(st.stroke)) {
+                active = true;
+                break;
+              }
+            }
+          }
+          if (!active) continue;
+          let hasCircleBg = false;
+          if (entry.circleEl) {
+            const cs = getComputedStyle(entry.circleEl);
+            const bg = parseRgb(cs.backgroundColor);
+            const radius = parseFloat(cs.borderTopLeftRadius) || 0;
+            hasCircleBg = Boolean(bg && bg.a >= 0.03 && radius >= 12);
+          }
+          if (hasCircleBg) {
+            nextActiveCircles.add(entry.circleEl);
+          } else if (entry.svgs.length > 0) {
+            for (const svg of entry.svgs) nextActiveIcons.add(svg);
+            for (const s of entry.shapes) nextActiveIcons.add(s);
+          } else {
+            nextActiveIcons.add(entry.ctrl);
+          }
+        }
+      } finally {
+        for (const item of probeReset) {
+          if (item.prevIcon !== null) item.node.setAttribute(ICON, item.prevIcon);
+          if (item.prevAction !== null) item.node.setAttribute(ACTION, item.prevAction);
+        }
+        endProbe(toProbe);
+      }
+
+      root.querySelectorAll('[' + ACTION + '="active"]').forEach((el) => {
+        if (!nextActiveCircles.has(el)) delAttrIfSet(el, ACTION);
+      });
+      for (const el of nextActiveCircles) setAttrIfDiff(el, ACTION, 'active');
+
+      root.querySelectorAll('[' + ICON + '="active"]').forEach((el) => {
+        if (!el.closest('[class*="DivSideNavContainer"], [' + SURFACE + '="sidenav"]') && !nextActiveIcons.has(el)) {
+          delAttrIfSet(el, ICON);
+        }
+      });
+      for (const el of nextActiveIcons) setAttrIfDiff(el, ICON, 'active');
 
       const probedIcons = Array.from(root.querySelectorAll('[' + ICON + ']')).filter(
         (el) =>
@@ -4890,14 +5156,25 @@ function syncScript(dark = true, amoled = false) {
         SURFACE +
         '="drawer"], [class*="ConversationItem" i], [class*="ChatItem" i], [class*="SessionItem" i]';
 
+      const ACTION_TARGET_SELECTOR =
+        '[class*="ButtonActionItem"], [class*="ButtonActionItem"] *, [class*="DivActionItemContainer"] *, [class*="ActionBar"] *, [data-e2e*="like"], [data-e2e*="like"] *, [data-e2e*="favorite"], [data-e2e*="favorite"] *, [data-e2e="undefined-icon"], [data-e2e="undefined-icon"] *, [data-e2e*="collect"], [data-e2e*="collect"] *, [data-e2e*="bookmark"], [data-e2e*="bookmark"] *, [data-e2e*="repost"], [data-e2e*="repost"] *, [class*="DivComment"] [class*="Like" i], [class*="DivComment"] [class*="Like" i] *';
+
       state.domObserver = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
           const t = mutation.target;
           if (t instanceof Element) {
             if (t.id?.startsWith('octo-') || t.closest('#octo-badge-modal, .octo-user-badge')) continue;
             if (mutation.type === 'attributes') {
-              if (mutation.attributeName === 'class' && !t.matches(CLASS_TARGET_SELECTOR)) {
-                continue;
+              if (
+                mutation.attributeName === 'style' ||
+                mutation.attributeName === 'fill' ||
+                mutation.attributeName === 'stroke'
+              ) {
+                if (!t.matches(ACTION_TARGET_SELECTOR)) continue;
+              } else if (mutation.attributeName === 'class') {
+                if (!t.matches(CLASS_TARGET_SELECTOR) && !t.matches(ACTION_TARGET_SELECTOR)) {
+                  continue;
+                }
               }
               scheduleScan();
               return;
@@ -4931,6 +5208,9 @@ function syncScript(dark = true, amoled = false) {
           'data-active',
           'data-selected',
           'class',
+          'style',
+          'fill',
+          'stroke',
         ],
       });
     }

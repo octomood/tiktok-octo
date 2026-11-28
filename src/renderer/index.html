@@ -4016,6 +4016,122 @@
               </button>
             </div>
           </section>
+
+          <section class="panel-cat" data-cat="experimental">
+            <button
+              type="button"
+              class="panel-cat-head"
+              id="catExperimentalHead"
+              data-cat-head="experimental"
+              aria-expanded="false"
+              aria-controls="catExperimental"
+            >
+              <span class="panel-cat-icon" aria-hidden="true">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M8 3.5h4" />
+                  <path
+                    d="M8.8 3.5v4.3l-4 7a1.3 1.3 0 0 0 1.1 2h8.2a1.3 1.3 0 0 0 1.1-2l-4-7V3.5"
+                  />
+                  <path d="M6.4 12.2h7.2" />
+                </svg>
+              </span>
+              <span class="panel-cat-title">Экспериментальные</span>
+              <svg
+                class="panel-cat-chevron"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m6 8 4 4 4-4" />
+              </svg>
+            </button>
+            <div
+              class="panel-cat-body"
+              id="catExperimental"
+              role="group"
+              aria-labelledby="catExperimentalHead"
+              hidden
+            >
+              <p class="panel-note">
+                Экспериментальные функции могут снижать производительность и вызывать
+                подтормаживания на тяжёлых страницах и видео.
+              </p>
+              <div class="panel-list" id="panelExperimental"></div>
+              <div
+                class="panel-field panel-field--card rainbow-settings"
+                id="rainbowSettingsBox"
+                hidden
+              >
+                <div class="rainbow-head">
+                  <span class="panel-field-label">Настройка переливания</span>
+                  <span class="theme-palette-active" id="rainbowRangeBadge">0° – 360° · 1.0×</span>
+                </div>
+                <div class="rainbow-preview-bar" id="rainbowGradientBar" aria-hidden="true"></div>
+                <div
+                  class="rainbow-presets"
+                  id="rainbowPresets"
+                  role="group"
+                  aria-label="Оттенки переливания"
+                ></div>
+                <div class="panel-range-row">
+                  <div class="panel-range-head">
+                    <label class="panel-row-label" for="rainbowHueFrom">Начальный оттенок</label>
+                    <span class="panel-range-val" id="rainbowHueFromVal">0°</span>
+                  </div>
+                  <input
+                    id="rainbowHueFrom"
+                    class="md3-slider md3-hue-slider"
+                    type="range"
+                    min="0"
+                    max="360"
+                    step="1"
+                    value="0"
+                  />
+                </div>
+                <div class="panel-range-row">
+                  <div class="panel-range-head">
+                    <label class="panel-row-label" for="rainbowHueTo">Конечный оттенок</label>
+                    <span class="panel-range-val" id="rainbowHueToVal">360°</span>
+                  </div>
+                  <input
+                    id="rainbowHueTo"
+                    class="md3-slider md3-hue-slider"
+                    type="range"
+                    min="0"
+                    max="360"
+                    step="1"
+                    value="360"
+                  />
+                </div>
+                <div class="panel-range-row">
+                  <div class="panel-range-head">
+                    <label class="panel-row-label" for="rainbowSpeed">Скорость</label>
+                    <span class="panel-range-val" id="rainbowSpeedVal">1.0×</span>
+                  </div>
+                  <input
+                    id="rainbowSpeed"
+                    class="md3-slider"
+                    type="range"
+                    min="0.2"
+                    max="4"
+                    step="0.1"
+                    value="1"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </div>
