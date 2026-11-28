@@ -3859,8 +3859,9 @@ function syncScript(dark = true, amoled = false) {
             }
             const pr = pane.getBoundingClientRect();
             if (pr.width < cr.width * 0.72 || pr.height < 36) continue;
+            const alreadyPane = pane.getAttribute(SURFACE) === 'live-chat-pane';
             const bg = getComputedStyle(pane).backgroundColor;
-            if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+            if (alreadyPane || (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent')) {
               nextSurface.set(pane, 'live-chat-pane');
             }
           }
