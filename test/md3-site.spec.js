@@ -1215,6 +1215,27 @@ test('MD3 дизайн для всего сайта: все элементы, SP
         heartBg: 'rgb(140, 132, 169)', // #8c84a9 — кнопка лайка в чате перекрашена в primary
       });
 
+    // Повторный скан после мутации не сбрасывает live-chat-pane обратно в rgb(15, 15, 15).
+    await site.evaluate(() => {
+      const msg = document.createElement('div');
+      msg.textContent = 'ping';
+      document.getElementById('liveChatBody')?.appendChild(msg);
+    });
+    await expect
+      .poll(async () => {
+        await site.waitForTimeout(120);
+        return site.evaluate(() => ({
+          paneSurface: document
+            .getElementById('liveChatBody')
+            ?.getAttribute('data-octo-md3-surface'),
+          paneBg: getComputedStyle(document.getElementById('liveChatBody')).backgroundColor,
+        }));
+      })
+      .toEqual({
+        paneSurface: 'live-chat-pane',
+        paneBg: 'rgba(0, 0, 0, 0)',
+      });
+
     // 9. Поверхность page не мигает между сканами, а плеер без DivBasicPlayerWrapper
     // (например, превью эфира в ленте) получает непрозрачный video-stage.
     await site.evaluate(() => {
