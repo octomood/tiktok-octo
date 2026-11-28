@@ -247,7 +247,13 @@ function buildDiagnostics() {
     `Профиль: ${app.getPath('userData')}`,
     `Язык: ${state.language || 'ru'} · TikTok: ${state.siteLanguage || 'auto'}`,
     `Регион: ${state.region?.preset || 'off'} · прокси: ${state.region?.proxy ? 'включён' : 'нет'}`,
-    `Тема: ${state.cosmetics?.['dark-theme'] === false ? 'светлая' : 'тёмная'}`,
+    `Тема: ${
+      state.cosmetics?.['dark-theme'] === false
+        ? 'светлая'
+        : state.themeAmoled
+          ? 'тёмная (AMOLED)'
+          : 'тёмная'
+    }`,
     `Режим: ${ctx.safeMode ? 'безопасный' : 'обычный'}`,
     `Питание: ${ctx.onBattery ? 'батарея' : 'сеть'}${ctx.eco ? ' · экономный режим' : ''}`,
     `Фильтры: ${state.filters?.enabled === true ? 'включены' : 'выключены'}`,

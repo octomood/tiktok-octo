@@ -22,6 +22,7 @@
 const { DEFAULT_PALETTE, getPaletteTokens } = require('./md3-palettes');
 
 const MD3_ATTR = 'data-octo-md3';
+const AMOLED_ATTR = 'data-octo-md3-amoled';
 const ACCENT_ATTR = 'data-octo-md3-accent';
 const NAV_ATTR = 'data-octo-md3-nav';
 const POS_ATTR = 'data-octo-md3-pos';
@@ -31,12 +32,13 @@ const ACTION_ATTR = 'data-octo-md3-action';
 const SURFACE_ATTR = 'data-octo-md3-surface';
 const FG_ATTR = 'data-octo-md3-fg';
 const CHAT_LAYOUT_ATTR = 'data-octo-md3-chat-layout';
+const PROBE_ATTR = 'data-octo-md3-probe';
 
 const DARK_TOKENS = getPaletteTokens(DEFAULT_PALETTE, true);
 const LIGHT_TOKENS = getPaletteTokens(DEFAULT_PALETTE, false);
 
-function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE) {
-  const t = getPaletteTokens(paletteId, dark);
+function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE, customTheme = null, amoled = false) {
+  const t = getPaletteTokens(paletteId, dark, customTheme, { amoled: Boolean(dark && amoled) });
   return `
     color-scheme: ${t.scheme} !important;
     --octo-md-primary: ${t.primary} !important;
@@ -75,6 +77,7 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE) {
     --octo-md-elevation-2: ${t.elevation2} !important;
     --octo-md-elevation-3: ${t.elevation3} !important;
     --octo-md-ease: cubic-bezier(0.2, 0, 0, 1);
+    --octo-md-motion-scale: 1 !important;
 
     /* TUX (TikTok UI Kit) — системная перекраска встроенных компонентов */
     --tux-colorBGPrimary: ${t.surface} !important;
@@ -83,7 +86,7 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE) {
     --tux-colorBGQuaternary: ${t.surfaceContainerHigh} !important;
     --tux-colorBGView: ${t.surfaceContainerLow} !important;
     --tux-colorBGView2: ${t.surfaceContainer} !important;
-    --tux-colorBGReverse: ${t.surfaceContainerHighest} !important;
+    --tux-colorBGReverse: ${t.inverseSurface} !important;
     --tux-colorBGInput: ${t.surfaceContainerHigh} !important;
     --tux-colorBGInput2: ${t.surfaceContainerHighest} !important;
     --tux-colorBGPlaceholderOpaque: ${t.surfaceContainerHigh} !important;
@@ -107,8 +110,8 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE) {
     --tux-colorSecondary: ${t.secondary} !important;
     --tux-colorTextPrimary: ${t.onSurface} !important;
     --tux-colorTextSecondary: ${t.onSurfaceVariant} !important;
-    --tux-colorTextTertiary: ${t.outline} !important;
-    --tux-colorTextQuaternary: ${t.outline} !important;
+    --tux-colorTextTertiary: ${t.onSurfaceVariant} !important;
+    --tux-colorTextQuaternary: ${t.onSurfaceVariant} !important;
     --tux-colorTextPrimaryInverse: ${t.inverseOnSurface} !important;
     --tux-colorTextConstWhite: #ffffff !important;
     --tux-colorLinePrimary: ${t.outlineVariant} !important;
@@ -142,13 +145,13 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE) {
     --live-color-end: ${t.secondary} !important;
     --text-primary: ${t.onSurface} !important;
     --text-secondary: ${t.onSurfaceVariant} !important;
-    --text-tertiary: ${t.outline} !important;
+    --text-tertiary: ${t.onSurfaceVariant} !important;
     --text-tertiary-2: ${t.onSurfaceVariant} !important;
     --text-tertiary-alt: ${t.onSurfaceVariant} !important;
-    --text-quaternary: ${t.outline} !important;
+    --text-quaternary: ${t.onSurfaceVariant} !important;
     --text-reverse: ${t.onSurface} !important;
     --text-reverse-2: ${t.onSurfaceVariant} !important;
-    --const-text-primary: ${t.inverseOnSurface} !important;
+    --const-text-primary: #ffffff !important;
     --line-primary: color-mix(in srgb, ${t.outlineVariant} 45%, transparent) !important;
     --line-primary-2: color-mix(in srgb, ${t.outlineVariant} 55%, transparent) !important;
     --line-secondary: color-mix(in srgb, ${t.outlineVariant} 42%, transparent) !important;
@@ -178,8 +181,8 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE) {
     --ui-text-1: ${t.onSurface} !important;
     --ui-text-1-display: ${t.onSurface} !important;
     --ui-text-2: ${t.onSurfaceVariant} !important;
-    --ui-text-3: ${t.outline} !important;
-    --ui-text-placeholder: ${t.outline} !important;
+    --ui-text-3: ${t.onSurfaceVariant} !important;
+    --ui-text-placeholder: ${t.onSurfaceVariant} !important;
     --ui-text-primary: ${t.primary} !important;
     --ui-text-primary-display: ${t.primary} !important;
     --tux-v2-color-ui-page-flat-1: ${t.surface} !important;
@@ -210,8 +213,8 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE) {
     --tux-v2-color-ui-text-1: ${t.onSurface} !important;
     --tux-v2-color-ui-text-1-display: ${t.onSurface} !important;
     --tux-v2-color-ui-text-2: ${t.onSurfaceVariant} !important;
-    --tux-v2-color-ui-text-3: ${t.outline} !important;
-    --tux-v2-color-ui-text-placeholder: ${t.outline} !important;
+    --tux-v2-color-ui-text-3: ${t.onSurfaceVariant} !important;
+    --tux-v2-color-ui-text-placeholder: ${t.onSurfaceVariant} !important;
     --tux-v2-color-ui-text-primary: ${t.primary} !important;
     --tux-v2-color-ui-text-primary-display: ${t.primary} !important;
     --tux-v2-color-misc-toast-background: ${t.inverseSurface} !important;
@@ -241,8 +244,8 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE) {
     --semi-color-fill-2: ${t.surfaceContainerHighest} !important;
     --semi-color-text-0: ${t.onSurface} !important;
     --semi-color-text-1: ${t.onSurfaceVariant} !important;
-    --semi-color-text-2: ${t.outline} !important;
-    --semi-color-text-3: ${t.outline} !important;
+    --semi-color-text-2: ${t.onSurfaceVariant} !important;
+    --semi-color-text-3: ${t.onSurfaceVariant} !important;
     --semi-color-primary: ${t.primary} !important;
     --semi-color-primary-hover: ${t.primary} !important;
     --semi-color-primary-active: ${t.primary} !important;
@@ -261,7 +264,7 @@ function tokenDeclarations(dark, paletteId = DEFAULT_PALETTE) {
     --color-border-2: ${t.outlineVariant} !important;
     --color-text-1: ${t.onSurface} !important;
     --color-text-2: ${t.onSurfaceVariant} !important;
-    --color-text-3: ${t.outline} !important;
+    --color-text-3: ${t.onSurfaceVariant} !important;
     --color-background-primary: ${t.surface} !important;
     --color-background-secondary: ${t.surfaceContainerLow} !important;
     --color-text-primary: ${t.onSurface} !important;
@@ -307,11 +310,36 @@ const BASE_CANVAS_CSS = `
       radial-gradient(580px 420px at 76% 84%, color-mix(in srgb, var(--octo-md-primary-container) 55%, transparent), transparent 72%) !important;
   }
 
+  [${MD3_ATTR}="dark"][${AMOLED_ATTR}="true"] body {
+    background-color: #000000 !important;
+    background-image: none !important;
+  }
+
   video {
     background-color: transparent !important;
     background-image: none !important;
   }
 `;
+
+/**
+ * Длительность перехода скина. Умножается на `--octo-md-motion-scale`, который
+ * при системной настройке «Уменьшить движение» становится `0`: правила скина
+ * объявлены с `!important` и высокой специфичностью, поэтому общее правило
+ * `* { transition-duration }` их бы не перекрыло.
+ */
+function motion(seconds) {
+  return `calc(${seconds}s * var(--octo-md-motion-scale, 1))`;
+}
+
+function reducedMotionCss(selector) {
+  return `
+    @media (prefers-reduced-motion: reduce) {
+      ${selector} {
+        --octo-md-motion-scale: 0 !important;
+      }
+    }
+  `;
+}
 
 const COMPONENT_CSS = `
 
@@ -412,17 +440,17 @@ const COMPONENT_CSS = `
   }
 
   [${SURFACE_ATTR}="drawer"] [${SURFACE_ATTR}="drawer-segmented"] > button:first-child {
-    border-radius: 9999px 6px 6px 9999px !important;
+    border-radius: 24px 6px 6px 24px !important;
   }
 
   [${SURFACE_ATTR}="drawer"] [${SURFACE_ATTR}="drawer-segmented"] > button:last-child {
-    border-radius: 6px 9999px 9999px 6px !important;
+    border-radius: 6px 24px 24px 6px !important;
   }
 
   [${SURFACE_ATTR}="drawer"] [${SURFACE_ATTR}="drawer-segmented"] > button:is([aria-pressed="true"], [aria-selected="true"], [data-active="true"], [class*="Active"]) {
     background-color: var(--octo-md-secondary-container) !important;
     color: var(--octo-md-on-secondary-container) !important;
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
   }
 
   [${SURFACE_ATTR}="drawer"] [${SURFACE_ATTR}="chip-bar"] {
@@ -440,8 +468,8 @@ const COMPONENT_CSS = `
     border-radius: 6px !important;
     margin-bottom: 4px !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      border-radius 0.2s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      border-radius ${motion(0.2)} var(--octo-md-ease) !important;
   }
 
   [${SURFACE_ATTR}="drawer"] :is(a, button, [role="button"], [role="menuitem"]):not([${SURFACE_ATTR}="drawer-segmented"] *):not([${SURFACE_ATTR}="chip"]):not([${SURFACE_ATTR}="chip-active"]):not([role="tab"]):not([id^="octo-"]):first-child {
@@ -465,10 +493,14 @@ const COMPONENT_CSS = `
     box-shadow: none !important;
   }
 
+  [${SURFACE_ATTR}="drawer"] :where(a, span, p, div, h1, h2, h3, h4, label, strong, button, [role="button"], [role="menuitem"], svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([${SURFACE_ATTR}="chip-active"]):not([${SURFACE_ATTR}="chip-active"] *):not([${SURFACE_ATTR}="chip"]):not([role="switch"]):not([${ACCENT_ATTR}="switch"]):not([${ACCENT_ATTR}="switch-off"]):not(:disabled):not([aria-disabled="true"]) {
+    color: var(--octo-md-on-surface) !important;
+  }
+
   [${SURFACE_ATTR}="drawer"] :is([${SURFACE_ATTR}="chip"], [${SURFACE_ATTR}="chip-active"]):not([id^="octo-"]) {
     display: inline-flex !important;
     align-items: center !important;
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
     margin: 0 !important;
     padding: 6px 12px !important;
   }
@@ -477,13 +509,13 @@ const COMPONENT_CSS = `
     background-color: var(--octo-md-surface-container-high) !important;
     color: var(--octo-md-on-surface-variant) !important;
     border: 0 !important;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 42%, transparent) !important;
+    box-shadow: none !important;
   }
 
   [${SURFACE_ATTR}="drawer"] [${SURFACE_ATTR}="chip"]:not([id^="octo-"]):hover {
     background-color: var(--octo-md-surface-container-highest) !important;
     color: var(--octo-md-on-surface) !important;
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
   }
 
   [${SURFACE_ATTR}="drawer"] [${SURFACE_ATTR}="chip-active"]:not([id^="octo-"]),
@@ -491,7 +523,7 @@ const COMPONENT_CSS = `
     background-color: var(--octo-md-secondary-container) !important;
     color: var(--octo-md-on-secondary-container) !important;
     box-shadow: none !important;
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
     font-weight: 600 !important;
   }
 
@@ -556,14 +588,14 @@ const COMPONENT_CSS = `
     background-image: none !important;
     border: 0 !important;
     outline: none !important;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 30%, transparent) !important;
+    box-shadow: none !important;
     border-radius: 6px !important;
     color: var(--octo-md-on-surface-variant) !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      box-shadow 0.16s var(--octo-md-ease),
-      border-radius 0.22s var(--octo-md-ease),
-      color 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      box-shadow ${motion(0.16)} var(--octo-md-ease),
+      border-radius ${motion(0.22)} var(--octo-md-ease),
+      color ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) :is(a, button, [role="button"])[${POS_ATTR}="first"] {
@@ -586,7 +618,7 @@ const COMPONENT_CSS = `
   :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) button:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-toggle"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])):hover,
   :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) [role="button"]:where(:not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([data-e2e="search-button"]):not([class*="Search"]):not([${SURFACE_ATTR}="drawer"] *):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-toggle"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([id^="octo-"])):hover {
     background-color: var(--octo-md-surface-container-high) !important;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 68%, transparent) !important;
+    box-shadow: none !important;
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -628,8 +660,8 @@ const COMPONENT_CSS = `
     color: var(--octo-md-on-surface-variant) !important;
     border-radius: 9999px !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      color 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      color ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) [${SURFACE_ATTR}="sidenav-toggle"]:hover {
@@ -775,7 +807,7 @@ const COMPONENT_CSS = `
   [${SURFACE_ATTR}="sidenav-footer"] {
     background-color: var(--octo-md-surface-container) !important;
     color: var(--octo-md-on-surface-variant) !important;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 38%, transparent) !important;
+    box-shadow: none !important;
   }
 
   [${SURFACE_ATTR}="sidenav-footer"]:hover {
@@ -803,8 +835,12 @@ const COMPONENT_CSS = `
     [class*="--active"],
     [class*="IsActive"],
     [class*="is-active"]
-  ) :where(span, p, div):not([class*="Badge"]):not([class*="Badge"] *):not([class*="Sup"]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="badge"] *):not([data-e2e="inbox-badge"]):not([data-e2e="inbox-badge"] *) {
+  ) :where(span, p, div, a, label, strong):not([class*="Badge"]):not([class*="Badge"] *):not([class*="Sup"]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="badge"] *):not([data-e2e="inbox-badge"]):not([data-e2e="inbox-badge"] *) {
     color: var(--octo-md-on-secondary-container) !important;
+  }
+
+  :is([class*="DivSideNavContainer"], [${SURFACE_ATTR}="sidenav"]) :is(a, button, [role="button"]):where(:not([${NAV_ATTR}="active"]):not([aria-current="page"]):not([aria-selected="true"]):not([data-active="true"]):not([class*="-Active"]):not([class*="--active"]):not([class*="IsActive"]):not([class*="is-active"]):not([data-e2e="tiktok-logo"]):not([data-octo-md3-logo="1"]):not([class*="Search"]):not([${SURFACE_ATTR}="sidenav-search"]):not([${SURFACE_ATTR}="sidenav-creator"]):not([${SURFACE_ATTR}="drawer"] *):not([data-e2e*="login" i]):not([class*="LoginButton" i]):not([id^="octo-"])) :where(span, p, div, label, strong):not([class*="Badge" i]):not([class*="Badge" i] *):not([class*="Sup"]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="badge"] *):not([data-e2e="inbox-badge"]):not([data-e2e="inbox-badge"] *):not([${ICON_ATTR}="active"]) {
+    color: inherit !important;
   }
 
   /* Красный домик/иконки внутри сайдбара переводим в палитру MD3 */
@@ -866,14 +902,18 @@ const COMPONENT_CSS = `
   [class*="DivSideNavContainer"] [class*="DivUserContainer"],
   [class*="DivSideNavContainer"] [class*="DivAccountItem"],
   [${SURFACE_ATTR}="sidenav"] [${SURFACE_ATTR}="sidenav-creator"] {
-    border-radius: 5px !important;
+    border-radius: 6px !important;
     margin-bottom: 2px !important;
     background-color: var(--octo-md-surface-container) !important;
     color: var(--octo-md-on-surface) !important;
     box-shadow: none !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      border-radius 0.2s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      border-radius ${motion(0.2)} var(--octo-md-ease) !important;
+  }
+
+  [${SURFACE_ATTR}="sidenav"] [${SURFACE_ATTR}="sidenav-creator"] :where(span, p, div, label, strong):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]) {
+    color: var(--octo-md-on-surface) !important;
   }
 
   [class*="DivSideNavContainer"] :is([class*="DivUserContainer"], [class*="DivAccountItem"]):first-of-type,
@@ -943,14 +983,27 @@ const COMPONENT_CSS = `
   [class*="NavBar"]:not([id^="octo-"]),
   [class*="HeaderBar"]:not([id^="octo-"]),
   header[class*="Header"],
-  [${SURFACE_ATTR}="header"] {
+  [${SURFACE_ATTR}="header"][${SURFACE_ATTR}="header"][${SURFACE_ATTR}="header"] {
     background-color: var(--octo-md-surface-container-low) !important;
     background-image: none !important;
     color: var(--octo-md-on-surface) !important;
     border-bottom: 1px solid color-mix(in srgb, var(--octo-md-outline-variant) 42%, transparent) !important;
   }
 
-  [${SURFACE_ATTR}="header"] :where(div, nav, section, ul, li):not([${SURFACE_ATTR}="header"]):not([data-e2e="search-box"]):not([class*="Search"]):not([role="button"]):not(button):not([role="menu"]):not([role="menu"] *):not([role="listbox"]):not([role="listbox"] *):not([role="dialog"]):not([role="dialog"] *):not([role="tooltip"]):not([role="tooltip"] *):not([data-e2e="search-transfer-list"]):not([data-e2e="search-transfer-list"] *):not([class*="TUXPopover"]):not([class*="TUXPopover"] *):not([class*="DivPopupContainer"]):not([class*="DivPopupContainer"] *):not([class*="DivDropdown"]):not([class*="DivDropdown"] *):not([class*="DivMenuContainer"]):not([class*="DivMenuContainer"] *):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([class*="Avatar" i]):not([id^="octo-"]) {
+  :is(
+    header:not([id^="octo-"]):not([class*="Player"] *),
+    [role="banner"]:not([id^="octo-"]),
+    [class*="DivHeaderContainer"],
+    [class*="DivHeaderWrapper"],
+    [class*="NavHeader"]:not([id^="octo-"]),
+    [class*="BusinessHeader"]:not([id^="octo-"]),
+    [class*="LayoutHeader"]:not([id^="octo-"]),
+    [class*="TopBar"]:not([id^="octo-"]),
+    [class*="NavBar"]:not([id^="octo-"]),
+    [class*="HeaderBar"]:not([id^="octo-"]),
+    header[class*="Header"],
+    [${SURFACE_ATTR}="header"]
+  ) :where(div, nav, section, ul, li):not([${SURFACE_ATTR}="header"]):not([data-e2e="search-box"]):not([class*="Search"]):not([role="button"]):not(button):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="tonal"]):not([class*="TUXButton"]):not([role="menu"]):not([role="menu"] *):not([role="listbox"]):not([role="listbox"] *):not([role="dialog"]):not([role="dialog"] *):not([role="tooltip"]):not([role="tooltip"] *):not([data-e2e="search-transfer-list"]):not([data-e2e="search-transfer-list"] *):not([class*="TUXPopover"]):not([class*="TUXPopover"] *):not([class*="DivPopupContainer"]):not([class*="DivPopupContainer"] *):not([class*="DivDropdown"]):not([class*="DivDropdown"] *):not([class*="DivMenuContainer"]):not([class*="DivMenuContainer"] *):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([class*="Avatar" i]):not([id^="octo-"]) {
     background-color: transparent !important;
     background-image: none !important;
   }
@@ -967,7 +1020,7 @@ const COMPONENT_CSS = `
     [class*="NavBar"]:not([id^="octo-"]),
     [class*="HeaderBar"]:not([id^="octo-"]),
     [${SURFACE_ATTR}="header"]
-  ) :where(a, span, p, div, h1, h2, h3, h4, label, button, svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([class*="TUXButton--primary"]):not([class*="TUXButton--primary"] *):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([role="tooltip"]):not([role="tooltip"] *) {
+  ) :where(a, span, p, div, h1, h2, h3, h4, label, button, svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([class*="TUXButton--primary"]):not([class*="TUXButton--primary"] *):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([role="tooltip"]):not([role="tooltip"] *):not([${ICON_ATTR}="inverse"]):not([${ICON_ATTR}="inverse"] *):not([${FG_ATTR}="inverse"]):not([${FG_ATTR}="inverse"] *) {
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -982,11 +1035,11 @@ const COMPONENT_CSS = `
     border: 0 !important;
     border-color: transparent !important;
     border-radius: 14px !important;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 45%, transparent) !important;
+    box-shadow: none !important;
     overflow: hidden !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      box-shadow 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      box-shadow ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   [${SURFACE_ATTR}="sidenav-search"]:hover {
@@ -1020,7 +1073,7 @@ const COMPONENT_CSS = `
   }
 
   [data-e2e="search-button"] {
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
     border: 0 !important;
     color: var(--octo-md-on-surface-variant) !important;
     background: transparent !important;
@@ -1041,6 +1094,10 @@ const COMPONENT_CSS = `
     box-shadow:
       var(--octo-md-elevation-2),
       inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 48%, transparent) !important;
+  }
+
+  :is([data-e2e="search-transfer-list"], [class*="DivSearchSuggestion"], [class*="DivSearchHistory"]) :where(a, span, p, div, label, strong, li, button, svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not(:disabled):not([aria-disabled="true"]) {
+    color: var(--octo-md-on-surface) !important;
   }
 
   /* --- Все вкладки и чипы фильтрации (Профиль, Обзор, Поиск, Видео, Live, Studio) --- */
@@ -1083,12 +1140,12 @@ const COMPONENT_CSS = `
   [data-e2e="liked-tab"],
   [data-e2e="favorites-tab"],
   [data-e2e="repost-tab"] {
-    border-radius: 5px !important;
+    border-radius: 6px !important;
     color: var(--octo-md-on-surface-variant) !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      border-radius 0.2s var(--octo-md-ease),
-      color 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      border-radius ${motion(0.2)} var(--octo-md-ease),
+      color ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   :is([role="tablist"], [class*="DivTabList"], [class*="TUXTabBar"]) > :first-child {
@@ -1149,12 +1206,12 @@ const COMPONENT_CSS = `
   [class*="FilterChip"],
   [data-e2e*="category"],
   [${SURFACE_ATTR}="chip"] {
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
     background-color: var(--octo-md-surface-container) !important;
     color: var(--octo-md-on-surface-variant) !important;
     border: 0 !important;
     border-color: transparent !important;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 42%, transparent) !important;
+    box-shadow: none !important;
   }
 
   [class*="DivCategory"] button:hover,
@@ -1168,7 +1225,7 @@ const COMPONENT_CSS = `
   [${SURFACE_ATTR}="chip"]:hover {
     background-color: var(--octo-md-surface-container-high) !important;
     color: var(--octo-md-on-surface) !important;
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
   }
 
   [class*="DivCategory"] :is(button, a):is([aria-selected="true"], [aria-pressed="true"], [class*="-Active"], [class*="--active"], [class*="IsActive"], [class*="Selected"]),
@@ -1180,7 +1237,7 @@ const COMPONENT_CSS = `
   [data-e2e*="category"]:is([aria-selected="true"], [aria-pressed="true"], [class*="-Active"], [class*="--active"], [class*="IsActive"], [class*="Selected"]),
   [${SURFACE_ATTR}="chip-active"],
   [${SURFACE_ATTR}="chip-active"]:hover {
-    border-radius: 9999px !important;
+    border-radius: 24px !important;
     background-color: var(--octo-md-secondary-container) !important;
     color: var(--octo-md-on-secondary-container) !important;
     box-shadow: none !important;
@@ -1193,56 +1250,56 @@ const COMPONENT_CSS = `
   [class*="TUXButton"]:where(:not([id^="octo-"])) {
     border-radius: 14px !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      border-radius 0.22s var(--octo-md-ease),
-      color 0.16s var(--octo-md-ease),
-      box-shadow 0.16s var(--octo-md-ease),
-      filter 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      border-radius ${motion(0.22)} var(--octo-md-ease),
+      color ${motion(0.16)} var(--octo-md-ease),
+      box-shadow ${motion(0.16)} var(--octo-md-ease),
+      filter ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-first"] {
-    border-radius: 14px 5px 5px 14px !important;
+    border-radius: 24px 6px 6px 24px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-mid"] {
-    border-radius: 5px !important;
+    border-radius: 6px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-last"] {
-    border-radius: 5px 14px 14px 5px !important;
+    border-radius: 6px 24px 24px 6px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-first"] {
-    border-radius: 14px 14px 5px 5px !important;
+    border-radius: 24px 24px 6px 6px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-mid"] {
-    border-radius: 5px !important;
+    border-radius: 6px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-last"] {
-    border-radius: 5px 5px 14px 14px !important;
+    border-radius: 6px 6px 24px 24px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-first"]:hover {
-    border-radius: 14px 9px 9px 14px !important;
+    border-radius: 24px 12px 12px 24px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-mid"]:hover,
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-mid"]:hover {
-    border-radius: 9px !important;
+    border-radius: 12px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="h-last"]:hover {
-    border-radius: 9px 14px 14px 9px !important;
+    border-radius: 12px 24px 24px 12px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-first"]:hover {
-    border-radius: 14px 14px 9px 9px !important;
+    border-radius: 24px 24px 12px 12px !important;
   }
 
   :is(button, a[role="button"], [class*="TUXButton"])[${BTN_GROUP_ATTR}="v-last"]:hover {
-    border-radius: 9px 9px 14px 14px !important;
+    border-radius: 12px 12px 24px 24px !important;
   }
 
   [class*="TUXButton--primary"]:not([id^="octo-"]):not([class*="DivSideNavContainer"] *):not([${SURFACE_ATTR}="sidenav"] *),
@@ -1395,9 +1452,7 @@ const COMPONENT_CSS = `
     color: var(--octo-md-on-surface) !important;
     border-color: transparent !important;
     opacity: 1 !important;
-    box-shadow:
-      var(--octo-md-elevation-1),
-      inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 48%, transparent) !important;
+    box-shadow: var(--octo-md-elevation-1) !important;
   }
 
   [${SURFACE_ATTR}="player-more"] {
@@ -1513,7 +1568,7 @@ const COMPONENT_CSS = `
     [class*="DivMediaControl"],
     [class*="DivControlBottom"],
     [${SURFACE_ATTR}="player-controls"]
-  ) :where(span, p, label, time, button, [role="button"], svg):not([${ACCENT_ATTR}="switch"]):not([${ACCENT_ATTR}="switch"] *):not([${ACCENT_ATTR}="switch-off"]):not([${ACCENT_ATTR}="switch-off"] *):not([${ACCENT_ATTR}="progress"]):not([${SURFACE_ATTR}="player-seekbar"]):not([${SURFACE_ATTR}="player-seekbar"] *):not([${SURFACE_ATTR}="player-seekbar-thumb"]) {
+  ) :where(div, span, p, label, time, a, strong, button, [role="button"], svg):not([${ACCENT_ATTR}="switch"]):not([${ACCENT_ATTR}="switch"] *):not([${ACCENT_ATTR}="switch-off"]):not([${ACCENT_ATTR}="switch-off"] *):not([${ACCENT_ATTR}="progress"]):not([${SURFACE_ATTR}="player-seekbar"]):not([${SURFACE_ATTR}="player-seekbar"] *):not([${SURFACE_ATTR}="player-seekbar-thumb"]):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]) {
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -1521,8 +1576,8 @@ const COMPONENT_CSS = `
     background-color: transparent !important;
     border-radius: 9999px !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      color 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      color ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   [${SURFACE_ATTR}="player-controls"] :is(button, [role="button"]):not([class*="PlayOverlay"]):not([class*="VideoMask"]):not([class*="ClickArea"]):not([role="switch"]):hover {
@@ -1573,6 +1628,7 @@ const COMPONENT_CSS = `
   [class*="TUXCard"]:not([class*="wrapper"]):not([class*="Wrapper"]),
   [class*="DivInfoCard"] {
     background-color: var(--octo-md-surface-container) !important;
+    color: var(--octo-md-on-surface) !important;
     border-radius: 14px !important;
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 40%, transparent) !important;
   }
@@ -1590,7 +1646,7 @@ const COMPONENT_CSS = `
     border-inline-start: 1px solid color-mix(in srgb, var(--octo-md-outline-variant) 42%, transparent) !important;
   }
 
-  [${SURFACE_ATTR}="comments"] :where(span, p, a, strong):not([class*="Badge"]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *) {
+  [${SURFACE_ATTR}="comments"] :where(span, p, div, h1, h2, h3, h4, label, a, strong, button, svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([${ICON_ATTR}="active"]):not([data-e2e="comment-post"]):not(:disabled):not([aria-disabled="true"]) {
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -1631,10 +1687,10 @@ const COMPONENT_CSS = `
 
   [class*="DivCommentItemContainer"],
   [class*="DivReplyItem"] {
-    border-radius: 5px !important;
+    border-radius: 6px !important;
     transition:
-      background-color 0.14s var(--octo-md-ease),
-      border-radius 0.2s var(--octo-md-ease) !important;
+      background-color ${motion(0.14)} var(--octo-md-ease),
+      border-radius ${motion(0.2)} var(--octo-md-ease) !important;
   }
 
   [class*="DivCommentItemContainer"]:first-child,
@@ -1679,6 +1735,10 @@ const COMPONENT_CSS = `
     color: var(--octo-md-on-surface) !important;
     border-radius: 14px !important;
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 42%, transparent) !important;
+  }
+
+  [${SURFACE_ATTR}="live-footer"] :where(span, p, div, label, strong, a, svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not(:disabled):not([aria-disabled="true"]) {
+    color: var(--octo-md-on-surface) !important;
   }
 
   [${SURFACE_ATTR}="live-chat"] {
@@ -1814,7 +1874,7 @@ const COMPONENT_CSS = `
     color: var(--octo-md-on-surface) !important;
   }
 
-  [${SURFACE_ATTR}="card"] {
+  [${SURFACE_ATTR}="card"][${SURFACE_ATTR}="card"][${SURFACE_ATTR}="card"] {
     background-color: var(--octo-md-surface-container-low) !important;
     color: var(--octo-md-on-surface) !important;
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 40%, transparent) !important;
@@ -1829,11 +1889,11 @@ const COMPONENT_CSS = `
   [class*="ChatItem"] {
     background-color: transparent !important;
     color: var(--octo-md-on-surface) !important;
-    border-radius: 5px !important;
+    border-radius: 6px !important;
     margin-bottom: 2px !important;
     transition:
-      background-color 0.15s var(--octo-md-ease),
-      border-radius 0.2s var(--octo-md-ease) !important;
+      background-color ${motion(0.15)} var(--octo-md-ease),
+      border-radius ${motion(0.2)} var(--octo-md-ease) !important;
   }
 
   [data-e2e="chat-list-item"]:first-child,
@@ -1895,7 +1955,7 @@ const COMPONENT_CSS = `
   [class*="ContactItem"]:is([aria-selected="true"], [aria-current="true"], [data-selected="true"], [data-active="true"], [class*="-Active"], [class*="--active"], [class*="IsActive"], [class*="Selected"], [class*="selected"], [class*="active"]),
   [class*="ConversationItem"]:is([aria-selected="true"], [aria-current="true"], [data-selected="true"], [data-active="true"], [class*="-Active"], [class*="--active"], [class*="IsActive"], [class*="Selected"], [class*="selected"], [class*="active"]),
   [class*="ChatItem"]:is([aria-selected="true"], [aria-current="true"], [data-selected="true"], [data-active="true"], [class*="-Active"], [class*="--active"], [class*="IsActive"], [class*="Selected"], [class*="selected"], [class*="active"]),
-  [${SURFACE_ATTR}="chat-active"] {
+  [${SURFACE_ATTR}="chat-active"][${SURFACE_ATTR}="chat-active"][${SURFACE_ATTR}="chat-active"] {
     border-radius: 14px !important;
     background-color: var(--octo-md-secondary-container) !important;
     color: var(--octo-md-on-secondary-container) !important;
@@ -1917,22 +1977,78 @@ const COMPONENT_CSS = `
     color: var(--octo-md-on-secondary-container) !important;
   }
 
+  /* Строка списка, которую сайт подсвечивает светлым :hover (классы не известны
+     заранее — строку находит скрипт по цвету): тональная подсветка MD3. */
+  [${SURFACE_ATTR}="chat-hover"][${SURFACE_ATTR}="chat-hover"][${SURFACE_ATTR}="chat-hover"] {
+    background-color: var(--octo-md-surface-container-high) !important;
+    color: var(--octo-md-on-surface) !important;
+  }
+
+  [${SURFACE_ATTR}="chat-hover"] :where(span, p, div, strong, h1, h2, h3, h4):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([data-e2e="inbox-badge"]):not([class*="Avatar" i]) {
+    color: var(--octo-md-on-surface) !important;
+  }
+
+  /* Замер собственного цвета сайта: на время замера снятой подложки переходы
+     выключены, иначе getComputedStyle вернёт промежуточный цвет, а возврат
+     подложки покажет белую вспышку. */
+  [${PROBE_ATTR}],
+  [${PROBE_ATTR}] * {
+    transition: none !important;
+  }
+
   [${FG_ATTR}="on-surface"] {
     color: var(--octo-md-on-surface) !important;
+  }
+
+  [${FG_ATTR}="inverse"] {
+    color: var(--octo-md-inverse-on-surface) !important;
+  }
+
+  [${FG_ATTR}="const-white"] {
+    color: #ffffff !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.72) !important;
   }
 
   [${ICON_ATTR}="on-surface"] {
     color: var(--octo-md-on-surface) !important;
   }
 
-  svg[${ICON_ATTR}="on-surface"] path:not([fill="none"]),
-  [${ICON_ATTR}="on-surface"] > path:not([fill="none"]) {
+  [${ICON_ATTR}="inverse"] {
+    color: var(--octo-md-inverse-on-surface) !important;
+  }
+
+  [${ICON_ATTR}="const-white"] {
+    color: #ffffff !important;
+  }
+
+  [${ICON_ATTR}="fill"],
+  [${ICON_ATTR}="fill-stroke"] {
     fill: var(--octo-md-on-surface) !important;
   }
 
-  svg[${ICON_ATTR}="on-surface"] path[stroke]:not([stroke="none"]),
-  [${ICON_ATTR}="on-surface"] > path[stroke]:not([stroke="none"]) {
+  [${ICON_ATTR}="stroke"],
+  [${ICON_ATTR}="fill-stroke"] {
     stroke: var(--octo-md-on-surface) !important;
+  }
+
+  [${ICON_ATTR}="inverse-fill"],
+  [${ICON_ATTR}="inverse-fill-stroke"] {
+    fill: var(--octo-md-inverse-on-surface) !important;
+  }
+
+  [${ICON_ATTR}="inverse-stroke"],
+  [${ICON_ATTR}="inverse-fill-stroke"] {
+    stroke: var(--octo-md-inverse-on-surface) !important;
+  }
+
+  [${ICON_ATTR}="const-fill"],
+  [${ICON_ATTR}="const-fill-stroke"] {
+    fill: #ffffff !important;
+  }
+
+  [${ICON_ATTR}="const-stroke"],
+  [${ICON_ATTR}="const-fill-stroke"] {
+    stroke: #ffffff !important;
   }
 
   [class*="DivMessageContent"],
@@ -1988,6 +2104,16 @@ const COMPONENT_CSS = `
       inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 55%, transparent) !important;
   }
 
+  :is(
+    [role="dialog"]:not([id^="octo-"]):not([${PROBE_ATTR}]),
+    [aria-modal="true"]:not([id^="octo-"]):not([${PROBE_ATTR}]),
+    [class*="TUXModal-content"]:not([id^="octo-"]):not([${PROBE_ATTR}]),
+    [class*="DivModalContainer"]:not([id^="octo-"]):not([${PROBE_ATTR}]),
+    [class*="DivDialogContainer"]:not([id^="octo-"]):not([${PROBE_ATTR}])
+  ) :where(h1, h2, h3, h4, p, span, label, strong, a, button, svg):not([${ACCENT_ATTR}="primary-text"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([${ACCENT_ATTR}="badge"]):not([class*="Badge" i]):not(:disabled):not([aria-disabled="true"]):not([role="switch"]):not([${ACCENT_ATTR}="switch"]):not([${ACCENT_ATTR}="switch-off"]):not([class*="DivVideoWrapper"] *):not([class*="DivBasicPlayerWrapper"] *) {
+    color: var(--octo-md-on-surface) !important;
+  }
+
   [class*="DivModalMask"],
   [class*="TUXModal-backdrop"],
   [class*="DivOverlayMask"] {
@@ -2023,10 +2149,10 @@ const COMPONENT_CSS = `
   [role="option"],
   [class*="DivMenuItem"],
   [class*="TUXMenu-item"] {
-    border-radius: 5px !important;
+    border-radius: 6px !important;
     transition:
-      background-color 0.14s var(--octo-md-ease),
-      border-radius 0.18s var(--octo-md-ease) !important;
+      background-color ${motion(0.14)} var(--octo-md-ease),
+      border-radius ${motion(0.18)} var(--octo-md-ease) !important;
   }
 
   [role="menuitem"]:first-child,
@@ -2064,7 +2190,7 @@ const COMPONENT_CSS = `
     [role="tooltip"]:not([id^="octo-"]),
     [class*="TUXTooltip-tooltip"]:not([id^="octo-"]),
     [class*="TUXTooltip-content"]:not([id^="octo-"])
-  ) :where(span, p, div) {
+  ) :where(span, p, div, strong, label, a, svg) {
     color: var(--octo-md-inverse-on-surface) !important;
   }
 
@@ -2099,8 +2225,8 @@ const COMPONENT_CSS = `
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 55%, transparent) !important;
     overflow: hidden !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      box-shadow 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      box-shadow ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   [${SURFACE_ATTR}="field"]:focus-within {
@@ -2231,8 +2357,8 @@ const COMPONENT_CSS = `
     border-radius: 6px !important;
     margin-bottom: 4px !important;
     transition:
-      background-color 0.16s var(--octo-md-ease),
-      color 0.16s var(--octo-md-ease) !important;
+      background-color ${motion(0.16)} var(--octo-md-ease),
+      color ${motion(0.16)} var(--octo-md-ease) !important;
   }
 
   [${SURFACE_ATTR}="setting-nav-item"]:first-child {
@@ -2270,7 +2396,7 @@ const COMPONENT_CSS = `
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--octo-md-outline-variant) 42%, transparent) !important;
   }
 
-  [${SURFACE_ATTR}="setting-pane"] :where(h1, h2, h3, h4, strong) {
+  [${SURFACE_ATTR}="setting-pane"] :where(h1, h2, h3, h4, p, span, label, a, strong, button, svg):not([class*="Badge" i]):not([${ACCENT_ATTR}="badge"]):not([${ACCENT_ATTR}="primary"]):not([${ACCENT_ATTR}="primary"] *):not([${ACCENT_ATTR}="tonal"]):not([${ACCENT_ATTR}="tonal"] *):not([role="switch"]):not([${ACCENT_ATTR}="switch"]):not([${ACCENT_ATTR}="switch-off"]):not(:disabled):not([aria-disabled="true"]) {
     color: var(--octo-md-on-surface) !important;
   }
 
@@ -2375,8 +2501,7 @@ const COMPONENT_CSS = `
   }
 `;
 
-function siteCss(dark = true, paletteId = DEFAULT_PALETTE) {
-  return `
+const TOKEN_ROOTS = `
     :root,
     html,
     body,
@@ -2384,27 +2509,35 @@ function siteCss(dark = true, paletteId = DEFAULT_PALETTE) {
     [data-tux-theme],
     [data-tux-color-scheme],
     [class*="ThemeProvider"],
-    [${MD3_ATTR}] {
-      ${tokenDeclarations(dark, paletteId)}
+    [${MD3_ATTR}]`;
+
+function siteCss(dark = true, paletteId = DEFAULT_PALETTE, customTheme = null, amoled = false) {
+  return `
+    ${TOKEN_ROOTS} {
+      ${tokenDeclarations(dark, paletteId, customTheme, amoled)}
     }
+    ${reducedMotionCss(TOKEN_ROOTS)}
     ${BASE_CANVAS_CSS}
     ${COMPONENT_CSS}
   `;
 }
 
-function shadowCss(dark = true, paletteId = DEFAULT_PALETTE) {
+function shadowCss(dark = true, paletteId = DEFAULT_PALETTE, customTheme = null, amoled = false) {
   return `
     :host {
-      ${tokenDeclarations(dark, paletteId)}
+      ${tokenDeclarations(dark, paletteId, customTheme, amoled)}
     }
+    ${reducedMotionCss(':host')}
     ${COMPONENT_CSS}
   `;
 }
 
-function syncScript(dark = true) {
+function syncScript(dark = true, amoled = false) {
   const mode = dark ? 'dark' : 'light';
+  const useAmoled = Boolean(dark && amoled);
   return `(() => {
     const ATTR = '${MD3_ATTR}';
+    const AMOLED_ATTR = '${AMOLED_ATTR}';
     const ACCENT = '${ACCENT_ATTR}';
     const NAV = '${NAV_ATTR}';
     const POS = '${POS_ATTR}';
@@ -2414,7 +2547,9 @@ function syncScript(dark = true) {
     const SURFACE = '${SURFACE_ATTR}';
     const FG = '${FG_ATTR}';
     const CHAT_LAYOUT = '${CHAT_LAYOUT_ATTR}';
+    const PROBE = '${PROBE_ATTR}';
     const MODE = '${mode}';
+    const AMOLED = ${useAmoled ? 'true' : 'false'};
 
     const setAttrIfDiff = (el, name, value) => {
       if (el.getAttribute(name) !== value) el.setAttribute(name, value);
@@ -2447,42 +2582,137 @@ function syncScript(dark = true) {
 
     const luminanceOf = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
 
-    const effectiveBgLum = (el, lumCache = null) => {
-      if (lumCache && lumCache.has(el)) return lumCache.get(el);
-      const chain = [];
+    const srgbChannel = (v) => {
+      const c = v / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+
+    const relLuminance = (c) =>
+      0.2126 * srgbChannel(c.r) + 0.7152 * srgbChannel(c.g) + 0.0722 * srgbChannel(c.b);
+
+    const blendOver = (fg, bg) => {
+      const a = fg.a >= 1 ? 1 : Math.max(0, fg.a);
+      return {
+        r: fg.r * a + bg.r * (1 - a),
+        g: fg.g * a + bg.g * (1 - a),
+        b: fg.b * a + bg.b * (1 - a),
+        a: 1,
+      };
+    };
+
+    const contrastRatioRgb = (fg, bg) => {
+      const eff = fg.a < 1 ? blendOver(fg, bg) : fg;
+      const l1 = relLuminance(eff);
+      const l2 = relLuminance(bg);
+      return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    };
+
+    const collectMediaRects = (root) => {
+      const rects = [];
+      for (const node of root.querySelectorAll(
+        'video, [data-e2e="user-post-item"] img, [data-e2e="explore-item"] img, [data-e2e="search_top-item"] img, [data-e2e="favorites-item"] img, [class*="DivVideoCard"] img, [class*="DivExploreCard"] img, [class*="DivLiveCard"] img, [class*="DivBasicPlayerWrapper"] img, [class*="DivVideoWrapper"] img',
+      )) {
+        if (node.id?.startsWith('octo-')) continue;
+        const r = node.getBoundingClientRect();
+        if (r.width >= 60 && r.height >= 60) rects.push({ node, rect: r });
+      }
+      return rects;
+    };
+
+    const MEDIA_UI_EXCLUDE =
+      '[' +
+      SURFACE +
+      '="player-controls"], [' +
+      SURFACE +
+      '="comments"], [' +
+      SURFACE +
+      '="live-chat"], [' +
+      SURFACE +
+      '="drawer"], [role="dialog"], [role="menu"], [role="listbox"], [role="tooltip"], header, [' +
+      SURFACE +
+      '="header"], [' +
+      SURFACE +
+      '="sidenav"]';
+
+    const overlapsMedia = (el, mediaRects) => {
+      if (!mediaRects || mediaRects.length === 0) return false;
+      if (el.closest(MEDIA_UI_EXCLUDE)) return false;
+      const er = el.getBoundingClientRect();
+      if (er.width <= 0 || er.height <= 0) return false;
+      for (const item of mediaRects) {
+        if (item.node === el || el.contains(item.node)) continue;
+        const mr = item.rect;
+        if (er.right > mr.left + 1 && er.left < mr.right - 1 && er.bottom > mr.top + 1 && er.top < mr.bottom - 1) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const plannedSurfaceBg = (kind) => {
+      if (kind === 'chat-active') {
+        return MODE === 'dark' ? { r: 86, g: 78, b: 112, a: 1 } : { r: 228, g: 219, b: 233, a: 1 };
+      }
+      if (kind === 'chat-hover' || kind === 'chat-input' || kind === 'live-chat-input' || kind === 'comment-input' || kind === 'field') {
+        return MODE === 'dark' ? { r: 62, g: 56, b: 84, a: 1 } : { r: 226, g: 216, b: 232, a: 1 };
+      }
+      return MODE === 'dark'
+        ? (AMOLED ? { r: 8, g: 8, b: 10, a: 1 } : { r: 33, g: 29, b: 48, a: 1 })
+        : { r: 239, g: 233, b: 243, a: 1 };
+    };
+
+    const effectiveBgInfo = (el, bgCache = null, mediaRects = null, nextSurface = null) => {
+      if (bgCache && bgCache.has(el)) return bgCache.get(el);
+      const layers = [];
       let cur = el;
-      let result = MODE === 'dark' ? 25 : 246;
+      let base = MODE === 'dark' ? (AMOLED ? { r: 0, g: 0, b: 0, a: 1 } : { r: 25, g: 22, b: 36, a: 1 }) : { r: 246, g: 241, b: 248, a: 1 };
+      let onMedia = false;
       while (cur && cur.nodeType === 1) {
-        if (lumCache && lumCache.has(cur)) {
-          result = lumCache.get(cur);
+        const planned = nextSurface ? nextSurface.get(cur) : null;
+        if (planned && planned !== 'page' && planned !== 'video-stage' && planned !== 'live-stage') {
+          base = plannedSurfaceBg(planned);
           break;
         }
-        chain.push(cur);
         const c = parseRgb(getComputedStyle(cur).backgroundColor);
-        if (c && c.a >= 0.5) {
-          result = luminanceOf(c);
-          break;
+        if (c && c.a > 0.02) {
+          if (c.a >= 0.96) {
+            base = { r: c.r, g: c.g, b: c.b, a: 1 };
+            break;
+          }
+          layers.push(c);
         }
         cur = cur.parentElement;
       }
-      if (lumCache) {
-        for (const node of chain) lumCache.set(node, result);
+      if (cur == null || cur.nodeType !== 1) {
+        if (overlapsMedia(el, mediaRects)) {
+          base = { r: 16, g: 16, b: 18, a: 1 };
+          onMedia = true;
+        }
       }
-      return result;
+      let rgb = base;
+      for (let i = layers.length - 1; i >= 0; i -= 1) {
+        rgb = blendOver(layers[i], rgb);
+      }
+      const info = { rgb, lum: relLuminance(rgb), lum255: luminanceOf(rgb), onMedia };
+      if (bgCache) bgCache.set(el, info);
+      return info;
     };
+
+    const effectiveBgLum = (el, lumCache = null) => effectiveBgInfo(el, lumCache).lum255;
 
     const isMessagesTopPage = () => /^\\/messages(?:\\/|$)/i.test(location.pathname || '');
 
     const isMessagesRoute = () =>
       isMessagesTopPage() ||
-      /^\\/business-suite(?:\\/|$)/i.test(location.pathname || '') ||
-      /business\\.tiktok\\.com/i.test(location.hostname || '');
+      /^\\/(?:business-suite|tiktokstudio|creator-center)(?:\\/|$)/i.test(location.pathname || '') ||
+      /business\\.tiktok\\.com/i.test(location.hostname || '') ||
+      /\\/(?:messages|business-suite)(?:\\/|$)/i.test(document.referrer || '');
 
     const isMessagesContext = () =>
       isMessagesRoute() ||
       Boolean(
         document.querySelector(
-          '[data-e2e="chat-list-item"], [class*="SessionList" i], [class*="DivConversationList"], [class*="DivChatMain"], [data-e2e="message-input-area"]',
+          '[data-e2e="chat-list-item"], [class*="SessionList" i], [class*="DivConversationList"], [class*="DivChatMain"], [data-e2e="message-input-area"], [class*="InboxList" i]',
         ),
       );
 
@@ -3222,13 +3452,15 @@ function syncScript(dark = true) {
       'chat-active',
       'card',
       'chat-input',
+      'chat-hover',
     ]);
 
-    const syncSurfaces = (root) => {
+    const syncSurfacesNow = (root) => {
       findSidebars();
       const nextSurface = new Map();
-      const nextFg = new Set();
+      const nextFg = new Map();
       const lumCache = new WeakMap();
+      const mediaRects = collectMediaRects(root);
       const hasPlannedAncestor = (el, value, includeSelf = false) => {
         let cur = includeSelf ? el : el.parentElement;
         while (cur && cur.nodeType === 1) {
@@ -3689,7 +3921,7 @@ function syncScript(dark = true) {
             rect.top >= -4 &&
             rect.top <= topLimit &&
             rect.height >= 32 &&
-            rect.height <= 120 &&
+            rect.height <= 140 &&
             rect.width >= window.innerWidth * 0.45
           ) {
             const c = parseRgb(getComputedStyle(el).backgroundColor);
@@ -3702,19 +3934,19 @@ function syncScript(dark = true) {
 
       if (MODE === 'dark' && msgCtx) {
         const chatRows = root.querySelectorAll(
-          '[data-e2e="chat-list-item"], [class*="ConversationItem" i], [class*="ChatItem" i], [class*="SessionItem" i], [class*="ContactItem" i], [class*="SessionList" i] > div, [class*="SessionList" i] li, [class*="ConversationList" i] > div, [class*="ChatList" i] > div, [class*="InboxList" i] > div',
+          '[data-e2e="chat-list-item"], [class*="ConversationItem" i], [class*="ChatItem" i], [class*="SessionItem" i], [class*="ContactItem" i], [class*="SessionList" i] > div, [class*="SessionList" i] li, [class*="ConversationList" i] > div, [class*="ConversationList" i] li, [class*="ChatList" i] > div, [class*="ChatList" i] li, [class*="InboxList" i] > div, [class*="InboxList" i] li',
         );
         for (const row of chatRows) {
           if (row.id?.startsWith('octo-')) continue;
           const r = row.getBoundingClientRect();
-          if (r.width < 120 || r.height < 36 || r.height > 150) continue;
+          if (r.width < 44 || r.height < 36 || r.height > 150) continue;
           if (isLightColor(getComputedStyle(row).backgroundColor)) {
-            nextSurface.set(row, 'chat-active');
+            nextSurface.set(row, row.matches(':hover') ? 'chat-hover' : 'chat-active');
           }
         }
 
         const msgPanels = root.querySelectorAll(
-          'div, section, aside, nav, ul',
+          'div, section, aside, nav, ul, li',
         );
         for (const panel of msgPanels) {
           if (
@@ -3723,21 +3955,23 @@ function syncScript(dark = true) {
             panel.matches('button, [role="button"], input, textarea, [contenteditable], img, video, svg, [class*="Bubble" i], [class*="MessageContent" i], [class*="Avatar" i], [class*="Badge" i]') ||
             panel.closest('[role="dialog"], [role="menu"], [role="tooltip"]') ||
             hasPlannedAncestor(panel, 'chat-active') ||
+            hasPlannedAncestor(panel, 'chat-hover') ||
             hasPlannedAncestor(panel, 'header')
           ) {
             continue;
           }
           const r = panel.getBoundingClientRect();
-          if (r.width < 120 || r.height < 36) {
+          if (r.width < 44 || r.height < 36) {
             continue;
           }
           if (isLightColor(getComputedStyle(panel).backgroundColor)) {
-            nextSurface.set(
-              panel,
-              r.height >= window.innerHeight * 0.45 && r.width >= window.innerWidth * 0.45
-                ? 'page'
-                : 'card',
-            );
+            if (r.height >= window.innerHeight * 0.45 && r.width >= window.innerWidth * 0.45) {
+              nextSurface.set(panel, 'page');
+            } else if (isListRow(panel, r)) {
+              nextSurface.set(panel, panel.matches(':hover') ? 'chat-hover' : 'chat-active');
+            } else if (r.width >= 120 || r.height >= 200) {
+              nextSurface.set(panel, 'card');
+            }
           }
         }
 
@@ -3756,31 +3990,60 @@ function syncScript(dark = true) {
             if (!nextSurface.has(wrap)) nextSurface.set(wrap, 'chat-input');
           }
         }
+      }
 
-        for (const node of root.querySelectorAll(
-          'span, p, div, a, strong, label, h1, h2, h3, h4, input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"]',
-        )) {
-          if (
-            node.id?.startsWith('octo-') ||
-            hasPlannedAncestor(node, 'chat-active', true) ||
-            node.closest('[' + ACCENT + '="primary"], [' + ACCENT + '="tonal"], [' + ACCENT + '="badge"], [role="tooltip"], [class*="DivSideNavContainer"]')
-          ) {
-            continue;
-          }
-          const isField = node.matches('input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"]');
-          if (!isField) {
-            let hasDirectText = false;
-            for (const child of node.childNodes) {
-              if (child.nodeType === 3 && child.textContent.trim()) {
-                hasDirectText = true;
-                break;
-              }
+      for (const node of root.querySelectorAll(
+        'span, p, div, a, strong, em, label, time, button, h1, h2, h3, h4, li, td, th, input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"]',
+      )) {
+        if (
+          node.id?.startsWith('octo-') ||
+          hasPlannedAncestor(node, 'chat-active', true) ||
+          hasPlannedAncestor(node, 'chat-hover', true) ||
+          node.matches(':disabled, [aria-disabled="true"], video, img, svg') ||
+          node.closest(
+            'button:disabled, [aria-disabled="true"], [' +
+              ACCENT +
+              '="primary"], [' +
+              ACCENT +
+              '="tonal"], [' +
+              ACCENT +
+              '="badge"], [' +
+              ACCENT +
+              '="primary-text"], [' +
+              ACCENT +
+              '="switch"], [' +
+              ACCENT +
+              '="switch-off"], [data-e2e="inbox-badge"], [role="tooltip"], [class*="Avatar" i], [class*="Emoji" i], [class*="Sticker" i], [class*="DivSideNavContainer"], [' +
+              SURFACE +
+              '="sidenav"]',
+          )
+        ) {
+          continue;
+        }
+        const isField = node.matches('input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"]');
+        if (!isField) {
+          let hasDirectText = false;
+          for (const child of node.childNodes) {
+            if (child.nodeType === 3 && child.textContent.trim()) {
+              hasDirectText = true;
+              break;
             }
-            if (!hasDirectText) continue;
           }
-          const style = getComputedStyle(node);
-          if (isDarkColor(style.color) && effectiveBgLum(node, lumCache) < 105) {
-            nextFg.add(node);
+          if (!hasDirectText) continue;
+        }
+        const style = getComputedStyle(node);
+        const fgColor = parseRgb(style.color);
+        const bgInfo = effectiveBgInfo(node, lumCache, mediaRects, nextSurface);
+        if (
+          !fgColor ||
+          fgColor.a < 0.45 ||
+          contrastRatioRgb(fgColor, bgInfo.rgb) < 2.8 ||
+          (MODE === 'dark' && msgCtx && isDarkColor(style.color) && bgInfo.lum255 < 105)
+        ) {
+          if (bgInfo.lum < 0.22) {
+            nextFg.set(node, bgInfo.onMedia && MODE === 'light' ? 'const-white' : 'on-surface');
+          } else {
+            nextFg.set(node, MODE === 'light' ? 'on-surface' : 'inverse');
           }
         }
       }
@@ -3796,7 +4059,99 @@ function syncScript(dark = true) {
       root.querySelectorAll('[' + FG + ']').forEach((el) => {
         if (!nextFg.has(el)) delAttrIfSet(el, FG);
       });
-      for (const el of nextFg) setAttrIfDiff(el, FG, 'on-surface');
+      for (const [el, val] of nextFg) setAttrIfDiff(el, FG, val);
+    };
+
+    // Подложки, которые ставятся по светлому цвету сайта (шапка, карточка, строка
+    // диалога), сами перекрашивают элемент: при следующем сканировании цвет уже
+    // тёмный, подложка снималась, и элемент мигал белым с белым текстом. Поэтому
+    // перед сканированием снимаем их под «замером» без переходов, читаем цвет
+    // сайта и возвращаем подложку до первой отрисовки.
+    const PROBED_SURFACES = ['header', 'card', 'chat-active', 'chat-hover'];
+    const PROBED_SELECTOR = PROBED_SURFACES.map((v) => '[' + SURFACE + '="' + v + '"]').join(', ');
+
+    const beginProbe = (els, fgEls = []) => {
+      for (const el of els) {
+        el.setAttribute(PROBE, '');
+        el.removeAttribute(SURFACE);
+      }
+      for (const el of fgEls) {
+        el.setAttribute(PROBE, '');
+        el.removeAttribute(FG);
+      }
+    };
+
+    const endProbe = (els) => {
+      if (!els.length) return;
+      // Стиль пересчитывается при чтении: подложка уже вернулась, переходы ещё выключены.
+      void getComputedStyle(els[0]).backgroundColor;
+      for (const el of els) el.removeAttribute(PROBE);
+    };
+
+    const syncSurfaces = (root) => {
+      const probed = MODE === 'dark' ? Array.from(root.querySelectorAll(PROBED_SELECTOR)) : [];
+      const probedFg = Array.from(root.querySelectorAll('[' + FG + ']'));
+      beginProbe(probed, probedFg);
+      try {
+        syncSurfacesNow(root);
+      } finally {
+        endProbe(probed.concat(probedFg));
+      }
+    };
+
+    // Строка списка сообщений: светлая подложка высотой со строку, у которой есть
+    // соседи той же высоты. Выбранная строка — капсула, строка под курсором — hover.
+    const isListRow = (el, r) => {
+      if (r.width < 44 || r.height < 36 || r.height > 150) return false;
+      const parent = el.parentElement;
+      if (!parent) return false;
+      let similar = 0;
+      for (const sibling of parent.children) {
+        if (sibling === el || sibling.tagName !== el.tagName) continue;
+        const sr = sibling.getBoundingClientRect();
+        if (Math.abs(sr.height - r.height) <= 12 && Math.abs(sr.width - r.width) <= 24) {
+          similar += 1;
+          if (similar >= 2) return true;
+        }
+      }
+      return false;
+    };
+
+    // Наведение не меняет DOM, поэтому сканирование его не видит: светлый :hover
+    // сайта оставался белым, а текст строки уже был светлым. Проверяем только
+    // цепочку элементов под курсором.
+    let hoverFrame = 0;
+    const syncChatHover = () => {
+      hoverFrame = 0;
+      if (MODE !== 'dark' || !isMessagesContext()) return;
+      for (const el of document.querySelectorAll('[' + SURFACE + '="chat-hover"]')) {
+        if (!el.matches(':hover')) el.removeAttribute(SURFACE);
+      }
+      const chain = Array.from(document.querySelectorAll(':hover')).reverse();
+      const fresh = [];
+      for (const el of chain) {
+        // Строка уже размечена (выбранная, под курсором) или дошли до карточки списка.
+        if (el === document.body || el === document.documentElement || el.hasAttribute(SURFACE)) break;
+        if (!el.id?.startsWith('octo-')) fresh.push(el);
+      }
+      if (!fresh.length) return;
+      for (const el of fresh) el.setAttribute(PROBE, '');
+      let row = null;
+      for (const el of fresh) {
+        const r = el.getBoundingClientRect();
+        if (r.width < 44 || r.height < 36 || r.height > 150) continue;
+        if (isLightColor(getComputedStyle(el).backgroundColor)) {
+          row = el;
+          break;
+        }
+      }
+      if (row) row.setAttribute(SURFACE, 'chat-hover');
+      endProbe(fresh);
+    };
+
+    const onPointerMove = () => {
+      if (MODE !== 'dark' || hoverFrame) return;
+      hoverFrame = requestAnimationFrame(syncChatHover);
     };
 
     const classify = (el, accentWrites) => {
@@ -3939,35 +4294,73 @@ function syncScript(dark = true) {
       }
     };
 
-    const isDimOrMutedColor = (value) => {
+    const iconTonePrefix = (bgInfo) => {
+      if (bgInfo.lum < 0.22) {
+        return bgInfo.onMedia && MODE === 'light' ? 'const-' : '';
+      }
+      return MODE === 'light' ? '' : 'inverse-';
+    };
+
+    const isLowContrastPaint = (value, bgInfo, strictPlayer = false) => {
       const c = parseRgb(value);
       if (!c) return false;
-      if (c.a < 0.85) return true;
-      return MODE === 'dark' ? luminanceOf(c) < 155 : luminanceOf(c) > 120;
+      if (c.a < 0.5) return true;
+      if (strictPlayer && c.a < 0.85) return true;
+      if (contrastRatioRgb(c, bgInfo.rgb) < 2.8) return true;
+      if (strictPlayer) {
+        return bgInfo.lum < 0.22 ? luminanceOf(c) < 155 : luminanceOf(c) > 120;
+      }
+      return false;
     };
 
-    const markIconOnSurfaceIfDim = (svg, iconWrites) => {
+    const checkSvgContrast = (svg, iconWrites, bgCache, mediaRects, strictPlayer = false) => {
       if (!(svg instanceof Element) || svg.id?.startsWith('octo-')) return;
-      if (svg.getAttribute(ICON) === 'on-surface') return;
+      if (
+        svg.closest(
+          '[' +
+            ACCENT +
+            '="switch"], [' +
+            ACCENT +
+            '="switch-off"], [' +
+            ACCENT +
+            '="primary"], [' +
+            ACCENT +
+            '="tonal"], [' +
+            ACCENT +
+            '="badge"], [role="tooltip"], [data-e2e="tiktok-logo"], [data-octo-brand], [class*="Avatar" i], [class*="Emoji" i], [class*="Sticker" i], [class*="Animation" i], [class*="Lottie" i], [class*="DivSideNavContainer"], [' +
+            SURFACE +
+            '="sidenav"]',
+        )
+      ) {
+        return;
+      }
+      if (svg.getAttribute(ICON) === 'active' || svg.querySelector('[' + ICON + '="active"]')) return;
+      const bgInfo = effectiveBgInfo(svg, bgCache, mediaRects);
+      const prefix = iconTonePrefix(bgInfo);
       const st = getComputedStyle(svg);
-      let dim = isDimOrMutedColor(st.color) || isDimOrMutedColor(st.fill);
-      if (!dim) {
-        for (const p of svg.querySelectorAll('path, circle, rect, line, polyline, polygon')) {
-          const ps = getComputedStyle(p);
-          if (isDimOrMutedColor(ps.fill) || isDimOrMutedColor(ps.stroke)) {
-            dim = true;
-            break;
-          }
+      if (isLowContrastPaint(st.color, bgInfo, strictPlayer)) {
+        iconWrites.set(svg, prefix ? prefix.slice(0, -1) : 'on-surface');
+      }
+      for (const p of svg.querySelectorAll('path, circle, rect, line, polyline, polygon, ellipse')) {
+        if (p.getAttribute(ICON) === 'active') continue;
+        const ps = getComputedStyle(p);
+        const badFill = ps.fill !== 'none' && isLowContrastPaint(ps.fill, bgInfo, strictPlayer);
+        const badStroke = ps.stroke !== 'none' && isLowContrastPaint(ps.stroke, bgInfo, strictPlayer);
+        if (badFill && badStroke) {
+          iconWrites.set(p, prefix + 'fill-stroke');
+        } else if (badFill) {
+          iconWrites.set(p, prefix + 'fill');
+        } else if (badStroke) {
+          iconWrites.set(p, prefix + 'stroke');
         }
       }
-      if (dim) iconWrites.add(svg);
     };
 
-    const syncPlayerControls = (root) => {
+    const syncPlayerControls = (root, bgCache, mediaRects) => {
       const nextPlayerSurfaces = new Map();
       const nextNavBtns = new Map();
       const nextProgress = new Set();
-      const nextDimIcons = new Set();
+      const playerIcons = new Map();
       const markPlayerSurface = (el, value) => {
         nextPlayerSurfaces.set(el, value);
       };
@@ -4031,30 +4424,39 @@ function syncScript(dark = true) {
           markPlayerSurface(stageHost, 'video-stage');
         }
         if (vr.width < 180 || vr.height < 160) continue;
-        const host =
-          video.closest('[class*="DivItemContainerV2"], [class*="DivRecommendList"], [class*="DivBasicPlayerWrapper"], [class*="DivVideoWrapper"]') ||
+        const innerHost =
+          video.closest('[class*="DivBasicPlayerWrapper"], [class*="DivVideoWrapper"]') ||
           video.parentElement;
-        if (host) playerScopes.add(host);
+        if (innerHost) playerScopes.add(innerHost);
+        const outerHost = video.closest(
+          '[class*="DivItemContainerV2"], [class*="DivRecommendList"], [class*="DivBrowserModeContainer"], [class*="DivVideoDetailContainer"], [data-e2e="feed-video"]',
+        );
+        if (outerHost) playerScopes.add(outerHost);
+      }
+
+      const globalBars = new Set();
+      for (const bar of root.querySelectorAll(
+        '[class*="DivVideoControlBottom"], [class*="DivPlayerControls"], [class*="DivBottomControls"], [class*="DivMediaControl"], [class*="DivControlBottom"]',
+      )) {
+        if (bar.id?.startsWith('octo-') || bar.querySelector('video')) continue;
+        const br = bar.getBoundingClientRect();
+        if (br.width >= 120 && br.height >= 16 && br.height <= 140) {
+          markPlayerSurface(bar, 'player-controls');
+          globalBars.add(bar);
+        }
       }
 
       for (const scope of playerScopes) {
         const sr = scope.getBoundingClientRect();
         const localBars = new Set();
-        for (const bar of scope.querySelectorAll(
-          '[class*="DivVideoControlBottom"], [class*="DivPlayerControls"], [class*="DivBottomControls"], [class*="DivMediaControl"], [class*="DivControlBottom"]',
-        )) {
-          if (bar.id?.startsWith('octo-') || bar.querySelector('video')) continue;
-          const br = bar.getBoundingClientRect();
-          if (br.width >= 120 && br.height >= 16 && br.height <= 110) {
-            markPlayerSurface(bar, 'player-controls');
-            localBars.add(bar);
-          }
+        for (const bar of globalBars) {
+          if (scope.contains(bar)) localBars.add(bar);
         }
 
         // Структурный поиск нижней панели по таймкоду / автопрокрутке / скорости / звуку
         if (localBars.size === 0) {
           for (const leaf of scope.querySelectorAll(
-            'time, span, [class*="AutoScroll"], [class*="PlaybackRate"], [data-e2e*="video-play"]',
+            'time, span, div, [class*="AutoScroll"], [class*="PlaybackRate"], [data-e2e*="video-play"]',
           )) {
             if (leaf.id?.startsWith('octo-')) continue;
             let inMarkedBar = false;
@@ -4090,6 +4492,7 @@ function syncScript(dark = true) {
             if (picked) {
               markPlayerSurface(picked, 'player-controls');
               localBars.add(picked);
+              globalBars.add(picked);
             }
           }
         }
@@ -4105,11 +4508,6 @@ function syncScript(dark = true) {
               markPlayerSurface(wrap, 'player-controls-wrap');
             }
             wrap = wrap.parentElement;
-          }
-          for (const svg of bar.querySelectorAll('svg')) {
-            if (!svg.closest('[' + ACCENT + '="switch"], [' + ACCENT + '="switch-off"]')) {
-              markIconOnSurfaceIfDim(svg, nextDimIcons);
-            }
           }
         }
 
@@ -4185,7 +4583,6 @@ function syncScript(dark = true) {
         }
         if (btn.hasAttribute(BTN_GROUP)) delAttrIfSet(btn, BTN_GROUP);
         markPlayerSurface(btn, 'player-more');
-        if (svg) markIconOnSurfaceIfDim(svg, nextDimIcons);
       }
 
       root
@@ -4215,9 +4612,6 @@ function syncScript(dark = true) {
       for (const el of nextProgress) {
         setAttrIfDiff(el, ACCENT, 'progress');
       }
-      for (const svg of nextDimIcons) {
-        setAttrIfDiff(svg, ICON, 'on-surface');
-      }
       root
         .querySelectorAll('[' + BTN_GROUP + '="v-first"], [' + BTN_GROUP + '="v-last"]')
         .forEach((el) => {
@@ -4228,9 +4622,23 @@ function syncScript(dark = true) {
       for (const [el, val] of nextNavBtns) {
         setAttrIfDiff(el, BTN_GROUP, val);
       }
+
+      for (const bar of globalBars) {
+        for (const svg of bar.querySelectorAll('svg')) {
+          checkSvgContrast(svg, playerIcons, bgCache, mediaRects, true);
+        }
+      }
+      for (const [el, val] of nextPlayerSurfaces) {
+        if (val === 'player-more') {
+          for (const svg of el.querySelectorAll('svg')) {
+            checkSvgContrast(svg, playerIcons, bgCache, mediaRects, true);
+          }
+        }
+      }
+      return playerIcons;
     };
 
-    const syncActionIcons = (root) => {
+    const syncActionIcons = (root, extraIcons = null, bgCache = new WeakMap(), mediaRects = null) => {
       const icons = root.querySelectorAll(
         '[data-e2e*="like-icon"], [data-e2e*="like-icon"] svg, [data-e2e*="like-icon"] path, [data-e2e*="favorite-icon"], [data-e2e*="favorite-icon"] svg, [data-e2e*="favorite-icon"] path, [class*="DivComment"] [data-e2e*="like"] svg, [class*="DivComment"] [data-e2e*="like"] svg path, [class*="DivComment"] [class*="Like" i] svg, [class*="DivComment"] [class*="Like" i] svg path',
       );
@@ -4266,58 +4674,83 @@ function syncScript(dark = true) {
       }
       for (const node of nextActive) setAttrIfDiff(node, ICON, 'active');
 
-      if (MODE === 'dark' && isMessagesContext()) {
-        const lumCache = new WeakMap();
-        const uiSvgs = root.querySelectorAll(
-          '[' +
-            SURFACE +
-            '="header"] svg, [' +
-            SURFACE +
-            '="card"] svg, [' +
-            SURFACE +
-            '="chat-input"] svg, [role="menu"] svg, [role="listbox"] svg, [class*="TUXPopover-content"] svg, [class*="DivPopupContainer"] svg, [class*="DivDropdown"] svg, [class*="DivMenuContainer"] svg, [class*="Header" i] svg, [class*="Toolbar" i] svg, [class*="MessageEditor" i] svg, [class*="ChatEditor" i] svg',
-        );
-        const nextOnSurface = new Set();
-        const delOnSurface = [];
-        for (const svg of uiSvgs) {
-          if (
-            svg.id?.startsWith('octo-') ||
-            svg.closest('[class*="Avatar" i], [class*="Emoji" i], [class*="Sticker" i], [class*="Video" i], [class*="DivSideNavContainer"]')
-          ) {
+      const probedIcons = Array.from(root.querySelectorAll('[' + ICON + ']')).filter(
+        (el) =>
+          el.getAttribute(ICON) !== 'active' &&
+          !el.closest('[class*="DivSideNavContainer"], [' + SURFACE + '="sidenav"]'),
+      );
+      for (const el of probedIcons) {
+        el.setAttribute(PROBE, '');
+        el.removeAttribute(ICON);
+      }
+      const nextContrastIcons = new Map();
+      try {
+        if (extraIcons) {
+          for (const [el, val] of extraIcons) nextContrastIcons.set(el, val);
+        }
+        for (const svg of root.querySelectorAll('svg')) {
+          if (svg.id?.startsWith('octo-')) continue;
+          const r = svg.getBoundingClientRect();
+          if (r.width <= 0 || r.height <= 0) continue;
+          const inHdr = Boolean(svg.closest('header, [' + SURFACE + '="header"]'));
+          if (inHdr ? (r.width > 180 || r.height > 56) : (r.width > 72 || r.height > 72)) {
             continue;
           }
-          const r = svg.getBoundingClientRect();
-          if (r.width <= 0 || r.height <= 0 || r.width > 180 || r.height > 56) continue;
-          const style = getComputedStyle(svg);
-          let hasDark = isDarkColor(style.color) || isDarkColor(style.fill);
-          if (!hasDark) {
-            for (const p of svg.querySelectorAll('path, circle, rect, line, polyline, polygon')) {
-              const ps = getComputedStyle(p);
-              if (isDarkColor(ps.fill) || isDarkColor(ps.stroke)) {
-                hasDark = true;
-                break;
-              }
-            }
-          }
-          if (hasDark && effectiveBgLum(svg, lumCache) < 105) {
-            nextOnSurface.add(svg);
-          } else if (svg.getAttribute(ICON) === 'on-surface') {
-            delOnSurface.push(svg);
-          }
+          checkSvgContrast(svg, nextContrastIcons, bgCache, mediaRects, false);
         }
-        for (const svg of delOnSurface) delAttrIfSet(svg, ICON);
-        for (const svg of nextOnSurface) setAttrIfDiff(svg, ICON, 'on-surface');
+        for (const el of probedIcons) {
+          if (!nextContrastIcons.has(el)) delAttrIfSet(el, ICON);
+        }
+        for (const [el, val] of nextContrastIcons) {
+          if (el.getAttribute(ICON) !== 'active') setAttrIfDiff(el, ICON, val);
+        }
+      } finally {
+        endProbe(probedIcons);
       }
     };
 
     const scan = (root = document) => {
       if (!root || !root.querySelectorAll) return;
+
+      // Красные текстовые ссылки в модалках (например «Отправить код заново») перекрашиваем в primary
+      const dialogs = Array.from(root.querySelectorAll('[role="dialog"], [aria-modal="true"]'));
+      if (dialogs.length) {
+        const dialogProbes = [];
+        for (const dialog of dialogs) {
+          if (dialog.id?.startsWith('octo-')) continue;
+          dialog.setAttribute(PROBE, '');
+          dialogProbes.push(dialog);
+        }
+        try {
+          for (const dialog of dialogProbes) {
+            for (const node of dialog.querySelectorAll('button, a, span, p, div')) {
+              if (
+                node.id?.startsWith('octo-') ||
+                node.matches('button:disabled, [aria-disabled="true"]') ||
+                node.getAttribute(ACCENT) === 'primary-text'
+              ) {
+                continue;
+              }
+              const tc = (node.textContent || '').trim();
+              if (!tc || tc.length > 64) continue;
+              if (isTikTokRed(getComputedStyle(node).color)) {
+                setAttrIfDiff(node, ACCENT, 'primary-text');
+              }
+            }
+          }
+        } finally {
+          endProbe(dialogProbes);
+        }
+      }
+
       syncMessagesLayout();
       syncSurfaces(root);
       syncSidebarNav();
-      syncActionIcons(root);
       syncButtonGroups(root);
-      syncPlayerControls(root);
+      const bgCache = new WeakMap();
+      const mediaRects = collectMediaRects(root);
+      const playerIcons = syncPlayerControls(root, bgCache, mediaRects);
+      syncActionIcons(root, playerIcons, bgCache, mediaRects);
       const candidates = root.querySelectorAll(
         'button, [role="button"], [role="switch"], [class*="Switch"], [class*="Toggle"], [class*="AutoScroll"] div, [class*="DivPlayerControls"] > div, [class*="DivBottomControls"] > div, [' +
           SURFACE +
@@ -4334,27 +4767,6 @@ function syncScript(dark = true) {
       const accentWrites = { set: new Map(), del: new Set() };
       for (const el of candidates) classify(el, accentWrites);
 
-      // Красные текстовые ссылки в модалках (например «Отправить код заново») перекрашиваем в primary
-      const dialogs = root.querySelectorAll('[role="dialog"], [aria-modal="true"]');
-      if (dialogs.length) {
-        for (const dialog of dialogs) {
-          for (const node of dialog.querySelectorAll('button, a, span, p, div')) {
-            if (
-              node.id?.startsWith('octo-') ||
-              node.matches('button:disabled, [aria-disabled="true"]') ||
-              node.getAttribute(ACCENT) === 'primary-text'
-            ) {
-              continue;
-            }
-            const tc = (node.textContent || '').trim();
-            if (!tc || tc.length > 64) continue;
-            if (isTikTokRed(getComputedStyle(node).color)) {
-              accentWrites.set.set(node, 'primary-text');
-            }
-          }
-        }
-      }
-
       for (const el of accentWrites.del) delAttrIfSet(el, ACCENT);
       for (const [el, val] of accentWrites.set) setAttrIfDiff(el, ACCENT, val);
     };
@@ -4364,12 +4776,17 @@ function syncScript(dark = true) {
       if (root && root.getAttribute(ATTR) !== MODE) {
         root.setAttribute(ATTR, MODE);
       }
+      if (root) {
+        if (AMOLED) setAttrIfDiff(root, AMOLED_ATTR, 'true');
+        else delAttrIfSet(root, AMOLED_ATTR);
+      }
       lastScanAt = Date.now();
       scan(document);
     };
 
     if (window.__octoMd3) {
       window.__octoMd3.mode = MODE;
+      window.__octoMd3.amoled = AMOLED;
       apply();
       return 0;
     }
@@ -4405,16 +4822,23 @@ function syncScript(dark = true) {
 
     const state = {
       mode: MODE,
+      amoled: AMOLED,
       attrObserver: null,
       domObserver: null,
       stop() {
         if (timer) clearTimeout(timer);
         window.removeEventListener('popstate', onPopState);
         document.removeEventListener('visibilitychange', onVisibility);
+        document.removeEventListener('pointerover', onPointerMove, true);
+        document.removeEventListener('pointerout', onPointerMove, true);
+        if (hoverFrame) cancelAnimationFrame(hoverFrame);
         if (railObserver) railObserver.disconnect();
         if (state.attrObserver) state.attrObserver.disconnect();
         if (state.domObserver) state.domObserver.disconnect();
-        if (document.documentElement) document.documentElement.removeAttribute(ATTR);
+        if (document.documentElement) {
+          document.documentElement.removeAttribute(ATTR);
+          document.documentElement.removeAttribute(AMOLED_ATTR);
+        }
         document.querySelectorAll('[' + ACCENT + ']').forEach((el) => el.removeAttribute(ACCENT));
         document.querySelectorAll('[' + NAV + ']').forEach((el) => el.removeAttribute(NAV));
         document.querySelectorAll('[' + POS + ']').forEach((el) => el.removeAttribute(POS));
@@ -4422,6 +4846,7 @@ function syncScript(dark = true) {
         document.querySelectorAll('[' + ICON + ']').forEach((el) => el.removeAttribute(ICON));
         document.querySelectorAll('[' + ACTION + ']').forEach((el) => el.removeAttribute(ACTION));
         document.querySelectorAll('[' + SURFACE + ']').forEach((el) => el.removeAttribute(SURFACE));
+        document.querySelectorAll('[' + PROBE + ']').forEach((el) => el.removeAttribute(PROBE));
         document.querySelectorAll('[' + FG + ']').forEach((el) => el.removeAttribute(FG));
         document.querySelectorAll('[data-octo-md3-rail]').forEach((el) => el.removeAttribute('data-octo-md3-rail'));
         document.querySelectorAll('[data-octo-md3-logo]').forEach((el) => el.removeAttribute('data-octo-md3-logo'));
@@ -4444,6 +4869,8 @@ function syncScript(dark = true) {
 
     window.addEventListener('popstate', onPopState);
     document.addEventListener('visibilitychange', onVisibility);
+    document.addEventListener('pointerover', onPointerMove, true);
+    document.addEventListener('pointerout', onPointerMove, true);
 
     const root = document.documentElement;
     if (root && typeof MutationObserver !== 'undefined') {
@@ -4520,6 +4947,7 @@ const CLEANUP_JS = `(() => {
   }
   if (document.documentElement) {
     document.documentElement.removeAttribute('${MD3_ATTR}');
+    document.documentElement.removeAttribute('${AMOLED_ATTR}');
   }
   document
     .querySelectorAll('[${ACCENT_ATTR}]')
@@ -4566,10 +4994,14 @@ const CLEANUP_JS = `(() => {
   document
     .querySelectorAll('[${CHAT_LAYOUT_ATTR}]')
     .forEach((el) => el.removeAttribute('${CHAT_LAYOUT_ATTR}'));
+  document
+    .querySelectorAll('[${PROBE_ATTR}]')
+    .forEach((el) => el.removeAttribute('${PROBE_ATTR}'));
 })()`;
 
 module.exports = {
   MD3_ATTR,
+  AMOLED_ATTR,
   ACCENT_ATTR,
   NAV_ATTR,
   POS_ATTR,

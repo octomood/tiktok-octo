@@ -161,6 +161,38 @@ test('бейджи сообщества отображаются у ников �
     await site.locator('[data-e2e="user-title"]').click();
     await expect(modal).toHaveCount(0);
 
+    // «Уменьшить движение»: без пружины у значка, перехода у кнопки закрытия и
+    // анимации появления окна; без настройки анимации остаются прежними.
+    const badgeMotion = () =>
+      site.evaluate(() => {
+        const badge = document.querySelector(
+          '.octo-user-badge[data-octo-badge-user="churros_dev"]',
+        );
+        const box = document.getElementById('octo-badge-modal');
+        const close = document.getElementById('octo-badge-modal-close');
+        return {
+          badge: getComputedStyle(badge).transitionDuration,
+          close: close ? getComputedStyle(close).transitionDuration : '',
+          modal: box ? getComputedStyle(box).animationName : '',
+        };
+      });
+    await creatorBadge.click();
+    await expect(modal).toBeVisible();
+    expect(await badgeMotion()).toEqual({
+      badge: '0.2s, 0.15s',
+      close: '0.14s, 0.14s',
+      modal: 'octo-badge-pop',
+    });
+    await site.keyboard.press('Escape');
+    await expect(modal).toHaveCount(0);
+    await site.emulateMedia({ reducedMotion: 'reduce' });
+    await creatorBadge.click();
+    await expect(modal).toBeVisible();
+    expect(await badgeMotion()).toEqual({ badge: '0s', close: '0s', modal: 'none' });
+    await site.keyboard.press('Escape');
+    await expect(modal).toHaveCount(0);
+    await site.emulateMedia({ reducedMotion: 'no-preference' });
+
     // Переключатель в косметике убирает и возвращает бейджи.
     await page.evaluate(() => window.octo.cmd('cosmetic', 'user-badges'));
     await expect(site.locator('.octo-user-badge')).toHaveCount(0);

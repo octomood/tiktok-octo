@@ -92,6 +92,29 @@ test('профили аккаунтов, заметки к авторам, пл�
     await page.selectOption('#themeModeSelect', 'dark');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
+    // 4.5. AMOLED-режим: чисто чёрный фон в тёмной теме и сохранение настройки при светлой.
+    const amoledRow = page.locator('#rowThemeAmoled');
+    await expect(amoledRow).toHaveAttribute('aria-checked', 'false');
+    await amoledRow.click();
+    await expect(amoledRow).toHaveAttribute('aria-checked', 'true');
+    await expect.poll(() => readState(userData).themeAmoled).toBe(true);
+    await expect(page.locator('html')).toHaveAttribute('data-amoled', 'true');
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          getComputedStyle(document.documentElement).getPropertyValue('--md-surface').trim(),
+        ),
+      )
+      .toBe('#000000');
+
+    await page.selectOption('#themeModeSelect', 'light');
+    await expect(page.locator('html')).toHaveAttribute('data-amoled', 'false');
+    await page.selectOption('#themeModeSelect', 'dark');
+    await expect(page.locator('html')).toHaveAttribute('data-amoled', 'true');
+    await amoledRow.click();
+    await expect(amoledRow).toHaveAttribute('aria-checked', 'false');
+    await expect(page.locator('html')).toHaveAttribute('data-amoled', 'false');
+
     // 5. 20 гармоничных цветовых палитр MD3 Expressive в настройках косметики.
     await expect(page.locator('#themePaletteGrid .theme-swatch')).toHaveCount(20);
     await expect(page.locator('[data-theme-palette="octo-lavender"]')).toHaveAttribute(

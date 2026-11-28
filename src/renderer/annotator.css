@@ -33,7 +33,6 @@ body.annotator {
   flex-wrap: wrap;
   gap: 2px;
   padding: 3px;
-  border: 1px solid color-mix(in srgb, var(--md-outline-variant, #47405e) 50%, transparent);
   border-radius: 9999px;
   background: var(--md-surface-container, #2b263d);
 }

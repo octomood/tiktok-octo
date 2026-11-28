@@ -18,7 +18,6 @@ body.update {
   gap: 16px;
   min-width: 0;
   padding: 20px 22px 22px;
-  border: 1px solid color-mix(in srgb, var(--md-outline-variant, #47405e) 65%, transparent);
   border-radius: 28px;
   background:
     radial-gradient(
@@ -28,6 +27,10 @@ body.update {
     ),
     var(--md-surface-container-low, #211d30);
   box-shadow: var(--md-elev-2, 0 8px 24px rgba(0, 0, 0, 0.4));
+}
+
+:root[data-theme='dark'][data-amoled='true'] .update-card {
+  background: var(--md-surface-container-low, #08080a);
 }
 
 .update-head {

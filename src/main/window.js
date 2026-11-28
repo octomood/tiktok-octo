@@ -17,6 +17,8 @@ const plugins = require('./plugins');
 const chat = require('./chat');
 const windowsMedia = require('./windows-media');
 const uiFont = require('./ui-font');
+const uiCustom = require('./ui-custom');
+const { getPaletteTokens, normalizePaletteId } = require('./md3-palettes');
 
 function saveGeometry(win) {
   // В PiP и в «только полоса» окно маленькое — сохраняем геометрию до режима.
@@ -28,6 +30,16 @@ function createWindow() {
   const saved = readState();
   const bounds = saved.bounds || {};
   const uiScale = clampUiScale(saved.uiScale);
+  const initialCustom = uiCustom.normalizeUiCustom(saved.uiCustom);
+  const initialBg =
+    saved.themeAmoled && saved.themeMode !== 'light'
+      ? '#000000'
+      : getPaletteTokens(
+          normalizePaletteId(saved.themePalette),
+          saved.themeMode !== 'light',
+          saved.themeCustom,
+        )?.surface || '#191624';
+  const initialTitle = initialCustom.brand?.label || 'TikTok Octo';
 
   const win = new BrowserWindow({
     width: bounds.width ?? 1280,
@@ -37,8 +49,8 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     show: false,
-    backgroundColor: '#191624',
-    title: 'TikTok Octo',
+    backgroundColor: initialBg,
+    title: initialTitle,
     icon: path.join(__dirname, '../../build/icon.png'),
     autoHideMenuBar: true,
     // На Linux/Windows прячем системный заголовок, но оставляем рамку —
@@ -58,6 +70,7 @@ function createWindow() {
   ctx.win = win;
   ctx.uiScale = uiScale;
   ctx.uiFont = uiFont.normalizeUiFont(saved.uiFont);
+  ctx.uiCustom = initialCustom;
   ctx.chromeHeightCss = TITLEBAR_H;
   ctx.chromeHeight = Math.round(TITLEBAR_H * uiScale);
   win.webContents.setZoomFactor(uiScale);

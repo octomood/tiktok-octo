@@ -2306,6 +2306,17 @@
                   <option value="light">Светлая</option>
                 </select>
               </div>
+              <button
+                type="button"
+                class="panel-row"
+                id="rowThemeAmoled"
+                role="switch"
+                aria-checked="false"
+                data-cmd="themeAmoled"
+              >
+                <span class="panel-row-label">AMOLED-режим</span>
+                <span class="switch" aria-hidden="true"></span>
+              </button>
               <div class="panel-field" id="themePaletteField">
                 <div class="theme-palette-head">
                   <span class="panel-field-label" id="themePaletteLabel">Цветовая палитра</span>
@@ -2317,8 +2328,742 @@
                   role="radiogroup"
                   aria-labelledby="themePaletteLabel"
                 ></div>
+                <div class="theme-custom-box" id="themeCustomBox">
+                  <button
+                    type="button"
+                    class="theme-custom-trigger"
+                    id="themeCustomTrigger"
+                    aria-pressed="false"
+                  >
+                    <span class="theme-swatch-wheel theme-swatch-wheel--custom" aria-hidden="true">
+                      <span class="theme-swatch-c1" id="themeCustomWheel1"></span>
+                      <span class="theme-swatch-c2" id="themeCustomWheel2"></span>
+                      <span class="theme-swatch-c3" id="themeCustomWheel3"></span>
+                      <span class="theme-swatch-check">
+                        <svg
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.4"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path d="m4.5 10.5 3.6 3.6 7.4-7.8" />
+                        </svg>
+                      </span>
+                    </span>
+                    <span class="theme-custom-text">
+                      <span class="theme-custom-title">Свой цвет</span>
+                      <span class="theme-custom-sub" id="themeCustomSummary">#8c84a9</span>
+                    </span>
+                    <span class="theme-custom-pill">Любой цвет</span>
+                  </button>
+                  <div class="theme-custom-controls" id="themeCustomControls">
+                    <div class="color-role-tabs" id="themeCustomRoleTabs" role="tablist">
+                      <button
+                        type="button"
+                        class="color-role-tab is-active"
+                        data-color-role="primary"
+                        role="tab"
+                        aria-selected="true"
+                      >
+                        Основной
+                      </button>
+                      <button
+                        type="button"
+                        class="color-role-tab"
+                        data-color-role="secondary"
+                        role="tab"
+                        aria-selected="false"
+                      >
+                        Доп.
+                      </button>
+                      <button
+                        type="button"
+                        class="color-role-tab"
+                        data-color-role="tertiary"
+                        role="tab"
+                        aria-selected="false"
+                      >
+                        Третичный
+                      </button>
+                      <button
+                        type="button"
+                        class="color-role-tab"
+                        data-color-role="surface"
+                        role="tab"
+                        aria-selected="false"
+                      >
+                        Фон
+                      </button>
+                      <button
+                        type="button"
+                        class="color-role-tab"
+                        data-color-role="text"
+                        role="tab"
+                        aria-selected="false"
+                      >
+                        Текст
+                      </button>
+                    </div>
+                    <div class="md3-paint-box" id="themeCustomPaintBox">
+                      <div class="panel-range-row">
+                        <div class="panel-range-head">
+                          <label class="panel-row-label" for="themeCustomHue">Оттенок</label>
+                          <span class="panel-range-val" id="themeCustomHueVal">254°</span>
+                        </div>
+                        <input
+                          id="themeCustomHue"
+                          class="md3-slider md3-hue-slider"
+                          type="range"
+                          min="0"
+                          max="360"
+                          step="1"
+                          value="254"
+                        />
+                      </div>
+                      <div class="panel-range-row">
+                        <div class="panel-range-head">
+                          <label class="panel-row-label" for="themeCustomSat">Насыщенность</label>
+                          <span class="panel-range-val" id="themeCustomSatVal">19 %</span>
+                        </div>
+                        <input
+                          id="themeCustomSat"
+                          class="md3-slider md3-sat-slider"
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value="19"
+                        />
+                      </div>
+                      <div class="panel-range-row">
+                        <div class="panel-range-head">
+                          <label class="panel-row-label" for="themeCustomLight">Яркость</label>
+                          <span class="panel-range-val" id="themeCustomLightVal">59 %</span>
+                        </div>
+                        <input
+                          id="themeCustomLight"
+                          class="md3-slider md3-light-slider"
+                          type="range"
+                          min="5"
+                          max="95"
+                          step="1"
+                          value="59"
+                        />
+                      </div>
+                      <div class="color-swatch-row" id="themeCustomSwatches"></div>
+                    </div>
+                    <div class="theme-color-row">
+                      <label class="theme-color-label" for="themeCustomPrimary">Основной</label>
+                      <input
+                        type="color"
+                        class="color-input-native"
+                        id="themeCustomPrimary"
+                        value="#8c84a9"
+                        aria-label="Основной цвет палитры"
+                      />
+                      <input
+                        type="text"
+                        class="panel-input color-input-hex"
+                        id="themeCustomPrimaryHex"
+                        value="#8c84a9"
+                        maxlength="7"
+                        spellcheck="false"
+                        autocomplete="off"
+                        aria-label="HEX основного цвета"
+                      />
+                    </div>
+                    <div class="theme-color-grid">
+                      <div class="theme-color-cell">
+                        <label class="theme-color-sub" for="themeCustomSecondary"
+                          >Дополнительный</label
+                        >
+                        <div class="color-chip-row">
+                          <input
+                            type="color"
+                            class="color-input-native"
+                            id="themeCustomSecondary"
+                            aria-label="Дополнительный цвет"
+                          />
+                          <input
+                            type="text"
+                            class="panel-input color-input-hex"
+                            id="themeCustomSecondaryHex"
+                            placeholder="Авто"
+                            maxlength="7"
+                            spellcheck="false"
+                            autocomplete="off"
+                            aria-label="HEX дополнительного цвета"
+                          />
+                          <button
+                            type="button"
+                            class="color-reset-btn"
+                            id="themeCustomSecondaryReset"
+                            title="Авто"
+                            aria-label="Сбросить дополнительный цвет"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                      <div class="theme-color-cell">
+                        <label class="theme-color-sub" for="themeCustomTertiary">Третичный</label>
+                        <div class="color-chip-row">
+                          <input
+                            type="color"
+                            class="color-input-native"
+                            id="themeCustomTertiary"
+                            aria-label="Третичный цвет"
+                          />
+                          <input
+                            type="text"
+                            class="panel-input color-input-hex"
+                            id="themeCustomTertiaryHex"
+                            placeholder="Авто"
+                            maxlength="7"
+                            spellcheck="false"
+                            autocomplete="off"
+                            aria-label="HEX третичного цвета"
+                          />
+                          <button
+                            type="button"
+                            class="color-reset-btn"
+                            id="themeCustomTertiaryReset"
+                            title="Авто"
+                            aria-label="Сбросить третичный цвет"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                      <div class="theme-color-cell">
+                        <label class="theme-color-sub" for="themeCustomSurface">Фон</label>
+                        <div class="color-chip-row">
+                          <input
+                            type="color"
+                            class="color-input-native"
+                            id="themeCustomSurface"
+                            aria-label="Цвет фона"
+                          />
+                          <input
+                            type="text"
+                            class="panel-input color-input-hex"
+                            id="themeCustomSurfaceHex"
+                            placeholder="Авто"
+                            maxlength="7"
+                            spellcheck="false"
+                            autocomplete="off"
+                            aria-label="HEX цвета фона"
+                          />
+                          <button
+                            type="button"
+                            class="color-reset-btn"
+                            id="themeCustomSurfaceReset"
+                            title="Авто"
+                            aria-label="Сбросить цвет фона"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                      <div class="theme-color-cell">
+                        <label class="theme-color-sub" for="themeCustomText">Текст</label>
+                        <div class="color-chip-row">
+                          <input
+                            type="color"
+                            class="color-input-native"
+                            id="themeCustomText"
+                            aria-label="Цвет текста"
+                          />
+                          <input
+                            type="text"
+                            class="panel-input color-input-hex"
+                            id="themeCustomTextHex"
+                            placeholder="Авто"
+                            maxlength="7"
+                            spellcheck="false"
+                            autocomplete="off"
+                            aria-label="HEX цвета текста"
+                          />
+                          <button
+                            type="button"
+                            class="color-reset-btn"
+                            id="themeCustomTextReset"
+                            title="Авто"
+                            aria-label="Сбросить цвет текста"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="theme-custom-actions">
+                      <button type="button" class="panel-inline-btn" id="btnThemeCustomAuto">
+                        Автогармония по основному
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
+              <button type="button" class="panel-row" id="btnOpenComponentsCat">
+                <span class="panel-row-label">Редактор компонентов интерфейса</span>
+                <span class="panel-row-hint">Названия, иконки, цвета, шрифты</span>
+              </button>
               <div class="panel-list" id="panelCosmetics"></div>
+            </div>
+          </section>
+
+          <section class="panel-cat" data-cat="components">
+            <button
+              type="button"
+              class="panel-cat-head"
+              id="catComponentsHead"
+              data-cat-head="components"
+              aria-expanded="false"
+              aria-controls="catComponents"
+            >
+              <span class="panel-cat-icon" aria-hidden="true">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="3.5" width="6" height="6" rx="1.4" />
+                  <rect x="11" y="3.5" width="6" height="6" rx="1.4" />
+                  <rect x="3" y="11" width="6" height="6" rx="1.4" />
+                  <path d="M14 11v6M11 14h6" />
+                </svg>
+              </span>
+              <span class="panel-cat-title">Компоненты</span>
+              <svg
+                class="panel-cat-chevron"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m6 8 4 4 4-4" />
+              </svg>
+            </button>
+            <div
+              class="panel-cat-body"
+              id="catComponents"
+              role="group"
+              aria-labelledby="catComponentsHead"
+              hidden
+            >
+              <div class="panel-row panel-row--static">
+                <label class="panel-row-label" for="compSelect">Компонент</label>
+                <select
+                  id="compSelect"
+                  class="panel-select panel-select--wide"
+                  aria-label="Выбор компонента интерфейса"
+                ></select>
+              </div>
+              <div class="comp-chips" id="compModifiedChips" hidden></div>
+
+              <div class="comp-preview-card">
+                <span class="comp-preview-cap">Предпросмотр</span>
+                <div class="comp-preview-sample" id="compPreviewSample">
+                  <span class="comp-preview-icon" id="compPreviewIcon" aria-hidden="true"></span>
+                  <span class="comp-preview-label" id="compPreviewLabel" data-i18n-skip></span>
+                </div>
+              </div>
+
+              <div class="panel-field panel-field--card" id="compLabelRow">
+                <label class="panel-field-label" for="compLabelInput">Название / текст</label>
+                <input
+                  id="compLabelInput"
+                  class="panel-input"
+                  type="text"
+                  maxlength="60"
+                  placeholder="По умолчанию"
+                  spellcheck="false"
+                  autocomplete="off"
+                />
+              </div>
+
+              <div class="panel-field panel-field--card">
+                <label class="panel-field-label" for="compTooltipInput"
+                  >Подсказка при наведении</label
+                >
+                <input
+                  id="compTooltipInput"
+                  class="panel-input"
+                  type="text"
+                  maxlength="100"
+                  placeholder="По умолчанию"
+                  spellcheck="false"
+                  autocomplete="off"
+                />
+              </div>
+
+              <button
+                type="button"
+                class="panel-row"
+                id="compHiddenRow"
+                role="switch"
+                aria-checked="false"
+              >
+                <span class="panel-row-label">Скрыть компонент</span>
+                <span class="switch" aria-hidden="true"></span>
+              </button>
+
+              <div class="panel-field panel-field--card" id="compIconSection">
+                <div class="panel-row panel-row--static comp-subrow">
+                  <label class="panel-row-label" for="compIconType">Иконка</label>
+                  <select id="compIconType" class="panel-select" aria-label="Тип иконки">
+                    <option value="default">По умолчанию</option>
+                    <option value="preset">Из набора</option>
+                    <option value="emoji">Эмодзи / символ</option>
+                    <option value="file">Своя картинка</option>
+                    <option value="none">Без иконки</option>
+                  </select>
+                </div>
+                <div id="compIconPresetWrap" hidden>
+                  <div class="comp-icon-grid" id="compIconPresetGrid"></div>
+                </div>
+                <div class="comp-emoji-wrap" id="compIconEmojiWrap" hidden>
+                  <input
+                    id="compIconEmojiInput"
+                    class="panel-input"
+                    type="text"
+                    maxlength="12"
+                    placeholder="Например, 🐙 или ★"
+                    spellcheck="false"
+                    autocomplete="off"
+                  />
+                  <div class="comp-emoji-chips" id="compIconEmojiChips"></div>
+                </div>
+                <div class="panel-row panel-row--static comp-subrow" id="compIconFileWrap" hidden>
+                  <span class="panel-row-label" id="compIconFileName">Файл не выбран</span>
+                  <button type="button" class="panel-inline-btn" id="compIconPickBtn">
+                    Выбрать файл…
+                  </button>
+                </div>
+              </div>
+
+              <div class="panel-field panel-field--card">
+                <div class="theme-palette-head">
+                  <span class="panel-field-label">Цвета компонента</span>
+                  <div
+                    class="color-role-tabs color-role-tabs--compact"
+                    id="compColorRoleTabs"
+                    role="tablist"
+                  >
+                    <button
+                      type="button"
+                      class="color-role-tab is-active"
+                      data-comp-color-role="fgColor"
+                      role="tab"
+                      aria-selected="true"
+                    >
+                      Текст
+                    </button>
+                    <button
+                      type="button"
+                      class="color-role-tab"
+                      data-comp-color-role="bgColor"
+                      role="tab"
+                      aria-selected="false"
+                    >
+                      Фон
+                    </button>
+                    <button
+                      type="button"
+                      class="color-role-tab"
+                      data-comp-color-role="borderColor"
+                      role="tab"
+                      aria-selected="false"
+                    >
+                      Рамка
+                    </button>
+                  </div>
+                </div>
+                <div class="md3-paint-box" id="compPaintBox">
+                  <div class="panel-range-row">
+                    <div class="panel-range-head">
+                      <label class="panel-row-label" for="compColorHue">Оттенок</label>
+                      <span class="panel-range-val" id="compColorHueVal">254°</span>
+                    </div>
+                    <input
+                      id="compColorHue"
+                      class="md3-slider md3-hue-slider"
+                      type="range"
+                      min="0"
+                      max="360"
+                      step="1"
+                      value="254"
+                    />
+                  </div>
+                  <div class="panel-range-row">
+                    <div class="panel-range-head">
+                      <label class="panel-row-label" for="compColorSat">Насыщенность</label>
+                      <span class="panel-range-val" id="compColorSatVal">19 %</span>
+                    </div>
+                    <input
+                      id="compColorSat"
+                      class="md3-slider md3-sat-slider"
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value="19"
+                    />
+                  </div>
+                  <div class="panel-range-row">
+                    <div class="panel-range-head">
+                      <label class="panel-row-label" for="compColorLight">Яркость</label>
+                      <span class="panel-range-val" id="compColorLightVal">59 %</span>
+                    </div>
+                    <input
+                      id="compColorLight"
+                      class="md3-slider md3-light-slider"
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value="59"
+                    />
+                  </div>
+                  <div class="color-swatch-row" id="compColorSwatches"></div>
+                </div>
+                <div class="theme-color-grid">
+                  <div class="theme-color-cell">
+                    <label class="theme-color-sub" for="compFgColor">Текст и иконка</label>
+                    <div class="color-chip-row">
+                      <input
+                        type="color"
+                        class="color-input-native"
+                        id="compFgColor"
+                        aria-label="Цвет текста и иконки"
+                      />
+                      <input
+                        type="text"
+                        class="panel-input color-input-hex"
+                        id="compFgHex"
+                        placeholder="Авто"
+                        maxlength="7"
+                        spellcheck="false"
+                        autocomplete="off"
+                      />
+                      <button
+                        type="button"
+                        class="color-reset-btn"
+                        id="compFgReset"
+                        title="Авто"
+                        aria-label="Сбросить цвет текста"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  <div class="theme-color-cell">
+                    <label class="theme-color-sub" for="compBgColor">Фон</label>
+                    <div class="color-chip-row">
+                      <input
+                        type="color"
+                        class="color-input-native"
+                        id="compBgColor"
+                        aria-label="Цвет фона компонента"
+                      />
+                      <input
+                        type="text"
+                        class="panel-input color-input-hex"
+                        id="compBgHex"
+                        placeholder="Авто"
+                        maxlength="7"
+                        spellcheck="false"
+                        autocomplete="off"
+                      />
+                      <button
+                        type="button"
+                        class="color-reset-btn"
+                        id="compBgReset"
+                        title="Авто"
+                        aria-label="Сбросить цвет фона"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  <div class="theme-color-cell">
+                    <label class="theme-color-sub" for="compBorderColor">Рамка</label>
+                    <div class="color-chip-row">
+                      <input
+                        type="color"
+                        class="color-input-native"
+                        id="compBorderColor"
+                        aria-label="Цвет рамки компонента"
+                      />
+                      <input
+                        type="text"
+                        class="panel-input color-input-hex"
+                        id="compBorderHex"
+                        placeholder="Авто"
+                        maxlength="7"
+                        spellcheck="false"
+                        autocomplete="off"
+                      />
+                      <button
+                        type="button"
+                        class="color-reset-btn"
+                        id="compBorderReset"
+                        title="Авто"
+                        aria-label="Сбросить цвет рамки"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel-field panel-field--card">
+                <div class="panel-row panel-row--static comp-subrow">
+                  <label class="panel-row-label" for="compFontPreset">Шрифт</label>
+                  <select id="compFontPreset" class="panel-select" aria-label="Шрифт компонента">
+                    <option value="inherit">Как у интерфейса</option>
+                    <option value="google-sans-medium">Google Sans Medium</option>
+                    <option value="inter">Inter</option>
+                    <option value="system">Системный</option>
+                    <option value="mono">Моноширинный</option>
+                    <option value="custom-name">Свой шрифт (название)</option>
+                    <option value="custom-file">Свой файл шрифта</option>
+                  </select>
+                </div>
+                <div class="panel-field-row" id="compFontNameRow" hidden>
+                  <input
+                    id="compFontNameInput"
+                    class="panel-input"
+                    type="text"
+                    placeholder="Например, JetBrains Mono"
+                    spellcheck="false"
+                    autocomplete="off"
+                    aria-label="Название шрифта компонента"
+                  />
+                  <button type="button" class="panel-inline-btn" id="compFontNameApply">
+                    Применить
+                  </button>
+                </div>
+                <div class="panel-row panel-row--static comp-subrow" id="compFontFileRow" hidden>
+                  <span class="panel-row-label" id="compFontFileName">Файл не выбран</span>
+                  <button type="button" class="panel-inline-btn" id="compFontPickBtn">
+                    Выбрать файл…
+                  </button>
+                </div>
+
+                <div class="panel-row panel-row--static comp-subrow">
+                  <label class="panel-row-label" for="compFontWeight">Начертание</label>
+                  <select id="compFontWeight" class="panel-select" aria-label="Начертание шрифта">
+                    <option value="">По умолчанию</option>
+                    <option value="400">Обычное (400)</option>
+                    <option value="500">Среднее (500)</option>
+                    <option value="600">Полужирное (600)</option>
+                    <option value="700">Жирное (700)</option>
+                  </select>
+                </div>
+
+                <div class="panel-range-row">
+                  <div class="panel-range-head">
+                    <label class="panel-row-label" for="compFontSize">Размер шрифта</label>
+                    <span class="panel-range-val" id="compFontSizeValue">Авто</span>
+                  </div>
+                  <input
+                    id="compFontSize"
+                    class="md3-slider"
+                    type="range"
+                    min="8"
+                    max="24"
+                    step="1"
+                    value="8"
+                  />
+                </div>
+
+                <div class="panel-range-row" id="compIconSizeRow">
+                  <div class="panel-range-head">
+                    <label class="panel-row-label" for="compIconSize">Размер иконки</label>
+                    <span class="panel-range-val" id="compIconSizeValue">Авто</span>
+                  </div>
+                  <input
+                    id="compIconSize"
+                    class="md3-slider"
+                    type="range"
+                    min="9"
+                    max="28"
+                    step="1"
+                    value="9"
+                  />
+                </div>
+
+                <div class="panel-range-row">
+                  <div class="panel-range-head">
+                    <label class="panel-row-label" for="compRadius">Скругление</label>
+                    <span class="panel-range-val" id="compRadiusValue">Авто</span>
+                  </div>
+                  <input
+                    id="compRadius"
+                    class="md3-slider"
+                    type="range"
+                    min="-1"
+                    max="32"
+                    step="1"
+                    value="-1"
+                  />
+                </div>
+
+                <div class="panel-range-row" id="compHeightRow" hidden>
+                  <div class="panel-range-head">
+                    <label class="panel-row-label" for="compHeight">Высота полосы</label>
+                    <span class="panel-range-val" id="compHeightValue">Авто</span>
+                  </div>
+                  <input
+                    id="compHeight"
+                    class="md3-slider"
+                    type="range"
+                    min="37"
+                    max="72"
+                    step="1"
+                    value="37"
+                  />
+                </div>
+
+                <div class="panel-range-row">
+                  <div class="panel-range-head">
+                    <label class="panel-row-label" for="compOpacity">Прозрачность</label>
+                    <span class="panel-range-val" id="compOpacityValue">100 %</span>
+                  </div>
+                  <input
+                    id="compOpacity"
+                    class="md3-slider"
+                    type="range"
+                    min="20"
+                    max="100"
+                    step="5"
+                    value="100"
+                  />
+                </div>
+              </div>
+
+              <div class="comp-actions">
+                <button type="button" class="panel-inline-btn" id="compResetBtn">
+                  Сбросить компонент
+                </button>
+                <button type="button" class="panel-inline-btn" id="compResetAllBtn">
+                  Сбросить все
+                </button>
+              </div>
+              <p class="panel-note">
+                Изменения применяются сразу. Скрытые кнопки остаются доступны через сочетания клавиш
+                и палитру команд (Ctrl+K).
+              </p>
             </div>
           </section>
 
@@ -3761,6 +4506,7 @@
     <script src="md3-select.js"></script>
     <script src="welcome.js"></script>
     <script src="plugins.js"></script>
+    <script src="ui-custom.js"></script>
     <script src="titlebar.js"></script>
   </body>
 </html>

@@ -25,7 +25,13 @@ const { isTikTokUrl } = require('./shared');
 const autoTheme = require('./auto-theme');
 const badges = require('./badges');
 const md3Site = require('./md3-site');
-const { getPaletteTokens, listPalettes, normalizePaletteId } = require('./md3-palettes');
+const { EMOJI_SCRIPT } = require('./tiktok-emoji');
+const {
+  getPaletteTokens,
+  listPalettes,
+  normalizePaletteId,
+  normalizeCustomTheme,
+} = require('./md3-palettes');
 
 const PROMO_MARK = 'data-octo-promo';
 const BRAND_MARK = 'data-octo-brand';
@@ -597,7 +603,14 @@ function enabledShadowCss() {
   const parts = [];
   if (isEnabled('modern-font')) parts.push(shadowFontRule());
   if (isEnabled('md3-design')) {
-    parts.push(md3Site.shadowCss(isEnabled('dark-theme'), getThemePalette()));
+    parts.push(
+      md3Site.shadowCss(
+        isEnabled('dark-theme'),
+        getThemePalette(),
+        getThemeCustom(),
+        isEffectiveAmoled(),
+      ),
+    );
   }
   return parts.join('\n');
 }
@@ -623,7 +636,7 @@ async function injectFrameStyles(wc = ctx.view?.webContents) {
   if (!frames.length) return;
 
   const frameMd3Script = isEnabled('md3-design')
-    ? md3Site.syncScript(isEnabled('dark-theme'))
+    ? md3Site.syncScript(isEnabled('dark-theme'), isEffectiveAmoled())
     : md3Site.CLEANUP_JS;
 
   await Promise.all(
@@ -632,6 +645,7 @@ async function injectFrameStyles(wc = ctx.view?.webContents) {
         .executeJavaScript(frameInjectionScript(documentCss, shadowCss), false)
         .catch(() => false);
       await frame.executeJavaScript(frameMd3Script, false).catch(() => false);
+      await frame.executeJavaScript(EMOJI_SCRIPT, false).catch(() => false);
     }),
   );
 }
@@ -833,8 +847,14 @@ const IMPLEMENTATIONS = {
     cleanupJs: BRAND_CLEANUP_JS,
   },
   'md3-design': {
-    css: () => md3Site.siteCss(isEnabled('dark-theme'), getThemePalette()),
-    js: () => md3Site.syncScript(isEnabled('dark-theme')),
+    css: () =>
+      md3Site.siteCss(
+        isEnabled('dark-theme'),
+        getThemePalette(),
+        getThemeCustom(),
+        isEffectiveAmoled(),
+      ),
+    js: () => md3Site.syncScript(isEnabled('dark-theme'), isEffectiveAmoled()),
     cleanupJs: md3Site.CLEANUP_JS,
   },
   'modern-font': { css: siteFontCss() },
@@ -907,18 +927,35 @@ function getThemePalette() {
   return normalizePaletteId(readState().themePalette);
 }
 
+function getThemeCustom() {
+  return normalizeCustomTheme(readState().themeCustom);
+}
+
+function getThemeAmoled() {
+  return readState().themeAmoled === true;
+}
+
+function isEffectiveAmoled() {
+  return isEnabled('dark-theme') && getThemeAmoled();
+}
+
 function getThemePayload() {
   const dark = isEnabled('dark-theme');
+  const amoled = dark && getThemeAmoled();
   const palette = getThemePalette();
+  const custom = getThemeCustom();
   return {
     dark,
+    amoled,
     palette,
-    tokens: getPaletteTokens(palette, dark),
+    custom,
+    tokens: getPaletteTokens(palette, dark, custom, { amoled }),
   };
 }
 
 function broadcastTheme() {
   const payload = getThemePayload();
+  ctx.themeTokens = payload.tokens;
   try {
     for (const win of BrowserWindow.getAllWindows()) {
       if (!win || win.isDestroyed()) continue;
@@ -1012,7 +1049,8 @@ async function runScripts(wc = ctx.view?.webContents) {
   }
 
   const enabled = RULES.filter((rule) => isEnabled(rule.id));
-  const scripts = [];
+  // Всегда включено, независимо от скина и переключателей косметики.
+  const scripts = [EMOJI_SCRIPT];
 
   for (const rule of RULES) {
     const js = resolveValue(rule.js);
@@ -1081,6 +1119,9 @@ function applyThemeMode(mode, { reload = true } = {}) {
     nextMode === 'system' ? Boolean(nativeTheme.shouldUseDarkColors) : nextMode === 'dark';
 
   ctx.themeMode = nextMode;
+  ctx.themeTokens = getPaletteTokens(getThemePalette(), nextDark, getThemeCustom(), {
+    amoled: nextDark && getThemeAmoled(),
+  });
   writeState({
     themeMode: nextMode,
     cosmetics: { ...settings(), 'dark-theme': nextDark },
@@ -1110,6 +1151,7 @@ function applyThemeMode(mode, { reload = true } = {}) {
 function applyThemePalette(paletteId) {
   const nextPalette = normalizePaletteId(paletteId);
   ctx.themePalette = nextPalette;
+  ctx.themeTokens = getThemePayload().tokens;
   writeState({ themePalette: nextPalette });
   apply();
   const chatWc = ctx.chatView?.webContents;
@@ -1118,6 +1160,36 @@ function applyThemePalette(paletteId) {
   broadcastTheme();
   if (onChange) onChange();
   return nextPalette;
+}
+
+function applyThemeAmoled(enabled) {
+  const nextAmoled = Boolean(enabled);
+  ctx.themeAmoled = nextAmoled;
+  ctx.themeTokens = getThemePayload().tokens;
+  writeState({ themeAmoled: nextAmoled });
+  apply();
+  const chatWc = ctx.chatView?.webContents;
+  if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
+  pushState();
+  broadcastTheme();
+  if (onChange) onChange();
+  return nextAmoled;
+}
+
+function applyThemeCustom(customRaw, { activate = true } = {}) {
+  const nextCustom = normalizeCustomTheme(customRaw);
+  const nextPalette = activate ? 'custom' : getThemePalette();
+  ctx.themeCustom = nextCustom;
+  ctx.themePalette = nextPalette;
+  ctx.themeTokens = getThemePayload().tokens;
+  writeState({ themeCustom: nextCustom, themePalette: nextPalette });
+  apply();
+  const chatWc = ctx.chatView?.webContents;
+  if (chatWc && !chatWc.isDestroyed()) apply(chatWc);
+  pushState();
+  broadcastTheme();
+  if (onChange) onChange();
+  return nextCustom;
 }
 
 function initThemeListener() {
@@ -1164,7 +1236,10 @@ function menuItems() {
 
 // Интерфейс получает актуальные галочки сразу при старте.
 ctx.themeMode = getThemeMode();
+ctx.themeAmoled = getThemeAmoled();
 ctx.themePalette = getThemePalette();
+ctx.themeCustom = getThemeCustom();
+ctx.themeTokens = getThemePayload().tokens;
 setCosmeticsState(effectiveSettings());
 
 try {
@@ -1186,8 +1261,12 @@ module.exports = {
   injectFrameStyles,
   prepareTheme,
   applyThemeMode,
+  applyThemeAmoled,
   applyThemePalette,
+  applyThemeCustom,
+  getThemeAmoled,
   getThemePalette,
+  getThemeCustom,
   getThemePayload,
   initThemeListener,
   toggle,

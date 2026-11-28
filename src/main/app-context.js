@@ -84,6 +84,8 @@ const ctx = {
   uiScale: 1,
   /** Шрифт собственного интерфейса (Google Sans Medium по умолчанию). */
   uiFont: { preset: 'google-sans-medium', family: '', fileName: '' },
+  /** Покомпонентная кастомизация собственного интерфейса. */
+  uiCustom: {},
   /** Открыта ли панель функций. */
   panelOpen: false,
   /** Открыт ли оверлей менеджера плагинов. */
@@ -112,8 +114,12 @@ const ctx = {
   abLoop: { a: null, b: null, enabled: false },
   /** Режим темы: 'system' | 'dark' | 'light'. */
   themeMode: 'dark',
+  /** Чисто чёрный AMOLED-фон поверх тёмной темы. */
+  themeAmoled: false,
   /** Цветовая палитра MD3 Expressive (см. md3-palettes.js). */
   themePalette: 'octo-lavender',
+  /** Пользовательские цвета палитры 'custom'. */
+  themeCustom: { primary: '#8c84a9', secondary: '', tertiary: '', surface: '', text: '' },
   /** Настройки плеера, которых нет у сайта. */
   player: {
     speed: 1,
@@ -776,6 +782,7 @@ function currentState() {
     panelWidth: PANEL_W,
     uiScale: ctx.uiScale,
     uiFont: require('./ui-font').toRendererPayload(ctx.uiFont),
+    uiCustom: require('./ui-custom').toRendererPayload(ctx.uiCustom),
     // Ширина для полоски-ручки: фактическая, а не желаемая — в узком окне
     // чат упирается в предел и ручка должна стоять на его краю.
     chat: {
@@ -820,7 +827,10 @@ function currentState() {
     })),
     abLoop: { ...ctx.abLoop },
     themeMode: ctx.themeMode,
+    themeAmoled: Boolean(ctx.themeAmoled),
     themePalette: ctx.themePalette,
+    themeCustom: ctx.themeCustom,
+    themeTokens: ctx.themeTokens || null,
     proxyScan: {
       state: ctx.proxyScan.state,
       items: ctx.proxyScan.items.map((item) => ({ ...item })),

@@ -158,10 +158,13 @@
     return pill('файл');
   }
 
-  function signaturePill(value) {
-    if (value === 'verified') return pill('подпись', 'ok');
+  function signaturePill(record) {
+    const value = record.signature;
+    if (value === 'verified') return pill('официальный', 'ok');
     if (value === 'invalid') return pill('подпись неверна', 'error');
-    return pill('без подписи');
+    // Неподписанный плагин с правами высокого риска выделен тем же цветом,
+    // что и чипы прав высокого риска.
+    return pill('без подписи', record.risk === 'high' ? 'error' : '');
   }
 
   function addPermissionsDetail(container, record) {
@@ -483,7 +486,7 @@
     titleRow.append(node('h3', 'card-title', record.name));
     titleRow.append(pill(`v${record.version}`));
     titleRow.append(sourcePill(record));
-    titleRow.append(signaturePill(record.signature));
+    titleRow.append(signaturePill(record));
     if (record.cosmetic) titleRow.append(pill('косметика', 'ok'));
     titleBlock.append(titleRow);
     titleBlock.append(

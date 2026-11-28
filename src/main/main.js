@@ -63,6 +63,7 @@ const i18n = require('./i18n');
 const session = require('./session');
 const settingsTransfer = require('./settings-transfer');
 const privacy = require('./privacy');
+require('./ui-custom');
 const resilience = require('./resilience');
 const deepLinks = require('./deep-links');
 const { externalHttpUrlFromArgv } = require('./deep-link-url');
@@ -70,6 +71,7 @@ const linkHandler = require('./link-handler');
 const jumpList = require('./jump-list');
 const videoQuality = require('./video-quality');
 const media = require('./media');
+const fullscreenNav = require('./fullscreen-nav');
 
 // Кастомные схемы (хосты плагинов и превью стикеров) должны быть объявлены
 // до app.whenReady().
@@ -197,6 +199,7 @@ if (!gotLock) {
     i18n.setOnChange(() => {
       rebuildMenus();
       session.applySpellChecker();
+      fullscreenNav.syncLabels();
     });
     buildAppMenu();
     createWindow();

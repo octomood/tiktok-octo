@@ -324,6 +324,105 @@ try {
 }
 
 /**
+ * Переключение видео в полноэкранном режиме сайта: стрелки вверх/вниз,
+ * PageUp/PageDown и прокрутка колёсиком мыши.
+ */
+function installFullscreenNav() {
+  if (pageRole === 'chat') return;
+
+  const isBlockedTarget = (element) => {
+    if (!element || element.nodeType !== 1) return false;
+    const tag = element.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (element.isContentEditable) return true;
+    if (typeof element.closest !== 'function') return false;
+    return Boolean(
+      element.closest(
+        '[contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"], [role="slider"]',
+      ),
+    );
+  };
+
+  const hasScrollableParent = (target, root) => {
+    let el = target instanceof window.Element ? target : null;
+    while (el && el !== root && el !== document.body && el !== document.documentElement) {
+      if (el.scrollHeight > el.clientHeight + 2) {
+        const overflowY = window.getComputedStyle(el).overflowY;
+        if (overflowY === 'auto' || overflowY === 'scroll') return true;
+      }
+      el = el.parentElement;
+    }
+    return false;
+  };
+
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      if (!document.fullscreenElement || !event.isTrusted || event.defaultPrevented) return;
+      if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
+      const origin = typeof event.composedPath === 'function' ? event.composedPath()[0] : null;
+      if (
+        isBlockedTarget(origin) ||
+        isBlockedTarget(event.target) ||
+        isBlockedTarget(document.activeElement)
+      ) {
+        return;
+      }
+
+      if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        ipcRenderer.send('octo:fullscreen-nav', 'next');
+      } else if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        ipcRenderer.send('octo:fullscreen-nav', 'prev');
+      }
+    },
+    true,
+  );
+
+  let lastWheel = 0;
+  window.addEventListener(
+    'wheel',
+    (event) => {
+      if (!document.fullscreenElement || !event.isTrusted || event.defaultPrevented) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (Math.abs(event.deltaY) < 15 || Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
+      if (hasScrollableParent(event.target, document.fullscreenElement)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      const now = Date.now();
+      if (now - lastWheel < 450) return;
+      lastWheel = now;
+      ipcRenderer.send('octo:fullscreen-nav', event.deltaY > 0 ? 'next' : 'prev');
+    },
+    { capture: true, passive: false },
+  );
+
+  window.addEventListener(
+    'click',
+    (event) => {
+      if (!event.isTrusted || !document.fullscreenElement) return;
+      if (!(event.target instanceof window.Element)) return;
+      if (event.target.closest('#octo-fs-prev, #octo-fs-next')) {
+        ipcRenderer.send('octo:fullscreen-switching');
+      }
+    },
+    true,
+  );
+}
+
+try {
+  installFullscreenNav();
+} catch {
+  /* DOM ещё не готов — обработчики не нужны */
+}
+
+/**
  * Перетаскивание файлов в панель чата: drop = отправить как фото.
  *
  * Работает только в роли «chat»: на самом сайте TikTok файл, брошенный в
@@ -390,3 +489,51 @@ if (config && config.locale && isTikTok) {
     /* страница уже ушла — патчи не нужны */
   });
 }
+
+// Изолированные миры скриптов плагинов (octo.page.run) получают свою строгую
+// CSP (src/main/plugins/page-world.js). setIsolatedWorldInfo есть только у
+// webFrame, поэтому это делает preload: сразу при загрузке документа — для всех
+// известных миров, до первого кода в них, — и по просьбе main для новых.
+// Странице ничего не отдаётся, миры вне диапазона плагинов не трогаем.
+function applyPluginWorld(info) {
+  const worldId = Number(info?.worldId);
+  if (
+    !Number.isInteger(worldId) ||
+    worldId < 20000 ||
+    worldId >= 80000 ||
+    typeof info.csp !== 'string' ||
+    typeof info.origin !== 'string' ||
+    !info.origin.startsWith('octo-plugin://')
+  ) {
+    return false;
+  }
+  webFrame.setIsolatedWorldInfo(worldId, {
+    securityOrigin: info.origin,
+    csp: info.csp,
+    name: String(info.name || 'octo-plugin'),
+  });
+  return true;
+}
+
+try {
+  const pluginWorlds = ipcRenderer.sendSync('octo:plugin-worlds');
+  for (const info of Array.isArray(pluginWorlds) ? pluginWorlds : []) {
+    try {
+      applyPluginWorld(info);
+    } catch {
+      /* main проверит мир перед запуском и попросит ещё раз */
+    }
+  }
+} catch {
+  /* плагины ещё не запущены */
+}
+
+ipcRenderer.on('octo:plugin-world', (_event, info) => {
+  let ok = false;
+  try {
+    ok = applyPluginWorld(info);
+  } catch {
+    ok = false;
+  }
+  ipcRenderer.send('octo:plugin-world-ready', info?.token, ok);
+});

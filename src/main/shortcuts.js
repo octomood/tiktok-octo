@@ -4,6 +4,7 @@ const { ctx, setPopover } = require('./app-context');
 const { handleCommand } = require('./commands');
 const plugins = require('./plugins');
 const keymap = require('./keymap');
+const fullscreenNav = require('./fullscreen-nav');
 
 /**
  * Горячие клавиши.
@@ -46,6 +47,7 @@ function handleShortcut(event, input) {
     // HTML-fullscreen важнее PiP: сначала вернуть полосу PiP, потом выходить.
     if (ctx.htmlFullscreen) {
       return run(() => {
+        fullscreenNav.cancelSwitch();
         const wc = ctx.view?.webContents;
         if (wc && !wc.isDestroyed()) {
           wc.executeJavaScript(

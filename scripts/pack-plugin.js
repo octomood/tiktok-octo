@@ -14,7 +14,9 @@ const {
   signPayload,
   createSignatureManifest,
   SIGNATURE_FILE,
+  SIGNATURE_FILES,
 } = require('../src/main/plugins/signature');
+const { TRUSTED_KEYS, keyId } = require('../src/main/plugins/plugin-trust');
 
 /**
  * Упаковка плагина в .octoplugin.
@@ -25,7 +27,8 @@ const {
  *
  * Пакет детерминирован: фиксированная дата внутри ZIP и сортировка файлов,
  * поэтому SHA-256 не меняется от перепаковки. Подпись — Ed25519, ключ берётся
- * из OCTO_PLUGIN_SIGNING_KEY (путь к PEM) или --key.
+ * из --key или OCTO_PLUGIN_SIGNING_KEY: путь к PEM или сам PEM (так его отдаёт
+ * секрет GitHub Actions). --require-signature запрещает сборку без ключа.
  */
 
 function usage(message) {
@@ -35,6 +38,7 @@ function usage(message) {
       'Использование:',
       '  node scripts/pack-plugin.js <папка-плагина> [--out <папка>]',
       '    [--base-url <url>] [--update-registry <registry.json>] [--key <private.pem>]',
+      '    [--require-signature]',
       '',
       'Пример:',
       '  node scripts/pack-plugin.js plugins/examples/hello-octo --out plugins/packages',
@@ -44,7 +48,14 @@ function usage(message) {
 }
 
 function parseArgs(argv) {
-  const result = { source: '', out: 'plugins/packages', baseUrl: '', registry: '', key: '' };
+  const result = {
+    source: '',
+    out: 'plugins/packages',
+    baseUrl: '',
+    registry: '',
+    key: '',
+    requireSignature: false,
+  };
   const rest = [...argv];
   while (rest.length) {
     const item = rest.shift();
@@ -53,6 +64,7 @@ function parseArgs(argv) {
     else if (item === '--base-url') result.baseUrl = rest.shift() || '';
     else if (item === '--update-registry') result.registry = rest.shift() || '';
     else if (item === '--key') result.key = rest.shift() || '';
+    else if (item === '--require-signature') result.requireSignature = true;
     else if (item.startsWith('-')) usage(`Неизвестный аргумент: ${item}`);
     else if (!result.source) result.source = item;
     else usage(`Лишний аргумент: ${item}`);
@@ -72,7 +84,7 @@ function readTree(root, prefix = '', files = new Map(), state = { total: 0 }) {
       continue;
     }
     if (entry.name.endsWith('.octoplugin') || entry.name.endsWith('.zip')) continue;
-    if (entry.name === SIGNATURE_FILE && !prefix) continue;
+    if (SIGNATURE_FILES.includes(entry.name) && !prefix) continue;
 
     const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
     if (!isSafeRelativePath(relative)) throw new Error(`Недопустимый путь: ${relative}`);
@@ -135,6 +147,13 @@ function updateRegistry(file, manifest, release) {
   fs.writeFileSync(file, `${JSON.stringify(registry, null, 2)}\n`);
 }
 
+/** Путь к PEM или сам PEM; переносы строк в секрете могут прийти как литерал \n. */
+function readSigningKey(value) {
+  const text = String(value || '').trim();
+  if (text.includes('-----BEGIN')) return `${text.replace(/\\n/g, '\n')}\n`;
+  return fs.readFileSync(path.resolve(text), 'utf8');
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const source = path.resolve(args.source);
@@ -183,11 +202,21 @@ function main() {
     }
   }
 
-  const keyPath = args.key || process.env.OCTO_PLUGIN_SIGNING_KEY || '';
+  const keySource = args.key || process.env.OCTO_PLUGIN_SIGNING_KEY || '';
   let signature = '';
   let privateKey = '';
-  if (keyPath) {
-    privateKey = fs.readFileSync(path.resolve(keyPath), 'utf8');
+  let signer = '';
+  if (!keySource && args.requireSignature) {
+    console.error('Нет ключа подписи: задайте OCTO_PLUGIN_SIGNING_KEY или --key');
+    process.exit(1);
+  }
+  if (keySource) {
+    privateKey = readSigningKey(keySource);
+    signer = keyId(privateKey);
+    if (!signer) {
+      console.error('OCTO_PLUGIN_SIGNING_KEY — не приватный ключ Ed25519');
+      process.exit(1);
+    }
     files.set(
       SIGNATURE_FILE,
       Buffer.from(
@@ -235,7 +264,15 @@ function main() {
   console.log(`\nПакет: ${output}`);
   console.log(`Размер: ${(zip.length / 1024).toFixed(1)} КБ`);
   console.log(`SHA-256: ${hash}`);
-  console.log(`Подпись: ${signature ? 'есть' : 'нет (OCTO_PLUGIN_SIGNING_KEY не задан)'}`);
+  console.log(
+    `Подпись: ${signature ? `есть, ключ ${signer}` : 'нет (OCTO_PLUGIN_SIGNING_KEY не задан)'}`,
+  );
+  if (signer && !TRUSTED_KEYS.some((item) => item.id === signer)) {
+    console.warn(
+      `Ключ ${signer} не лежит в src/main/plugins/trusted-keys/: приложение покажет пакет ` +
+        'как неподписанный. Добавьте публичный ключ: node scripts/plugin-keygen.js --trust',
+    );
+  }
   if (report.verdict === 'review') console.log(`Предупреждений проверки: ${report.warnings}`);
   console.log('\nЗапись для registry.json:\n');
   console.log(JSON.stringify(release, null, 2));

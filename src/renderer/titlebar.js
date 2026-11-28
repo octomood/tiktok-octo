@@ -209,8 +209,39 @@ const el = {
   regionPingValue: $('regionPingValue'),
   regionPingResult: $('regionPingResult'),
   themeModeSelect: $('themeModeSelect'),
+  rowThemeAmoled: $('rowThemeAmoled'),
   themePaletteGrid: $('themePaletteGrid'),
   themePaletteActiveName: $('themePaletteActiveName'),
+  themeCustomBox: $('themeCustomBox'),
+  themeCustomTrigger: $('themeCustomTrigger'),
+  themeCustomSummary: $('themeCustomSummary'),
+  themeCustomWheel1: $('themeCustomWheel1'),
+  themeCustomWheel2: $('themeCustomWheel2'),
+  themeCustomWheel3: $('themeCustomWheel3'),
+  themeCustomRoleTabs: $('themeCustomRoleTabs'),
+  themeCustomHue: $('themeCustomHue'),
+  themeCustomHueVal: $('themeCustomHueVal'),
+  themeCustomSat: $('themeCustomSat'),
+  themeCustomSatVal: $('themeCustomSatVal'),
+  themeCustomLight: $('themeCustomLight'),
+  themeCustomLightVal: $('themeCustomLightVal'),
+  themeCustomSwatches: $('themeCustomSwatches'),
+  themeCustomPrimary: $('themeCustomPrimary'),
+  themeCustomPrimaryHex: $('themeCustomPrimaryHex'),
+  themeCustomSecondary: $('themeCustomSecondary'),
+  themeCustomSecondaryHex: $('themeCustomSecondaryHex'),
+  themeCustomSecondaryReset: $('themeCustomSecondaryReset'),
+  themeCustomTertiary: $('themeCustomTertiary'),
+  themeCustomTertiaryHex: $('themeCustomTertiaryHex'),
+  themeCustomTertiaryReset: $('themeCustomTertiaryReset'),
+  themeCustomSurface: $('themeCustomSurface'),
+  themeCustomSurfaceHex: $('themeCustomSurfaceHex'),
+  themeCustomSurfaceReset: $('themeCustomSurfaceReset'),
+  themeCustomText: $('themeCustomText'),
+  themeCustomTextHex: $('themeCustomTextHex'),
+  themeCustomTextReset: $('themeCustomTextReset'),
+  btnThemeCustomAuto: $('btnThemeCustomAuto'),
+  btnOpenComponentsCat: $('btnOpenComponentsCat'),
   profileSelect: $('profileSelect'),
   profileNewName: $('profileNewName'),
   btnProfileAdd: $('btnProfileAdd'),
@@ -273,6 +304,7 @@ const state = {
     fit: 'auto',
   },
   cosmetics: [],
+  themeAmoled: false,
   closeToTray: false,
   autostart: false,
   startInTray: false,
@@ -360,7 +392,7 @@ const PANEL_GROUPS = [
   { title: 'Управление', cats: ['keys', 'focus'] },
   { title: 'Общение', cats: ['notify', 'replies'] },
   { title: 'Библиотека', cats: ['library', 'stats', 'downloads'] },
-  { title: 'Внешний вид', cats: ['cosmetics', 'custom'] },
+  { title: 'Внешний вид', cats: ['cosmetics', 'components', 'custom'] },
   { title: 'Система', cats: ['region', 'language', 'plugins', 'data', 'privacy', 'app'] },
 ];
 const panelGroupNodes = [];
@@ -512,6 +544,10 @@ el.panel.addEventListener('click', (event) => {
   if (!row) return;
   if (row.dataset.cmd === 'sleepMode') {
     api.cmd('sleepMode', state.sleepTimerMode === 'end' ? 'off' : 'end');
+    return;
+  }
+  if (row.dataset.cmd === 'themeAmoled') {
+    api.cmd('themeAmoled', !state.themeAmoled);
     return;
   }
   if (row.dataset.cmd === 'repliesSave') {
@@ -714,6 +750,211 @@ el.themeModeSelect.addEventListener('change', () => {
 el.themePaletteGrid?.addEventListener('click', (event) => {
   const swatch = event.target.closest('[data-theme-palette]');
   if (swatch) api.cmd('themePalette', swatch.dataset.themePalette);
+});
+
+el.themeCustomTrigger?.addEventListener('click', () => {
+  api.cmd('themePalette', 'custom');
+});
+
+el.btnOpenComponentsCat?.addEventListener('click', () => {
+  openPanelCategory('components');
+});
+
+let activeThemeColorRole = 'primary';
+
+const CUSTOM_ACCENT_SWATCHES = [
+  '#8c84a9',
+  '#e91e63',
+  '#ff5722',
+  '#ffb300',
+  '#4caf50',
+  '#00bfa5',
+  '#00b0ff',
+  '#3f51b5',
+  '#9c27b0',
+  '#78909c',
+];
+
+function currentCustomThemeDraft() {
+  const saved = state.themeCustom || {};
+  return {
+    primary: saved.primary || '#8c84a9',
+    secondary: saved.secondary || '',
+    tertiary: saved.tertiary || '',
+    surface: saved.surface || '',
+    text: saved.text || '',
+  };
+}
+
+function pushCustomThemePatch(fieldKey, val) {
+  const next = { ...currentCustomThemeDraft(), [fieldKey]: val };
+  state.themeCustom = next;
+  state.themePalette = 'custom';
+  api.cmd('themeCustom', next);
+}
+
+function syncCustomThemePaintControls(isDark) {
+  const helpers = window.octoUiCustom?.colorHelpers;
+  if (!helpers) return;
+  const custom = currentCustomThemeDraft();
+  const fallbacks = {
+    primary: '#8c84a9',
+    secondary: custom.primary,
+    tertiary: custom.primary,
+    surface: isDark ? '#191624' : '#f6f1f8',
+    text: isDark ? '#ddd2e0' : '#282338',
+  };
+  if (el.themeCustomRoleTabs) {
+    for (const tab of el.themeCustomRoleTabs.children) {
+      const active = tab.dataset.colorRole === activeThemeColorRole;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-selected', String(active));
+    }
+  }
+  const activeHex = custom[activeThemeColorRole] || fallbacks[activeThemeColorRole] || '#8c84a9';
+  const hsl = helpers.hexToHsl(activeHex);
+  if (el.themeCustomHue && document.activeElement !== el.themeCustomHue) {
+    el.themeCustomHue.value = String(hsl.h);
+  }
+  if (el.themeCustomSat && document.activeElement !== el.themeCustomSat) {
+    el.themeCustomSat.value = String(hsl.s);
+  }
+  if (el.themeCustomLight && document.activeElement !== el.themeCustomLight) {
+    el.themeCustomLight.value = String(hsl.l);
+  }
+  if (el.themeCustomHueVal) el.themeCustomHueVal.textContent = `${hsl.h}°`;
+  if (el.themeCustomSatVal) el.themeCustomSatVal.textContent = `${hsl.s} %`;
+  if (el.themeCustomLightVal) el.themeCustomLightVal.textContent = `${hsl.l} %`;
+  helpers.paintHslSliders(el.themeCustomHue, el.themeCustomSat, el.themeCustomLight, hsl);
+
+  if (el.themeCustomSwatches) {
+    el.themeCustomSwatches.replaceChildren(
+      ...CUSTOM_ACCENT_SWATCHES.map((hex) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `color-swatch-dot${hex === activeHex ? ' is-selected' : ''}`;
+        btn.dataset.themeSwatchHex = hex;
+        btn.title = hex;
+        btn.setAttribute('aria-label', hex);
+        btn.style.backgroundColor = hex;
+        return btn;
+      }),
+    );
+  }
+}
+
+el.themeCustomRoleTabs?.addEventListener('click', (event) => {
+  const tab = event.target.closest('[data-color-role]');
+  if (!tab) return;
+  activeThemeColorRole = tab.dataset.colorRole;
+  const darkCosmetic = Array.isArray(state.cosmetics)
+    ? state.cosmetics.find((item) => item.id === 'dark-theme')
+    : null;
+  syncCustomThemePaintControls(darkCosmetic ? Boolean(darkCosmetic.enabled) : true);
+});
+
+let themeHslTimer = null;
+function handleThemeHslInput() {
+  const helpers = window.octoUiCustom?.colorHelpers;
+  if (!helpers) return;
+  const hsl = {
+    h: Number(el.themeCustomHue?.value) || 0,
+    s: Number(el.themeCustomSat?.value) || 0,
+    l: Number(el.themeCustomLight?.value) || 50,
+  };
+  helpers.paintHslSliders(el.themeCustomHue, el.themeCustomSat, el.themeCustomLight, hsl);
+  if (el.themeCustomHueVal) el.themeCustomHueVal.textContent = `${hsl.h}°`;
+  if (el.themeCustomSatVal) el.themeCustomSatVal.textContent = `${hsl.s} %`;
+  if (el.themeCustomLightVal) el.themeCustomLightVal.textContent = `${hsl.l} %`;
+  const hex = helpers.hslToHex(hsl.h, hsl.s, hsl.l);
+  clearTimeout(themeHslTimer);
+  themeHslTimer = setTimeout(() => pushCustomThemePatch(activeThemeColorRole, hex), 30);
+}
+
+el.themeCustomHue?.addEventListener('input', handleThemeHslInput);
+el.themeCustomSat?.addEventListener('input', handleThemeHslInput);
+el.themeCustomLight?.addEventListener('input', handleThemeHslInput);
+
+el.themeCustomSwatches?.addEventListener('click', (event) => {
+  const btn = event.target.closest('[data-theme-swatch-hex]');
+  if (!btn) return;
+  pushCustomThemePatch(activeThemeColorRole, btn.dataset.themeSwatchHex);
+});
+
+function bindCustomThemeColor(picker, hexInput, resetBtn, fieldKey, required = false) {
+  let timer = null;
+  const selectRole = () => {
+    if (activeThemeColorRole !== fieldKey) {
+      activeThemeColorRole = fieldKey;
+      const darkCosmetic = Array.isArray(state.cosmetics)
+        ? state.cosmetics.find((item) => item.id === 'dark-theme')
+        : null;
+      syncCustomThemePaintControls(darkCosmetic ? Boolean(darkCosmetic.enabled) : true);
+    }
+  };
+  picker?.addEventListener('focus', selectRole);
+  picker?.addEventListener('input', () => {
+    selectRole();
+    const val = picker.value;
+    if (hexInput) hexInput.value = val;
+    clearTimeout(timer);
+    timer = setTimeout(() => pushCustomThemePatch(fieldKey, val), 40);
+  });
+  hexInput?.addEventListener('focus', selectRole);
+  hexInput?.addEventListener('change', () => {
+    selectRole();
+    const raw = hexInput.value.trim();
+    if (!raw && !required) {
+      pushCustomThemePatch(fieldKey, '');
+      return;
+    }
+    const hex = window.octoUiCustom?.colorHelpers?.normalizeHex(raw) || '';
+    if (hex) {
+      hexInput.value = hex;
+      if (picker) picker.value = hex;
+      pushCustomThemePatch(fieldKey, hex);
+    } else {
+      hexInput.value = currentCustomThemeDraft()[fieldKey] || '';
+    }
+  });
+  resetBtn?.addEventListener('click', () => {
+    if (hexInput) hexInput.value = '';
+    pushCustomThemePatch(fieldKey, '');
+  });
+}
+
+bindCustomThemeColor(el.themeCustomPrimary, el.themeCustomPrimaryHex, null, 'primary', true);
+bindCustomThemeColor(
+  el.themeCustomSecondary,
+  el.themeCustomSecondaryHex,
+  el.themeCustomSecondaryReset,
+  'secondary',
+);
+bindCustomThemeColor(
+  el.themeCustomTertiary,
+  el.themeCustomTertiaryHex,
+  el.themeCustomTertiaryReset,
+  'tertiary',
+);
+bindCustomThemeColor(
+  el.themeCustomSurface,
+  el.themeCustomSurfaceHex,
+  el.themeCustomSurfaceReset,
+  'surface',
+);
+bindCustomThemeColor(el.themeCustomText, el.themeCustomTextHex, el.themeCustomTextReset, 'text');
+
+el.btnThemeCustomAuto?.addEventListener('click', () => {
+  const next = {
+    primary: currentCustomThemeDraft().primary || '#8c84a9',
+    secondary: '',
+    tertiary: '',
+    surface: '',
+    text: '',
+  };
+  state.themeCustom = next;
+  state.themePalette = 'custom';
+  api.cmd('themeCustom', next);
 });
 
 el.profileSelect.addEventListener('change', () => {
@@ -1819,6 +2060,11 @@ function paletteItems() {
     { label: 'Тема: как в системе', cmd: 'themeMode', payload: 'system' },
     { label: 'Тема: тёмная', cmd: 'themeMode', payload: 'dark' },
     { label: 'Тема: светлая', cmd: 'themeMode', payload: 'light' },
+    {
+      label: tr(state.themeAmoled ? 'AMOLED-режим: выключить' : 'AMOLED-режим: включить'),
+      cmd: 'themeAmoled',
+      payload: !state.themeAmoled,
+    },
     ...(Array.isArray(api.themePalettes)
       ? api.themePalettes.map((palette) => ({
           label: `${tr('Палитра')}: ${tr(palette.label)}`,
@@ -1826,6 +2072,11 @@ function paletteItems() {
           payload: palette.id,
         }))
       : []),
+    {
+      label: `${tr('Палитра')}: ${tr('Свой цвет')}`,
+      cmd: 'themePalette',
+      payload: 'custom',
+    },
     { label: 'Сбросить данные сайта…', cmd: 'regionResetData' },
   );
 
@@ -2189,7 +2440,12 @@ function renderBar() {
   el.baronly.hidden = !bar;
   if (!bar) return;
 
-  el.barTitle.textContent = toastText || prettyTitle(state.title);
+  const baseTitle = prettyTitle(state.title);
+  el.barTitle.textContent =
+    toastText ||
+    (window.octoUiCustom
+      ? window.octoUiCustom.getPageTitle('baronly', baseTitle, state.uiCustom)
+      : baseTitle);
   el.barTitle.classList.toggle('is-toast', Boolean(toastText));
   el.barPlay.classList.toggle('is-playing', Boolean(state.playing));
   el.barPlay.title = state.playing ? 'Пауза' : 'Играть';
@@ -2897,7 +3153,71 @@ function renderThemePalettes(isDark) {
       activeLabel = palette ? palette.label : '';
     }
   }
+  const isCustom = activeId === 'custom';
+  if (isCustom) activeLabel = 'Свой цвет';
   if (el.themePaletteActiveName) el.themePaletteActiveName.textContent = activeLabel;
+
+  const custom = state.themeCustom || {};
+  const primaryHex = custom.primary || '#8c84a9';
+  if (el.themeCustomTrigger) {
+    el.themeCustomTrigger.setAttribute('aria-pressed', String(isCustom));
+    el.themeCustomTrigger.classList.toggle('is-active', isCustom);
+  }
+  if (el.themeCustomWheel1) el.themeCustomWheel1.style.backgroundColor = primaryHex;
+  if (el.themeCustomWheel2) {
+    el.themeCustomWheel2.style.backgroundColor = custom.secondary || custom.surface || primaryHex;
+  }
+  if (el.themeCustomWheel3) {
+    el.themeCustomWheel3.style.backgroundColor = custom.tertiary || custom.text || primaryHex;
+  }
+  if (el.themeCustomSummary) {
+    const parts = [primaryHex];
+    if (custom.secondary) parts.push(custom.secondary);
+    if (custom.tertiary) parts.push(custom.tertiary);
+    if (custom.surface) parts.push(custom.surface);
+    if (custom.text) parts.push(custom.text);
+    el.themeCustomSummary.textContent = parts.join(' · ');
+  }
+  if (el.themeCustomPrimary && document.activeElement !== el.themeCustomPrimary) {
+    el.themeCustomPrimary.value = primaryHex;
+  }
+  if (el.themeCustomPrimaryHex && document.activeElement !== el.themeCustomPrimaryHex) {
+    el.themeCustomPrimaryHex.value = primaryHex;
+  }
+  const syncOptColor = (picker, hexInput, resetBtn, val, fallback) => {
+    if (picker && document.activeElement !== picker) picker.value = val || fallback;
+    if (hexInput && document.activeElement !== hexInput) hexInput.value = val || '';
+    if (resetBtn) resetBtn.disabled = !val;
+  };
+  syncOptColor(
+    el.themeCustomSecondary,
+    el.themeCustomSecondaryHex,
+    el.themeCustomSecondaryReset,
+    custom.secondary,
+    primaryHex,
+  );
+  syncOptColor(
+    el.themeCustomTertiary,
+    el.themeCustomTertiaryHex,
+    el.themeCustomTertiaryReset,
+    custom.tertiary,
+    primaryHex,
+  );
+  syncOptColor(
+    el.themeCustomSurface,
+    el.themeCustomSurfaceHex,
+    el.themeCustomSurfaceReset,
+    custom.surface,
+    isDark ? '#191624' : '#f6f1f8',
+  );
+  syncOptColor(
+    el.themeCustomText,
+    el.themeCustomTextHex,
+    el.themeCustomTextReset,
+    custom.text,
+    isDark ? '#ddd2e0' : '#282338',
+  );
+  syncCustomThemePaintControls(isDark);
 }
 
 function renderPanel() {
@@ -2974,6 +3294,7 @@ function renderPanel() {
     ? state.cosmetics.find((item) => item.id === 'dark-theme')
     : null;
   renderThemePalettes(darkCosmetic ? Boolean(darkCosmetic.enabled) : true);
+  setSwitch(el.rowThemeAmoled, Boolean(state.themeAmoled));
   if (document.activeElement !== el.themeModeSelect && state.themeMode) {
     el.themeModeSelect.value = state.themeMode;
   }
@@ -3016,18 +3337,28 @@ function render() {
     ? state.cosmetics.find((item) => item.id === 'dark-theme')
     : null;
   const isDark = darkRule ? Boolean(darkRule.enabled) : true;
+  const isAmoled = isDark && Boolean(state.themeAmoled);
   const activePaletteId = state.themePalette || 'octo-lavender';
   const paletteObj = Array.isArray(api.themePalettes)
     ? api.themePalettes.find((item) => item.id === activePaletteId)
     : null;
-  if (window.octoTheme && paletteObj) {
+  const tokens = paletteObj
+    ? isDark
+      ? isAmoled
+        ? paletteObj.amoled || paletteObj.dark
+        : paletteObj.dark
+      : paletteObj.light
+    : state.themeTokens;
+  if (window.octoTheme && tokens) {
     window.octoTheme.apply({
       dark: isDark,
+      amoled: isAmoled,
       palette: activePaletteId,
-      tokens: isDark ? paletteObj.dark : paletteObj.light,
+      tokens,
     });
   } else {
     document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+    document.documentElement.dataset.amoled = isAmoled ? 'true' : 'false';
   }
 
   el.back.disabled = !state.canGoBack;
@@ -3043,7 +3374,12 @@ function render() {
   el.top.classList.toggle('is-on', state.onTop);
   el.top.setAttribute('aria-pressed', String(state.onTop));
 
-  el.title.textContent = toastText || prettyTitle(state.title);
+  const pageTitleText = prettyTitle(state.title);
+  el.title.textContent =
+    toastText ||
+    (window.octoUiCustom
+      ? window.octoUiCustom.getPageTitle('pagePill', pageTitleText, state.uiCustom)
+      : pageTitleText);
 
   el.pill.classList.toggle('is-loading', state.loading && !toastText);
   el.pill.classList.toggle('is-toast', Boolean(toastText));
@@ -3059,7 +3395,11 @@ function render() {
   el.titlebar.hidden = pip;
   el.pipbar.hidden = !pip;
   el.titlebar.classList.toggle('is-hidden', state.chromeHidden && !pip);
-  el.pipTitle.textContent = toastText || prettyTitle(state.title);
+  el.pipTitle.textContent =
+    toastText ||
+    (window.octoUiCustom
+      ? window.octoUiCustom.getPageTitle('pipbar', pageTitleText, state.uiCustom)
+      : pageTitleText);
   el.pipTitle.classList.toggle('is-toast', Boolean(toastText));
   el.pipPlay.classList.toggle('is-playing', Boolean(state.playing));
   el.pipPlay.title = state.playing ? 'Пауза' : 'Играть';
@@ -3084,6 +3424,8 @@ function render() {
   renderStickerPicker(state.stickers);
   renderActivePlugins(state.plugins);
   renderPalette();
+  window.octoUiCustom?.apply(state.uiCustom);
+  window.octoUiCustom?.renderEditor(state.uiCustom);
 }
 
 function showToast(text) {
