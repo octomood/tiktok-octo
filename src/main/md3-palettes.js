@@ -18,6 +18,18 @@ const DEFAULT_CUSTOM_THEME = Object.freeze({
   surface: '',
   text: '',
 });
+const DEFAULT_RAINBOW_CONFIG = Object.freeze({
+  hueFrom: 0,
+  hueTo: 360,
+  speed: 1,
+});
+const RAINBOW_PRESETS = Object.freeze([
+  { id: 'full', label: 'Вся радуга', hueFrom: 0, hueTo: 360 },
+  { id: 'sunset', label: 'Закат', hueFrom: 335, hueTo: 50 },
+  { id: 'ocean', label: 'Океан', hueFrom: 155, hueTo: 250 },
+  { id: 'neon', label: 'Неон', hueFrom: 190, hueTo: 325 },
+  { id: 'sakura', label: 'Сакура', hueFrom: 265, hueTo: 350 },
+]);
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -67,6 +79,25 @@ function normalizeCustomTheme(raw) {
     surface: normalizeHex(raw.surface, ''),
     text: normalizeHex(raw.text, ''),
   };
+}
+
+function normalizeRainbowConfig(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ...DEFAULT_RAINBOW_CONFIG };
+  }
+  const hueFromRaw = Number(raw.hueFrom);
+  const hueToRaw = Number(raw.hueTo);
+  const speedRaw = Number(raw.speed);
+  const hueFrom = Number.isFinite(hueFromRaw)
+    ? Math.round(clamp(hueFromRaw, 0, 360))
+    : DEFAULT_RAINBOW_CONFIG.hueFrom;
+  const hueTo = Number.isFinite(hueToRaw)
+    ? Math.round(clamp(hueToRaw, 0, 360))
+    : DEFAULT_RAINBOW_CONFIG.hueTo;
+  const speed = Number.isFinite(speedRaw)
+    ? Math.round(clamp(speedRaw, 0.2, 4) * 10) / 10
+    : DEFAULT_RAINBOW_CONFIG.speed;
+  return { hueFrom, hueTo, speed };
 }
 
 function hslToHex(hue, sat, light) {
@@ -966,6 +997,98 @@ function getPaletteTokens(id, dark = true, customRaw = null, options = {}) {
   return opts && opts.amoled ? applyAmoledTokens(palette.dark) : palette.dark;
 }
 
+/**
+ * Динамические MD3-токены для режима переливания цветов.
+ *
+ * Используют перцептивно равномерный OKLCH с общим углом `--octo-hue`,
+ * поэтому яркость и контраст текста остаются стабильными на всём спектре.
+ */
+function getIridescentCssTokens(dark = true, options = {}) {
+  const hue = 'var(--octo-hue, 260)';
+  const secHue = `calc(${hue} + 38)`;
+  const terHue = `calc(${hue} + 86)`;
+
+  const tokens = dark
+    ? {
+        scheme: 'dark',
+        primary: `oklch(0.76 0.13 ${hue})`,
+        onPrimary: `oklch(0.18 0.04 ${hue})`,
+        primaryContainer: `oklch(0.32 0.08 ${hue})`,
+        onPrimaryContainer: `oklch(0.90 0.045 ${hue})`,
+        secondary: `oklch(0.80 0.095 ${secHue})`,
+        onSecondary: `oklch(0.19 0.035 ${secHue})`,
+        secondaryContainer: `oklch(0.38 0.07 ${secHue})`,
+        onSecondaryContainer: `oklch(0.91 0.04 ${secHue})`,
+        tertiary: `oklch(0.82 0.115 ${terHue})`,
+        onTertiary: `oklch(0.21 0.04 ${terHue})`,
+        tertiaryContainer: `oklch(0.36 0.08 ${terHue})`,
+        onTertiaryContainer: `oklch(0.91 0.045 ${terHue})`,
+        error: '#f2b8b5',
+        onError: '#601410',
+        errorContainer: '#8c1d18',
+        onErrorContainer: '#f9dedc',
+        surfaceDim: `oklch(0.16 0.024 ${hue})`,
+        surface: `oklch(0.19 0.028 ${hue})`,
+        surfaceContainerLowest: `oklch(0.14 0.022 ${hue})`,
+        surfaceContainerLow: `oklch(0.22 0.030 ${hue})`,
+        surfaceContainer: `oklch(0.26 0.034 ${hue})`,
+        surfaceContainerHigh: `oklch(0.32 0.042 ${hue})`,
+        surfaceContainerHighest: `oklch(0.38 0.048 ${hue})`,
+        onSurface: `oklch(0.90 0.024 ${hue})`,
+        onSurfaceVariant: `oklch(0.77 0.036 ${hue})`,
+        outline: `oklch(0.64 0.065 ${hue})`,
+        outlineVariant: `oklch(0.36 0.038 ${hue})`,
+        inverseSurface: `oklch(0.90 0.024 ${hue})`,
+        inverseOnSurface: `oklch(0.22 0.030 ${hue})`,
+        stateHover: `oklch(0.76 0.13 ${hue} / 0.16)`,
+        statePressed: `oklch(0.76 0.13 ${hue} / 0.24)`,
+        scrim: 'rgba(14, 12, 22, 0.78)',
+        elevation1: '0 2px 8px rgba(8, 6, 16, 0.36)',
+        elevation2: '0 8px 24px rgba(8, 6, 16, 0.46)',
+        elevation3: '0 20px 44px rgba(8, 6, 16, 0.58)',
+      }
+    : {
+        scheme: 'light',
+        primary: `oklch(0.47 0.15 ${hue})`,
+        onPrimary: `oklch(0.98 0.01 ${hue})`,
+        primaryContainer: `oklch(0.89 0.06 ${hue})`,
+        onPrimaryContainer: `oklch(0.22 0.06 ${hue})`,
+        secondary: `oklch(0.48 0.11 ${secHue})`,
+        onSecondary: `oklch(0.98 0.01 ${secHue})`,
+        secondaryContainer: `oklch(0.90 0.05 ${secHue})`,
+        onSecondaryContainer: `oklch(0.23 0.055 ${secHue})`,
+        tertiary: `oklch(0.46 0.12 ${terHue})`,
+        onTertiary: `oklch(0.98 0.01 ${terHue})`,
+        tertiaryContainer: `oklch(0.89 0.065 ${terHue})`,
+        onTertiaryContainer: `oklch(0.22 0.06 ${terHue})`,
+        error: '#b3261e',
+        onError: '#ffffff',
+        errorContainer: '#f9dedc',
+        onErrorContainer: '#410e0b',
+        surfaceDim: `oklch(0.89 0.022 ${hue})`,
+        surface: `oklch(0.96 0.014 ${hue})`,
+        surfaceContainerLowest: '#ffffff',
+        surfaceContainerLow: `oklch(0.935 0.018 ${hue})`,
+        surfaceContainer: `oklch(0.91 0.022 ${hue})`,
+        surfaceContainerHigh: `oklch(0.88 0.028 ${hue})`,
+        surfaceContainerHighest: `oklch(0.85 0.034 ${hue})`,
+        onSurface: `oklch(0.22 0.030 ${hue})`,
+        onSurfaceVariant: `oklch(0.41 0.045 ${hue})`,
+        outline: `oklch(0.54 0.055 ${hue})`,
+        outlineVariant: `oklch(0.78 0.035 ${hue})`,
+        inverseSurface: `oklch(0.28 0.045 ${hue})`,
+        inverseOnSurface: `oklch(0.95 0.015 ${hue})`,
+        stateHover: `oklch(0.47 0.15 ${hue} / 0.08)`,
+        statePressed: `oklch(0.47 0.15 ${hue} / 0.14)`,
+        scrim: 'rgba(40, 35, 56, 0.44)',
+        elevation1: '0 1px 4px rgba(24, 20, 36, 0.1)',
+        elevation2: '0 6px 18px rgba(24, 20, 36, 0.14)',
+        elevation3: '0 16px 36px rgba(24, 20, 36, 0.2)',
+      };
+
+  return dark && options && options.amoled ? applyAmoledTokens(tokens) : tokens;
+}
+
 function listPalettes() {
   return PALETTES.map((item) => ({
     id: item.id,
@@ -980,13 +1103,17 @@ module.exports = {
   DEFAULT_PALETTE,
   CUSTOM_PALETTE_ID,
   DEFAULT_CUSTOM_THEME,
+  DEFAULT_RAINBOW_CONFIG,
+  RAINBOW_PRESETS,
   PALETTES,
   normalizeHex,
   normalizeCustomTheme,
+  normalizeRainbowConfig,
   normalizePaletteId,
   buildCustomScheme,
   applyAmoledTokens,
   getPalette,
   getPaletteTokens,
+  getIridescentCssTokens,
   listPalettes,
 };

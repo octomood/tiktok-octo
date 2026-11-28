@@ -1504,5 +1504,16 @@
   "ZIP: файл «{0}» больше {1} байт": "ZIP: file \"{0}\" is larger than {1} bytes",
   "ZIP: файл «{0}» повторяется": "ZIP: file \"{0}\" is repeated",
   "ZIP: файл слишком короткий": "ZIP: file too short",
-  "ZIP: ZIP64 не поддерживается": "ZIP: ZIP64 is not supported"
+  "ZIP: ZIP64 не поддерживается": "ZIP: ZIP64 is not supported",
+  "Переливание цветов интерфейса": "Iridescent UI color shift",
+  "Настройка переливания": "Color shift settings",
+  "Оттенки переливания": "Color shift hues",
+  "Вся радуга": "Full rainbow",
+  "Закат": "Sunset",
+  "Океан": "Ocean",
+  "Неон": "Neon",
+  "Начальный оттенок": "Start hue",
+  "Конечный оттенок": "End hue",
+  "Экспериментальные": "Experimental",
+  "Экспериментальные функции могут снижать производительность и вызывать подтормаживания на тяжёлых страницах и видео.": "Experimental features may reduce performance and cause stuttering on heavy pages and video playback."
 }

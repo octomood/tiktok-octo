@@ -43,17 +43,94 @@
     elevation3: '--md-elev-3',
   };
 
+  const BASE_DEG_PER_MS = 0.024;
+  const motionQuery =
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)')
+      : null;
+
+  let rainbowActive = false;
+  let rainbowCfg = { hueFrom: 0, hueTo: 360, speed: 1 };
+  let hueTimer = null;
+  let lastHue = '';
+
+  function stepMsForSpeed() {
+    const speed = Math.min(4, Math.max(0.2, Number(rainbowCfg.speed) || 1));
+    return Math.round(Math.min(180, Math.max(70, 100 / Math.sqrt(speed))));
+  }
+
+  function computeHue(reduced) {
+    const from = Number(rainbowCfg.hueFrom) || 0;
+    const to = rainbowCfg.hueTo === undefined ? 360 : Number(rainbowCfg.hueTo);
+    const speed = Math.min(4, Math.max(0.2, Number(rainbowCfg.speed) || 1));
+    const isFull = Math.abs(to - from) >= 360;
+    const span = isFull ? 360 : (((to - from) % 360) + 360) % 360;
+    if (reduced) {
+      return ((from + (isFull ? 260 : span / 2)) % 360).toFixed(1);
+    }
+    if (!isFull && span === 0) {
+      return (((from % 360) + 360) % 360).toFixed(1);
+    }
+    const degPerMs = BASE_DEG_PER_MS * speed;
+    if (isFull) {
+      return ((Date.now() * degPerMs) % 360).toFixed(1);
+    }
+    const periodMs = (2 * Math.max(span, 30)) / degPerMs;
+    const phase = (Date.now() % periodMs) / periodMs;
+    const wave = 0.5 - 0.5 * Math.cos(phase * Math.PI * 2);
+    return ((from + span * wave) % 360).toFixed(1);
+  }
+
+  function paintHue() {
+    const root = document.documentElement;
+    if (!root) return;
+    const hue = computeHue(Boolean(motionQuery && motionQuery.matches));
+    if (hue === lastHue) return;
+    lastHue = hue;
+    root.style.setProperty('--octo-hue', hue);
+  }
+
+  function syncHueLoop() {
+    if (hueTimer) {
+      clearInterval(hueTimer);
+      hueTimer = null;
+    }
+    const root = document.documentElement;
+    if (!rainbowActive) {
+      lastHue = '';
+      if (root) root.style.removeProperty('--octo-hue');
+      return;
+    }
+    paintHue();
+    if (document.visibilityState === 'hidden') return;
+    if (motionQuery && motionQuery.matches) return;
+    hueTimer = setInterval(paintHue, stepMsForSpeed());
+  }
+
+  document.addEventListener('visibilitychange', syncHueLoop);
+  if (motionQuery && typeof motionQuery.addEventListener === 'function') {
+    motionQuery.addEventListener('change', syncHueLoop);
+  }
+
   function apply(payload) {
     if (!payload || typeof payload !== 'object') return;
     const root = document.documentElement;
     const dark = payload.dark !== false;
     const amoled = dark && payload.amoled === true;
+    const rainbow = payload.rainbow === true;
     root.dataset.theme = dark ? 'dark' : 'light';
     root.dataset.amoled = amoled ? 'true' : 'false';
+    root.dataset.rainbow = rainbow ? 'true' : 'false';
     if (payload.palette) root.dataset.palette = String(payload.palette);
     root.style.setProperty('--md-scheme', dark ? 'dark' : 'light');
 
-    const tokens = payload.tokens;
+    rainbowActive = rainbow;
+    if (payload.rainbowConfig && typeof payload.rainbowConfig === 'object') {
+      rainbowCfg = payload.rainbowConfig;
+    }
+    syncHueLoop();
+
+    const tokens = rainbow && payload.rainbowTokens ? payload.rainbowTokens : payload.tokens;
     if (tokens && typeof tokens === 'object') {
       for (const [key, cssVar] of Object.entries(TOKEN_CSS_MAP)) {
         if (typeof tokens[key] === 'string') {

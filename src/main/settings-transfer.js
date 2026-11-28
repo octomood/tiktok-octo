@@ -46,6 +46,7 @@ const SETTINGS_KEYS = [
   'themeAmoled',
   'themePalette',
   'themeCustom',
+  'themeRainbow',
   'region',
   'language',
   'siteLanguage',
@@ -247,6 +248,11 @@ function cleanSettings(raw) {
       result.themeCustom = normalizeCustomTheme(value);
       continue;
     }
+    if (key === 'themeRainbow') {
+      const { normalizeRainbowConfig } = require('./md3-palettes');
+      result.themeRainbow = normalizeRainbowConfig(value);
+      continue;
+    }
     if (key === 'region') {
       const region = cleanRegion(value);
       if (region) result.region = region;
@@ -277,6 +283,7 @@ function liveDefaults() {
     themeAmoled: Boolean(ctx.themeAmoled),
     themePalette: ctx.themePalette,
     themeCustom: ctx.themeCustom,
+    themeRainbow: ctx.themeRainbow,
     // Логин и пароль прокси остаются в профиле, но не в экспорте.
     region: stripRegionCredentials(ctx.region),
     language: ctx.language,
@@ -472,6 +479,9 @@ function refreshLive() {
     call('./cosmetics', 'applyThemeCustom', state.themeCustom, {
       activate: state.themePalette === 'custom',
     });
+  }
+  if (state.themeRainbow) {
+    call('./cosmetics', 'applyThemeRainbow', state.themeRainbow);
   }
   if (state.themePalette) {
     call('./cosmetics', 'applyThemePalette', state.themePalette);

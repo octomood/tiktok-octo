@@ -784,6 +784,9 @@ function handleCommand(command, payload) {
     case 'themeCustom':
       if (payload && typeof payload === 'object') cosmetics.applyThemeCustom(payload);
       break;
+    case 'themeRainbow':
+      if (payload && typeof payload === 'object') cosmetics.applyThemeRainbow(payload);
+      break;
     case 'uiCustomSet': {
       if (!payload || typeof payload !== 'object') break;
       const current = ctx.uiCustom && typeof ctx.uiCustom === 'object' ? { ...ctx.uiCustom } : {};

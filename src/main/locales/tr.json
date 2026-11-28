@@ -1504,5 +1504,16 @@
   "ZIP: файл «{0}» больше {1} байт": "ZIP: «{0}» dosyası {1} bayttan büyük",
   "ZIP: файл «{0}» повторяется": "ZIP: «{0}» dosyası tekrar ediyor",
   "ZIP: файл слишком короткий": "ZIP: dosya çok kısa",
-  "ZIP: ZIP64 не поддерживается": "ZIP: ZIP64 desteklenmiyor"
+  "ZIP: ZIP64 не поддерживается": "ZIP: ZIP64 desteklenmiyor",
+  "Переливание цветов интерфейса": "Akıcı arayüz renk geçişi",
+  "Настройка переливания": "Geçiş ayarları",
+  "Оттенки переливания": "Renk geçiş tonları",
+  "Вся радуга": "Tüm gökkuşağı",
+  "Закат": "Gün batımı",
+  "Океан": "Okyanus",
+  "Неон": "Neon",
+  "Начальный оттенок": "Başlangıç tonu",
+  "Конечный оттенок": "Bitiş tonu",
+  "Экспериментальные": "Deneysel",
+  "Экспериментальные функции могут снижать производительность и вызывать подтормаживания на тяжёлых страницах и видео.": "Deneysel özellikler performansı düşürebilir ve yoğun sayfalarda ya da videolarda takılmalara yol açabilir."
 }
